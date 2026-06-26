@@ -149,6 +149,26 @@ def get_db() -> Session:
         db.close()
 
 
+def trigger_collections_assistant(loan_id: str, activity_type: str, notes: str) -> None:
+    """Best-effort FinDNA hook keyed by loan account because assignments do not store customer_id."""
+    try:
+        import httpx
+
+        findna_base = os.getenv("FINDNA_BASE_URL", "http://localhost:8006")
+        payload = {
+            "customer_id": loan_id,
+            "subject_type": "loan_account",
+            "subject_id": loan_id,
+            "source_service": "collections",
+            "source_reference_id": loan_id,
+            "context_text": f"Collections activity: type={activity_type}, notes={notes}",
+        }
+        with httpx.Client(timeout=5.0) as client:
+            client.post(f"{findna_base}/collections-assistant/{loan_id}", json=payload)
+    except Exception:
+        pass
+
+
 @app.on_event("startup")
 async def startup():
     Base.metadata.create_all(bind=engine)
@@ -303,6 +323,7 @@ async def log_activity(
     db.add(new_activity)
     db.commit()
     db.refresh(new_activity)
+    trigger_collections_assistant(loan_id, activity.activity_type, activity.notes)
     
     return {
         "activity_id": new_activity.id,

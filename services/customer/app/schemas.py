@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class CustomerCreate(BaseModel):
@@ -73,6 +73,90 @@ class OfficeCreateBase(BaseModel):
     is_active: bool = True
 
 
+class OfficeUpdateBase(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class OfficeResponseBase(BaseModel):
+    id: str
+    name: str
+    code: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    is_active: bool
+    created_at: datetime
+
+    @field_validator("is_active", mode="before")
+    @classmethod
+    def parse_bool(cls, value):
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in {"1", "true", "yes", "active"}
+
+    class Config:
+        from_attributes = True
+
+
+class OrganizationCreate(OfficeCreateBase):
+    pass
+
+
+class OrganizationUpdate(OfficeUpdateBase):
+    pass
+
+
+class OrganizationResponse(OfficeResponseBase):
+    pass
+
+
+class ZoneCreate(OfficeCreateBase):
+    organization_id: str
+
+
+class ZoneUpdate(OfficeUpdateBase):
+    pass
+
+
+class ZoneResponse(OfficeResponseBase):
+    organization_id: str
+
+
+class RegionCreate(OfficeCreateBase):
+    zone_id: str
+
+
+class RegionUpdate(OfficeUpdateBase):
+    pass
+
+
+class RegionResponse(OfficeResponseBase):
+    zone_id: str
+
+
+class AreaCreate(OfficeCreateBase):
+    region_id: str
+
+
+class AreaUpdate(OfficeUpdateBase):
+    pass
+
+
+class AreaResponse(OfficeResponseBase):
+    region_id: str
+
+
 class HeadOfficeCreate(OfficeCreateBase):
     pass
 
@@ -90,9 +174,30 @@ class AreaOfficeCreate(OfficeCreateBase):
 
 
 class BranchOfficeCreate(OfficeCreateBase):
-    area_office_id: str
+    area_office_id: Optional[str] = None
+    area_id: Optional[str] = None
     branch_type: Optional[str] = None
     postal_code: Optional[str] = None
+
+    @model_validator(mode="after")
+    def require_area(self):
+        if not self.area_office_id and self.area_id:
+            self.area_office_id = self.area_id
+        if not self.area_office_id:
+            raise ValueError("area_id or area_office_id is required")
+        return self
+
+
+class BranchCreate(OfficeCreateBase):
+    area_id: str
+    branch_type: Optional[str] = None
+    postal_code: Optional[str] = None
+
+
+class BranchUpdate(OfficeUpdateBase):
+    branch_type: Optional[str] = None
+    postal_code: Optional[str] = None
+    area_id: Optional[str] = None
 
 
 class BranchTransactionCreate(BaseModel):
@@ -106,6 +211,7 @@ class BranchTransactionCreate(BaseModel):
 class BranchResponse(BaseModel):
     id: str
     area_office_id: str
+    area_id: str
     name: str
     code: str
     branch_type: Optional[str]
@@ -130,6 +236,45 @@ class BranchResponse(BaseModel):
         from_attributes = True
 
 
+class BranchHierarchyResponse(OfficeResponseBase):
+    area_id: str
+    branch_type: Optional[str] = None
+    postal_code: Optional[str] = None
+
+
+class AssignBranchRequest(BaseModel):
+    branch_id: str
+
+
+class BranchScopeResponse(BaseModel):
+    organization_id: str
+    organization_name: str
+    zone_id: str
+    zone_name: str
+    region_id: str
+    region_name: str
+    area_id: str
+    area_name: str
+    branch_id: str
+    branch_name: str
+
+
+class AreaTreeResponse(AreaResponse):
+    branches: list[BranchHierarchyResponse] = Field(default_factory=list)
+
+
+class RegionTreeResponse(RegionResponse):
+    areas: list[AreaTreeResponse] = Field(default_factory=list)
+
+
+class ZoneTreeResponse(ZoneResponse):
+    regions: list[RegionTreeResponse] = Field(default_factory=list)
+
+
+class OrganizationTreeResponse(OrganizationResponse):
+    zones: list[ZoneTreeResponse] = Field(default_factory=list)
+
+
 
 class BranchTransactionResponse(BaseModel):
     id: str
@@ -139,7 +284,7 @@ class BranchTransactionResponse(BaseModel):
     amount: float
     currency: str
     status: str
-    metadata: Optional[dict]
+    metadata: Optional[dict] = Field(default=None, validation_alias="metadata_")
     created_at: datetime
 
     @field_validator("amount", mode="before")

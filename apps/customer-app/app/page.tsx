@@ -10,6 +10,7 @@ const dashboardCards = [
   { title: 'Payments', value: 'EMI history and collection', href: '/payments' },
   { title: 'Documents', value: 'KYC and expiry tracking', href: '/documents' },
   { title: 'Profile', value: 'Customer 360 and risk', href: '/profile' },
+  { title: 'Executive', value: 'Portfolio and AI risk summary', href: '/executive' },
   { title: 'Apply Loan', value: 'New loan request', href: '/apply-loan' },
   { title: 'Settings', value: 'Preferences and security', href: '/settings' },
 ];

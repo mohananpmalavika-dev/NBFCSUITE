@@ -1,36 +1,44 @@
-# TODO — Phase 2 (Customer 360 correctness + expiry/compliance/reporting)
+# TODO: Missing Phase 1–3 Frontend/Backend Items
 
-## Step 1: Fix `services/customer/app/schemas.py` mismatches
-- [x] Inspect customer schemas + customer router response models
-- [x] Align request/response models with actual DB fields
-- [x] Ensure risk/financial profile types validate correctly
+> Updated: 2026-06-26
 
+## Phase 1 (End-to-end lending workflow: LOS → FindNA → LMS → Collections)
+- [x] Verify API surface matches API.md for auth/customer/los/lms/collections.
+- [x] Implement/adjust Auth endpoints: `/auth/refresh` and `/auth/validate` (JWT handling) to match API.md.
+- [ ] Add LOS workflow hooks:
+  - [x] On `POST /applications/{id}/submit`: trigger FindNA behavior scoring (if required inputs exist).
+  - [x] On approval/decision: trigger LMS booking with sanctioned details.
+- [ ] Add LMS hooks:
+  - [x] After booking (and/or after first payment): notify Collections to log activity / ensure assignment.
+- [ ] Add Collections hooks:
+  - [x] Ensure activity logging/assignment endpoints support workflow wiring.
+- [ ] Add Phase-1 E2E integration test(s): create customer → KYC docs → submit LOS application → underwrite/decision → LMS booking → record payment → collections record created.
 
-## Step 2: Add/adjust atomic customer risk profile update endpoint(s)
-- [ ] Inspect customer router risk update endpoints
-- [ ] Implement single-transaction atomic update + validation
-- [ ] Ensure response matches updated schema
+## Phase 2 (Customer 360 correctness + document expiry + compliance orchestration + reporting + key standardization)
+- [x] Fix `services/customer/app/schemas.py` mismatches with DB model and router behavior.
+- [x] Add/adjust atomic risk profile update endpoint(s) in customer service.
+- [ ] Document expiry actions:
+  - [x] Add `GET /documents/expiring` and `PUT /documents/{id}/expire` in document service.
+  - [x] Enforce/standardize OCR metadata shape for document records.
+- [ ] Compliance orchestration:
+  - [x] Add `POST /run-checks/{customer_id}` in compliance service.
+  - [x] Standardize status enums and AuditLog writes.
+- [ ] Cross-service reference keys:
+  - [x] Enforce `subject_type`, `subject_id`, `source_service`, `source_reference_id` across relevant models/schemas.
+- [ ] Minimal reporting endpoints:
+  - [x] Add/adjust summary endpoints in deposits/accounting/CRM/compliance.
 
-## Step 3: Add document expiry endpoints
-- [ ] Inspect document service model/status fields
-- [ ] Implement `GET /documents/expiring` (expiry_date + filters)
-- [ ] Implement `PUT /documents/{id}/expire` (status transitions)
+## Phase 3 (FinDNA AI orchestration + persistence + exec dashboard)
+- [x] Update FinDNA assistant endpoints to accept canonical inputs.
+- [x] Implement persistence keys and retrieval endpoints needed for dashboard.
+- [x] Add workflow hooks so LOS/LMS/Collections invoke FinDNA assistants during key state transitions.
+- [x] Add dashboard aggregation endpoints (portfolio/risk/collections summaries).
 
-## Step 4: Compliance orchestration endpoint (`run-checks`)
-- [ ] Inspect compliance models/status enums + AuditLog write path
-- [ ] Implement `POST /run-checks/{customer_id}` orchestration
-- [ ] Standardize compliance statuses + ensure AuditLog includes standardized subject/source keys
+## Frontend / Mobile (only after Phase 1–3 backend is verifiable)
+- [x] Wire customer/loan/collection views to real backend endpoints (replace mocks where present).
 
-## Step 5: Standardize cross-service subject/reference keys
-- [ ] Identify all schema fields: `subject_type/subject_id/source_service/source_reference_id`
-- [ ] Update affected services/endpoints to use canonical naming
-- [ ] Add/adjust minimal serialization/mapping where needed
-
-## Step 6: Minimal reporting endpoints
-- [ ] Add deposits/accounting/CRM/compliance summary endpoints
-- [ ] Ensure endpoints return consistent minimal aggregates
-
-## Verification
-- [ ] Run tests (`pytest -q`)
-- [ ] Smoke test endpoints per `API.md`
+## CI/CD + Local Dev
+- [ ] Ensure docker-compose + ports allow all phase-1 services to run.
+- [ ] Add GitHub Actions workflow: lint + unit tests + integration smoke tests.
+- [ ] Run DB migrations before tests.
 

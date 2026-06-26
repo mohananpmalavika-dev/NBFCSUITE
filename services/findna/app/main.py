@@ -65,6 +65,24 @@ class EmbeddingVector(Base):
     generated_at = Column(DateTime, default=datetime.utcnow)
 
 
+class AssistantInvocation(Base):
+    __tablename__ = "assistant_invocations"
+
+    id = Column(String, primary_key=True)
+    assistant_type = Column(String, index=True)
+    invocation_key = Column(String, unique=True, index=True)
+    customer_id = Column(String, index=True, nullable=True)
+    application_id = Column(String, index=True, nullable=True)
+    summary = Column(String)
+    recommendation = Column(String)
+    risk_indicators = Column(JSON)
+    action_plan = Column(JSON)
+    insights = Column(JSON)
+    source_context = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # Pydantic Schemas
 class IncomeData(BaseModel):
     monthly_income: Optional[float] = None
@@ -147,6 +165,10 @@ class EmbeddingVectorResponse(BaseModel):
 class AssistantRequest(BaseModel):
     customer_id: Optional[str] = None
     application_id: Optional[str] = None
+    subject_type: Optional[str] = None
+    subject_id: Optional[str] = None
+    source_service: Optional[str] = None
+    source_reference_id: Optional[str] = None
     context_text: Optional[str] = None
 
 
@@ -158,9 +180,24 @@ class AssistantResponse(BaseModel):
     risk_indicators: List[str]
     action_plan: Dict[str, str]
     insights: Dict[str, str]
+    invocation_key: Optional[str] = None
+    generated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
+
+
+class AssistantInvocationResponse(AssistantResponse):
+    assistant_type: str
+
+
+class ExecutiveDashboardResponse(BaseModel):
+    generated_at: datetime
+    portfolio_health: Dict[str, float | int]
+    risk_summary: Dict[str, int]
+    collections_summary: Dict[str, float | int]
+    assistant_summary: Dict[str, int]
+    recommendations: List[str]
 
 
 class ExplanationResponse(BaseModel):
@@ -185,6 +222,85 @@ def get_db() -> Session:
         yield db
     finally:
         db.close()
+
+
+def _assistant_key(assistant_type: str, customer_id: Optional[str], application_id: Optional[str]) -> str:
+    subject = application_id or customer_id or "anonymous"
+    return f"{assistant_type}:{subject}"
+
+
+def persist_assistant_invocation(
+    db: Session,
+    assistant_type: str,
+    customer_id: Optional[str],
+    application_id: Optional[str],
+    context_text: Optional[str],
+    summary: str,
+    recommendation: str,
+    risk_indicators: List[str],
+    action_plan: Dict[str, str],
+    insights: Dict[str, str],
+) -> AssistantInvocation:
+    from uuid import uuid4
+
+    invocation_key = _assistant_key(assistant_type, customer_id, application_id)
+    invocation = db.query(AssistantInvocation).filter(
+        AssistantInvocation.invocation_key == invocation_key
+    ).first()
+    if invocation:
+        invocation.customer_id = customer_id
+        invocation.application_id = application_id
+        invocation.summary = summary
+        invocation.recommendation = recommendation
+        invocation.risk_indicators = risk_indicators
+        invocation.action_plan = action_plan
+        invocation.insights = insights
+        invocation.source_context = context_text
+        invocation.updated_at = datetime.utcnow()
+    else:
+        invocation = AssistantInvocation(
+            id=str(uuid4()),
+            assistant_type=assistant_type,
+            invocation_key=invocation_key,
+            customer_id=customer_id,
+            application_id=application_id,
+            summary=summary,
+            recommendation=recommendation,
+            risk_indicators=risk_indicators,
+            action_plan=action_plan,
+            insights=insights,
+            source_context=context_text,
+        )
+        db.add(invocation)
+
+    db.commit()
+    db.refresh(invocation)
+    return invocation
+
+
+def assistant_response(invocation: AssistantInvocation) -> dict:
+    return {
+        "assistant_type": invocation.assistant_type,
+        "customer_id": invocation.customer_id,
+        "application_id": invocation.application_id,
+        "summary": invocation.summary,
+        "recommendation": invocation.recommendation,
+        "risk_indicators": invocation.risk_indicators or [],
+        "action_plan": invocation.action_plan or {},
+        "insights": invocation.insights or {},
+        "invocation_key": invocation.invocation_key,
+        "generated_at": invocation.updated_at or invocation.created_at,
+    }
+
+
+def _risk_level_from_score(score: Optional[float]) -> str:
+    if score is None:
+        return "unknown"
+    if score < 60:
+        return "high"
+    if score < 75:
+        return "medium"
+    return "low"
 
 
 @app.get("/health")
@@ -447,18 +563,26 @@ async def underwriting_assistant(
     }
     insights = {
         "credit_recommendation": "Offer a tiered personal loan product with 17% APR.",
+        "subject_type": request.subject_type or "application",
+        "subject_id": request.subject_id or application_id,
+        "source_service": request.source_service or "los",
+        "source_reference_id": request.source_reference_id or application_id,
         "risk_summary": "Overall risk is medium; keep exposure limited to 20% of customer’s monthly income." 
     }
 
-    return {
-        "customer_id": request.customer_id,
-        "application_id": application_id,
-        "summary": summary,
-        "recommendation": recommendation,
-        "risk_indicators": risk_indicators,
-        "action_plan": action_plan,
-        "insights": insights
-    }
+    invocation = persist_assistant_invocation(
+        db=db,
+        assistant_type="underwriting",
+        customer_id=request.customer_id,
+        application_id=application_id,
+        context_text=request.context_text,
+        summary=summary,
+        recommendation=recommendation,
+        risk_indicators=risk_indicators,
+        action_plan=action_plan,
+        insights=insights,
+    )
+    return assistant_response(invocation)
 
 
 @app.post("/collections-assistant/{customer_id}", response_model=AssistantResponse)
@@ -482,17 +606,26 @@ async def collections_assistant(
     }
     insights = {
         "customer_sentiment": "Customer is likely to respond positively to empathetic outreach.",
-        "settlement_recommendation": "Recommend partial settlement to prevent escalation."
+        "settlement_recommendation": "Recommend partial settlement to prevent escalation.",
+        "subject_type": request.subject_type or "customer",
+        "subject_id": request.subject_id or customer_id,
+        "source_service": request.source_service or "collections",
+        "source_reference_id": request.source_reference_id or customer_id,
     }
 
-    return {
-        "customer_id": customer_id,
-        "summary": summary,
-        "recommendation": recommendation,
-        "risk_indicators": risk_indicators,
-        "action_plan": action_plan,
-        "insights": insights
-    }
+    invocation = persist_assistant_invocation(
+        db=db,
+        assistant_type="collections",
+        customer_id=customer_id,
+        application_id=request.application_id,
+        context_text=request.context_text,
+        summary=summary,
+        recommendation=recommendation,
+        risk_indicators=risk_indicators,
+        action_plan=action_plan,
+        insights=insights,
+    )
+    return assistant_response(invocation)
 
 
 @app.post("/relationship-manager/{customer_id}", response_model=AssistantResponse)
@@ -516,16 +649,110 @@ async def relationship_manager(
     }
     insights = {
         "engagement_opportunity": "Customer is receptive to digital advisory nudges.",
-        "cross_sell": "Recommend gold loan advisory only if liquidity need emerges."
+        "cross_sell": "Recommend gold loan advisory only if liquidity need emerges.",
+        "subject_type": request.subject_type or "customer",
+        "subject_id": request.subject_id or customer_id,
+        "source_service": request.source_service or "relationship",
+        "source_reference_id": request.source_reference_id or customer_id,
     }
 
+    invocation = persist_assistant_invocation(
+        db=db,
+        assistant_type="relationship",
+        customer_id=customer_id,
+        application_id=request.application_id,
+        context_text=request.context_text,
+        summary=summary,
+        recommendation=recommendation,
+        risk_indicators=risk_indicators,
+        action_plan=action_plan,
+        insights=insights,
+    )
+    return assistant_response(invocation)
+
+
+@app.get("/assistant-invocations", response_model=List[AssistantInvocationResponse])
+async def list_assistant_invocations(
+    assistant_type: Optional[str] = Query(None),
+    customer_id: Optional[str] = Query(None),
+    application_id: Optional[str] = Query(None),
+    skip: int = Query(0),
+    limit: int = Query(50),
+    db: Session = Depends(get_db),
+):
+    """List persisted FinDNA assistant outputs for dashboard and audit views."""
+    query = db.query(AssistantInvocation)
+    if assistant_type:
+        query = query.filter(AssistantInvocation.assistant_type == assistant_type)
+    if customer_id:
+        query = query.filter(AssistantInvocation.customer_id == customer_id)
+    if application_id:
+        query = query.filter(AssistantInvocation.application_id == application_id)
+
+    invocations = query.order_by(AssistantInvocation.updated_at.desc()).offset(skip).limit(limit).all()
+    return [assistant_response(invocation) for invocation in invocations]
+
+
+@app.get("/assistant-invocations/{invocation_key}", response_model=AssistantInvocationResponse)
+async def get_assistant_invocation(invocation_key: str, db: Session = Depends(get_db)):
+    """Retrieve the latest saved assistant output by stable invocation key."""
+    invocation = db.query(AssistantInvocation).filter(
+        AssistantInvocation.invocation_key == invocation_key
+    ).first()
+    if not invocation:
+        raise HTTPException(status_code=404, detail="Assistant invocation not found")
+    return assistant_response(invocation)
+
+
+@app.get("/dashboard/executive", response_model=ExecutiveDashboardResponse)
+async def executive_dashboard(db: Session = Depends(get_db)):
+    """Aggregate FinDNA portfolio, risk, collections, and assistant signals."""
+    scores = db.query(BehavioralScore).all()
+    fraud_records = db.query(FraudDetectionRecord).all()
+    churn_predictions = db.query(ChurnPrediction).all()
+    assistant_invocations = db.query(AssistantInvocation).all()
+
+    risk_summary = {"low": 0, "medium": 0, "high": 0, "critical": 0, "unknown": 0}
+    for score in scores:
+        risk_summary[_risk_level_from_score(score.score)] += 1
+    for fraud in fraud_records:
+        risk_summary[fraud.risk_level if fraud.risk_level in risk_summary else "unknown"] += 1
+
+    assistant_summary: dict[str, int] = {}
+    for invocation in assistant_invocations:
+        assistant_summary[invocation.assistant_type] = assistant_summary.get(invocation.assistant_type, 0) + 1
+
+    average_behavior_score = round(sum(score.score for score in scores) / len(scores), 2) if scores else 0.0
+    average_fraud_score = round(sum(record.fraud_score for record in fraud_records) / len(fraud_records), 2) if fraud_records else 0.0
+    churn_risk_customers = sum(1 for prediction in churn_predictions if prediction.churn_probability >= 0.5)
+
+    recommendations = []
+    if risk_summary["high"] or risk_summary["critical"]:
+        recommendations.append("Prioritize manual review for high and critical risk customers.")
+    if average_behavior_score and average_behavior_score < 70:
+        recommendations.append("Tighten underwriting thresholds until portfolio behavior score improves.")
+    if churn_risk_customers:
+        recommendations.append("Trigger relationship manager outreach for high churn-risk customers.")
+    if not recommendations:
+        recommendations.append("Portfolio risk is stable; continue monitoring assistant signals.")
+
     return {
-        "customer_id": customer_id,
-        "summary": summary,
-        "recommendation": recommendation,
-        "risk_indicators": risk_indicators,
-        "action_plan": action_plan,
-        "insights": insights
+        "generated_at": datetime.utcnow(),
+        "portfolio_health": {
+            "scored_customers": len(scores),
+            "average_behavior_score": average_behavior_score,
+            "fraud_records": len(fraud_records),
+            "average_fraud_score": average_fraud_score,
+            "churn_predictions": len(churn_predictions),
+        },
+        "risk_summary": risk_summary,
+        "collections_summary": {
+            "collections_assistant_runs": assistant_summary.get("collections", 0),
+            "churn_risk_customers": churn_risk_customers,
+            "high_fraud_records": sum(1 for record in fraud_records if record.risk_level in {"high", "critical"}),
+        },
+        "assistant_summary": assistant_summary,
+        "recommendations": recommendations,
     }
 
 

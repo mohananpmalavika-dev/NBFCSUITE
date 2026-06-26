@@ -118,6 +118,135 @@ paths:
         '201':
           description: kyc initiated
 
+  /organizations:
+    post:
+      summary: Create organization / financial institution root
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, code]
+              properties:
+                name: { type: string }
+                code: { type: string }
+                address: { type: string }
+                city: { type: string }
+                state: { type: string }
+                country: { type: string }
+                contact_email: { type: string }
+                contact_phone: { type: string }
+                is_active: { type: boolean, default: true }
+      responses:
+        '201':
+          description: organization created
+    get:
+      summary: List organizations
+      responses:
+        '200':
+          description: organization list
+
+  /organizations/hierarchy:
+    get:
+      summary: Get complete Organization -> Zone -> Region -> Area -> Branch hierarchy
+      responses:
+        '200':
+          description: hierarchy tree
+
+  /zones:
+    post:
+      summary: Create zone under an organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [organization_id, name, code]
+              properties:
+                organization_id: { type: string }
+                name: { type: string }
+                code: { type: string }
+      responses:
+        '201':
+          description: zone created
+    get:
+      summary: List zones, optionally filtered by organization_id
+      parameters:
+        - in: query
+          name: organization_id
+          schema: { type: string }
+      responses:
+        '200':
+          description: zone list
+
+  /regions:
+    post:
+      summary: Create region under a zone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [zone_id, name, code]
+              properties:
+                zone_id: { type: string }
+                name: { type: string }
+                code: { type: string }
+      responses:
+        '201':
+          description: region created
+    get:
+      summary: List regions, optionally filtered by zone_id
+      parameters:
+        - in: query
+          name: zone_id
+          schema: { type: string }
+      responses:
+        '200':
+          description: region list
+
+  /areas:
+    post:
+      summary: Create area under a region
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [region_id, name, code]
+              properties:
+                region_id: { type: string }
+                name: { type: string }
+                code: { type: string }
+      responses:
+        '201':
+          description: area created
+    get:
+      summary: List areas, optionally filtered by region_id
+      parameters:
+        - in: query
+          name: region_id
+          schema: { type: string }
+      responses:
+        '200':
+          description: area list
+
+  /branches/{id}/scope:
+    get:
+      summary: Get branch roll-up scope through area, region, zone, and organization
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: branch scope
+
   /head-offices:
     post:
       summary: Create a head office

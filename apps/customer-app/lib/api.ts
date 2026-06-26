@@ -35,6 +35,36 @@ export interface DocumentPayload {
   metadata?: JsonObject;
 }
 
+export interface OfficePayload {
+  name: string;
+  code: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  is_active?: boolean;
+}
+
+export interface ZonePayload extends OfficePayload {
+  organization_id: string;
+}
+
+export interface RegionPayload extends OfficePayload {
+  zone_id: string;
+}
+
+export interface AreaPayload extends OfficePayload {
+  region_id: string;
+}
+
+export interface BranchPayload extends OfficePayload {
+  area_id: string;
+  branch_type?: string;
+  postal_code?: string;
+}
+
 export const apiClient = {
   setToken: (token: string) => {
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -66,6 +96,32 @@ export const apiClient = {
     axiosInstance.post(`/customers/${customerId}/financial-profile`, data),
   updateRiskProfile: (customerId: string, data: JsonObject) =>
     axiosInstance.put(`/customers/${customerId}/risk-profile`, data),
+  createOrganization: (data: OfficePayload) =>
+    axiosInstance.post(`/organizations`, data),
+  getOrganizations: () =>
+    axiosInstance.get(`/organizations`),
+  getOrganizationHierarchy: () =>
+    axiosInstance.get(`/organizations/hierarchy`),
+  createZone: (data: ZonePayload) =>
+    axiosInstance.post(`/zones`, data),
+  getZones: (organizationId?: string) =>
+    axiosInstance.get(`/zones`, { params: organizationId ? { organization_id: organizationId } : undefined }),
+  createRegion: (data: RegionPayload) =>
+    axiosInstance.post(`/regions`, data),
+  getRegions: (zoneId?: string) =>
+    axiosInstance.get(`/regions`, { params: zoneId ? { zone_id: zoneId } : undefined }),
+  createArea: (data: AreaPayload) =>
+    axiosInstance.post(`/areas`, data),
+  getAreas: (regionId?: string) =>
+    axiosInstance.get(`/areas`, { params: regionId ? { region_id: regionId } : undefined }),
+  createBranch: (data: BranchPayload) =>
+    axiosInstance.post(`/branches`, data),
+  getBranches: (areaId?: string) =>
+    axiosInstance.get(`/branches`, { params: areaId ? { area_id: areaId } : undefined }),
+  getBranchScope: (branchId: string) =>
+    axiosInstance.get(`/branches/${branchId}/scope`),
+  assignCustomerBranch: (customerId: string, branchId: string) =>
+    axiosInstance.post(`/customers/${customerId}/assign-branch`, { branch_id: branchId }),
   getCustomerDocuments: (customerId: string) =>
     axiosInstance.get(`/documents`, { params: { subject_type: 'customer', subject_id: customerId } }),
   getExpiringDocuments: (customerId: string, days = 30) =>
@@ -94,4 +150,8 @@ export const apiClient = {
   // Compliance Service
   runComplianceChecks: (customerId: string, data: JsonObject = {}) =>
     axiosInstance.post(`/run-checks/${customerId}`, data),
+
+  // FinDNA Service
+  getExecutiveDashboard: () =>
+    axiosInstance.get(`/dashboard/executive`),
 };

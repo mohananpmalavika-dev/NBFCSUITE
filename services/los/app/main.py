@@ -240,6 +240,30 @@ def create_or_update_scorecard(application: LoanApplication, db: Session):
     return scorecard
 
 
+def trigger_underwriting_assistant(application: LoanApplication, event: str) -> None:
+    """Best-effort FinDNA assistant hook; never blocks LOS state transitions."""
+    try:
+        import httpx
+
+        findna_base = os.getenv("FINDNA_BASE_URL", "http://localhost:8006")
+        payload = {
+            "customer_id": application.customer_id,
+            "application_id": application.id,
+            "subject_type": "application",
+            "subject_id": application.id,
+            "source_service": "los",
+            "source_reference_id": application.id,
+            "context_text": (
+                f"LOS {event}: status={application.application_status}, "
+                f"amount={application.applied_amount}, tenure={application.tenure_months}"
+            ),
+        }
+        with httpx.Client(timeout=5.0) as client:
+            client.post(f"{findna_base}/underwriting-assistant/{application.id}", json=payload)
+    except Exception:
+        pass
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "los"}
@@ -503,6 +527,8 @@ async def submit_application(
         # Do not fail LOS submit on downstream scoring.
         pass
 
+    trigger_underwriting_assistant(application, "submitted")
+
     return {"message": "Application submitted", "application_id": application.id}
 
 
@@ -524,6 +550,7 @@ async def underwrite_application(
     db.refresh(application)
 
     scorecard = create_or_update_scorecard(application, db)
+    trigger_underwriting_assistant(application, "under_review")
     return scorecard
 
 
@@ -589,6 +616,8 @@ async def decide_application(
         except Exception:
             # Do not fail LOS decision on downstream booking.
             pass
+
+    trigger_underwriting_assistant(application, f"decision_{application.application_status}")
 
     return UnderwritingDecisionResponse(
         application_id=application.id,

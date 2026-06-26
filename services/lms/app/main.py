@@ -157,6 +157,27 @@ def calculate_emi(principal: float, annual_rate: float, tenure_months: int) -> f
     return float(numerator / denominator)
 
 
+def trigger_findna_assistant(customer_id: str, assistant_type: str, source_reference_id: str, context_text: str) -> None:
+    """Best-effort FinDNA assistant hook; LMS operations must remain primary."""
+    try:
+        import httpx
+
+        findna_base = os.getenv("FINDNA_BASE_URL", "http://localhost:8006")
+        endpoint = "relationship-manager" if assistant_type == "relationship" else "collections-assistant"
+        payload = {
+            "customer_id": customer_id,
+            "subject_type": "customer",
+            "subject_id": customer_id,
+            "source_service": "lms",
+            "source_reference_id": source_reference_id,
+            "context_text": context_text,
+        }
+        with httpx.Client(timeout=5.0) as client:
+            client.post(f"{findna_base}/{endpoint}/{customer_id}", json=payload)
+    except Exception:
+        pass
+
+
 @app.post("/loans", response_model=LoanAccountResponse)
 async def create_loan(
     loan_data: LoanAccountCreate,
@@ -212,6 +233,15 @@ async def create_loan(
         db.add(schedule_entry)
 
     db.commit()
+    trigger_findna_assistant(
+        customer_id=new_loan.customer_id,
+        assistant_type="relationship",
+        source_reference_id=new_loan.id,
+        context_text=(
+            f"LMS loan booked: account={new_loan.account_number}, "
+            f"sanction_amount={new_loan.sanction_amount}, emi={new_loan.emi_amount}"
+        ),
+    )
     return new_loan
 
 
@@ -358,6 +388,17 @@ async def record_payment(
     except Exception:
         # Do not fail LMS payment on downstream collections logging
         pass
+
+    trigger_findna_assistant(
+        customer_id=loan.customer_id,
+        assistant_type="collections",
+        source_reference_id=transaction_id,
+        context_text=(
+            f"LMS payment recorded: loan_id={loan_id}, amount={payment.amount}, "
+            f"principal_paid={principal_paid}, interest_paid={interest_paid}, "
+            f"outstanding_principal={loan.outstanding_principal}"
+        ),
+    )
 
     return {
         "transaction_id": transaction_id,

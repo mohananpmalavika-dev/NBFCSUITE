@@ -84,6 +84,10 @@ class HeadOffice(Base):
 
     zonal_offices = relationship("ZonalOffice", back_populates="head_office")
 
+    @property
+    def zones(self):
+        return self.zonal_offices
+
 
 class ZonalOffice(Base):
     __tablename__ = "zonal_offices"
@@ -103,6 +107,14 @@ class ZonalOffice(Base):
 
     head_office = relationship("HeadOffice", back_populates="zonal_offices")
     regional_offices = relationship("RegionalOffice", back_populates="zonal_office")
+
+    @property
+    def organization_id(self):
+        return self.head_office_id
+
+    @property
+    def regions(self):
+        return self.regional_offices
 
 
 class RegionalOffice(Base):
@@ -124,6 +136,14 @@ class RegionalOffice(Base):
     zonal_office = relationship("ZonalOffice", back_populates="regional_offices")
     area_offices = relationship("AreaOffice", back_populates="regional_office")
 
+    @property
+    def zone_id(self):
+        return self.zonal_office_id
+
+    @property
+    def areas(self):
+        return self.area_offices
+
 
 class AreaOffice(Base):
     __tablename__ = "area_offices"
@@ -143,6 +163,10 @@ class AreaOffice(Base):
 
     regional_office = relationship("RegionalOffice", back_populates="area_offices")
     branches = relationship("BranchOffice", back_populates="area_office")
+
+    @property
+    def region_id(self):
+        return self.regional_office_id
 
 
 class BranchOffice(Base):
@@ -167,6 +191,10 @@ class BranchOffice(Base):
     customers = relationship("Customer", back_populates="branch")
     transactions = relationship("CustomerBranchTransaction", back_populates="branch")
 
+    @property
+    def area_id(self):
+        return self.area_office_id
+
 
 class CustomerBranchTransaction(Base):
     __tablename__ = "customer_branch_transactions"
@@ -178,7 +206,7 @@ class CustomerBranchTransaction(Base):
     amount = Column(String)
     currency = Column(String, default="INR")
     status = Column(String, default="completed")
-    metadata = Column(JSON, nullable=True)
+    metadata_ = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     branch = relationship("BranchOffice", back_populates="transactions")

@@ -1,11 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from ..models import BranchOffice, AreaOffice, Customer, CustomerBranchTransaction
-from ..schemas import BranchOfficeCreate, BranchResponse, BranchTransactionCreate, BranchTransactionResponse
+from ..schemas import (
+    AssignBranchRequest,
+    BranchOfficeCreate,
+    BranchResponse,
+    BranchScopeResponse,
+    BranchTransactionCreate,
+    BranchTransactionResponse,
+    BranchUpdate,
+)
 from ..db import get_db
 from uuid import uuid4
 
 router = APIRouter(prefix="", tags=["branches"])
+
+
+def _set_active(value):
+    if value is None:
+        return value
+    return str(value).lower()
 
 
 @router.post("/branches", response_model=BranchResponse)
@@ -35,6 +49,19 @@ async def create_branch(branch: BranchOfficeCreate, db: Session = Depends(get_db
     return new_branch
 
 
+@router.get("/branches", response_model=list[BranchResponse])
+async def list_branches(
+    area_id: str | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    query = db.query(BranchOffice)
+    if area_id:
+        query = query.filter(BranchOffice.area_office_id == area_id)
+    return query.offset(skip).limit(limit).all()
+
+
 @router.get("/branches/{branch_id}", response_model=BranchResponse)
 async def get_branch(branch_id: str, db: Session = Depends(get_db)):
     branch = db.query(BranchOffice).filter(BranchOffice.id == branch_id).first()
@@ -43,20 +70,87 @@ async def get_branch(branch_id: str, db: Session = Depends(get_db)):
     return branch
 
 
-@router.post("/customers/{customer_id}/assign-branch")
-async def assign_customer_branch(customer_id: str, branch_id: str, db: Session = Depends(get_db)):
-    customer = db.query(Customer).filter(Customer.id == customer_id).first()
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found")
-
+@router.put("/branches/{branch_id}", response_model=BranchResponse)
+async def update_branch(branch_id: str, update: BranchUpdate, db: Session = Depends(get_db)):
     branch = db.query(BranchOffice).filter(BranchOffice.id == branch_id).first()
     if not branch:
         raise HTTPException(status_code=404, detail="Branch not found")
 
-    customer.branch_id = branch_id
+    update_data = update.model_dump(exclude_unset=True)
+    area_id = update_data.pop("area_id", None)
+    if area_id:
+        area = db.query(AreaOffice).filter(AreaOffice.id == area_id).first()
+        if not area:
+            raise HTTPException(status_code=404, detail="Area not found")
+        branch.area_office_id = area_id
+
+    for field, value in update_data.items():
+        if field == "is_active":
+            value = _set_active(value)
+        setattr(branch, field, value)
+
+    db.commit()
+    db.refresh(branch)
+    return branch
+
+
+@router.delete("/branches/{branch_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_branch(branch_id: str, db: Session = Depends(get_db)):
+    branch = db.query(BranchOffice).filter(BranchOffice.id == branch_id).first()
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    db.delete(branch)
+    db.commit()
+    return None
+
+
+@router.get("/branches/{branch_id}/scope", response_model=BranchScopeResponse)
+async def get_branch_scope(branch_id: str, db: Session = Depends(get_db)):
+    branch = db.query(BranchOffice).filter(BranchOffice.id == branch_id).first()
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+
+    area = branch.area_office
+    region = area.regional_office
+    zone = region.zonal_office
+    organization = zone.head_office
+    return {
+        "organization_id": organization.id,
+        "organization_name": organization.name,
+        "zone_id": zone.id,
+        "zone_name": zone.name,
+        "region_id": region.id,
+        "region_name": region.name,
+        "area_id": area.id,
+        "area_name": area.name,
+        "branch_id": branch.id,
+        "branch_name": branch.name,
+    }
+
+
+@router.post("/customers/{customer_id}/assign-branch")
+async def assign_customer_branch(
+    customer_id: str,
+    assignment: AssignBranchRequest | None = Body(None),
+    branch_id: str | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    selected_branch_id = branch_id or (assignment.branch_id if assignment else None)
+    if not selected_branch_id:
+        raise HTTPException(status_code=422, detail="branch_id is required")
+
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    branch = db.query(BranchOffice).filter(BranchOffice.id == selected_branch_id).first()
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+
+    customer.branch_id = selected_branch_id
     db.commit()
     db.refresh(customer)
-    return {"message": "Customer assigned to branch", "branch_id": branch_id}
+    return {"message": "Customer assigned to branch", "branch_id": selected_branch_id}
 
 
 @router.post("/customers/{customer_id}/transactions", response_model=BranchTransactionResponse)
@@ -77,7 +171,7 @@ async def create_customer_transaction(customer_id: str, transaction: BranchTrans
         amount=str(transaction.amount),
         currency=transaction.currency,
         status=transaction.status,
-        metadata=transaction.metadata,
+        metadata_=transaction.metadata,
     )
     db.add(new_transaction)
     db.commit()
