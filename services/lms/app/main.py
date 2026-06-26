@@ -22,7 +22,7 @@ class LoanAccount(Base):
     application_id = Column(String, unique=True, index=True)
     customer_id = Column(String, index=True)
     product_id = Column(String)
-    account_number = Column(String, unique=True, index=True)
+    account_number = Column("loan_account_number", String, unique=True, index=True)
     sanction_amount = Column(Float)
     disbursed_amount = Column(Float, default=0)
     tenure_months = Column(Integer)
@@ -61,8 +61,9 @@ class PaymentTransaction(Base):
     amount = Column(Float)
     principal_paid = Column(Float)
     interest_paid = Column(Float)
-    reference = Column(String)
-    status = Column(String)
+    penalty_paid = Column(Float, default=0)
+    reference = Column("transaction_reference", String)
+    status = Column("payment_status", String)
 
 
 # Pydantic Schemas
@@ -81,9 +82,12 @@ class EMIScheduleResponse(BaseModel):
 class LoanAccountResponse(BaseModel):
     id: str
     account_number: str
+    application_id: str
+    customer_id: str
     sanction_amount: float
     disbursed_amount: float
     outstanding_principal: float
+    outstanding_interest: float
     status: str
     emi_amount: float
     
@@ -117,6 +121,18 @@ class PaymentRequest(BaseModel):
     amount: float
     payment_mode: str
     reference: str
+
+
+class DisbursementRequest(BaseModel):
+    amount: Optional[float] = None
+    reference: Optional[str] = None
+
+
+class DisbursementResponse(BaseModel):
+    loan_id: str
+    account_number: str
+    disbursed_amount: float
+    status: str
 
 
 class PaymentResponse(BaseModel):
@@ -157,6 +173,31 @@ def calculate_emi(principal: float, annual_rate: float, tenure_months: int) -> f
     return float(numerator / denominator)
 
 
+def build_amortization_schedule(principal: float, annual_rate: float, tenure_months: int):
+    emi_amount = round(calculate_emi(principal, annual_rate, tenure_months), 2)
+    monthly_rate = annual_rate / 100 / 12
+    outstanding = principal
+    rows = []
+    for sequence in range(1, tenure_months + 1):
+        interest_component = round(outstanding * monthly_rate, 2)
+        principal_component = round(emi_amount - interest_component, 2)
+        if sequence == tenure_months:
+            principal_component = round(outstanding, 2)
+            emi_for_row = round(principal_component + interest_component, 2)
+        else:
+            emi_for_row = emi_amount
+        outstanding = round(max(0.0, outstanding - principal_component), 2)
+        rows.append(
+            {
+                "emi_number": sequence,
+                "emi_amount": emi_for_row,
+                "principal_amount": principal_component,
+                "interest_amount": interest_component,
+            }
+        )
+    return emi_amount, rows
+
+
 def trigger_findna_assistant(customer_id: str, assistant_type: str, source_reference_id: str, context_text: str) -> None:
     """Best-effort FinDNA assistant hook; LMS operations must remain primary."""
     try:
@@ -190,10 +231,21 @@ async def create_loan(
         raise HTTPException(status_code=400, detail="Loan already exists for this application")
 
     account_number = f"LA-{str(uuid4())[:8].upper()}"
-    emi_amount = calculate_emi(loan_data.sanction_amount, loan_data.interest_rate, loan_data.tenure_months)
+    if loan_data.sanction_amount <= 0:
+        raise HTTPException(status_code=400, detail="sanction_amount must be positive")
+    if loan_data.tenure_months <= 0:
+        raise HTTPException(status_code=400, detail="tenure_months must be positive")
+    if loan_data.interest_rate < 0:
+        raise HTTPException(status_code=400, detail="interest_rate cannot be negative")
+
+    emi_amount, amortization_rows = build_amortization_schedule(
+        loan_data.sanction_amount,
+        loan_data.interest_rate,
+        loan_data.tenure_months,
+    )
     start_date = loan_data.start_date or datetime.utcnow()
     end_date = start_date + timedelta(days=30 * loan_data.tenure_months)
-    outstanding_interest = round(emi_amount * loan_data.tenure_months - loan_data.sanction_amount, 2)
+    outstanding_interest = round(sum(row["interest_amount"] for row in amortization_rows), 2)
 
     new_loan = LoanAccount(
         id=str(uuid4()),
@@ -210,25 +262,22 @@ async def create_loan(
         emi_amount=emi_amount,
         outstanding_principal=loan_data.sanction_amount,
         outstanding_interest=outstanding_interest,
-        status="active",
+        status="active" if loan_data.disbursed_amount > 0 else "sanctioned",
     )
 
     db.add(new_loan)
     db.commit()
     db.refresh(new_loan)
 
-    # Build EMI schedule
-    for sequence in range(1, loan_data.tenure_months + 1):
-        principal_component = round(loan_data.sanction_amount / loan_data.tenure_months, 2)
-        interest_component = round(max(0.0, emi_amount - principal_component), 2)
+    for row in amortization_rows:
         schedule_entry = EMISchedule(
             id=str(uuid4()),
             loan_account_id=new_loan.id,
-            emi_number=sequence,
-            due_date=start_date + timedelta(days=30 * sequence),
-            emi_amount=emi_amount,
-            principal_amount=principal_component,
-            interest_amount=interest_component,
+            emi_number=row["emi_number"],
+            due_date=start_date + timedelta(days=30 * row["emi_number"]),
+            emi_amount=row["emi_amount"],
+            principal_amount=row["principal_amount"],
+            interest_amount=row["interest_amount"],
         )
         db.add(schedule_entry)
 
@@ -324,6 +373,46 @@ async def get_emi_schedule(
     }
 
 
+@app.post("/loans/{loan_id}/disburse", response_model=DisbursementResponse)
+async def disburse_loan(
+    loan_id: str,
+    disbursement: DisbursementRequest,
+    db: Session = Depends(get_db)
+):
+    loan = db.query(LoanAccount).filter(LoanAccount.id == loan_id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    if loan.status not in {"active", "sanctioned"}:
+        raise HTTPException(status_code=400, detail="Loan is not eligible for disbursement")
+
+    amount = disbursement.amount if disbursement.amount is not None else loan.sanction_amount
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Disbursement amount must be positive")
+    if loan.disbursed_amount + amount > loan.sanction_amount:
+        raise HTTPException(status_code=400, detail="Disbursement exceeds sanctioned amount")
+
+    loan.disbursed_amount = round(loan.disbursed_amount + amount, 2)
+    loan.status = "active"
+    db.commit()
+    db.refresh(loan)
+
+    try:
+        import httpx
+
+        los_base = os.getenv("LOS_BASE_URL", "http://localhost:8002")
+        with httpx.Client(timeout=5.0) as client:
+            client.post(f"{los_base}/applications/{loan.application_id}/disburse")
+    except Exception:
+        pass
+
+    return {
+        "loan_id": loan.id,
+        "account_number": loan.account_number,
+        "disbursed_amount": loan.disbursed_amount,
+        "status": loan.status,
+    }
+
+
 @app.post("/loans/{loan_id}/payment", response_model=PaymentResponse)
 async def record_payment(
     loan_id: str,
@@ -339,18 +428,34 @@ async def record_payment(
     
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+    if payment.amount <= 0:
+        raise HTTPException(status_code=400, detail="Payment amount must be positive")
     
     # Create payment transaction
     transaction_id = str(uuid4())
     
-    # Calculate allocation (simplified)
     interest_due = loan.outstanding_interest
-    principal_paid = max(0, payment.amount - interest_due)
-    interest_paid = min(payment.amount, interest_due)
+    interest_paid = round(min(payment.amount, interest_due), 2)
+    principal_paid = round(min(loan.outstanding_principal, max(0, payment.amount - interest_paid)), 2)
     
     # Update loan
-    loan.outstanding_interest = max(0, loan.outstanding_interest - interest_paid)
-    loan.outstanding_principal = max(0, loan.outstanding_principal - principal_paid)
+    loan.outstanding_interest = round(max(0, loan.outstanding_interest - interest_paid), 2)
+    loan.outstanding_principal = round(max(0, loan.outstanding_principal - principal_paid), 2)
+    if loan.outstanding_principal == 0 and loan.outstanding_interest == 0:
+        loan.status = "closed"
+
+    remaining_payment = payment.amount
+    pending_emis = db.query(EMISchedule).filter(
+        EMISchedule.loan_account_id == loan_id,
+        EMISchedule.status == "pending",
+    ).order_by(EMISchedule.emi_number).all()
+    for emi in pending_emis:
+        due_amount = round((emi.emi_amount or 0) + (emi.penalty_amount or 0), 2)
+        if remaining_payment + 0.01 < due_amount:
+            break
+        emi.status = "paid"
+        emi.paid_date = datetime.utcnow()
+        remaining_payment = round(remaining_payment - due_amount, 2)
     
     # Create transaction
     transaction = PaymentTransaction(

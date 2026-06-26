@@ -151,6 +151,11 @@ class KYCValidationResponse(BaseModel):
     checks: dict
 
 
+class KYCValidationUpdateResponse(KYCValidationResponse):
+    pan: Optional[str] = None
+    aadhar: Optional[str] = None
+
+
 class Customer360Response(BaseModel):
     customer: CustomerResponse
     branch_scope: Optional["BranchScopeResponse"] = None

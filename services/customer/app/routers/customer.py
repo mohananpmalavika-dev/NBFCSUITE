@@ -7,7 +7,8 @@ from ..models import BranchOffice, Customer, CustomerAddress, KYCDocument, Custo
 from ..schemas import (
     CustomerCreate, CustomerResponse, CustomerUpdate, AddressCreate,
     Customer360Response, CustomerListResponse, FinancialProfileUpdate,
-    FinancialProfileResponse, KYCValidationRequest, KYCValidationResponse
+    FinancialProfileResponse, KYCValidationRequest, KYCValidationResponse,
+    KYCValidationUpdateResponse
 )
 from ..db import get_db
 from uuid import uuid4
@@ -54,6 +55,23 @@ def _build_branch_scope(customer: Customer):
     }
 
 
+def _validate_pan(pan: str | None) -> bool:
+    return bool(pan and PAN_PATTERN.match(pan.upper()))
+
+
+def _validate_aadhar(aadhar: str | None) -> bool:
+    normalized = re.sub(r"\D", "", aadhar or "")
+    return bool(AADHAR_PATTERN.match(normalized))
+
+
+def _kyc_status(pan_valid: bool, aadhar_valid: bool) -> str:
+    if pan_valid and aadhar_valid:
+        return "verified"
+    if pan_valid or aadhar_valid:
+        return "partially_verified"
+    return "pending"
+
+
 @router.post("", response_model=CustomerResponse)
 async def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
     existing = db.query(Customer).filter(
@@ -84,6 +102,23 @@ async def get_customer(customer_id: str, db: Session = Depends(get_db)):
     return _get_customer_or_404(customer_id, db)
 
 
+@router.get("/{customer_id}/360", response_model=Customer360Response)
+async def get_customer_360(customer_id: str, db: Session = Depends(get_db)):
+    customer = _get_customer_or_404(customer_id, db)
+    addresses = db.query(CustomerAddress).filter(CustomerAddress.customer_id == customer_id).all()
+    documents = db.query(KYCDocument).filter(KYCDocument.customer_id == customer_id).all()
+    profile = db.query(CustomerFinancialProfile).filter(
+        CustomerFinancialProfile.customer_id == customer_id
+    ).first()
+    return {
+        "customer": customer,
+        "branch_scope": _build_branch_scope(customer),
+        "addresses": addresses,
+        "kyc_documents": documents,
+        "financial_profile": profile,
+    }
+
+
 @router.put("/{customer_id}", response_model=CustomerResponse)
 async def update_customer(customer_id: str, update_data: CustomerUpdate, db: Session = Depends(get_db)):
     customer = _get_customer_or_404(customer_id, db)
@@ -94,6 +129,51 @@ async def update_customer(customer_id: str, update_data: CustomerUpdate, db: Ses
     db.commit()
     db.refresh(customer)
     return customer
+
+
+@router.post("/{customer_id}/validate-kyc", response_model=KYCValidationUpdateResponse)
+async def validate_customer_kyc(
+    customer_id: str,
+    validation: KYCValidationRequest,
+    db: Session = Depends(get_db),
+):
+    customer = _get_customer_or_404(customer_id, db)
+    pan = validation.pan or customer.pan
+    aadhar = validation.aadhar or customer.aadhar
+    pan_valid = _validate_pan(pan)
+    aadhar_valid = _validate_aadhar(aadhar)
+
+    if validation.pan is not None:
+        customer.pan = validation.pan.upper()
+    if validation.aadhar is not None:
+        customer.aadhar = re.sub(r"\D", "", validation.aadhar)
+
+    customer.kyc_status = _kyc_status(pan_valid, aadhar_valid)
+    db.commit()
+    db.refresh(customer)
+
+    return {
+        "customer_id": customer.id,
+        "kyc_status": customer.kyc_status,
+        "pan": customer.pan,
+        "aadhar": customer.aadhar,
+        "pan_valid": pan_valid,
+        "aadhar_valid": aadhar_valid,
+        "checks": {
+            "pan_format": "valid" if pan_valid else "invalid_or_missing",
+            "aadhar_format": "valid" if aadhar_valid else "invalid_or_missing",
+            "provider": "mock_phase1_rules",
+        },
+    }
+
+
+@router.post("/{customer_id}/kyc/validate", response_model=KYCValidationUpdateResponse)
+async def validate_customer_kyc_alias(
+    customer_id: str,
+    validation: KYCValidationRequest,
+    db: Session = Depends(get_db),
+):
+    return await validate_customer_kyc(customer_id, validation, db)
 
 
 @router.get("", response_model=CustomerListResponse)

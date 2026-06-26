@@ -57,6 +57,7 @@ class LoanApplication(Base):
     application_date = Column(DateTime, default=datetime.utcnow)
     submitted_date = Column(DateTime, nullable=True)
     decision_date = Column(DateTime, nullable=True)
+    disbursed_date = Column(DateTime, nullable=True)
     rejection_reason = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -159,6 +160,7 @@ class LoanApplicationDetailResponse(BaseModel):
     application_date: datetime
     submitted_date: Optional[datetime] = None
     decision_date: Optional[datetime] = None
+    disbursed_date: Optional[datetime] = None
     rejection_reason: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -187,6 +189,12 @@ class UnderwritingDecisionResponse(BaseModel):
         from_attributes = True
 
 
+class ApplicationDisbursementResponse(BaseModel):
+    application_id: str
+    status: str
+    disbursed_date: datetime
+
+
 # FastAPI App
 app = FastAPI(title="los-service", version="0.1.0")
 
@@ -212,6 +220,28 @@ def compute_underwriting_score(application: LoanApplication) -> dict:
         "overall_score": min(100.0, overall),
         "recommendation": recommendation
     }
+
+
+def _get_product_by_code(product_code: str, db: Session) -> LoanProduct:
+    product = db.query(LoanProduct).filter(LoanProduct.product_code == product_code).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if str(product.is_active).lower() not in {"1", "true", "yes", "active"}:
+        raise HTTPException(status_code=400, detail="Product is inactive")
+    return product
+
+
+def _validate_terms(product: LoanProduct, amount: float, tenure_months: int) -> None:
+    if amount < product.min_amount or amount > product.max_amount:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Amount must be between {product.min_amount} and {product.max_amount}",
+        )
+    if tenure_months < product.min_tenor or tenure_months > product.max_tenor:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tenure must be between {product.min_tenor} and {product.max_tenor} months",
+        )
 
 
 def create_or_update_scorecard(application: LoanApplication, db: Session):
@@ -365,16 +395,8 @@ async def create_application(
     """Create a new loan application."""
     from uuid import uuid4
     
-    # Validate product
-    product = db.query(LoanProduct).filter(
-        LoanProduct.product_code == app_data.product_code
-    ).first()
-    
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
-    
-    if app_data.applied_amount < product.min_amount or app_data.applied_amount > product.max_amount:
-        raise HTTPException(status_code=400, detail="Amount outside product limits")
+    product = _get_product_by_code(app_data.product_code, db)
+    _validate_terms(product, app_data.applied_amount, app_data.tenure_months)
     
     # Create application
     new_app = LoanApplication(
@@ -502,9 +524,11 @@ async def submit_application(
 
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
+    if application.application_status not in {"draft", "submitted"}:
+        raise HTTPException(status_code=400, detail="Only draft applications can be submitted")
 
     application.application_status = "submitted"
-    application.submitted_date = datetime.utcnow()
+    application.submitted_date = application.submitted_date or datetime.utcnow()
     db.commit()
     db.refresh(application)
 
@@ -542,7 +566,7 @@ async def underwrite_application(
     application = db.query(LoanApplication).filter(LoanApplication.id == application_id).first()
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
-    if application.application_status not in {"submitted", "under_review", "draft"}:
+    if application.application_status not in {"submitted", "under_review"}:
         raise HTTPException(status_code=400, detail="Only submitted applications can be underwritten")
 
     application.application_status = "under_review"
@@ -570,6 +594,11 @@ async def decide_application(
     if decision.decision.lower() == "approved":
         if decision.approved_amount is None or decision.approved_tenure_months is None or decision.approved_interest_rate is None:
             raise HTTPException(status_code=400, detail="approved_amount, approved_tenure_months and approved_interest_rate are required for approval")
+        product = db.query(LoanProduct).filter(LoanProduct.id == application.product_id).first()
+        if product:
+            _validate_terms(product, decision.approved_amount, decision.approved_tenure_months)
+        if decision.approved_amount > application.applied_amount:
+            raise HTTPException(status_code=400, detail="approved_amount cannot exceed applied_amount")
         application.application_status = "approved"
         application.sanctioned_amount = decision.approved_amount
         application.final_interest_rate = decision.approved_interest_rate
@@ -627,6 +656,31 @@ async def decide_application(
         final_interest_rate=application.final_interest_rate,
         decision_date=application.decision_date
     )
+
+
+@app.post("/applications/{application_id}/disburse", response_model=ApplicationDisbursementResponse)
+async def mark_application_disbursed(
+    application_id: str,
+    db: Session = Depends(get_db)
+):
+    """Mark an approved application as disbursed after LMS disbursement succeeds."""
+    application = db.query(LoanApplication).filter(LoanApplication.id == application_id).first()
+    if not application:
+        raise HTTPException(status_code=404, detail="Application not found")
+    if application.application_status != "approved":
+        raise HTTPException(status_code=400, detail="Only approved applications can be disbursed")
+
+    disbursed_at = datetime.utcnow()
+    application.application_status = "disbursed"
+    application.disbursed_date = disbursed_at
+    db.commit()
+    db.refresh(application)
+    trigger_underwriting_assistant(application, "disbursed")
+    return {
+        "application_id": application.id,
+        "status": application.application_status,
+        "disbursed_date": disbursed_at,
+    }
 
 
 

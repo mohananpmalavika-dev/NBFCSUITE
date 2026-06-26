@@ -15,6 +15,7 @@ from services.customer.app.routers.branch import (
     get_branch_scope,
 )
 from services.customer.app.routers.customer import create_customer
+from services.customer.app.routers.customer import get_customer_360, validate_customer_kyc
 from services.customer.app.routers.office import (
     create_area,
     create_organization,
@@ -27,6 +28,7 @@ from services.customer.app.schemas import (
     AssignBranchRequest,
     BranchOfficeCreate,
     CustomerCreate,
+    KYCValidationRequest,
     OrganizationCreate,
     RegionCreate,
     ZoneCreate,
@@ -134,5 +136,18 @@ def test_customer_hierarchy_chain_and_branch_scope():
             )
         )
         assert assignment["branch_id"] == branch.id
+
+        kyc = run(
+            validate_customer_kyc(
+                customer.id,
+                KYCValidationRequest(pan="ABCDE1234F", aadhar="234567890123"),
+                db,
+            )
+        )
+        assert kyc["kyc_status"] == "verified"
+
+        customer_360 = run(get_customer_360(customer.id, db))
+        assert customer_360["customer"].id == customer.id
+        assert customer_360["branch_scope"]["branch_id"] == branch.id
     finally:
         db.close()
