@@ -12,6 +12,7 @@ const dashboardCards = [
   { title: 'Branch Portal', value: 'CIF, underwriting and disbursement queue', href: '/branch' },
   { title: 'Documents', value: 'KYC and expiry tracking', href: '/documents' },
   { title: 'Profile', value: 'Customer 360 and risk', href: '/profile' },
+  { title: 'Branch Portal', value: 'CIF, LOS and LMS operations', href: '/branch' },
   { title: 'Executive', value: 'Portfolio and AI risk summary', href: '/executive' },
   { title: 'Apply Loan', value: 'New loan request', href: '/apply-loan' },
   { title: 'Settings', value: 'Preferences and security', href: '/settings' },

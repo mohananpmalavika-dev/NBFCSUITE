@@ -9,6 +9,13 @@
 
 ## Major Milestones Completed
 
+### Phase 1 Core Lending Hardening (100%)
+- Token-derived hierarchy scope now drives Customer, LOS, LMS, and Collections filtering.
+- Auth users have persisted organization/zone/region/area/branch assignment columns via migration `015_add_user_hierarchy_scope.sql`.
+- LOS approval/booking/disbursement includes idempotent state fields and Document Service registration fallback.
+- LMS exposes overdue/DPD computation with penalties and Collections assignment handoff.
+- Branch Portal V1 supports CIF queue, branch application intake, underwriting actions, disbursement, DPD, and payment posting.
+
 ### ✅ 1. Project Scaffold & Architecture (100%)
 - Monorepo structure: apps/, services/, design/, infra/
 - 6 core microservices defined with API contracts
@@ -240,6 +247,10 @@ psql -U postgres -d nbfcsuite -f migrations/001_create_auth_tables.sql
 
 - ✅ All 6 core services deployed and tested
 - ✅ Full end-to-end loan application flow working
+- ✅ Hierarchy-scoped Customer/LOS/LMS/Collections access path wired from auth token claims
+- ✅ Branch Portal V1 for internal core lending operations
+- ✅ Document Service registration path wired from LOS document upload
+- ✅ LMS overdue/DPD computation path with penalty and Collections handoff
 - ✅ Customer web app with 8+ pages
 - ✅ Mobile app with 6+ screens
 - ✅ CI/CD pipeline green lights
@@ -247,6 +258,6 @@ psql -U postgres -d nbfcsuite -f migrations/001_create_auth_tables.sql
 
 ---
 
-**Last Updated:** 2026-06-26  
+**Last Updated:** 2026-06-27  
 **Next Review:** 2026-07-26  
 **Contact:** Project team

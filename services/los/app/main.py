@@ -7,9 +7,12 @@ from typing import Optional, List
 from enum import Enum as PyEnum
 from uuid import uuid4
 import os
+import jwt
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://nbfc_user:nbfc_pass@localhost:5432/nbfcsuite")
+AUTH_SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+AUTH_ALGORITHM = os.getenv("AUTH_ALGORITHM", "HS256")
 engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -236,9 +239,18 @@ class PrincipalScope:
 
 
 def get_principal_scope(
+    authorization: Optional[str] = Header(default=None),
     branch_id: Optional[str] = Header(default=None, alias="X-Scope-Branch-Id"),
     legacy_branch_id: Optional[str] = Header(default=None, alias="X-Branch-Id"),
 ) -> PrincipalScope:
+    if authorization:
+        if not authorization.lower().startswith("bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        try:
+            payload = jwt.decode(authorization.split(" ", 1)[1], AUTH_SECRET_KEY, algorithms=[AUTH_ALGORITHM])
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return PrincipalScope(branch_id=payload.get("branch_id"))
     return PrincipalScope(branch_id=branch_id or legacy_branch_id)
 
 

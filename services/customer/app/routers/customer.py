@@ -1,6 +1,8 @@
 import re
+import os
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Header
+import jwt
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from ..models import (
@@ -26,6 +28,8 @@ router = APIRouter(prefix="/customers", tags=["customers"])
 
 PAN_PATTERN = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$")
 AADHAR_PATTERN = re.compile(r"^[2-9][0-9]{11}$")
+AUTH_SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+AUTH_ALGORITHM = os.getenv("AUTH_ALGORITHM", "HS256")
 
 
 class PrincipalScope:
@@ -49,6 +53,7 @@ class PrincipalScope:
 
 
 def get_principal_scope(
+    authorization: str | None = Header(default=None),
     organization_id: str | None = Header(default=None, alias="X-Scope-Organization-Id"),
     zone_id: str | None = Header(default=None, alias="X-Scope-Zone-Id"),
     region_id: str | None = Header(default=None, alias="X-Scope-Region-Id"),
@@ -56,6 +61,20 @@ def get_principal_scope(
     branch_id: str | None = Header(default=None, alias="X-Scope-Branch-Id"),
     legacy_branch_id: str | None = Header(default=None, alias="X-Branch-Id"),
 ) -> PrincipalScope:
+    if authorization:
+        if not authorization.lower().startswith("bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        try:
+            payload = jwt.decode(authorization.split(" ", 1)[1], AUTH_SECRET_KEY, algorithms=[AUTH_ALGORITHM])
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return PrincipalScope(
+            organization_id=payload.get("organization_id"),
+            zone_id=payload.get("zone_id"),
+            region_id=payload.get("region_id"),
+            area_id=payload.get("area_id"),
+            branch_id=payload.get("branch_id"),
+        )
     return PrincipalScope(
         organization_id=organization_id,
         zone_id=zone_id,
@@ -66,7 +85,7 @@ def get_principal_scope(
 
 
 def _allowed_branch_ids(db: Session, scope: PrincipalScope) -> set[str] | None:
-    if not scope.is_scoped:
+    if not isinstance(scope, PrincipalScope) or not scope.is_scoped:
         return None
     if scope.branch_id:
         return {scope.branch_id}
@@ -168,7 +187,7 @@ async def create_customer(
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Customer already exists")
-    selected_branch_id = customer.branch_id or scope.branch_id
+    selected_branch_id = customer.branch_id or (scope.branch_id if isinstance(scope, PrincipalScope) else None)
     _ensure_branch_exists(selected_branch_id, db)
     _assert_branch_in_scope(selected_branch_id, db, scope)
 

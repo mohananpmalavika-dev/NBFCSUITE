@@ -4,7 +4,7 @@ import { apiClient } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 
 interface Customer {
   id: string;
@@ -14,14 +14,6 @@ interface Customer {
   phone: string;
   kyc_status: string;
   branch_id?: string | null;
-}
-
-interface LoanProduct {
-  product_code: string;
-  product_name: string;
-  min_amount: number;
-  min_tenor: number;
-  base_rate: number;
 }
 
 interface LoanApplication {
@@ -42,14 +34,27 @@ interface LoanAccount {
   sanction_amount: number;
   disbursed_amount: number;
   outstanding_principal: number;
+  outstanding_interest: number;
   emi_amount: number;
   status: string;
 }
 
-const statusFilters = ['submitted', 'under_review', 'approved', 'disbursed', 'draft'];
+interface LoanProduct {
+  product_code: string;
+  product_name: string;
+  min_amount: number;
+  min_tenor: number;
+  base_rate: number;
+}
+
+const branchRoles = new Set(['admin', 'branch_manager', 'regional_manager', 'lender', 'collector']);
 
 function formatCurrency(value: number) {
   return `INR ${Number(value || 0).toLocaleString()}`;
+}
+
+function roleName(role: string | { name: string }) {
+  return typeof role === 'string' ? role : role.name;
 }
 
 export default function BranchPortalPage() {
@@ -59,22 +64,23 @@ export default function BranchPortalPage() {
   const [applications, setApplications] = useState<LoanApplication[]>([]);
   const [loans, setLoans] = useState<LoanAccount[]>([]);
   const [products, setProducts] = useState<LoanProduct[]>([]);
-  const [selectedStatus, setSelectedStatus] = useState('submitted');
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [productCode, setProductCode] = useState('');
+  const [amount, setAmount] = useState('');
+  const [tenure, setTenure] = useState('');
+  const [paymentByLoan, setPaymentByLoan] = useState<Record<string, string>>({});
+  const [busyAction, setBusyAction] = useState('');
   const [message, setMessage] = useState('');
-  const [busyId, setBusyId] = useState('');
-  const [formData, setFormData] = useState({
-    customerId: '',
-    productCode: '',
-    appliedAmount: '',
-    tenureMonths: '',
-  });
 
-  const selectedProduct = useMemo(
-    () => products.find((product) => product.product_code === formData.productCode),
-    [products, formData.productCode],
+  const roles = useMemo(() => new Set((user?.roles || []).map(roleName)), [user]);
+  const canOpenBranchPortal = useMemo(
+    () => roles.size === 0 || Array.from(roles).some((role) => branchRoles.has(role)),
+    [roles],
   );
-
-  const branchId = user?.branch_id || undefined;
+  const scopeParams = useMemo(
+    () => (user?.branch_id ? { branch_id: user.branch_id } : undefined),
+    [user?.branch_id],
+  );
 
   useEffect(() => {
     if (!isLoading && !token) {
@@ -82,17 +88,16 @@ export default function BranchPortalPage() {
     }
   }, [token, isLoading, router]);
 
-  const loadBranchWorkspace = useCallback(async () => {
-    if (!token) {
+  const loadBranchWork = useCallback(async () => {
+    if (!token || !user) {
       return;
     }
-
     setMessage('');
     try {
       const [customersRes, appsRes, loansRes, productsRes] = await Promise.all([
-        apiClient.getCustomers(branchId ? { branch_id: branchId, limit: 50 } : { limit: 50 }),
-        apiClient.getLoanApplications({ branch_id: branchId, status: selectedStatus, limit: 50 }),
-        apiClient.getLoans(branchId ? { branch_id: branchId, limit: 50 } : { limit: 50 }),
+        apiClient.getCustomers(scopeParams),
+        apiClient.getLoanApplications(scopeParams),
+        apiClient.getLoans(scopeParams),
         apiClient.getLoanProducts(),
       ]);
       const customerItems = customersRes.data.items || [];
@@ -101,114 +106,101 @@ export default function BranchPortalPage() {
       setApplications(appsRes.data.items || []);
       setLoans(loansRes.data.items || []);
       setProducts(productItems);
-      setFormData((previous) => ({
-        customerId: previous.customerId || customerItems[0]?.id || '',
-        productCode: previous.productCode || productItems[0]?.product_code || '',
-        appliedAmount: previous.appliedAmount || String(productItems[0]?.min_amount || ''),
-        tenureMonths: previous.tenureMonths || String(productItems[0]?.min_tenor || ''),
-      }));
+      setSelectedCustomerId((current) => current || customerItems[0]?.id || '');
+      if (!productCode && productItems[0]) {
+        setProductCode(productItems[0].product_code);
+        setAmount(String(productItems[0].min_amount));
+        setTenure(String(productItems[0].min_tenor));
+      }
     } catch {
-      setMessage('Could not load the branch workspace. Check service availability and scope headers.');
+      setMessage('Branch workspace data could not be loaded.');
     }
-  }, [branchId, selectedStatus, token]);
+  }, [productCode, scopeParams, token, user]);
 
   useEffect(() => {
-    loadBranchWorkspace();
-  }, [loadBranchWorkspace]);
+    loadBranchWork();
+  }, [loadBranchWork]);
 
-  const handleFormChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = event.target;
-    if (name === 'productCode') {
-      const product = products.find((item) => item.product_code === value);
-      setFormData((previous) => ({
-        ...previous,
-        productCode: value,
-        appliedAmount: product ? String(product.min_amount) : previous.appliedAmount,
-        tenureMonths: product ? String(product.min_tenor) : previous.tenureMonths,
-      }));
-      return;
+  const customerById = useMemo(() => {
+    return new Map(customers.map((customer) => [customer.id, customer]));
+  }, [customers]);
+
+  const selectedProduct = products.find((product) => product.product_code === productCode);
+
+  const handleProductChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextProduct = products.find((product) => product.product_code === event.target.value);
+    setProductCode(event.target.value);
+    if (nextProduct) {
+      setAmount(String(nextProduct.min_amount));
+      setTenure(String(nextProduct.min_tenor));
     }
-    setFormData((previous) => ({ ...previous, [name]: value }));
+  };
+
+  const runAction = async (key: string, action: () => Promise<void>, successMessage: string) => {
+    setBusyAction(key);
+    setMessage('');
+    try {
+      await action();
+      setMessage(successMessage);
+      await loadBranchWork();
+    } catch {
+      setMessage('Action failed. Review the record state and try again.');
+    } finally {
+      setBusyAction('');
+    }
   };
 
   const createApplication = async (event: FormEvent) => {
     event.preventDefault();
-    if (!formData.customerId || !selectedProduct) {
+    if (!selectedCustomerId || !selectedProduct) {
       setMessage('Select a customer and loan product.');
       return;
     }
-
-    setBusyId('create-application');
-    setMessage('');
-    try {
-      await apiClient.applyForLoan({
-        customer_id: formData.customerId,
-        branch_id: branchId,
-        product_code: selectedProduct.product_code,
-        applied_amount: Number(formData.appliedAmount),
-        tenure_months: Number(formData.tenureMonths),
-      });
-      setSelectedStatus('draft');
-      setMessage('Draft application created for the selected branch customer.');
-      await loadBranchWorkspace();
-    } catch {
-      setMessage('Could not create the branch application.');
-    } finally {
-      setBusyId('');
-    }
+    await runAction(
+      'create-application',
+      () =>
+        apiClient.applyForLoan({
+          customer_id: selectedCustomerId,
+          branch_id: user?.branch_id || customerById.get(selectedCustomerId)?.branch_id || undefined,
+          product_code: selectedProduct.product_code,
+          applied_amount: Number(amount),
+          tenure_months: Number(tenure),
+        }).then(() => undefined),
+      'Loan application created.',
+    );
   };
 
-  const runApplicationAction = async (application: LoanApplication, action: 'submit' | 'underwrite' | 'approve') => {
-    setBusyId(`${action}-${application.id}`);
-    setMessage('');
-    try {
-      if (action === 'submit') {
-        await apiClient.submitLoanApplication(application.id);
-      } else if (action === 'underwrite') {
-        await apiClient.underwriteLoanApplication(application.id);
-      } else {
-        await apiClient.decideLoanApplication(application.id, {
-          decision: 'approved',
-          approved_amount: application.applied_amount,
-          approved_tenure_months: application.tenure_months,
-          approved_interest_rate: selectedProduct?.base_rate || 14.5,
-        });
-      }
-      setMessage(`Application ${action} completed.`);
-      await loadBranchWorkspace();
-    } catch {
-      setMessage(`Could not ${action} application.`);
-    } finally {
-      setBusyId('');
-    }
-  };
+  const approveApplication = (application: LoanApplication) =>
+    runAction(
+      `approve-${application.id}`,
+      () =>
+        apiClient
+          .decideLoanApplication(application.id, {
+            decision: 'approved',
+            approved_amount: application.applied_amount,
+            approved_tenure_months: application.tenure_months,
+            approved_interest_rate: selectedProduct?.base_rate || 14.5,
+          })
+          .then(() => undefined),
+      'Application approved and queued for booking.',
+    );
 
-  const runLoanAction = async (loan: LoanAccount, action: 'disburse' | 'overdue') => {
-    setBusyId(`${action}-${loan.id}`);
-    setMessage('');
-    try {
-      if (action === 'disburse') {
-        await apiClient.disburseLoan(loan.id, {
-          amount: loan.sanction_amount - loan.disbursed_amount,
-          reference: `BRANCH-${Date.now()}`,
-        });
-        setMessage('Loan disbursement posted.');
-      } else {
-        const response = await apiClient.computeLoanOverdue(loan.id);
-        setMessage(
-          `DPD ${response.data.days_past_due}, penalty ${formatCurrency(response.data.penalty_amount)} computed.`,
-        );
-      }
-      await loadBranchWorkspace();
-    } catch {
-      setMessage(`Could not ${action} loan.`);
-    } finally {
-      setBusyId('');
-    }
-  };
-
-  if (isLoading) {
+  if (isLoading || !token) {
     return <div className="p-8 text-center">Loading...</div>;
+  }
+
+  if (!canOpenBranchPortal) {
+    return (
+      <main className="min-h-screen bg-slate-50 px-4 py-8">
+        <div className="mx-auto max-w-3xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h1 className="text-2xl font-bold text-slate-950">Branch Portal</h1>
+          <p className="mt-2 text-sm text-slate-600">Your role is not enabled for branch operations.</p>
+          <Link href="/" className="mt-5 inline-flex rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700">
+            Dashboard
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -216,11 +208,10 @@ export default function BranchPortalPage() {
       <div className="mx-auto max-w-7xl">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">Branch Portal</p>
-            <h1 className="mt-1 text-3xl font-bold text-slate-950">Core Lending Operations</h1>
-            <p className="mt-1 text-slate-600">
-              {branchId ? `Scoped to branch ${branchId}` : 'Using organization scope from the signed-in user.'}
-            </p>
+            <p className="text-sm font-semibold uppercase text-blue-700">Branch Portal</p>
+            <h1 className="mt-1 text-3xl font-bold text-slate-950">
+              {user?.branch_id ? `Branch ${user.branch_id}` : 'All Branches'}
+            </h1>
           </div>
           <Link href="/" className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white">
             Dashboard
@@ -233,16 +224,21 @@ export default function BranchPortalPage() {
           </div>
         )}
 
+        <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Metric label="Customers" value={String(customers.length)} />
+          <Metric label="Applications" value={String(applications.length)} />
+          <Metric label="Loans" value={String(loans.length)} />
+        </section>
+
         <section className="mb-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-xl font-semibold text-slate-950">Create Branch Application</h2>
-          <form onSubmit={createApplication} className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr_160px_160px_auto]">
+          <h2 className="mb-4 text-xl font-semibold text-slate-950">New Application</h2>
+          <form onSubmit={createApplication} className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px_160px_160px_auto]">
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Customer CIF</span>
+              <span className="mb-1 block text-sm font-medium text-slate-700">Customer</span>
               <select
-                name="customerId"
-                value={formData.customerId}
-                onChange={handleFormChange}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={selectedCustomerId}
+                onChange={(event) => setSelectedCustomerId(event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               >
                 <option value="">Select customer</option>
                 {customers.map((customer) => (
@@ -255,10 +251,9 @@ export default function BranchPortalPage() {
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Product</span>
               <select
-                name="productCode"
-                value={formData.productCode}
-                onChange={handleFormChange}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={productCode}
+                onChange={handleProductChange}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               >
                 {products.map((product) => (
                   <option key={product.product_code} value={product.product_code}>
@@ -270,26 +265,24 @@ export default function BranchPortalPage() {
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Amount</span>
               <input
-                name="appliedAmount"
                 type="number"
-                value={formData.appliedAmount}
-                onChange={handleFormChange}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
             </label>
             <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Tenure</span>
               <input
-                name="tenureMonths"
                 type="number"
-                value={formData.tenureMonths}
-                onChange={handleFormChange}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={tenure}
+                onChange={(event) => setTenure(event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
             </label>
             <button
               type="submit"
-              disabled={busyId === 'create-application' || customers.length === 0}
+              disabled={busyAction === 'create-application' || customers.length === 0 || products.length === 0}
               className="self-end rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Create
@@ -297,121 +290,229 @@ export default function BranchPortalPage() {
           </form>
         </section>
 
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1fr]">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xl font-semibold text-slate-950">Application Queue</h2>
-              <select
-                value={selectedStatus}
-                onChange={(event) => setSelectedStatus(event.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-              >
-                {statusFilters.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
+            <h2 className="mb-4 text-xl font-semibold text-slate-950">CIF Queue</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="px-3 py-3">Customer</th>
+                    <th className="px-3 py-3">Contact</th>
+                    <th className="px-3 py-3">KYC</th>
+                    <th className="px-3 py-3">Branch</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customers.map((customer) => (
+                    <tr key={customer.id} className="border-b border-slate-100">
+                      <td className="px-3 py-3 font-medium text-slate-950">
+                        {customer.first_name} {customer.last_name}
+                      </td>
+                      <td className="px-3 py-3 text-slate-600">{customer.phone}</td>
+                      <td className="px-3 py-3 capitalize text-slate-600">{customer.kyc_status}</td>
+                      <td className="px-3 py-3 text-slate-600">{customer.branch_id || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            {applications.length === 0 ? (
-              <p className="rounded-md bg-slate-50 p-4 text-sm text-slate-600">No applications in this queue.</p>
-            ) : (
-              <div className="space-y-3">
-                {applications.map((application) => (
+          </section>
+
+          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="mb-4 text-xl font-semibold text-slate-950">Application Queue</h2>
+            <div className="space-y-3">
+              {applications.length === 0 ? (
+                <p className="rounded-md bg-slate-50 p-4 text-sm text-slate-600">No applications found.</p>
+              ) : (
+                applications.map((application) => (
                   <article key={application.id} className="rounded-lg border border-slate-200 p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="font-semibold text-slate-950">{application.id}</p>
                         <p className="mt-1 text-sm text-slate-500">
-                          {application.customer_id} - {formatCurrency(application.applied_amount)} - {application.tenure_months} months
+                          {customerById.get(application.customer_id)?.first_name || application.customer_id} -{' '}
+                          {formatCurrency(application.applied_amount)}
                         </p>
                       </div>
-                      <span className="w-fit rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                      <span className="w-fit rounded bg-slate-100 px-2 py-1 text-xs font-semibold capitalize text-slate-700">
                         {application.application_status}
                       </span>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => runApplicationAction(application, 'submit')}
-                        disabled={busyId === `submit-${application.id}` || application.application_status !== 'draft'}
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-                      >
-                        Submit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => runApplicationAction(application, 'underwrite')}
-                        disabled={busyId === `underwrite-${application.id}` || !['submitted', 'under_review'].includes(application.application_status)}
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-                      >
-                        Underwrite
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => runApplicationAction(application, 'approve')}
-                        disabled={busyId === `approve-${application.id}` || !['submitted', 'under_review'].includes(application.application_status)}
-                        className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-                      >
-                        Approve + Book
-                      </button>
+                      {application.application_status === 'draft' && (
+                        <ActionButton
+                          busy={busyAction === `submit-${application.id}`}
+                          onClick={() =>
+                            runAction(
+                              `submit-${application.id}`,
+                              () => apiClient.submitLoanApplication(application.id).then(() => undefined),
+                              'Application submitted.',
+                            )
+                          }
+                        >
+                          Submit
+                        </ActionButton>
+                      )}
+                      {application.application_status === 'submitted' && (
+                        <ActionButton
+                          busy={busyAction === `underwrite-${application.id}`}
+                          onClick={() =>
+                            runAction(
+                              `underwrite-${application.id}`,
+                              () => apiClient.underwriteLoanApplication(application.id).then(() => undefined),
+                              'Underwriting completed.',
+                            )
+                          }
+                        >
+                          Underwrite
+                        </ActionButton>
+                      )}
+                      {application.application_status === 'under_review' && (
+                        <ActionButton busy={busyAction === `approve-${application.id}`} onClick={() => approveApplication(application)}>
+                          Approve
+                        </ActionButton>
+                      )}
                     </div>
                   </article>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-xl font-semibold text-slate-950">Loan Accounts</h2>
-            {loans.length === 0 ? (
-              <p className="rounded-md bg-slate-50 p-4 text-sm text-slate-600">No loan accounts found.</p>
-            ) : (
-              <div className="space-y-3">
-                {loans.map((loan) => (
-                  <article key={loan.id} className="rounded-lg border border-slate-200 p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="font-semibold text-slate-950">{loan.account_number}</p>
-                        <p className="mt-1 text-sm text-slate-500">
-                          EMI {formatCurrency(loan.emi_amount)} - Outstanding {formatCurrency(loan.outstanding_principal)}
-                        </p>
-                      </div>
-                      <span className="w-fit rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
-                        {loan.status}
-                      </span>
-                    </div>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => runLoanAction(loan, 'disburse')}
-                        disabled={busyId === `disburse-${loan.id}` || loan.disbursed_amount >= loan.sanction_amount}
-                        className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-                      >
-                        Disburse
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => runLoanAction(loan, 'overdue')}
-                        disabled={busyId === `overdue-${loan.id}`}
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
-                      >
-                        Compute DPD
-                      </button>
-                      <Link
-                        href="/payments"
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
-                      >
-                        Record Payment
-                      </Link>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </section>
         </div>
+
+        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold text-slate-950">Loan Operations</h2>
+          {loans.length === 0 ? (
+            <p className="rounded-md bg-slate-50 p-4 text-sm text-slate-600">No loan accounts found.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1080px] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="px-3 py-3">Account</th>
+                    <th className="px-3 py-3 text-right">Sanctioned</th>
+                    <th className="px-3 py-3 text-right">Disbursed</th>
+                    <th className="px-3 py-3 text-right">Outstanding</th>
+                    <th className="px-3 py-3">Status</th>
+                    <th className="px-3 py-3">Payment</th>
+                    <th className="px-3 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loans.map((loan) => (
+                    <tr key={loan.id} className="border-b border-slate-100">
+                      <td className="px-3 py-3 font-medium text-slate-950">{loan.account_number}</td>
+                      <td className="px-3 py-3 text-right">{formatCurrency(loan.sanction_amount)}</td>
+                      <td className="px-3 py-3 text-right">{formatCurrency(loan.disbursed_amount)}</td>
+                      <td className="px-3 py-3 text-right">
+                        {formatCurrency(loan.outstanding_principal + loan.outstanding_interest)}
+                      </td>
+                      <td className="px-3 py-3 capitalize text-slate-600">{loan.status}</td>
+                      <td className="px-3 py-3">
+                        <input
+                          type="number"
+                          value={paymentByLoan[loan.id] || ''}
+                          onChange={(event) =>
+                            setPaymentByLoan((current) => ({ ...current, [loan.id]: event.target.value }))
+                          }
+                          placeholder={String(Math.round(loan.emi_amount))}
+                          className="w-32 rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        />
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          {loan.status === 'sanctioned' && (
+                            <ActionButton
+                              busy={busyAction === `disburse-${loan.id}`}
+                              onClick={() =>
+                                runAction(
+                                  `disburse-${loan.id}`,
+                                  () =>
+                                    apiClient
+                                      .disburseLoan(loan.id, {
+                                        amount: loan.sanction_amount - loan.disbursed_amount,
+                                        reference: `BR-${Date.now()}`,
+                                      })
+                                      .then(() => undefined),
+                                  'Loan disbursed.',
+                                )
+                              }
+                            >
+                              Disburse
+                            </ActionButton>
+                          )}
+                          <ActionButton
+                            busy={busyAction === `overdue-${loan.id}`}
+                            onClick={() =>
+                              runAction(
+                                `overdue-${loan.id}`,
+                                () => apiClient.computeLoanOverdue(loan.id).then(() => undefined),
+                                'Overdue status computed.',
+                              )
+                            }
+                          >
+                            DPD
+                          </ActionButton>
+                          <ActionButton
+                            busy={busyAction === `payment-${loan.id}`}
+                            onClick={() =>
+                              runAction(
+                                `payment-${loan.id}`,
+                                () =>
+                                  apiClient
+                                    .makePayment(loan.id, {
+                                      amount: Number(paymentByLoan[loan.id] || loan.emi_amount),
+                                      payment_mode: 'BRANCH',
+                                      reference: `BRPAY-${Date.now()}`,
+                                    })
+                                    .then(() => undefined),
+                                'Payment recorded.',
+                              )
+                            }
+                          >
+                            Pay
+                          </ActionButton>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
     </main>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-sm font-medium text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-bold text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function ActionButton({
+  busy,
+  onClick,
+  children,
+}: {
+  busy: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {busy ? 'Working' : children}
+    </button>
   );
 }

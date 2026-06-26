@@ -1,13 +1,16 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Header
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional, List
 import os
+import jwt
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://nbfc_user:nbfc_pass@localhost:5432/nbfcsuite")
+AUTH_SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+AUTH_ALGORITHM = os.getenv("AUTH_ALGORITHM", "HS256")
 engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -170,6 +173,46 @@ def get_db() -> Session:
         db.close()
 
 
+class PrincipalScope:
+    def __init__(self, branch_id: Optional[str] = None):
+        self.branch_id = branch_id
+
+    @property
+    def is_scoped(self) -> bool:
+        return bool(self.branch_id)
+
+
+def get_principal_scope(
+    authorization: Optional[str] = Header(default=None),
+    branch_id: Optional[str] = Header(default=None, alias="X-Scope-Branch-Id"),
+    legacy_branch_id: Optional[str] = Header(default=None, alias="X-Branch-Id"),
+) -> PrincipalScope:
+    if authorization:
+        if not authorization.lower().startswith("bearer "):
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+        try:
+            payload = jwt.decode(authorization.split(" ", 1)[1], AUTH_SECRET_KEY, algorithms=[AUTH_ALGORITHM])
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return PrincipalScope(branch_id=payload.get("branch_id"))
+    return PrincipalScope(branch_id=branch_id or legacy_branch_id)
+
+
+def _resolve_branch_id(requested_branch_id: Optional[str], scope: PrincipalScope) -> Optional[str]:
+    if not isinstance(scope, PrincipalScope):
+        return requested_branch_id
+    if scope.is_scoped and requested_branch_id and requested_branch_id != scope.branch_id:
+        raise HTTPException(status_code=403, detail="Branch is outside the caller's branch scope")
+    return requested_branch_id or scope.branch_id
+
+
+def _assert_assignment_in_scope(assignment: CollectionAssignment, scope: PrincipalScope) -> None:
+    if not isinstance(scope, PrincipalScope):
+        return
+    if scope.is_scoped and assignment.branch_id != scope.branch_id:
+        raise HTTPException(status_code=403, detail="Assignment is outside the caller's branch scope")
+
+
 def seed_collection_buckets(db: Session) -> None:
     from uuid import uuid4
 
@@ -276,7 +319,8 @@ async def create_bucket(bucket: CollectionBucketCreate, db: Session = Depends(ge
 @app.post("/assignments", response_model=CollectionAssignmentResponse)
 async def create_assignment(
     assignment: CollectionAssignmentCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     from uuid import uuid4
 
@@ -287,13 +331,14 @@ async def create_assignment(
     )
     if not bucket:
         raise HTTPException(status_code=404, detail="Bucket not found")
+    branch_id = _resolve_branch_id(assignment.branch_id, scope)
 
     new_assignment = CollectionAssignment(
         id=str(uuid4()),
         loan_account_id=assignment.loan_account_id,
         customer_id=assignment.customer_id,
         collector_user_id=assignment.collector_user_id,
-        branch_id=assignment.branch_id,
+        branch_id=branch_id,
         bucket_id=assignment.bucket_id,
         days_past_due=assignment.days_past_due,
         outstanding_amount=assignment.outstanding_amount,
@@ -357,15 +402,17 @@ async def list_assignments(
     status: Optional[str] = Query(None),
     skip: int = Query(0),
     limit: int = Query(20),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """List collection assignments."""
     query = db.query(CollectionAssignment)
     
     if collector_id:
         query = query.filter(CollectionAssignment.collector_user_id == collector_id)
-    if branch_id:
-        query = query.filter(CollectionAssignment.branch_id == branch_id)
+    selected_branch_id = _resolve_branch_id(branch_id, scope)
+    if selected_branch_id:
+        query = query.filter(CollectionAssignment.branch_id == selected_branch_id)
     
     if status:
         query = query.filter(CollectionAssignment.status == status)
@@ -384,7 +431,8 @@ async def list_assignments(
 @app.get("/loan/{loan_id}/status")
 async def get_collection_status(
     loan_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Get collection status for a loan."""
     assignment = db.query(CollectionAssignment).filter(
@@ -393,6 +441,7 @@ async def get_collection_status(
     
     if not assignment:
         return {"status": "not_assigned", "loan_id": loan_id}
+    _assert_assignment_in_scope(assignment, scope)
     
     # Get latest activity
     latest_activity = db.query(CollectionActivity).filter(
@@ -420,7 +469,8 @@ async def get_collection_status(
 async def log_activity(
     loan_id: str,
     activity: CollectionActivityCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Log collection activity for a loan."""
     from uuid import uuid4
@@ -431,6 +481,7 @@ async def log_activity(
     
     if not assignment:
         raise HTTPException(status_code=404, detail="No active assignment for this loan")
+    _assert_assignment_in_scope(assignment, scope)
     
     # Create activity
     new_activity = CollectionActivity(
@@ -458,7 +509,8 @@ async def log_activity(
 async def create_settlement_offer(
     loan_id: str,
     request: SettlementOfferRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Create a settlement offer for a loan."""
     from uuid import uuid4
@@ -469,6 +521,7 @@ async def create_settlement_offer(
     
     if not assignment:
         raise HTTPException(status_code=404, detail="Loan not found")
+    _assert_assignment_in_scope(assignment, scope)
     
     outstanding = assignment.outstanding_amount
     settlement_percentage = (request.offer_amount / outstanding) * 100
@@ -498,11 +551,16 @@ async def create_settlement_offer(
 async def classify_npa(
     loan_id: str,
     npa_type: str = Query("substandard"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Classify loan as NPA."""
     from uuid import uuid4
     
+    assignment = db.query(CollectionAssignment).filter(CollectionAssignment.loan_account_id == loan_id).first()
+    if assignment:
+        _assert_assignment_in_scope(assignment, scope)
+
     # Check if already classified
     existing = db.query(NPARecord).filter(
         NPARecord.loan_account_id == loan_id

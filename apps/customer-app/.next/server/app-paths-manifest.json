@@ -1,11 +1,1 @@
-{
-  "/_not-found": "app/_not-found.js",
-  "/documents/page": "app/documents/page.js",
-  "/apply-loan/page": "app/apply-loan/page.js",
-  "/payments/page": "app/payments/page.js",
-  "/loans/page": "app/loans/page.js",
-  "/profile/page": "app/profile/page.js",
-  "/page": "app/page.js",
-  "/settings/page": "app/settings/page.js",
-  "/login/page": "app/login/page.js"
-}
+{}
