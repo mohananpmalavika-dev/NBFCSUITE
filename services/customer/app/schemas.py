@@ -39,6 +39,34 @@ class CustomerResponse(BaseModel):
         from_attributes = True
 
 
+class CustomerListResponse(BaseModel):
+    items: list[CustomerResponse]
+    total: int
+    skip: int
+    limit: int
+
+
+class AddressResponse(BaseModel):
+    id: str
+    customer_id: str
+    address_type: Optional[str] = None
+    street: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    postal_code: Optional[str] = None
+    is_primary: bool = False
+
+    @field_validator("is_primary", mode="before")
+    @classmethod
+    def parse_bool(cls, value):
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in {"1", "true", "yes", "active"}
+
+    class Config:
+        from_attributes = True
+
+
 class AddressCreate(BaseModel):
     address_type: str
     street: str
@@ -50,6 +78,7 @@ class AddressCreate(BaseModel):
 
 class DocumentResponse(BaseModel):
     id: str
+    customer_id: str
     document_type: str
     document_number: str
     document_url: str
@@ -107,6 +136,27 @@ class OfficeResponseBase(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class KYCValidationRequest(BaseModel):
+    pan: Optional[str] = None
+    aadhar: Optional[str] = None
+
+
+class KYCValidationResponse(BaseModel):
+    customer_id: str
+    kyc_status: str
+    pan_valid: bool
+    aadhar_valid: bool
+    checks: dict
+
+
+class Customer360Response(BaseModel):
+    customer: CustomerResponse
+    branch_scope: Optional["BranchScopeResponse"] = None
+    addresses: list[AddressResponse] = Field(default_factory=list)
+    kyc_documents: list[DocumentResponse] = Field(default_factory=list)
+    financial_profile: Optional["FinancialProfileResponse"] = None
 
 
 class OrganizationCreate(OfficeCreateBase):
