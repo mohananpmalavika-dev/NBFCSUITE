@@ -22,6 +22,7 @@ class Role(RoleBase):
 class UserBase(BaseModel):
     username: str
     email: str
+    tenant_id: Optional[str] = None
     organization_id: Optional[str] = None
     zone_id: Optional[str] = None
     region_id: Optional[str] = None
@@ -36,6 +37,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None
+    tenant_id: Optional[str] = None
     organization_id: Optional[str] = None
     zone_id: Optional[str] = None
     region_id: Optional[str] = None
@@ -73,8 +75,30 @@ class TokenValidationResponse(BaseModel):
     user_id: str
     username: str
     roles: List[str] = []
+    tenant_id: Optional[str] = None
     organization_id: Optional[str] = None
     zone_id: Optional[str] = None
     region_id: Optional[str] = None
     area_id: Optional[str] = None
     branch_id: Optional[str] = None
+
+
+class TenantConfigurationBase(BaseModel):
+    tenant_id: str
+    display_name: str
+    legal_name: Optional[str] = None
+    primary_color: Optional[str] = None
+    logo_url: Optional[str] = None
+    settings: Optional[dict] = None
+
+
+class TenantConfigurationCreate(TenantConfigurationBase):
+    pass
+
+
+class TenantConfiguration(TenantConfigurationBase):
+    id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 
 from app.database import get_db, init_db
-from app.models import User, Role
+from app.models import User, Role, TenantConfiguration
 from app.schemas import (
     UserCreate, User as UserSchema, LoginRequest, TokenResponse, 
-    RoleCreate, Role as RoleSchema, RefreshTokenRequest, TokenValidationResponse
+    RoleCreate, Role as RoleSchema, RefreshTokenRequest, TokenValidationResponse,
+    TenantConfigurationCreate, TenantConfiguration as TenantConfigurationSchema,
 )
 from app.security import hash_password, verify_password, create_access_token, decode_token
 
@@ -19,6 +20,7 @@ def _token_payload(user: User, token_type: str = "access") -> dict:
         "username": user.username,
         "roles": [role.name for role in user.roles],
         "typ": token_type,
+        "tenant_id": user.tenant_id,
         "organization_id": user.organization_id,
         "zone_id": user.zone_id,
         "region_id": user.region_id,
@@ -142,6 +144,7 @@ async def validate_token(current_user: User = Depends(get_current_user)):
         user_id=current_user.id,
         username=current_user.username,
         roles=[role.name for role in current_user.roles],
+        tenant_id=current_user.tenant_id,
         organization_id=current_user.organization_id,
         zone_id=current_user.zone_id,
         region_id=current_user.region_id,
@@ -170,6 +173,7 @@ async def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
         email=user_data.email,
         hashed_password=hash_password(user_data.password),
         is_active=True,
+        tenant_id=user_data.tenant_id,
         organization_id=user_data.organization_id,
         zone_id=user_data.zone_id,
         region_id=user_data.region_id,
@@ -210,10 +214,17 @@ async def get_user(user_id: str, db: Session = Depends(get_db)):
 
 
 @app.get("/auth/users", response_model=list[UserSchema])
-async def list_users(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
+async def list_users(
+    tenant_id: str | None = None,
+    skip: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+):
     """List all users (with pagination)."""
-    users = db.query(User).offset(skip).limit(limit).all()
-    return users
+    query = db.query(User)
+    if tenant_id:
+        query = query.filter(User.tenant_id == tenant_id)
+    return query.offset(skip).limit(limit).all()
 
 
 @app.post("/auth/roles", response_model=RoleSchema)
@@ -240,6 +251,53 @@ async def list_roles(db: Session = Depends(get_db)):
     """List all roles."""
     roles = db.query(Role).all()
     return roles
+
+
+@app.post("/tenants/configurations", response_model=TenantConfigurationSchema, status_code=201)
+async def create_tenant_configuration(
+    payload: TenantConfigurationCreate,
+    db: Session = Depends(get_db),
+):
+    """Create or update MVP tenant branding/configuration."""
+    existing = (
+        db.query(TenantConfiguration)
+        .filter(TenantConfiguration.tenant_id == payload.tenant_id)
+        .first()
+    )
+    if existing:
+        existing.display_name = payload.display_name
+        existing.legal_name = payload.legal_name
+        existing.primary_color = payload.primary_color
+        existing.logo_url = payload.logo_url
+        existing.settings = payload.settings
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    tenant_config = TenantConfiguration(
+        tenant_id=payload.tenant_id,
+        display_name=payload.display_name,
+        legal_name=payload.legal_name,
+        primary_color=payload.primary_color,
+        logo_url=payload.logo_url,
+        settings=payload.settings,
+    )
+    db.add(tenant_config)
+    db.commit()
+    db.refresh(tenant_config)
+    return tenant_config
+
+
+@app.get("/tenants/configurations/{tenant_id}", response_model=TenantConfigurationSchema)
+async def get_tenant_configuration(tenant_id: str, db: Session = Depends(get_db)):
+    tenant_config = (
+        db.query(TenantConfiguration)
+        .filter(TenantConfiguration.tenant_id == tenant_id)
+        .first()
+    )
+    if not tenant_config:
+        raise HTTPException(status_code=404, detail="Tenant configuration not found")
+    return tenant_config
 
 
 @app.get("/")

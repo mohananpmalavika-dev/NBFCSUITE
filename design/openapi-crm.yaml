@@ -5,26 +5,20 @@ info:
 paths:
   /leads:
     post:
-      summary: Create a lead
+      summary: Create a tenant-scoped lead
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                source:
-                  type: string
-                assigned_to:
-                  type: string
-                metadata:
-                  type: object
+              $ref: '#/components/schemas/LeadCreate'
       responses:
         '201':
-          description: lead created
+          description: Lead created
     get:
-      summary: List leads
+      summary: List tenant leads
       parameters:
+        - $ref: '#/components/parameters/TenantId'
         - in: query
           name: status
           schema:
@@ -33,28 +27,17 @@ paths:
           name: assigned_to
           schema:
             type: string
-        - in: query
-          name: skip
-          schema:
-            type: integer
-            default: 0
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 50
+        - $ref: '#/components/parameters/Skip'
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: leads list
+          description: Leads list
   /leads/{lead_id}/assign:
     post:
-      summary: Assign a lead to a user
+      summary: Assign a tenant lead to a user
       parameters:
-        - in: path
-          name: lead_id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/LeadId'
+        - $ref: '#/components/parameters/TenantId'
         - in: query
           name: assigned_to
           required: true
@@ -62,16 +45,13 @@ paths:
             type: string
       responses:
         '200':
-          description: lead assigned
+          description: Lead assigned
   /leads/{lead_id}/qualify:
     post:
-      summary: Qualify or disqualify a lead
+      summary: Qualify or disqualify a tenant lead
       parameters:
-        - in: path
-          name: lead_id
-          required: true
-          schema:
-            type: string
+        - $ref: '#/components/parameters/LeadId'
+        - $ref: '#/components/parameters/TenantId'
         - in: query
           name: qualified
           required: true
@@ -79,111 +59,311 @@ paths:
             type: boolean
       responses:
         '200':
-          description: lead qualification updated
+          description: Lead qualification updated
   /campaigns:
     post:
-      summary: Create a campaign
+      summary: Create a tenant campaign
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                name:
-                  type: string
-                description:
-                  type: string
-                start_date:
-                  type: string
-                  format: date-time
-                end_date:
-                  type: string
-                  format: date-time
-                budget:
-                  type: number
+              $ref: '#/components/schemas/CampaignCreate'
       responses:
         '200':
-          description: campaign created
+          description: Campaign created
     get:
-      summary: List campaigns
+      summary: List tenant campaigns
       parameters:
+        - $ref: '#/components/parameters/TenantId'
         - in: query
           name: status
           schema:
             type: string
-        - in: query
-          name: skip
-          schema:
-            type: integer
-            default: 0
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 50
+        - $ref: '#/components/parameters/Skip'
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: campaigns list
+          description: Campaigns list
   /opportunities:
     post:
-      summary: Create an opportunity
+      summary: Create a tenant opportunity from a tenant lead
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                lead_id:
-                  type: string
-                product_code:
-                  type: string
-                value:
-                  type: number
-                probability:
-                  type: number
-                close_date:
-                  type: string
-                  format: date-time
+              $ref: '#/components/schemas/OpportunityCreate'
       responses:
         '200':
-          description: opportunity created
+          description: Opportunity created
     get:
-      summary: List opportunities
+      summary: List tenant opportunities
       parameters:
+        - $ref: '#/components/parameters/TenantId'
         - in: query
           name: stage
           schema:
             type: string
-        - in: query
-          name: skip
-          schema:
-            type: integer
-            default: 0
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 50
+        - $ref: '#/components/parameters/Skip'
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: opportunities list
+          description: Opportunities list
+  /reports/pipeline-summary:
+    get:
+      summary: Return tenant CRM pipeline summary
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Pipeline summary
+  /reports/definitions:
+    post:
+      summary: Create a validated report definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportDefinitionCreate'
+      responses:
+        '200':
+          description: Report definition created
+    get:
+      summary: List tenant report definitions
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Report definitions
+  /reports/execute:
+    post:
+      summary: Execute an ad-hoc validated CRM report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportExecuteRequest'
+      responses:
+        '200':
+          description: Report result
+  /reports/definitions/{report_id}/execute:
+    post:
+      summary: Execute a saved report definition
+      parameters:
+        - in: path
+          name: report_id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Report result
+  /dashboards:
+    post:
+      summary: Create a dashboard definition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardCreate'
+      responses:
+        '200':
+          description: Dashboard created
+    get:
+      summary: List tenant dashboards
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Dashboards
+  /dashboards/{dashboard_id}/render:
+    get:
+      summary: Resolve dashboard widgets for a tenant
+      parameters:
+        - in: path
+          name: dashboard_id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Resolved dashboard
+  /dashboards/defaults/ceo-command-center:
+    post:
+      summary: Ensure the CEO Command Center default dashboard exists
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: CEO Command Center definition
+  /dashboards/defaults/ceo-command-center/render:
+    get:
+      summary: Render the CEO Command Center dashboard
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Resolved CEO dashboard
   /health:
     get:
       summary: CRM health check
       responses:
         '200':
-          description: service healthy
+          description: Service healthy
   /ready:
     get:
       summary: CRM readiness probe
       responses:
         '200':
-          description: service ready
-  /:
-    get:
-      summary: CRM service root
-      responses:
-        '200':
-          description: service metadata
+          description: Service ready
+components:
+  parameters:
+    TenantId:
+      in: query
+      name: tenant_id
+      required: true
+      schema:
+        type: string
+    LeadId:
+      in: path
+      name: lead_id
+      required: true
+      schema:
+        type: string
+    Skip:
+      in: query
+      name: skip
+      schema:
+        type: integer
+        default: 0
+    Limit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        default: 50
+  schemas:
+    LeadCreate:
+      type: object
+      required: [tenant_id, source]
+      properties:
+        tenant_id:
+          type: string
+        source:
+          type: string
+        assigned_to:
+          type: string
+        metadata:
+          type: object
+    CampaignCreate:
+      type: object
+      required: [tenant_id, name, description, start_date, end_date, budget]
+      properties:
+        tenant_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        start_date:
+          type: string
+          format: date-time
+        end_date:
+          type: string
+          format: date-time
+        budget:
+          type: number
+    OpportunityCreate:
+      type: object
+      required: [tenant_id, lead_id, product_code, value, probability]
+      properties:
+        tenant_id:
+          type: string
+        lead_id:
+          type: string
+        product_code:
+          type: string
+        value:
+          type: number
+        probability:
+          type: number
+        close_date:
+          type: string
+          format: date-time
+    ReportDefinitionCreate:
+      type: object
+      required: [tenant_id, name, data_source]
+      properties:
+        tenant_id:
+          type: string
+        name:
+          type: string
+        data_source:
+          type: string
+          enum: [leads, opportunities, campaigns]
+        columns:
+          type: array
+          items:
+            type: string
+        filters:
+          type: object
+        group_by:
+          type: array
+          items:
+            type: string
+    ReportExecuteRequest:
+      type: object
+      required: [tenant_id, data_source]
+      properties:
+        tenant_id:
+          type: string
+        data_source:
+          type: string
+          enum: [leads, opportunities, campaigns]
+        columns:
+          type: array
+          items:
+            type: string
+        filters:
+          type: object
+        group_by:
+          type: array
+          items:
+            type: string
+    DashboardWidget:
+      type: object
+      required: [widget_id, title, data_source, metric]
+      properties:
+        widget_id:
+          type: string
+        title:
+          type: string
+        data_source:
+          type: string
+          enum: [leads, opportunities, campaigns]
+        metric:
+          type: string
+          enum: [count, sum_value, weighted_value]
+        filters:
+          type: object
+    DashboardCreate:
+      type: object
+      required: [tenant_id, name, widgets]
+      properties:
+        tenant_id:
+          type: string
+        name:
+          type: string
+        widgets:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardWidget'
+        is_default:
+          type: boolean
+          default: false

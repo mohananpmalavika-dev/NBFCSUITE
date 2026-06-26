@@ -95,6 +95,10 @@ class ApplicationScorecard(Base):
     fraud_score = Column(Float)
     overall_score = Column(Float)
     recommendation = Column(String)
+    ai_risk_score = Column(Float, nullable=True)
+    ai_recommendation = Column(String, nullable=True)
+    ai_risk_grade = Column(String, nullable=True)
+    ai_reasons = Column(JSON, nullable=True)
     scoring_date = Column(DateTime, default=datetime.utcnow)
 
 
@@ -126,6 +130,10 @@ class ScorecardResponse(BaseModel):
     fraud_score: float
     overall_score: float
     recommendation: str
+    ai_risk_score: Optional[float] = None
+    ai_recommendation: Optional[str] = None
+    ai_risk_grade: Optional[str] = None
+    ai_reasons: Optional[List[str]] = None
     
     class Config:
         from_attributes = True
@@ -306,15 +314,43 @@ def _validate_terms(product: LoanProduct, amount: float, tenure_months: int) -> 
         )
 
 
+def get_ai_credit_decision(application: LoanApplication) -> dict:
+    """Best-effort FinDNA credit engine call. LOS rule underwriting remains the fallback."""
+    try:
+        import httpx
+
+        findna_base = os.getenv("FINDNA_BASE_URL", "http://localhost:8006")
+        payload = {
+            "customer_id": application.customer_id,
+            "application_id": application.id,
+            "requested_amount": application.applied_amount,
+            "tenure_months": application.tenure_months,
+        }
+        with httpx.Client(timeout=5.0) as client:
+            response = client.post(f"{findna_base}/credit-engine/score", json=payload)
+            response.raise_for_status()
+            decision = response.json()
+            if decision.get("recommendation") not in {"approve", "review", "decline"}:
+                return {}
+            return decision
+    except Exception:
+        return {}
+
+
 def create_or_update_scorecard(application: LoanApplication, db: Session):
     scorecard_data = compute_underwriting_score(application)
+    ai_decision = get_ai_credit_decision(application)
     scorecard = db.query(ApplicationScorecard).filter(ApplicationScorecard.application_id == application.id).first()
     if scorecard:
         scorecard.credit_score = scorecard_data["credit_score"]
         scorecard.behavior_score = scorecard_data["behavior_score"]
         scorecard.fraud_score = scorecard_data["fraud_score"]
         scorecard.overall_score = scorecard_data["overall_score"]
-        scorecard.recommendation = scorecard_data["recommendation"]
+        scorecard.recommendation = ai_decision.get("recommendation") or scorecard_data["recommendation"]
+        scorecard.ai_risk_score = ai_decision.get("ai_risk_score")
+        scorecard.ai_recommendation = ai_decision.get("recommendation")
+        scorecard.ai_risk_grade = ai_decision.get("risk_grade")
+        scorecard.ai_reasons = ai_decision.get("reasons")
     else:
         scorecard = ApplicationScorecard(
             id=str(uuid4()),
@@ -323,7 +359,11 @@ def create_or_update_scorecard(application: LoanApplication, db: Session):
             behavior_score=scorecard_data["behavior_score"],
             fraud_score=scorecard_data["fraud_score"],
             overall_score=scorecard_data["overall_score"],
-            recommendation=scorecard_data["recommendation"]
+            recommendation=ai_decision.get("recommendation") or scorecard_data["recommendation"],
+            ai_risk_score=ai_decision.get("ai_risk_score"),
+            ai_recommendation=ai_decision.get("recommendation"),
+            ai_risk_grade=ai_decision.get("risk_grade"),
+            ai_reasons=ai_decision.get("reasons"),
         )
         db.add(scorecard)
 
@@ -893,7 +933,11 @@ async def get_scorecard(
             "behavior_score": 0.0,
             "fraud_score": 0.0,
             "overall_score": 0.0,
-            "recommendation": "pending_scoring"
+            "recommendation": "pending_scoring",
+            "ai_risk_score": None,
+            "ai_recommendation": None,
+            "ai_risk_grade": None,
+            "ai_reasons": None,
         }
     
     return scorecard

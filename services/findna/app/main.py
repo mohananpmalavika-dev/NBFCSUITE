@@ -83,6 +83,43 @@ class AssistantInvocation(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class BankStatementAnalysis(Base):
+    __tablename__ = "bank_statement_analyses"
+
+    id = Column(String, primary_key=True)
+    customer_id = Column(String, index=True)
+    application_id = Column(String, index=True, nullable=True)
+    statement_url = Column(String, nullable=True)
+    average_balance = Column(Float)
+    monthly_income = Column(Float)
+    recurring_debits = Column(Float)
+    volatility_score = Column(Float)
+    bounced_payment_count = Column(Integer, default=0)
+    extracted_cashflows = Column(JSON)
+    insights = Column(JSON)
+    analyzed_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AICreditDecision(Base):
+    __tablename__ = "ai_credit_decisions"
+
+    id = Column(String, primary_key=True)
+    customer_id = Column(String, index=True)
+    application_id = Column(String, unique=True, index=True)
+    requested_amount = Column(Float)
+    tenure_months = Column(Integer)
+    rule_score = Column(Float)
+    behavioral_score = Column(Float)
+    statement_score = Column(Float)
+    fraud_penalty = Column(Float)
+    ai_risk_score = Column(Float)
+    default_probability_90d = Column(Float)
+    recommendation = Column(String)
+    risk_grade = Column(String)
+    reasons = Column(JSON)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # Pydantic Schemas
 class IncomeData(BaseModel):
     monthly_income: Optional[float] = None
@@ -170,6 +207,62 @@ class AssistantRequest(BaseModel):
     source_service: Optional[str] = None
     source_reference_id: Optional[str] = None
     context_text: Optional[str] = None
+
+
+class BankStatementTransaction(BaseModel):
+    transaction_date: datetime
+    description: str
+    amount: float
+    transaction_type: str
+    balance_after: Optional[float] = None
+
+
+class BankStatementAnalysisRequest(BaseModel):
+    customer_id: str
+    application_id: Optional[str] = None
+    statement_url: Optional[str] = None
+    transactions: List[BankStatementTransaction] = []
+
+
+class BankStatementAnalysisResponse(BaseModel):
+    customer_id: str
+    application_id: Optional[str] = None
+    average_balance: float
+    monthly_income: float
+    recurring_debits: float
+    volatility_score: float
+    bounced_payment_count: int
+    extracted_cashflows: Dict[str, float | int]
+    insights: Dict[str, str]
+    analyzed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AICreditEngineRequest(BaseModel):
+    customer_id: str
+    application_id: str
+    requested_amount: float
+    tenure_months: int
+    declared_monthly_income: Optional[float] = None
+    credit_score: Optional[int] = None
+    bank_statement: Optional[BankStatementAnalysisRequest] = None
+
+
+class AICreditEngineResponse(BaseModel):
+    customer_id: str
+    application_id: str
+    ai_risk_score: float
+    default_probability_90d: float
+    recommendation: str
+    risk_grade: str
+    component_scores: Dict[str, float]
+    reasons: List[str]
+    generated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class AssistantResponse(BaseModel):
@@ -303,6 +396,157 @@ def _risk_level_from_score(score: Optional[float]) -> str:
     return "low"
 
 
+def _risk_grade(score: float) -> str:
+    if score >= 82:
+        return "A"
+    if score >= 70:
+        return "B"
+    if score >= 58:
+        return "C"
+    return "D"
+
+
+def analyze_statement_signals(request: BankStatementAnalysisRequest) -> dict:
+    credits = [item.amount for item in request.transactions if item.transaction_type.lower() == "credit"]
+    debits = [abs(item.amount) for item in request.transactions if item.transaction_type.lower() == "debit"]
+    balances = [item.balance_after for item in request.transactions if item.balance_after is not None]
+    bounced = [
+        item
+        for item in request.transactions
+        if "bounce" in item.description.lower() or "return" in item.description.lower()
+    ]
+
+    average_balance = round(sum(balances) / len(balances), 2) if balances else 0.0
+    monthly_income = round(sum(credits) / max(1, min(3, len(credits))), 2) if credits else 0.0
+    recurring_debits = round(sum(debits) / max(1, min(3, len(debits))), 2) if debits else 0.0
+
+    if balances:
+        balance_range = max(balances) - min(balances)
+        volatility_score = round(min(1.0, balance_range / max(1.0, average_balance or max(balances))), 2)
+    else:
+        volatility_score = 0.45 if request.statement_url else 0.65
+
+    extracted_cashflows = {
+        "credit_count": len(credits),
+        "debit_count": len(debits),
+        "total_credits": round(sum(credits), 2),
+        "total_debits": round(sum(debits), 2),
+        "net_cashflow": round(sum(credits) - sum(debits), 2),
+    }
+    insights = {
+        "income_quality": "stable" if monthly_income >= recurring_debits else "tight",
+        "liquidity": "healthy" if average_balance >= recurring_debits * 0.5 else "thin",
+        "repayment_signal": "watch" if bounced else "clean",
+    }
+    return {
+        "average_balance": average_balance,
+        "monthly_income": monthly_income,
+        "recurring_debits": recurring_debits,
+        "volatility_score": volatility_score,
+        "bounced_payment_count": len(bounced),
+        "extracted_cashflows": extracted_cashflows,
+        "insights": insights,
+    }
+
+
+def persist_statement_analysis(
+    db: Session,
+    request: BankStatementAnalysisRequest,
+    analysis: dict,
+) -> BankStatementAnalysis:
+    from uuid import uuid4
+
+    record = BankStatementAnalysis(
+        id=str(uuid4()),
+        customer_id=request.customer_id,
+        application_id=request.application_id,
+        statement_url=request.statement_url,
+        average_balance=analysis["average_balance"],
+        monthly_income=analysis["monthly_income"],
+        recurring_debits=analysis["recurring_debits"],
+        volatility_score=analysis["volatility_score"],
+        bounced_payment_count=analysis["bounced_payment_count"],
+        extracted_cashflows=analysis["extracted_cashflows"],
+        insights=analysis["insights"],
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+def build_credit_decision(
+    request: AICreditEngineRequest,
+    behavioral_score: float,
+    statement_analysis: Optional[dict],
+    fraud_score: float,
+) -> dict:
+    rule_score = 68.0
+    if request.credit_score:
+        rule_score = min(90.0, max(35.0, (request.credit_score - 300) / 600 * 100))
+
+    monthly_income = (
+        request.declared_monthly_income
+        or (statement_analysis or {}).get("monthly_income")
+        or 0.0
+    )
+    emi_capacity_ratio = request.requested_amount / max(1.0, monthly_income * max(1, request.tenure_months))
+    affordability_score = round(max(20.0, min(95.0, 100 - (emi_capacity_ratio * 100))), 2)
+
+    if statement_analysis:
+        statement_score = round(
+            75
+            + min(15, statement_analysis["average_balance"] / 10000)
+            - (statement_analysis["volatility_score"] * 12)
+            - (statement_analysis["bounced_payment_count"] * 8),
+            2,
+        )
+    else:
+        statement_score = 62.0
+
+    fraud_penalty = round(fraud_score * 25, 2)
+    ai_risk_score = round(
+        (rule_score * 0.25)
+        + (behavioral_score * 0.30)
+        + (statement_score * 0.25)
+        + (affordability_score * 0.20)
+        - fraud_penalty,
+        2,
+    )
+    ai_risk_score = max(0.0, min(100.0, ai_risk_score))
+    default_probability_90d = round(max(0.02, min(0.45, 1 - (ai_risk_score / 110))), 2)
+
+    if ai_risk_score >= 72 and default_probability_90d <= 0.25:
+        recommendation = "approve"
+    elif ai_risk_score >= 58:
+        recommendation = "review"
+    else:
+        recommendation = "decline"
+
+    reasons = [
+        f"Behavioral score contributes {round(behavioral_score, 2)}.",
+        f"Bank statement score contributes {round(statement_score, 2)}.",
+        f"Affordability score is {round(affordability_score, 2)}.",
+    ]
+    if fraud_penalty:
+        reasons.append(f"Fraud penalty reduced score by {fraud_penalty}.")
+    if statement_analysis and statement_analysis["bounced_payment_count"]:
+        reasons.append("Bounced payment indicators require manual review.")
+
+    return {
+        "rule_score": round(rule_score, 2),
+        "behavioral_score": round(behavioral_score, 2),
+        "statement_score": round(statement_score, 2),
+        "affordability_score": round(affordability_score, 2),
+        "fraud_penalty": fraud_penalty,
+        "ai_risk_score": ai_risk_score,
+        "default_probability_90d": default_probability_90d,
+        "recommendation": recommendation,
+        "risk_grade": _risk_grade(ai_risk_score),
+        "reasons": reasons,
+    }
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "findna"}
@@ -311,6 +555,119 @@ async def health():
 @app.get("/ready")
 async def ready():
     return {"ready": True}
+
+
+@app.post("/bank-statement/analyze", response_model=BankStatementAnalysisResponse)
+async def analyze_bank_statement(
+    request: BankStatementAnalysisRequest,
+    db: Session = Depends(get_db),
+):
+    """Analyze bank statement cashflows for underwriting and monitoring."""
+    analysis = analyze_statement_signals(request)
+    record = persist_statement_analysis(db, request, analysis)
+    return {
+        "customer_id": record.customer_id,
+        "application_id": record.application_id,
+        "average_balance": record.average_balance,
+        "monthly_income": record.monthly_income,
+        "recurring_debits": record.recurring_debits,
+        "volatility_score": record.volatility_score,
+        "bounced_payment_count": record.bounced_payment_count,
+        "extracted_cashflows": record.extracted_cashflows or {},
+        "insights": record.insights or {},
+        "analyzed_at": record.analyzed_at,
+    }
+
+
+@app.post("/credit-engine/score", response_model=AICreditEngineResponse)
+async def ai_credit_engine(
+    request: AICreditEngineRequest,
+    db: Session = Depends(get_db),
+):
+    """Score a loan application with FinDNA behavioral, statement, and fraud signals."""
+    from uuid import uuid4
+
+    behavior = await score_behavior(
+        BehavioralScoreRequest(
+            customer_id=request.customer_id,
+            income_data=IncomeData(monthly_income=request.declared_monthly_income)
+            if request.declared_monthly_income
+            else None,
+            application_id=request.application_id,
+        ),
+        db,
+    )
+    statement_analysis = None
+    if request.bank_statement:
+        request.bank_statement.customer_id = request.customer_id
+        request.bank_statement.application_id = request.application_id
+        statement_analysis = analyze_statement_signals(request.bank_statement)
+        persist_statement_analysis(db, request.bank_statement, statement_analysis)
+
+    fraud = await score_fraud(
+        FraudDetectionRequest(customer_id=request.customer_id, application_id=request.application_id),
+        db,
+    )
+    decision = build_credit_decision(
+        request=request,
+        behavioral_score=behavior["score"],
+        statement_analysis=statement_analysis,
+        fraud_score=fraud["fraud_score"],
+    )
+
+    existing = db.query(AICreditDecision).filter(
+        AICreditDecision.application_id == request.application_id
+    ).first()
+    if existing:
+        record = existing
+        record.requested_amount = request.requested_amount
+        record.tenure_months = request.tenure_months
+        record.rule_score = decision["rule_score"]
+        record.behavioral_score = decision["behavioral_score"]
+        record.statement_score = decision["statement_score"]
+        record.fraud_penalty = decision["fraud_penalty"]
+        record.ai_risk_score = decision["ai_risk_score"]
+        record.default_probability_90d = decision["default_probability_90d"]
+        record.recommendation = decision["recommendation"]
+        record.risk_grade = decision["risk_grade"]
+        record.reasons = decision["reasons"]
+    else:
+        record = AICreditDecision(
+            id=str(uuid4()),
+            customer_id=request.customer_id,
+            application_id=request.application_id,
+            requested_amount=request.requested_amount,
+            tenure_months=request.tenure_months,
+            rule_score=decision["rule_score"],
+            behavioral_score=decision["behavioral_score"],
+            statement_score=decision["statement_score"],
+            fraud_penalty=decision["fraud_penalty"],
+            ai_risk_score=decision["ai_risk_score"],
+            default_probability_90d=decision["default_probability_90d"],
+            recommendation=decision["recommendation"],
+            risk_grade=decision["risk_grade"],
+            reasons=decision["reasons"],
+        )
+        db.add(record)
+    db.commit()
+
+    return {
+        "customer_id": request.customer_id,
+        "application_id": request.application_id,
+        "ai_risk_score": decision["ai_risk_score"],
+        "default_probability_90d": decision["default_probability_90d"],
+        "recommendation": decision["recommendation"],
+        "risk_grade": decision["risk_grade"],
+        "component_scores": {
+            "rule_score": decision["rule_score"],
+            "behavioral_score": decision["behavioral_score"],
+            "statement_score": decision["statement_score"],
+            "affordability_score": decision["affordability_score"],
+            "fraud_penalty": decision["fraud_penalty"],
+        },
+        "reasons": decision["reasons"],
+        "generated_at": datetime.utcnow(),
+    }
 
 
 @app.post("/score/behavior", response_model=BehavioralScoreResponse)

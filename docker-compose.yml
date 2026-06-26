@@ -277,6 +277,48 @@ services:
       timeout: 5s
       retries: 5
 
+  # Gold Loan Service
+  gold-service:
+    build:
+      context: ./services/gold
+      dockerfile: Dockerfile
+    container_name: nbfcsuite-gold
+    environment:
+      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+    ports:
+      - "8013:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Treasury & Forex Service
+  treasury-service:
+    build:
+      context: ./services/treasury
+      dockerfile: Dockerfile
+    container_name: nbfcsuite-treasury
+    environment:
+      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+    ports:
+      - "8014:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Frontend Web App
   web-app:
     build:

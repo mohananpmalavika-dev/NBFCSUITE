@@ -336,6 +336,8 @@ curl -X POST http://localhost:8000/auth/login \
 | POST | `/underwriting-assistant/{application_id}` | Generate underwriting recommendations for a loan application |
 | POST | `/collections-assistant/{customer_id}` | Generate collections outreach strategy |
 | POST | `/relationship-manager/{customer_id}` | Generate conversational relationship guidance |
+| POST | `/bank-statement/analyze` | Analyze bank statement cashflows, average balance, income, recurring debits |
+| POST | `/credit-engine/score` | Generate AI credit risk score, default probability, grade, and recommendation |
 
 **Behavioral Score Request:**
 ```json
@@ -394,6 +396,40 @@ curl -X POST http://localhost:8000/auth/login \
   }
 }
 ``````
+
+---
+
+### 9. Gold Loan Service
+
+**Port:** `8013`
+**Base URL:** `http://localhost:8013`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/gold-loans` | Create a gold loan application |
+| GET | `/gold-loans` | List gold loan applications by customer, branch, or status |
+| POST | `/gold-loans/{application_id}/ornaments` | Catalog pledged ornaments and appraise value |
+| POST | `/ornaments/{ornament_id}/purity-test` | Record purity test and recompute eligibility |
+| POST | `/gold-loans/{application_id}/vault` | Allocate secure vault packet |
+| GET | `/gold-loans/{application_id}/receipt` | Generate customer receipt with ornaments and vault packet |
+| POST | `/gold-loans/{application_id}/auction` | Schedule auction workflow |
+
+---
+
+### 10. Treasury & Forex Service
+
+**Port:** `8014`
+**Base URL:** `http://localhost:8014`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/exchange-rates` | Add exchange rate from manual or provider feed |
+| GET | `/exchange-rates/{base_currency}/{quote_currency}` | Get latest exchange rate |
+| POST | `/cash-inventory/adjust` | Inflow, outflow, reserve, or release branch cash |
+| GET | `/cash-inventory` | List cash inventory by branch or currency |
+| POST | `/forex-transactions` | Execute customer buy/sell forex transaction |
+| GET | `/forex-transactions` | List forex transactions |
+| GET | `/treasury/branch-summary/{branch_id}` | Branch inventory and turnover summary |
 
 ---
 

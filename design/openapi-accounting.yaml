@@ -5,63 +5,39 @@ info:
 paths:
   /gl-accounts:
     post:
-      summary: Create a general ledger account
+      summary: Create a tenant-scoped general ledger account
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                account_code:
-                  type: string
-                account_name:
-                  type: string
-                account_type:
-                  type: string
+              $ref: '#/components/schemas/GLAccountCreate'
       responses:
         '200':
-          description: gl account created
+          description: GL account created
     get:
-      summary: List GL accounts
+      summary: List tenant GL accounts
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
       responses:
         '200':
-          description: list of gl accounts
+          description: Tenant GL accounts
   /journal-entries:
     post:
-      summary: Create a journal entry
+      summary: Create a balanced tenant journal entry
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                description:
-                  type: string
-                reference:
-                  type: string
-                metadata:
-                  type: object
-                lines:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      gl_account_id:
-                        type: string
-                      debit:
-                        type: number
-                      credit:
-                        type: number
-                      description:
-                        type: string
+              $ref: '#/components/schemas/JournalEntryCreate'
       responses:
         '200':
-          description: journal entry created
+          description: Journal entry created
     get:
-      summary: List journal entries
+      summary: List tenant journal entries
       parameters:
+        - $ref: '#/components/parameters/TenantId'
         - in: query
           name: skip
           schema:
@@ -74,72 +50,291 @@ paths:
             default: 50
       responses:
         '200':
-          description: list of journal entries
+          description: Journal entries
+  /gl-postings/auto:
+    post:
+      summary: Create an idempotent automated GL posting from a source event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutomatedGLPostingRequest'
+      responses:
+        '200':
+          description: Existing or newly posted journal entry
+  /gl-postings/{journal_entry_id}/reverse:
+    post:
+      summary: Reverse a tenant journal entry
+      parameters:
+        - in: path
+          name: journal_entry_id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Reversal journal entry
   /gl-balances:
     get:
-      summary: Get GL balances
+      summary: Get tenant GL balances
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
       responses:
         '200':
-          description: current GL balances
+          description: Current tenant GL balances
+  /reports/trial-balance:
+    get:
+      summary: Generate a period-aware trial balance
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: Trial balance by tenant and period
+  /reports/profit-loss:
+    get:
+      summary: Generate a period-aware profit and loss statement
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StartDate'
+        - $ref: '#/components/parameters/EndDate'
+      responses:
+        '200':
+          description: Profit and loss statement
+  /reports/balance-sheet:
+    get:
+      summary: Generate an as-of balance sheet
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - in: query
+          name: as_of
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Balance sheet
+  /tax-rules:
+    post:
+      summary: Create tenant tax master data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxRuleCreate'
+      responses:
+        '200':
+          description: Tax rule created
+    get:
+      summary: List tenant tax rules
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tax rules
+  /tax/compute:
+    post:
+      summary: Compute GST/TDS and post corresponding journal lines
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxComputationRequest'
+      responses:
+        '200':
+          description: Tax computation and posting result
   /bank-transactions:
     post:
-      summary: Add a bank statement transaction
+      summary: Add a tenant bank statement transaction
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                reference:
-                  type: string
-                transaction_date:
-                  type: string
-                  format: date-time
-                amount:
-                  type: number
-                description:
-                  type: string
+              $ref: '#/components/schemas/BankTransactionCreate'
       responses:
         '200':
-          description: transaction added
+          description: Transaction added
     get:
-      summary: List bank transactions
+      summary: List tenant bank transactions
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
       responses:
         '200':
-          description: bank transactions list
+          description: Bank transactions
   /bank-reconciliation:
     post:
-      summary: Reconcile a bank transaction to a journal entry
+      summary: Reconcile a tenant bank transaction to a journal entry
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                transaction_id:
-                  type: string
-                journal_entry_id:
-                  type: string
+              $ref: '#/components/schemas/ReconciliationRequest'
       responses:
         '200':
-          description: bank transaction reconciled
+          description: Bank transaction reconciled
   /health:
     get:
       summary: Accounting health check
       responses:
         '200':
-          description: service healthy
+          description: Service healthy
   /ready:
     get:
       summary: Accounting readiness probe
       responses:
         '200':
-          description: service ready
-  /:
-    get:
-      summary: Accounting service root
-      responses:
-        '200':
-          description: service metadata
+          description: Service ready
+components:
+  parameters:
+    TenantId:
+      in: query
+      name: tenant_id
+      required: true
+      schema:
+        type: string
+    StartDate:
+      in: query
+      name: start_date
+      schema:
+        type: string
+        format: date-time
+    EndDate:
+      in: query
+      name: end_date
+      schema:
+        type: string
+        format: date-time
+  schemas:
+    GLAccountCreate:
+      type: object
+      required: [tenant_id, account_code, account_name, account_type]
+      properties:
+        tenant_id:
+          type: string
+        account_code:
+          type: string
+        account_name:
+          type: string
+        account_type:
+          type: string
+          enum: [asset, liability, equity, revenue, expense]
+    JournalLineCreate:
+      type: object
+      required: [gl_account_id]
+      properties:
+        gl_account_id:
+          type: string
+        debit:
+          type: number
+          default: 0
+        credit:
+          type: number
+          default: 0
+        description:
+          type: string
+    JournalEntryCreate:
+      type: object
+      required: [tenant_id, description, lines]
+      properties:
+        tenant_id:
+          type: string
+        entry_date:
+          type: string
+          format: date-time
+        description:
+          type: string
+        reference:
+          type: string
+        metadata:
+          type: object
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/JournalLineCreate'
+    AutomatedGLPostingRequest:
+      type: object
+      required: [tenant_id, source_module, source_event, source_reference, amount]
+      properties:
+        tenant_id:
+          type: string
+        idempotency_key:
+          type: string
+        source_module:
+          type: string
+        source_event:
+          type: string
+        source_reference:
+          type: string
+        amount:
+          type: number
+        debit_account_code:
+          type: string
+        credit_account_code:
+          type: string
+        metadata:
+          type: object
+    TaxRuleCreate:
+      type: object
+      required: [tenant_id, tax_code, tax_type, rate_percent]
+      properties:
+        tenant_id:
+          type: string
+        tax_code:
+          type: string
+        tax_type:
+          type: string
+          enum: [gst, tds]
+        rate_percent:
+          type: number
+        payable_gl_account_id:
+          type: string
+        payable_gl_account_code:
+          type: string
+        expense_gl_account_code:
+          type: string
+    TaxComputationRequest:
+      type: object
+      required: [tenant_id, tax_code, source_module, source_reference, taxable_amount]
+      properties:
+        tenant_id:
+          type: string
+        tax_code:
+          type: string
+        source_module:
+          type: string
+        source_reference:
+          type: string
+        taxable_amount:
+          type: number
+    BankTransactionCreate:
+      type: object
+      required: [tenant_id, reference, transaction_date, amount, description]
+      properties:
+        tenant_id:
+          type: string
+        reference:
+          type: string
+        transaction_date:
+          type: string
+          format: date-time
+        amount:
+          type: number
+        description:
+          type: string
+    ReconciliationRequest:
+      type: object
+      required: [tenant_id, transaction_id, journal_entry_id]
+      properties:
+        tenant_id:
+          type: string
+        transaction_id:
+          type: string
+        journal_entry_id:
+          type: string

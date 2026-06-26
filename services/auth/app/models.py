@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Table
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Table, JSON
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 from uuid import uuid4
@@ -22,6 +22,7 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
+    tenant_id = Column(String, nullable=True, index=True)
     organization_id = Column(String, nullable=True, index=True)
     zone_id = Column(String, nullable=True, index=True)
     region_id = Column(String, nullable=True, index=True)
@@ -40,3 +41,16 @@ class Role(Base):
     description = Column(String, nullable=True)
     
     users = relationship("User", secondary=user_roles, back_populates="roles")
+
+
+class TenantConfiguration(Base):
+    __tablename__ = "tenant_configurations"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    tenant_id = Column(String, unique=True, index=True, nullable=False)
+    display_name = Column(String, nullable=False)
+    legal_name = Column(String, nullable=True)
+    primary_color = Column(String, nullable=True)
+    logo_url = Column(String, nullable=True)
+    settings = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)

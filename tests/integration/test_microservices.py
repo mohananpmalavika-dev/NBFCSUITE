@@ -6,6 +6,7 @@ Tests complete workflows across services
 import pytest
 import httpx
 from datetime import datetime
+from uuid import uuid4
 
 # Base URLs - in production these would be environment variables
 AUTH_SERVICE = "http://localhost:8001"
@@ -19,6 +20,7 @@ ACCOUNTING_SERVICE = "http://localhost:8008"
 CRM_SERVICE = "http://localhost:8009"
 DOCUMENT_SERVICE = "http://localhost:8010"
 COMPLIANCE_SERVICE = "http://localhost:8011"
+DEFAULT_TENANT_ID = "tenant-integration"
 
 
 @pytest.fixture
@@ -63,13 +65,13 @@ class TestAuthService:
         """Test user creation"""
         client = httpx.Client()
         response = client.post(
-            f"{AUTH_SERVICE}/users",
+            f"{AUTH_SERVICE}/auth/users",
             headers=headers,
             json={
-                "username": "testuser",
-                "email": "test@example.com",
+                "username": f"testuser-{uuid4().hex[:8]}",
+                "email": f"test-{uuid4().hex[:8]}@example.com",
                 "password": "testpass123",
-                "role_id": 2
+                "tenant_id": DEFAULT_TENANT_ID
             }
         )
         assert response.status_code in [200, 201]
@@ -364,16 +366,20 @@ class TestAccountingService:
             f"{ACCOUNTING_SERVICE}/gl-accounts",
             headers=headers,
             json={
-                "account_code": "GL-1001",
+                "tenant_id": DEFAULT_TENANT_ID,
+                "account_code": f"GL-{uuid4().hex[:8].upper()}",
                 "account_name": "Cash Account",
                 "account_type": "asset"
             }
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["account_code"] == "GL-1001"
+        assert data["tenant_id"] == DEFAULT_TENANT_ID
 
-        list_response = client.get(f"{ACCOUNTING_SERVICE}/gl-accounts")
+        list_response = client.get(
+            f"{ACCOUNTING_SERVICE}/gl-accounts",
+            params={"tenant_id": DEFAULT_TENANT_ID},
+        )
         assert list_response.status_code == 200
 
     def test_create_balanced_journal_entry(self, headers):
@@ -383,7 +389,8 @@ class TestAccountingService:
             f"{ACCOUNTING_SERVICE}/gl-accounts",
             headers=headers,
             json={
-                "account_code": "GL-1002",
+                "tenant_id": DEFAULT_TENANT_ID,
+                "account_code": f"GL-{uuid4().hex[:8].upper()}",
                 "account_name": "Receivables",
                 "account_type": "asset"
             }
@@ -395,6 +402,7 @@ class TestAccountingService:
             f"{ACCOUNTING_SERVICE}/journal-entries",
             headers=headers,
             json={
+                "tenant_id": DEFAULT_TENANT_ID,
                 "description": "Test balanced entry",
                 "lines": [
                     {"gl_account_id": account_id, "debit": 100.0, "credit": 0.0},
@@ -420,6 +428,7 @@ class TestCRMService:
             f"{CRM_SERVICE}/leads",
             headers=headers,
             json={
+                "tenant_id": DEFAULT_TENANT_ID,
                 "source": "web",
                 "assigned_to": "user1"
             }
@@ -428,7 +437,10 @@ class TestCRMService:
         lead = response.json()
         assert lead["status"] == "new"
 
-        list_response = client.get(f"{CRM_SERVICE}/leads")
+        list_response = client.get(
+            f"{CRM_SERVICE}/leads",
+            params={"tenant_id": DEFAULT_TENANT_ID},
+        )
         assert list_response.status_code == 200
 
     def test_create_campaign_and_opportunity(self, headers):
@@ -437,6 +449,7 @@ class TestCRMService:
             f"{CRM_SERVICE}/campaigns",
             headers=headers,
             json={
+                "tenant_id": DEFAULT_TENANT_ID,
                 "name": "Summer Campaign",
                 "description": "Test campaign",
                 "start_date": "2026-01-01T00:00:00Z",
@@ -450,6 +463,7 @@ class TestCRMService:
             f"{CRM_SERVICE}/leads",
             headers=headers,
             json={
+                "tenant_id": DEFAULT_TENANT_ID,
                 "source": "referral"
             }
         )
@@ -460,6 +474,7 @@ class TestCRMService:
             f"{CRM_SERVICE}/opportunities",
             headers=headers,
             json={
+                "tenant_id": DEFAULT_TENANT_ID,
                 "lead_id": lead_id,
                 "product_code": "PL-001",
                 "value": 50000.0,
@@ -638,6 +653,138 @@ class TestEndToEndWorkflow:
                 
         except Exception as e:
             pytest.skip(f"End-to-end test skipped: {str(e)}")
+
+    def test_phase4_crm_accounting_tenant_isolation(self, headers):
+        """Create lead -> opportunity -> CRM report and GL posting -> trial balance with tenant isolation."""
+        client = httpx.Client()
+        tenant_a = f"tenant-a-{uuid4().hex[:8]}"
+        tenant_b = f"tenant-b-{uuid4().hex[:8]}"
+        overlapping_code = f"GL-SHARED-{uuid4().hex[:6].upper()}"
+
+        # Same GL account code must be valid for two different tenants.
+        for tenant_id in [tenant_a, tenant_b]:
+            account_response = client.post(
+                f"{ACCOUNTING_SERVICE}/gl-accounts",
+                headers=headers,
+                json={
+                    "tenant_id": tenant_id,
+                    "account_code": overlapping_code,
+                    "account_name": "Shared Code Cash",
+                    "account_type": "asset",
+                },
+            )
+            assert account_response.status_code == 200
+            assert account_response.json()["tenant_id"] == tenant_id
+
+        lead_response = client.post(
+            f"{CRM_SERVICE}/leads",
+            headers=headers,
+            json={
+                "tenant_id": tenant_a,
+                "source": "phase4-e2e",
+                "assigned_to": "ceo",
+            },
+        )
+        assert lead_response.status_code == 201
+        lead = lead_response.json()
+
+        opportunity_response = client.post(
+            f"{CRM_SERVICE}/opportunities",
+            headers=headers,
+            json={
+                "tenant_id": tenant_a,
+                "lead_id": lead["id"],
+                "product_code": "PL-CEO",
+                "value": 75000.0,
+                "probability": 0.8,
+            },
+        )
+        assert opportunity_response.status_code == 200
+
+        cross_tenant_opportunity = client.post(
+            f"{CRM_SERVICE}/opportunities",
+            headers=headers,
+            json={
+                "tenant_id": tenant_b,
+                "lead_id": lead["id"],
+                "product_code": "PL-CEO",
+                "value": 75000.0,
+                "probability": 0.8,
+            },
+        )
+        assert cross_tenant_opportunity.status_code == 404
+
+        report_response = client.post(
+            f"{CRM_SERVICE}/reports/execute",
+            headers=headers,
+            json={
+                "tenant_id": tenant_a,
+                "data_source": "opportunities",
+                "columns": ["id", "lead_id", "product_code", "value", "probability"],
+                "filters": {"lead_id": lead["id"]},
+                "group_by": ["product_code"],
+            },
+        )
+        assert report_response.status_code == 200
+        report = report_response.json()
+        assert report["tenant_id"] == tenant_a
+        assert report["row_count"] == 1
+        assert report["groups"][0]["value"] == 75000.0
+
+        dashboard_response = client.post(
+            f"{CRM_SERVICE}/dashboards/defaults/ceo-command-center",
+            headers=headers,
+            params={"tenant_id": tenant_a},
+        )
+        assert dashboard_response.status_code == 200
+
+        idem_key = f"phase4-{uuid4().hex}"
+        posting_payload = {
+            "tenant_id": tenant_a,
+            "idempotency_key": idem_key,
+            "source_module": "loans",
+            "source_event": "disbursement",
+            "source_reference": lead["id"],
+            "amount": 25000.0,
+            "metadata": {"scenario": "phase4-e2e"},
+        }
+        posting_response = client.post(
+            f"{ACCOUNTING_SERVICE}/gl-postings/auto",
+            headers=headers,
+            json=posting_payload,
+        )
+        assert posting_response.status_code == 200
+        first_posting = posting_response.json()
+        assert first_posting["posting_status"] == "posted"
+        assert first_posting["source_reference"] == lead["id"]
+
+        duplicate_response = client.post(
+            f"{ACCOUNTING_SERVICE}/gl-postings/auto",
+            headers=headers,
+            json=posting_payload,
+        )
+        assert duplicate_response.status_code == 200
+        assert duplicate_response.json()["id"] == first_posting["id"]
+
+        other_tenant_response = client.post(
+            f"{ACCOUNTING_SERVICE}/gl-postings/auto",
+            headers=headers,
+            json={**posting_payload, "tenant_id": tenant_b},
+        )
+        assert other_tenant_response.status_code == 200
+        assert other_tenant_response.json()["id"] != first_posting["id"]
+
+        trial_balance_response = client.get(
+            f"{ACCOUNTING_SERVICE}/reports/trial-balance",
+            headers=headers,
+            params={"tenant_id": tenant_a},
+        )
+        assert trial_balance_response.status_code == 200
+        trial_balance = trial_balance_response.json()
+        assert trial_balance["tenant_id"] == tenant_a
+        assert trial_balance["is_balanced"] is True
+        assert trial_balance["total_debit"] == 25000.0
+        assert trial_balance["total_credit"] == 25000.0
 
 
 if __name__ == "__main__":
