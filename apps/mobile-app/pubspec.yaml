@@ -1,0 +1,64 @@
+name: nbfcsuite_mobile
+description: NBFCSUITE mobile application for customer loan management.
+
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  bloc: ^8.1.0
+  flutter_bloc: ^8.1.0
+  provider: ^6.0.0
+
+  # Networking
+  dio: ^5.3.0
+  retrofit: ^4.0.0
+  pretty_dio_logger: ^1.3.0
+
+  # Storage
+  hive: ^2.2.0
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.2.0
+
+  # Auth & Security
+  flutter_secure_storage: ^9.0.0
+
+  # UI
+  flutter_svg: ^2.0.0
+  cached_network_image: ^3.3.0
+
+  # Notifications
+  firebase_core: ^2.24.0
+  firebase_messaging: ^14.6.0
+
+  # Utilities
+  intl: ^0.19.0
+  http: ^1.1.0
+  logger: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_linter: ^4.0.0
+  build_runner: ^2.4.0
+  hive_generator: ^2.0.0
+  retrofit_generator: ^7.0.0
+
+flutter:
+  uses-material-design: true
+
+  # To add custom fonts, place them in fonts/ directory and reference them below
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700

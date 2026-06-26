@@ -1,0 +1,97 @@
+openapi: 3.0.3
+info:
+  title: Collections Service API
+  version: 0.1.0
+paths:
+  /buckets:
+    get:
+      summary: List collection buckets (0-30 DPD, 30-60, 60-90, 90+)
+      responses:
+        '200':
+          description: array of buckets with loan counts
+
+  /buckets/{bucket_id}/loans:
+    get:
+      summary: Get loans in a specific bucket
+      parameters:
+        - in: path
+          name: bucket_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: array of loans
+
+  /collections/assign:
+    post:
+      summary: Assign loans to collectors
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                loan_ids:
+                  type: array
+                  items: { type: string }
+                collector_id: { type: string }
+      responses:
+        '201':
+          description: assigned
+
+  /collections/{id}:
+    get:
+      summary: Get collection record for loan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: collection record
+
+  /collections/{id}/note:
+    post:
+      summary: Log collection activity / call notes
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                activity_type: { type: string, enum: [call, sms, whatsapp, email, visit] }
+                notes: { type: string }
+                promised_amount: { type: number }
+                promised_date: { type: string, format: date }
+      responses:
+        '201':
+          description: note logged
+
+  /collections/{id}/settlement:
+    post:
+      summary: Process settlement offer
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                settlement_amount: { type: number }
+                settlement_date: { type: string, format: date }
+      responses:
+        '201':
+          description: settlement recorded

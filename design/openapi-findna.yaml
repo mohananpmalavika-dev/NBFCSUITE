@@ -1,0 +1,232 @@
+openapi: 3.0.3
+info:
+  title: FinDNA / AI Service API
+  version: 0.1.0
+paths:
+  /score/behavior:
+    post:
+      summary: Compute behavioral score for customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id: { type: string }
+                income_data:
+                  type: object
+                  properties:
+                    monthly_income: { type: number }
+                    annual_salary: { type: number }
+                bank_statement_url: { type: string }
+                gst_return_url: { type: string }
+      responses:
+        '200':
+          description: behavioral score
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  score: { type: number }
+                  risk_level: { type: string, enum: [low, medium, high] }
+                  default_probability_90d: { type: number }
+
+  /score/fraud:
+    post:
+      summary: Detect fraud indicators
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id: { type: string }
+                application_id: { type: string }
+                documents:
+                  type: array
+                  items: { type: string }
+      responses:
+        '200':
+          description: fraud assessment
+
+  /explanations/{id}:
+    get:
+      summary: Get explainable AI insights for risk assessment
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: explanation card
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id: { type: string }
+                  decision_behavior: { type: string }
+                  spending_psychology: { type: string }
+                  stress_indicators: { type: string }
+                  repayment_discipline: { type: string }
+                  recommended_amount: { type: number }
+                  recommendation_reason: { type: string }
+
+  /embeddings:
+    post:
+      summary: Generate vector embeddings for customer profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id: { type: string }
+      responses:
+        '200':
+          description: embedding vector
+
+  /predict/churn:
+    post:
+      summary: Predict customer churn probability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id: { type: string }
+      responses:
+        '200':
+          description: churn prediction
+
+  /underwriting-assistant/{application_id}:
+    post:
+      summary: AI underwriting assistant for a loan application
+      parameters:
+        - in: path
+          name: application_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id: { type: string }
+                context_text: { type: string }
+      responses:
+        '200':
+          description: underwriting guidance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id: { type: string }
+                  application_id: { type: string }
+                  summary: { type: string }
+                  recommendation: { type: string }
+                  risk_indicators:
+                    type: array
+                    items:
+                      type: string
+                  action_plan:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  insights:
+                    type: object
+                    additionalProperties:
+                      type: string
+
+  /collections-assistant/{customer_id}:
+    post:
+      summary: AI collections strategy assistant for a customer
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context_text: { type: string }
+      responses:
+        '200':
+          description: collections guidance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id: { type: string }
+                  summary: { type: string }
+                  recommendation: { type: string }
+                  risk_indicators:
+                    type: array
+                    items:
+                      type: string
+                  action_plan:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  insights:
+                    type: object
+                    additionalProperties:
+                      type: string
+
+  /relationship-manager/{customer_id}:
+    post:
+      summary: AI relationship manager assistant for a customer
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context_text: { type: string }
+      responses:
+        '200':
+          description: relationship guidance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id: { type: string }
+                  summary: { type: string }
+                  recommendation: { type: string }
+                  risk_indicators:
+                    type: array
+                    items:
+                      type: string
+                  action_plan:
+                    type: object
+                    additionalProperties:
+                      type: string
+                  insights:
+                    type: object
+                    additionalProperties:
+                      type: string

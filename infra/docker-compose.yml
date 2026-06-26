@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  auth:
+    build: ../services/auth
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../services/auth/app:/app/app:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+
+# Additional services (los, lms, collections, findna) can be added similarly.

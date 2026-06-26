@@ -1,0 +1,314 @@
+openapi: 3.0.3
+info:
+  title: Customer Service API (CIF / Customer 360)
+  version: 0.1.0
+paths:
+  /customers:
+    post:
+      summary: Create customer / CIF
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name: { type: string }
+                last_name: { type: string }
+                email: { type: string }
+                phone: { type: string }
+                kyc_status: { type: string, enum: [pending, approved, rejected] }
+      responses:
+        '201':
+          description: customer created
+
+    get:
+      summary: List customers (with pagination)
+      parameters:
+        - in: query
+          name: skip
+          schema: { type: integer, default: 0 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: array of customers
+
+  /customers/{id}:
+    get:
+      summary: Get customer profile (Customer 360)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: customer record
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  name: { type: string }
+                  kyc_status: { type: string }
+                  loans: { type: array }
+                  deposits: { type: array }
+                  insurance: { type: array }
+                  collection_history: { type: array }
+                  behavior_score: { type: number }
+                  risk_level: { type: string }
+
+    put:
+      summary: Update customer profile
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: updated
+
+  /customers/{id}/documents:
+    post:
+      summary: Upload KYC documents
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document_type: { type: string, enum: [aadhar, pan, driving_license] }
+                file: { type: string, format: binary }
+      responses:
+        '201':
+          description: uploaded
+
+  /customers/{id}/kyc:
+    post:
+      summary: Verify KYC
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                kyc_mode: { type: string, enum: [video, in_person, digital] }
+      responses:
+        '201':
+          description: kyc initiated
+
+  /head-offices:
+    post:
+      summary: Create a head office
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, code]
+              properties:
+                name: { type: string }
+                code: { type: string }
+                address: { type: string }
+                city: { type: string }
+                state: { type: string }
+                country: { type: string }
+                contact_email: { type: string }
+                contact_phone: { type: string }
+                is_active: { type: boolean, default: true }
+      responses:
+        '200':
+          description: head office created
+
+  /zonal-offices:
+    post:
+      summary: Create a zonal office
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [head_office_id, name, code]
+              properties:
+                head_office_id: { type: string }
+                name: { type: string }
+                code: { type: string }
+                address: { type: string }
+                city: { type: string }
+                state: { type: string }
+                country: { type: string }
+                contact_email: { type: string }
+                contact_phone: { type: string }
+                is_active: { type: boolean, default: true }
+      responses:
+        '200':
+          description: zonal office created
+
+  /regional-offices:
+    post:
+      summary: Create a regional office
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [zonal_office_id, name, code]
+              properties:
+                zonal_office_id: { type: string }
+                name: { type: string }
+                code: { type: string }
+                address: { type: string }
+                city: { type: string }
+                state: { type: string }
+                country: { type: string }
+                contact_email: { type: string }
+                contact_phone: { type: string }
+                is_active: { type: boolean, default: true }
+      responses:
+        '200':
+          description: regional office created
+
+  /area-offices:
+    post:
+      summary: Create an area office
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [regional_office_id, name, code]
+              properties:
+                regional_office_id: { type: string }
+                name: { type: string }
+                code: { type: string }
+                address: { type: string }
+                city: { type: string }
+                state: { type: string }
+                country: { type: string }
+                contact_email: { type: string }
+                contact_phone: { type: string }
+                is_active: { type: boolean, default: true }
+      responses:
+        '200':
+          description: area office created
+
+  /branches:
+    post:
+      summary: Create a branch office
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [area_office_id, name, code]
+              properties:
+                area_office_id: { type: string }
+                name: { type: string }
+                code: { type: string }
+                branch_type: { type: string }
+                address: { type: string }
+                city: { type: string }
+                state: { type: string }
+                postal_code: { type: string }
+                country: { type: string }
+                contact_email: { type: string }
+                contact_phone: { type: string }
+                is_active: { type: boolean, default: true }
+      responses:
+        '200':
+          description: branch created
+
+  /branches/{id}:
+    get:
+      summary: Get branch office details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: branch details
+
+  /customers/{id}/assign-branch:
+    post:
+      summary: Assign customer to a branch
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                branch_id: { type: string }
+      responses:
+        '200':
+          description: customer assigned to branch
+
+  /customers/{id}/transactions:
+    post:
+      summary: Create a branch transaction for a customer
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transaction_type, amount]
+              properties:
+                transaction_type: { type: string }
+                amount: { type: number }
+                currency: { type: string }
+                status: { type: string }
+                metadata: { type: object }
+      responses:
+        '200':
+          description: transaction created
+
+  /branches/{id}/transactions:
+    get:
+      summary: List branch transactions
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: branch transactions list

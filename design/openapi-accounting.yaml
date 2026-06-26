@@ -1,0 +1,145 @@
+openapi: 3.0.3
+info:
+  title: Accounting Service API
+  version: 0.1.0
+paths:
+  /gl-accounts:
+    post:
+      summary: Create a general ledger account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account_code:
+                  type: string
+                account_name:
+                  type: string
+                account_type:
+                  type: string
+      responses:
+        '200':
+          description: gl account created
+    get:
+      summary: List GL accounts
+      responses:
+        '200':
+          description: list of gl accounts
+  /journal-entries:
+    post:
+      summary: Create a journal entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                reference:
+                  type: string
+                metadata:
+                  type: object
+                lines:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      gl_account_id:
+                        type: string
+                      debit:
+                        type: number
+                      credit:
+                        type: number
+                      description:
+                        type: string
+      responses:
+        '200':
+          description: journal entry created
+    get:
+      summary: List journal entries
+      parameters:
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: list of journal entries
+  /gl-balances:
+    get:
+      summary: Get GL balances
+      responses:
+        '200':
+          description: current GL balances
+  /bank-transactions:
+    post:
+      summary: Add a bank statement transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reference:
+                  type: string
+                transaction_date:
+                  type: string
+                  format: date-time
+                amount:
+                  type: number
+                description:
+                  type: string
+      responses:
+        '200':
+          description: transaction added
+    get:
+      summary: List bank transactions
+      responses:
+        '200':
+          description: bank transactions list
+  /bank-reconciliation:
+    post:
+      summary: Reconcile a bank transaction to a journal entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transaction_id:
+                  type: string
+                journal_entry_id:
+                  type: string
+      responses:
+        '200':
+          description: bank transaction reconciled
+  /health:
+    get:
+      summary: Accounting health check
+      responses:
+        '200':
+          description: service healthy
+  /ready:
+    get:
+      summary: Accounting readiness probe
+      responses:
+        '200':
+          description: service ready
+  /:
+    get:
+      summary: Accounting service root
+      responses:
+        '200':
+          description: service metadata

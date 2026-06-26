@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: CRM Service API
+  version: 0.1.0
+paths:
+  /leads:
+    post:
+      summary: Create a lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+                assigned_to:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        '201':
+          description: lead created
+    get:
+      summary: List leads
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: assigned_to
+          schema:
+            type: string
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: leads list
+  /leads/{lead_id}/assign:
+    post:
+      summary: Assign a lead to a user
+      parameters:
+        - in: path
+          name: lead_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: assigned_to
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: lead assigned
+  /leads/{lead_id}/qualify:
+    post:
+      summary: Qualify or disqualify a lead
+      parameters:
+        - in: path
+          name: lead_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: qualified
+          required: true
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: lead qualification updated
+  /campaigns:
+    post:
+      summary: Create a campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                start_date:
+                  type: string
+                  format: date-time
+                end_date:
+                  type: string
+                  format: date-time
+                budget:
+                  type: number
+      responses:
+        '200':
+          description: campaign created
+    get:
+      summary: List campaigns
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: campaigns list
+  /opportunities:
+    post:
+      summary: Create an opportunity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lead_id:
+                  type: string
+                product_code:
+                  type: string
+                value:
+                  type: number
+                probability:
+                  type: number
+                close_date:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: opportunity created
+    get:
+      summary: List opportunities
+      parameters:
+        - in: query
+          name: stage
+          schema:
+            type: string
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: opportunities list
+  /health:
+    get:
+      summary: CRM health check
+      responses:
+        '200':
+          description: service healthy
+  /ready:
+    get:
+      summary: CRM readiness probe
+      responses:
+        '200':
+          description: service ready
+  /:
+    get:
+      summary: CRM service root
+      responses:
+        '200':
+          description: service metadata
