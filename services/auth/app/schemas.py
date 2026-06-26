@@ -52,3 +52,14 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: Optional[str] = None
     token_type: str = "bearer"
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class TokenValidationResponse(BaseModel):
+    valid: bool
+    user_id: str
+    username: str
+    roles: List[str] = []

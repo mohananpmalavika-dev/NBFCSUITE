@@ -1,3 +1,6 @@
+import './globals.css';
+import { AuthProvider } from '@/lib/auth-context';
+
 export const metadata = {
   title: 'NBFCSUITE Customer Portal',
   description: 'Loan management and financial services portal',
@@ -10,7 +13,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }

@@ -65,6 +65,13 @@ class ComplianceCheckCreate(BaseModel):
     details: Optional[dict] = None
 
 
+class RunChecksRequest(BaseModel):
+    performed_by: Optional[str] = "system"
+    customer_name: Optional[str] = None
+    source_service: Optional[str] = "customer"
+    source_reference_id: Optional[str] = None
+
+
 class AuditLogCreate(BaseModel):
     entity_type: str
     entity_id: str
@@ -74,6 +81,19 @@ class AuditLogCreate(BaseModel):
 
 
 app = FastAPI(title="compliance-service", version="0.1.0")
+
+COMPLIANCE_STATUSES = {"pending", "passed", "flagged", "rejected"}
+STATUS_ALIASES = {"pass": "passed", "fail": "rejected", "failed": "rejected"}
+
+
+def normalize_status(status: str) -> str:
+    normalized = STATUS_ALIASES.get(status.lower(), status.lower())
+    if normalized not in COMPLIANCE_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"status must be one of {', '.join(sorted(COMPLIANCE_STATUSES))}",
+        )
+    return normalized
 
 
 def get_db() -> Session:
@@ -133,11 +153,12 @@ async def list_watchlist(
 
 @app.post("/compliance-checks")
 async def add_compliance_check(check: ComplianceCheckCreate, db: Session = Depends(get_db)):
+    status = normalize_status(check.status)
     new_check = ComplianceCheck(
         id=str(uuid4()),
         customer_id=check.customer_id,
         check_type=check.check_type,
-        status=check.status,
+        status=status,
         score=check.score,
         details=check.details
     )
@@ -145,6 +166,75 @@ async def add_compliance_check(check: ComplianceCheckCreate, db: Session = Depen
     db.commit()
     db.refresh(new_check)
     return new_check
+
+
+@app.post("/run-checks/{customer_id}")
+async def run_customer_checks(
+    customer_id: str,
+    request: RunChecksRequest | None = None,
+    db: Session = Depends(get_db),
+):
+    request = request or RunChecksRequest()
+    source_reference_id = request.source_reference_id or customer_id
+    watchlist_match = None
+    if request.customer_name:
+        watchlist_match = db.query(WatchlistEntry).filter(WatchlistEntry.name == request.customer_name).first()
+
+    run_id = str(uuid4())
+    check_specs = [
+        ("kyc", "passed", 0.05),
+        ("aml", "flagged" if watchlist_match else "passed", 0.95 if watchlist_match else 0.10),
+        ("pep", "flagged" if watchlist_match and watchlist_match.list_type == "pep" else "passed", 0.85 if watchlist_match else 0.08),
+    ]
+    checks = []
+    for check_type, status, score in check_specs:
+        check = ComplianceCheck(
+            id=str(uuid4()),
+            customer_id=customer_id,
+            check_type=check_type,
+            status=status,
+            score=score,
+            details={
+                "run_id": run_id,
+                "subject_type": "customer",
+                "subject_id": customer_id,
+                "source_service": request.source_service,
+                "source_reference_id": source_reference_id,
+                "watchlist_entry_id": watchlist_match.id if watchlist_match else None,
+            },
+        )
+        db.add(check)
+        checks.append(check)
+
+    overall_status = "flagged" if any(check.status == "flagged" for check in checks) else "passed"
+    audit_log = AuditLog(
+        id=str(uuid4()),
+        entity_type="customer",
+        entity_id=customer_id,
+        action="compliance_run_checks",
+        performed_by=request.performed_by or "system",
+        details={
+            "run_id": run_id,
+            "subject_type": "customer",
+            "subject_id": customer_id,
+            "source_service": request.source_service,
+            "source_reference_id": source_reference_id,
+            "overall_status": overall_status,
+            "check_ids": [check.id for check in checks],
+        },
+    )
+    db.add(audit_log)
+    db.commit()
+    for check in checks:
+        db.refresh(check)
+    db.refresh(audit_log)
+    return {
+        "run_id": run_id,
+        "customer_id": customer_id,
+        "status": overall_status,
+        "checks": checks,
+        "audit_log_id": audit_log.id,
+    }
 
 
 @app.get("/compliance-checks/{customer_id}")
@@ -155,13 +245,16 @@ async def get_compliance_checks(customer_id: str, db: Session = Depends(get_db))
 
 @app.post("/audit-logs")
 async def create_audit_log(log: AuditLogCreate, db: Session = Depends(get_db)):
+    details = dict(log.details or {})
+    details.setdefault("subject_type", log.entity_type)
+    details.setdefault("subject_id", log.entity_id)
     new_log = AuditLog(
         id=str(uuid4()),
         entity_type=log.entity_type,
         entity_id=log.entity_id,
         action=log.action,
         performed_by=log.performed_by,
-        details=log.details
+        details=details
     )
     db.add(new_log)
     db.commit()
@@ -183,6 +276,22 @@ async def list_audit_logs(
     if entity_id:
         query = query.filter(AuditLog.entity_id == entity_id)
     return {"items": query.offset(skip).limit(limit).all(), "skip": skip, "limit": limit}
+
+
+@app.get("/reports/summary")
+async def compliance_summary(db: Session = Depends(get_db)):
+    checks = db.query(ComplianceCheck).all()
+    by_status: dict[str, int] = {}
+    by_check_type: dict[str, int] = {}
+    for check in checks:
+        by_status[check.status] = by_status.get(check.status, 0) + 1
+        by_check_type[check.check_type] = by_check_type.get(check.check_type, 0) + 1
+    return {
+        "total_checks": len(checks),
+        "by_status": by_status,
+        "by_check_type": by_check_type,
+        "flagged_customers": sorted({check.customer_id for check in checks if check.status == "flagged"}),
+    }
 
 
 @app.get("/")

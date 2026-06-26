@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class CustomerCreate(BaseModel):
@@ -16,6 +16,8 @@ class CustomerCreate(BaseModel):
 class CustomerUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     pan: Optional[str] = None
     aadhar: Optional[str] = None
     branch_id: Optional[str] = None
@@ -28,6 +30,8 @@ class CustomerResponse(BaseModel):
     email: str
     phone: str
     kyc_status: str
+    pan: Optional[str] = None
+    aadhar: Optional[str] = None
     branch_id: Optional[str] = None
     created_at: datetime
 
@@ -45,10 +49,16 @@ class AddressCreate(BaseModel):
 
 
 class DocumentResponse(BaseModel):
+    id: str
     document_type: str
     document_number: str
+    document_url: str
     verification_status: str
     expiry_date: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
 
 
 class OfficeCreateBase(BaseModel):
@@ -106,11 +116,19 @@ class BranchResponse(BaseModel):
     country: Optional[str]
     contact_email: Optional[str]
     contact_phone: Optional[str]
-    is_active: str
+    is_active: bool
     created_at: datetime
+
+    @field_validator("is_active", mode="before")
+    @classmethod
+    def parse_bool(cls, value):
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in {"1", "true", "yes", "active"}
 
     class Config:
         from_attributes = True
+
 
 
 class BranchTransactionResponse(BaseModel):
@@ -118,14 +136,20 @@ class BranchTransactionResponse(BaseModel):
     customer_id: str
     branch_id: str
     transaction_type: str
-    amount: str
+    amount: float
     currency: str
     status: str
     metadata: Optional[dict]
     created_at: datetime
 
+    @field_validator("amount", mode="before")
+    @classmethod
+    def parse_amount(cls, value):
+        return float(value or 0)
+
     class Config:
         from_attributes = True
+
 
 
 class FinancialProfileUpdate(BaseModel):

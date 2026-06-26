@@ -140,7 +140,7 @@ async def ready():
     return {"ready": True}
 
 
-@app.post("/leads", response_model=LeadResponse)
+@app.post("/leads", response_model=LeadResponse, status_code=201)
 async def create_lead(lead: LeadCreate, db: Session = Depends(get_db)):
     new_lead = Lead(
         id=str(uuid4()),
@@ -229,6 +229,31 @@ async def list_opportunities(
     if stage:
         query = query.filter(Opportunity.stage == stage)
     return query.offset(skip).limit(limit).all()
+
+
+@app.get("/reports/pipeline-summary")
+async def pipeline_summary(db: Session = Depends(get_db)):
+    opportunities = db.query(Opportunity).all()
+    leads = db.query(Lead).all()
+    by_stage: dict[str, dict[str, float | int]] = {}
+    for opportunity in opportunities:
+        stage = opportunity.stage or "unknown"
+        if stage not in by_stage:
+            by_stage[stage] = {"count": 0, "value": 0.0, "weighted_value": 0.0}
+        by_stage[stage]["count"] += 1
+        by_stage[stage]["value"] += opportunity.value or 0.0
+        by_stage[stage]["weighted_value"] += (opportunity.value or 0.0) * (opportunity.probability or 0.0)
+
+    lead_statuses: dict[str, int] = {}
+    for lead in leads:
+        lead_statuses[lead.status] = lead_statuses.get(lead.status, 0) + 1
+
+    return {
+        "opportunity_count": len(opportunities),
+        "lead_count": len(leads),
+        "by_stage": by_stage,
+        "lead_statuses": lead_statuses,
+    }
 
 
 @app.post("/leads/{lead_id}/assign")

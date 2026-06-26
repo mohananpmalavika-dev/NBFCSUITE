@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
@@ -6,11 +6,41 @@ from app.database import get_db, init_db
 from app.models import User, Role
 from app.schemas import (
     UserCreate, User as UserSchema, LoginRequest, TokenResponse, 
-    RoleCreate, Role as RoleSchema
+    RoleCreate, Role as RoleSchema, RefreshTokenRequest, TokenValidationResponse
 )
-from app.security import hash_password, verify_password, create_access_token
+from app.security import hash_password, verify_password, create_access_token, decode_token
 
 app = FastAPI(title="auth-service", version="0.1.0")
+
+
+def _extract_bearer_token(authorization: str | None) -> str:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing bearer token",
+        )
+    return authorization.split(" ", 1)[1]
+
+
+def get_current_user(
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+) -> User:
+    token = _extract_bearer_token(authorization)
+    payload = decode_token(token)
+    if not payload or payload.get("typ") == "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+
+    user = db.query(User).filter(User.id == payload.get("sub")).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+        )
+    return user
 
 
 @app.on_event("startup")
@@ -57,10 +87,48 @@ async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
         )
     
     access_token = create_access_token(
-        data={"sub": user.id, "username": user.username}
+        data={"sub": user.id, "username": user.username, "typ": "access"}
+    )
+    refresh_token = create_access_token(
+        data={"sub": user.id, "username": user.username, "typ": "refresh"},
+        expires_delta=timedelta(days=7),
     )
     
-    return TokenResponse(access_token=access_token)
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+
+
+@app.post("/auth/refresh", response_model=TokenResponse)
+async def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_db)):
+    """Exchange a valid refresh token for a new access token."""
+    decoded = decode_token(payload.refresh_token)
+    if not decoded or decoded.get("typ") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
+
+    user = db.query(User).filter(User.id == decoded.get("sub")).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive",
+        )
+
+    access_token = create_access_token(
+        data={"sub": user.id, "username": user.username, "typ": "access"}
+    )
+    return TokenResponse(access_token=access_token, refresh_token=payload.refresh_token)
+
+
+@app.get("/auth/validate", response_model=TokenValidationResponse)
+async def validate_token(current_user: User = Depends(get_current_user)):
+    """Validate the bearer token and return the authenticated principal."""
+    return TokenValidationResponse(
+        valid=True,
+        user_id=current_user.id,
+        username=current_user.username,
+        roles=[role.name for role in current_user.roles],
+    )
 
 
 @app.post("/auth/users", response_model=UserSchema)
@@ -95,6 +163,12 @@ async def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     
     return new_user
+
+
+@app.get("/auth/users/me", response_model=UserSchema)
+async def get_me(current_user: User = Depends(get_current_user)):
+    """Get the authenticated user's profile."""
+    return current_user
 
 
 @app.get("/auth/users/{user_id}", response_model=UserSchema)

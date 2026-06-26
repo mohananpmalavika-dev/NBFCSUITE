@@ -1,19 +1,31 @@
 'use client';
 
+import { apiClient } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react';
+
+interface LoanProduct {
+  product_code: string;
+  product_name: string;
+  min_amount: number;
+  max_amount: number;
+  min_tenor: number;
+  max_tenor: number;
+  base_rate: number;
+}
 
 export default function ApplyLoanPage() {
   const { user, token, isLoading } = useAuth();
   const router = useRouter();
+  const [products, setProducts] = useState<LoanProduct[]>([]);
   const [formData, setFormData] = useState({
-    productCode: 'PERSONAL_LOAN',
+    productCode: '',
     appliedAmount: '',
-    tenureMonths: '60',
+    tenureMonths: '',
   });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (!isLoading && !token) {
@@ -21,29 +33,88 @@ export default function ApplyLoanPage() {
     }
   }, [token, isLoading, router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  useEffect(() => {
+    const loadProducts = async () => {
+      if (!token) {
+        return;
+      }
+      try {
+        const response = await apiClient.getLoanProducts();
+        const productList = response.data as LoanProduct[];
+        setProducts(productList);
+        if (productList.length > 0) {
+          setFormData({
+            productCode: productList[0].product_code,
+            appliedAmount: String(productList[0].min_amount),
+            tenureMonths: String(productList[0].min_tenor),
+          });
+        }
+      } catch {
+        setMessage('Could not load loan products.');
+      }
+    };
+
+    loadProducts();
+  }, [token]);
+
+  const selectedProduct = useMemo(
+    () => products.find((product) => product.product_code === formData.productCode),
+    [products, formData.productCode],
+  );
+
+  const loanAmount = Number(formData.appliedAmount) || 0;
+  const tenure = Number(formData.tenureMonths) || selectedProduct?.min_tenor || 0;
+  const rate = selectedProduct?.base_rate || 0;
+  const monthlyRate = rate / 100 / 12;
+  const emi =
+    loanAmount > 0 && tenure > 0
+      ? (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, tenure)) /
+        (Math.pow(1 + monthlyRate, tenure) - 1)
+      : 0;
+  const totalAmount = emi * tenure;
+  const totalInterest = totalAmount - loanAmount;
+
+  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = event.target;
+    if (name === 'productCode') {
+      const product = products.find((item) => item.product_code === value);
+      setFormData({
+        productCode: value,
+        appliedAmount: product ? String(product.min_amount) : '',
+        tenureMonths: product ? String(product.min_tenor) : '',
+      });
+      return;
+    }
+    setFormData((previous) => ({ ...previous, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError('');
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!user || !selectedProduct) {
+      return;
+    }
 
+    setSubmitting(true);
+    setMessage('');
     try {
-      // Validate form
-      if (!formData.appliedAmount || parseInt(formData.appliedAmount) <= 0) {
-        setError('Please enter a valid amount');
-        setSubmitting(false);
+      if (loanAmount < selectedProduct.min_amount || loanAmount > selectedProduct.max_amount) {
+        setMessage('Amount is outside the selected product limits.');
+        return;
+      }
+      if (tenure < selectedProduct.min_tenor || tenure > selectedProduct.max_tenor) {
+        setMessage('Tenure is outside the selected product limits.');
         return;
       }
 
-      // In real implementation, call API
-      alert('Loan application submitted successfully');
+      await apiClient.applyForLoan({
+        customer_id: user.id,
+        product_code: selectedProduct.product_code,
+        applied_amount: loanAmount,
+        tenure_months: tenure,
+      });
       router.push('/loans');
-    } catch (err) {
-      setError('Failed to submit application');
+    } catch {
+      setMessage('Failed to submit application.');
     } finally {
       setSubmitting(false);
     }
@@ -53,141 +124,113 @@ export default function ApplyLoanPage() {
     return <div className="p-8 text-center">Loading...</div>;
   }
 
-  const products = [
-    { code: 'PERSONAL_LOAN', name: 'Personal Loan', minAmount: 50000, maxAmount: 2000000, rate: 9.0 },
-    { code: 'HOME_LOAN', name: 'Home Loan', minAmount: 1000000, maxAmount: 5000000, rate: 7.5 },
-    { code: 'AUTO_LOAN', name: 'Auto Loan', minAmount: 300000, maxAmount: 1500000, rate: 8.5 },
-    { code: 'GOLD_LOAN', name: 'Gold Loan', minAmount: 50000, maxAmount: 500000, rate: 12.0 },
-  ];
-
-  const selectedProduct = products.find((p) => p.code === formData.productCode);
-  const loanAmount = parseInt(formData.appliedAmount) || 0;
-  const tenure = parseInt(formData.tenureMonths) || 60;
-  const rate = selectedProduct?.rate || 0;
-  const monthlyRate = rate / 100 / 12;
-  const emi =
-    loanAmount > 0
-      ? (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, tenure)) /
-        (Math.pow(1 + monthlyRate, tenure) - 1)
-      : 0;
-  const totalAmount = emi * tenure;
-  const totalInterest = totalAmount - loanAmount;
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Apply for a Loan</h1>
-          <p className="text-gray-600 mt-2">Fill in your details and apply instantly</p>
+    <main className="min-h-screen bg-slate-50 px-4 py-8">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-slate-950">Apply for a Loan</h1>
+          <p className="mt-1 text-slate-600">Choose a product and submit a draft LOS application.</p>
         </div>
 
-        {/* Form */}
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Product Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Loan Type</label>
+        {message && (
+          <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {message}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="space-y-5">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Loan type</span>
               <select
                 name="productCode"
                 value={formData.productCode}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               >
                 {products.map((product) => (
-                  <option key={product.code} value={product.code}>
-                    {product.name} @ {product.rate}% p.a.
+                  <option key={product.product_code} value={product.product_code}>
+                    {product.product_name} @ {product.base_rate}% p.a.
                   </option>
                 ))}
               </select>
-            </div>
+            </label>
 
-            {/* Loan Amount */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Loan Amount (₹)</label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Loan amount (INR)</span>
               <input
                 type="number"
                 name="appliedAmount"
                 value={formData.appliedAmount}
                 onChange={handleChange}
-                min={selectedProduct?.minAmount || 0}
-                max={selectedProduct?.maxAmount || 10000000}
-                placeholder={`₹ ${selectedProduct?.minAmount?.toLocaleString()} - ₹ ${selectedProduct?.maxAmount?.toLocaleString()}`}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min={selectedProduct?.min_amount}
+                max={selectedProduct?.max_amount}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Range: ₹ {selectedProduct?.minAmount?.toLocaleString()} - ₹ {selectedProduct?.maxAmount?.toLocaleString()}
-              </p>
-            </div>
+              {selectedProduct && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Range: INR {selectedProduct.min_amount.toLocaleString()} - INR {selectedProduct.max_amount.toLocaleString()}
+                </p>
+              )}
+            </label>
 
-            {/* Tenure */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Loan Tenure (months)</label>
-              <select
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Tenure (months)</span>
+              <input
+                type="number"
                 name="tenureMonths"
                 value={formData.tenureMonths}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {[12, 24, 36, 48, 60, 84].map((months) => (
-                  <option key={months} value={months}>
-                    {months} months ({Math.round(months / 12)} years)
-                  </option>
-                ))}
-              </select>
-            </div>
+                min={selectedProduct?.min_tenor}
+                max={selectedProduct?.max_tenor}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+              {selectedProduct && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Range: {selectedProduct.min_tenor} - {selectedProduct.max_tenor} months
+                </p>
+              )}
+            </label>
 
-            {/* EMI Calculator Result */}
-            {loanAmount > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-3">Estimated EMI</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Monthly EMI</p>
-                    <p className="text-2xl font-bold text-blue-600">₹ {emi.toFixed(0).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Total Interest</p>
-                    <p className="text-2xl font-bold text-gray-900">₹ {totalInterest.toFixed(0).toLocaleString()}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-gray-600">Total Amount to Pay</p>
-                    <p className="text-2xl font-bold text-gray-900">₹ {totalAmount.toFixed(0).toLocaleString()}</p>
-                  </div>
+            {loanAmount > 0 && tenure > 0 && (
+              <section className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <h2 className="mb-3 font-semibold text-slate-950">Estimated repayment</h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <Metric label="Monthly EMI" value={`INR ${Math.round(emi).toLocaleString()}`} />
+                  <Metric label="Total interest" value={`INR ${Math.round(totalInterest).toLocaleString()}`} />
+                  <Metric label="Total payable" value={`INR ${Math.round(totalAmount).toLocaleString()}`} />
                 </div>
-              </div>
+              </section>
             )}
 
-            {error && <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">{error}</div>}
-
-            {/* Buttons */}
-            <div className="flex space-x-4">
+            <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row">
               <button
                 type="submit"
-                disabled={submitting}
-                className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-semibold"
+                disabled={submitting || products.length === 0}
+                className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {submitting ? 'Processing...' : 'Apply Now'}
+                {submitting ? 'Submitting...' : 'Submit Application'}
               </button>
               <button
                 type="button"
                 onClick={() => router.back()}
-                className="flex-1 bg-gray-300 text-gray-900 py-3 rounded-lg hover:bg-gray-400 font-semibold"
+                className="rounded-md border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
               >
                 Cancel
               </button>
             </div>
-
-            {/* Disclaimer */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-xs text-gray-600">
-                <strong>Disclaimer:</strong> This is an estimated EMI calculation. Actual EMI may vary based on your credit score,
-                income verification, and other factors. Please review the loan agreement carefully before signing.
-              </p>
-            </div>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
+    </main>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-slate-950">{value}</p>
     </div>
   );
 }

@@ -7,7 +7,7 @@ interface User {
   id: string;
   username: string;
   email: string;
-  roles: string[];
+  roles: Array<string | { id: string; name: string; description?: string | null }>;
 }
 
 interface AuthContextType {
@@ -31,6 +31,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    apiClient.clearToken();
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+  }, []);
+
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
@@ -43,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (token) {
       setIsLoading(true);
-      apiClient.getUser('me')
+      apiClient.getMe()
         .then(response => {
           setUser(response.data);
         })
@@ -54,19 +62,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsLoading(false);
         });
     }
-  }, [token]);
+  }, [token, logout]);
 
   const login = useCallback(async (username: string, password: string) => {
     setIsLoading(true);
     try {
       const response = await apiClient.login(username, password);
-      const { access_token } = response.data;
+      const { access_token, refresh_token } = response.data;
 
       setToken(access_token);
       apiClient.setToken(access_token);
       localStorage.setItem('token', access_token);
+      if (refresh_token) {
+        localStorage.setItem('refreshToken', refresh_token);
+      }
 
-      const userResponse = await apiClient.getUser('me');
+      const userResponse = await apiClient.getMe();
       setUser(userResponse.data);
     } catch (error) {
       console.error('Login failed:', error);
@@ -74,13 +85,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const logout = useCallback(() => {
-    setUser(null);
-    setToken(null);
-    apiClient.clearToken();
-    localStorage.removeItem('token');
   }, []);
 
   return (

@@ -1,29 +1,40 @@
 'use client';
 
+import { apiClient } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { apiClient } from '@/lib/api';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
+
+interface LoanAccount {
+  id: string;
+  account_number: string;
+  emi_amount: number;
+  outstanding_principal: number;
+  status: string;
+}
 
 interface Payment {
-  id: string;
-  transactionDate: string;
-  paymentMode: string;
+  id?: string;
+  transaction_id?: string;
+  transaction_date: string;
+  payment_mode: string;
   amount: number;
-  principalPaid: number;
-  interestPaid: number;
-  reference: string;
+  principal_paid?: number;
+  interest_paid?: number;
+  reference?: string;
   status: string;
 }
 
 export default function PaymentsPage() {
   const { user, token, isLoading } = useAuth();
   const router = useRouter();
+  const [loans, setLoans] = useState<LoanAccount[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loanId, setLoanId] = useState('');
   const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMode, setPaymentMode] = useState('UPI');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (!isLoading && !token) {
@@ -31,71 +42,67 @@ export default function PaymentsPage() {
     }
   }, [token, isLoading, router]);
 
-  useEffect(() => {
-    if (loanId) {
-      loadPayments();
+  const loadLoans = useCallback(async () => {
+    if (!user || !token) {
+      return;
+    }
+    setMessage('');
+    try {
+      const response = await apiClient.getCustomerLoans(user.id);
+      const loanItems = response.data.items || [];
+      setLoans(loanItems);
+      if (!loanId && loanItems.length > 0) {
+        setLoanId(loanItems[0].id);
+      }
+    } catch {
+      setMessage('Could not load loan accounts.');
+    }
+  }, [user, token, loanId]);
+
+  const loadPayments = useCallback(async () => {
+    if (!loanId) {
+      setPayments([]);
+      return;
+    }
+    try {
+      const response = await apiClient.getLoanPayments(loanId);
+      setPayments(response.data.payments || []);
+    } catch {
+      setMessage('Could not load payment history.');
     }
   }, [loanId]);
 
-  const loadPayments = async () => {
-    try {
-      // In real implementation, fetch actual payments
-      const mockPayments: Payment[] = [
-        {
-          id: '1',
-          transactionDate: '2026-06-20',
-          paymentMode: 'UPI',
-          amount: 12500,
-          principalPaid: 10000,
-          interestPaid: 2500,
-          reference: 'UPI123456',
-          status: 'completed',
-        },
-        {
-          id: '2',
-          transactionDate: '2026-05-20',
-          paymentMode: 'NEFT',
-          amount: 12500,
-          principalPaid: 10000,
-          interestPaid: 2500,
-          reference: 'NEFT789012',
-          status: 'completed',
-        },
-      ];
-      setPayments(mockPayments);
-    } catch (err) {
-      setError('Failed to load payments');
-    }
-  };
+  useEffect(() => {
+    loadLoans();
+  }, [loadLoans]);
 
-  const handleMakePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    loadPayments();
+  }, [loadPayments]);
+
+  const handleMakePayment = async (event: FormEvent) => {
+    event.preventDefault();
     setSubmitting(true);
-    setError('');
+    setMessage('');
 
     try {
-      if (!loanId || !paymentAmount) {
-        setError('Please select loan and enter amount');
+      const amount = Number(paymentAmount);
+      if (!loanId || !amount || amount <= 0) {
+        setMessage('Select a loan and enter a valid amount.');
         return;
       }
 
-      // In real implementation, call payment API
-      const newPayment: Payment = {
-        id: Date.now().toString(),
-        transactionDate: new Date().toISOString().split('T')[0],
-        paymentMode: 'UPI',
-        amount: parseFloat(paymentAmount),
-        principalPaid: parseFloat(paymentAmount) * 0.8,
-        interestPaid: parseFloat(paymentAmount) * 0.2,
-        reference: `TXN${Date.now()}`,
-        status: 'pending',
-      };
+      await apiClient.makePayment(loanId, {
+        amount,
+        payment_mode: paymentMode,
+        reference: `WEB-${Date.now()}`,
+      });
 
-      setPayments([newPayment, ...payments]);
       setPaymentAmount('');
-      alert('Payment initiated successfully');
-    } catch (err) {
-      setError('Payment failed. Please try again.');
+      setMessage('Payment recorded successfully.');
+      await Promise.all([loadLoans(), loadPayments()]);
+    } catch {
+      setMessage('Payment failed. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -106,96 +113,113 @@ export default function PaymentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Payments</h1>
-          <p className="text-gray-600 mt-2">Manage your loan payments and view history</p>
+    <main className="min-h-screen bg-slate-50 px-4 py-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-950">Payments</h1>
+            <p className="mt-1 text-slate-600">Record EMI payments and view LMS history.</p>
+          </div>
+          <button
+            onClick={() => router.push('/loans')}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+          >
+            Loans
+          </button>
         </div>
 
-        {/* Make Payment Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Make a Payment</h2>
-          <form onSubmit={handleMakePayment} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Loan</label>
-                <select
-                  value={loanId}
-                  onChange={(e) => setLoanId(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Choose a loan...</option>
-                  <option value="LOAN001">Personal Loan - ₹5,00,000</option>
-                  <option value="LOAN002">Home Loan - ₹20,00,000</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Amount (₹)</label>
-                <input
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  placeholder="Enter amount"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            {error && <div className="text-red-600 text-sm">{error}</div>}
+        {message && (
+          <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+            {message}
+          </div>
+        )}
+
+        <section className="mb-6 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold text-slate-950">Make a Payment</h2>
+          <form onSubmit={handleMakePayment} className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_180px_180px_auto]">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Loan account</span>
+              <select
+                value={loanId}
+                onChange={(event) => setLoanId(event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="">Choose a loan</option>
+                {loans.map((loan) => (
+                  <option key={loan.id} value={loan.id}>
+                    {loan.account_number} - EMI INR {Math.round(loan.emi_amount).toLocaleString()}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Amount</span>
+              <input
+                type="number"
+                value={paymentAmount}
+                onChange={(event) => setPaymentAmount(event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Mode</span>
+              <select
+                value={paymentMode}
+                onChange={(event) => setPaymentMode(event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="UPI">UPI</option>
+                <option value="NEFT">NEFT</option>
+                <option value="CASH">Cash</option>
+                <option value="CARD">Card</option>
+              </select>
+            </label>
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              disabled={submitting || loans.length === 0}
+              className="self-end rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting ? 'Processing...' : 'Make Payment'}
+              {submitting ? 'Recording...' : 'Pay'}
             </button>
           </form>
-        </div>
+        </section>
 
-        {/* Payment History */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment History</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b-2 border-gray-300">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Mode</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-700">Amount</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-700">Principal</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-700">Interest</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Reference</th>
-                  <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-900">{payment.transactionDate}</td>
-                    <td className="py-3 px-4 text-gray-700">{payment.paymentMode}</td>
-                    <td className="py-3 px-4 text-right font-semibold text-gray-900">₹{payment.amount.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-right text-gray-700">₹{payment.principalPaid.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-right text-gray-700">₹{payment.interestPaid.toLocaleString()}</td>
-                    <td className="py-3 px-4 text-gray-700">{payment.reference}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          payment.status === 'completed'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {payment.status}
-                      </span>
-                    </td>
+        <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold text-slate-950">Payment History</h2>
+          {payments.length === 0 ? (
+            <p className="rounded-md bg-slate-50 p-4 text-sm text-slate-600">No payments found for the selected loan.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-slate-500">
+                    <th className="px-3 py-3">Date</th>
+                    <th className="px-3 py-3">Mode</th>
+                    <th className="px-3 py-3 text-right">Amount</th>
+                    <th className="px-3 py-3 text-right">Principal</th>
+                    <th className="px-3 py-3 text-right">Interest</th>
+                    <th className="px-3 py-3">Reference</th>
+                    <th className="px-3 py-3">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                </thead>
+                <tbody>
+                  {payments.map((payment) => (
+                    <tr key={payment.id || payment.transaction_id} className="border-b border-slate-100">
+                      <td className="px-3 py-3">{new Date(payment.transaction_date).toLocaleDateString()}</td>
+                      <td className="px-3 py-3">{payment.payment_mode}</td>
+                      <td className="px-3 py-3 text-right">INR {payment.amount.toLocaleString()}</td>
+                      <td className="px-3 py-3 text-right">INR {(payment.principal_paid || 0).toLocaleString()}</td>
+                      <td className="px-3 py-3 text-right">INR {(payment.interest_paid || 0).toLocaleString()}</td>
+                      <td className="px-3 py-3">{payment.reference || payment.transaction_id}</td>
+                      <td className="px-3 py-3">{payment.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

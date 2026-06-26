@@ -220,6 +220,45 @@ async def get_deposit_account(account_id: str, db: Session = Depends(get_db)):
     return account
 
 
+@app.get("/deposit-accounts")
+async def list_deposit_accounts(
+    customer_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    skip: int = Query(0),
+    limit: int = Query(50),
+    db: Session = Depends(get_db),
+):
+    query = db.query(DepositAccount)
+    if customer_id:
+        query = query.filter(DepositAccount.customer_id == customer_id)
+    if status:
+        query = query.filter(DepositAccount.status == status)
+    total = query.count()
+    accounts = query.order_by(DepositAccount.created_at.desc()).offset(skip).limit(limit).all()
+    return {"items": accounts, "skip": skip, "limit": limit, "total": total}
+
+
+@app.get("/reports/customer-summary/{customer_id}")
+async def customer_deposit_summary(customer_id: str, db: Session = Depends(get_db)):
+    accounts = db.query(DepositAccount).filter(DepositAccount.customer_id == customer_id).all()
+    by_status: dict[str, int] = {}
+    total_principal = 0.0
+    weighted_rate_amount = 0.0
+    for account in accounts:
+        by_status[account.status] = by_status.get(account.status, 0) + 1
+        total_principal += account.principal_amount or 0.0
+        weighted_rate_amount += (account.principal_amount or 0.0) * (account.interest_rate or 0.0)
+
+    average_interest_rate = round(weighted_rate_amount / total_principal, 2) if total_principal else 0.0
+    return {
+        "customer_id": customer_id,
+        "account_count": len(accounts),
+        "total_principal": round(total_principal, 2),
+        "average_interest_rate": average_interest_rate,
+        "by_status": by_status,
+    }
+
+
 @app.get("/deposit-accounts/{account_id}/interest-schedule", response_model=InterestScheduleResponse)
 async def get_interest_schedule(account_id: str, db: Session = Depends(get_db)):
     account = db.query(DepositAccount).filter(DepositAccount.id == account_id).first()

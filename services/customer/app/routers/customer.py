@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from sqlalchemy.orm import Session
 from ..models import Customer, CustomerAddress, KYCDocument, CustomerFinancialProfile
@@ -163,23 +164,45 @@ async def get_risk_profile(customer_id: str, db: Session = Depends(get_db)):
 
 @router.put("/{customer_id}/risk-profile", response_model=FinancialProfileResponse)
 async def update_risk_profile(customer_id: str, profile_data: FinancialProfileUpdate, db: Session = Depends(get_db)):
-    # Allow partial updates, but focus on risk-related fields.
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    profile = db.query(CustomerFinancialProfile).filter(CustomerFinancialProfile.customer_id == customer_id).first()
-    if not profile:
-        profile = CustomerFinancialProfile(id=str(uuid4()), customer_id=customer_id)
-        db.add(profile)
-
     update_data = profile_data.model_dump(exclude_unset=True)
     allowed_fields = {"assets", "liabilities", "behavior_score", "risk_level", "credit_score"}
-    for key, value in update_data.items():
-        if key in allowed_fields:
-            setattr(profile, key, value)
+    unexpected_fields = set(update_data) - allowed_fields
+    if unexpected_fields:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Risk profile only accepts: {', '.join(sorted(allowed_fields))}",
+        )
 
-    db.commit()
-    db.refresh(profile)
+    risk_level = update_data.get("risk_level")
+    if risk_level and risk_level not in {"low", "medium", "high", "critical"}:
+        raise HTTPException(
+            status_code=422,
+            detail="risk_level must be one of low, medium, high, critical",
+        )
+
+    credit_score = update_data.get("credit_score")
+    if credit_score is not None and not 300 <= credit_score <= 900:
+        raise HTTPException(status_code=422, detail="credit_score must be between 300 and 900")
+
+    try:
+        profile = db.query(CustomerFinancialProfile).filter(CustomerFinancialProfile.customer_id == customer_id).first()
+        if not profile:
+            profile = CustomerFinancialProfile(id=str(uuid4()), customer_id=customer_id)
+            db.add(profile)
+
+        for key, value in update_data.items():
+            setattr(profile, key, value)
+        profile.last_updated = datetime.utcnow()
+
+        db.commit()
+        db.refresh(profile)
+    except Exception:
+        db.rollback()
+        raise
+
     return profile
 

@@ -1,96 +1,58 @@
 'use client';
 
 import { useAuth } from '@/lib/auth-context';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
+const dashboardCards = [
+  { title: 'Loans', value: 'Applications and accounts', href: '/loans' },
+  { title: 'Payments', value: 'EMI history and collection', href: '/payments' },
+  { title: 'Documents', value: 'KYC and expiry tracking', href: '/documents' },
+  { title: 'Profile', value: 'Customer 360 and risk', href: '/profile' },
+  { title: 'Apply Loan', value: 'New loan request', href: '/apply-loan' },
+  { title: 'Settings', value: 'Preferences and security', href: '/settings' },
+];
+
 export default function Home() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!token) {
+    if (!isLoading && !token) {
       router.push('/login');
     }
-  }, [token, router]);
+  }, [token, isLoading, router]);
 
-  if (!token) {
-    return null;
+  if (isLoading || !token) {
+    return <div className="p-8 text-center">Loading...</div>;
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>NBFCSUITE Customer Portal</h1>
-      <p>Welcome, {user?.username}!</p>
+    <main className="min-h-screen bg-slate-50 px-4 py-8">
+      <div className="mx-auto max-w-6xl">
+        <section className="mb-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">Customer Portal</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-950">NBFCSUITE</h1>
+          <p className="mt-2 max-w-2xl text-slate-600">
+            Welcome, {user?.username}. Manage loans, payments, customer profile, and documents from one workspace.
+          </p>
+        </section>
 
-      <div style={{ marginTop: '2rem' }}>
-        <h2>Your Dashboard</h2>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '1rem',
-          }}
-        >
-          <Card title="Loans" count="2" href="/loans" />
-          <Card title="EMI Payments" count="24" href="/payments" />
-          <Card title="Documents" count="5" href="/documents" />
-          <Card title="KYC Status" count="Approved" href="/kyc" />
-          <Card title="Credit Score" count="750" href="/score" />
-          <Card title="Settings" count="—" href="/settings" />
-        </div>
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {dashboardCards.map((card) => (
+            <Link
+              key={card.href}
+              href={card.href}
+              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+            >
+              <h2 className="text-lg font-semibold text-slate-950">{card.title}</h2>
+              <p className="mt-2 text-sm text-slate-600">{card.value}</p>
+              <p className="mt-4 text-sm font-medium text-blue-700">Open</p>
+            </Link>
+          ))}
+        </section>
       </div>
-
-      <div style={{ marginTop: '3rem' }}>
-        <h3>Quick Actions</h3>
-        <button
-          onClick={() => router.push('/apply-loan')}
-          style={{
-            padding: '0.5rem 1rem',
-            marginRight: '0.5rem',
-            cursor: 'pointer',
-          }}
-        >
-          Apply for Loan
-        </button>
-        <button
-          onClick={() => router.push('/payment')}
-          style={{
-            padding: '0.5rem 1rem',
-            marginRight: '0.5rem',
-            cursor: 'pointer',
-          }}
-        >
-          Make Payment
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Card({
-  title,
-  count,
-  href,
-}: {
-  title: string;
-  count: string;
-  href: string;
-}) {
-  return (
-    <div
-      style={{
-        border: '1px solid #ccc',
-        padding: '1rem',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-      }}
-    >
-      <h3>{title}</h3>
-      <p style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{count}</p>
-      <a href={href} style={{ color: '#0070f3', textDecoration: 'none' }}>
-        View →
-      </a>
-    </div>
+    </main>
   );
 }

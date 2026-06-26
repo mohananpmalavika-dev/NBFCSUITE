@@ -236,6 +236,38 @@ async def gl_balances(db: Session = Depends(get_db)):
     return {"accounts": accounts}
 
 
+@app.get("/reports/trial-balance")
+async def trial_balance(db: Session = Depends(get_db)):
+    accounts = db.query(GLAccount).all()
+    rows = []
+    total_debit = 0.0
+    total_credit = 0.0
+    for account in accounts:
+        balance = account.balance or 0.0
+        debit = round(balance, 2) if balance >= 0 else 0.0
+        credit = round(abs(balance), 2) if balance < 0 else 0.0
+        total_debit += debit
+        total_credit += credit
+        rows.append(
+            {
+                "account_id": account.id,
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "account_type": account.account_type,
+                "debit": debit,
+                "credit": credit,
+            }
+        )
+
+    return {
+        "as_of": datetime.utcnow(),
+        "rows": rows,
+        "total_debit": round(total_debit, 2),
+        "total_credit": round(total_credit, 2),
+        "is_balanced": round(total_debit, 2) == round(total_credit, 2),
+    }
+
+
 @app.post("/bank-transactions", response_model=BankStatementResponse)
 async def add_bank_transaction(transaction: BankTransactionCreate, db: Session = Depends(get_db)):
     existing = db.query(BankStatementTransaction).filter(BankStatementTransaction.reference == transaction.reference).first()
