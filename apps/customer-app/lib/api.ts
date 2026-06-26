@@ -25,6 +25,15 @@ export interface PaymentPayload {
   reference: string;
 }
 
+export interface DepositTransactionPayload {
+  transaction_type: 'credit' | 'debit' | 'interest' | 'fee';
+  amount: number;
+  description: string;
+  reference?: string;
+  transaction_date?: string;
+  metadata?: JsonObject;
+}
+
 export interface DocumentPayload {
   subject_type: string;
   subject_id: string;
@@ -146,6 +155,24 @@ export const apiClient = {
     axiosInstance.get(`/loans/${loanId}/payments`),
   makePayment: (loanId: string, data: PaymentPayload) =>
     axiosInstance.post(`/loans/${loanId}/payment`, data),
+
+  // Deposits Service
+  getDepositTypes: () =>
+    axiosInstance.get(`/deposit-types`),
+  getCustomerDepositAccounts: (customerId: string) =>
+    axiosInstance.get(`/deposit-accounts`, { params: { customer_id: customerId } }),
+  getDepositAccount: (accountId: string) =>
+    axiosInstance.get(`/deposit-accounts/${accountId}`),
+  getDepositInterestSchedule: (accountId: string) =>
+    axiosInstance.get(`/deposit-accounts/${accountId}/interest-schedule`),
+  getDepositTransactions: (accountId: string) =>
+    axiosInstance.get(`/deposit-accounts/${accountId}/transactions`),
+  getDepositStatement: (accountId: string, fromDate: string, toDate: string) =>
+    axiosInstance.get(`/deposit-accounts/${accountId}/statement`, {
+      params: { from_date: fromDate, to_date: toDate },
+    }),
+  createDepositTransaction: (accountId: string, data: DepositTransactionPayload) =>
+    axiosInstance.post(`/deposit-accounts/${accountId}/transactions`, data),
 
   // Compliance Service
   runComplianceChecks: (customerId: string, data: JsonObject = {}) =>

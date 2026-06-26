@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional, List
 import os
@@ -28,9 +28,12 @@ class CollectionAssignment(Base):
     
     id = Column(String, primary_key=True)
     loan_account_id = Column(String, index=True)
+    customer_id = Column(String, index=True, nullable=True)
     collector_user_id = Column(String)
+    branch_id = Column(String, index=True, nullable=True)
     assigned_date = Column(DateTime, default=datetime.utcnow)
     bucket_id = Column(String)
+    days_past_due = Column(Integer, default=0)
     status = Column(String, default="active")
     priority = Column(String, default="medium")
     outstanding_amount = Column(Float)
@@ -115,10 +118,24 @@ class CollectionBucketCreate(BaseModel):
     max_dpd: int
 
 
+class CollectionBucketResponse(BaseModel):
+    id: str
+    bucket_name: str
+    min_dpd: int
+    max_dpd: int
+    loan_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
 class CollectionAssignmentCreate(BaseModel):
     loan_account_id: str
+    customer_id: Optional[str] = None
     collector_user_id: str
-    bucket_id: str
+    branch_id: Optional[str] = None
+    bucket_id: Optional[str] = None
+    days_past_due: int = Field(default=0, ge=0)
     outstanding_amount: float
     priority: Optional[str] = "medium"
 
@@ -126,8 +143,12 @@ class CollectionAssignmentCreate(BaseModel):
 class CollectionAssignmentResponse(BaseModel):
     id: str
     loan_account_id: str
+    customer_id: Optional[str]
     collector_user_id: str
+    branch_id: Optional[str]
     bucket_id: str
+    bucket_name: Optional[str] = None
+    days_past_due: int
     status: str
     priority: str
     outstanding_amount: float
@@ -147,6 +168,59 @@ def get_db() -> Session:
         yield db
     finally:
         db.close()
+
+
+def seed_collection_buckets(db: Session) -> None:
+    from uuid import uuid4
+
+    default_buckets = [
+        ("0-30 DPD", 0, 30),
+        ("30-60 DPD", 31, 60),
+        ("60-90 DPD", 61, 90),
+        ("90+ DPD", 91, 9999),
+    ]
+    for bucket_name, min_dpd, max_dpd in default_buckets:
+        existing = db.query(CollectionBucket).filter(CollectionBucket.bucket_name == bucket_name).first()
+        if not existing:
+            db.add(
+                CollectionBucket(
+                    id=str(uuid4()),
+                    bucket_name=bucket_name,
+                    min_dpd=min_dpd,
+                    max_dpd=max_dpd,
+                )
+            )
+    db.commit()
+
+
+def find_bucket_for_dpd(db: Session, days_past_due: int) -> CollectionBucket:
+    bucket = (
+        db.query(CollectionBucket)
+        .filter(CollectionBucket.min_dpd <= days_past_due, CollectionBucket.max_dpd >= days_past_due)
+        .order_by(CollectionBucket.min_dpd.asc())
+        .first()
+    )
+    if not bucket:
+        raise HTTPException(status_code=400, detail="No collection bucket configured for days_past_due")
+    return bucket
+
+
+def assignment_response(assignment: CollectionAssignment, db: Session) -> CollectionAssignmentResponse:
+    bucket = db.query(CollectionBucket).filter(CollectionBucket.id == assignment.bucket_id).first()
+    return CollectionAssignmentResponse(
+        id=assignment.id,
+        loan_account_id=assignment.loan_account_id,
+        customer_id=assignment.customer_id,
+        collector_user_id=assignment.collector_user_id,
+        branch_id=assignment.branch_id,
+        bucket_id=assignment.bucket_id,
+        bucket_name=bucket.bucket_name if bucket else None,
+        days_past_due=assignment.days_past_due,
+        status=assignment.status,
+        priority=assignment.priority,
+        outstanding_amount=assignment.outstanding_amount,
+        assigned_date=assignment.assigned_date,
+    )
 
 
 def trigger_collections_assistant(loan_id: str, activity_type: str, notes: str) -> None:
@@ -172,6 +246,11 @@ def trigger_collections_assistant(loan_id: str, activity_type: str, notes: str) 
 @app.on_event("startup")
 async def startup():
     Base.metadata.create_all(bind=engine)
+    db = next(get_db())
+    try:
+        seed_collection_buckets(db)
+    finally:
+        db.close()
 
 
 @app.post("/collection-buckets", response_model=dict)
@@ -201,22 +280,30 @@ async def create_assignment(
 ):
     from uuid import uuid4
 
-    bucket = db.query(CollectionBucket).filter(CollectionBucket.id == assignment.bucket_id).first()
+    bucket = (
+        db.query(CollectionBucket).filter(CollectionBucket.id == assignment.bucket_id).first()
+        if assignment.bucket_id
+        else find_bucket_for_dpd(db, assignment.days_past_due)
+    )
     if not bucket:
         raise HTTPException(status_code=404, detail="Bucket not found")
 
     new_assignment = CollectionAssignment(
         id=str(uuid4()),
         loan_account_id=assignment.loan_account_id,
+        customer_id=assignment.customer_id,
         collector_user_id=assignment.collector_user_id,
+        branch_id=assignment.branch_id,
         bucket_id=assignment.bucket_id,
+        days_past_due=assignment.days_past_due,
         outstanding_amount=assignment.outstanding_amount,
         priority=assignment.priority,
     )
+    new_assignment.bucket_id = bucket.id
     db.add(new_assignment)
     db.commit()
     db.refresh(new_assignment)
-    return new_assignment
+    return assignment_response(new_assignment, db)
 
 
 @app.get("/health")
@@ -229,16 +316,44 @@ async def ready():
     return {"ready": True}
 
 
-@app.get("/collection-buckets")
+@app.get("/collection-buckets", response_model=List[CollectionBucketResponse])
+@app.get("/buckets", response_model=List[CollectionBucketResponse])
 async def get_buckets(db: Session = Depends(get_db)):
     """Get all collection buckets."""
     buckets = db.query(CollectionBucket).all()
-    return {"buckets": buckets}
+    responses = []
+    for bucket in buckets:
+        loan_count = db.query(CollectionAssignment).filter(CollectionAssignment.bucket_id == bucket.id).count()
+        responses.append(
+            CollectionBucketResponse(
+                id=bucket.id,
+                bucket_name=bucket.bucket_name,
+                min_dpd=bucket.min_dpd,
+                max_dpd=bucket.max_dpd,
+                loan_count=loan_count,
+            )
+        )
+    return responses
+
+
+@app.get("/buckets/{bucket_id}/loans")
+async def get_bucket_loans(bucket_id: str, db: Session = Depends(get_db)):
+    bucket = db.query(CollectionBucket).filter(CollectionBucket.id == bucket_id).first()
+    if not bucket:
+        raise HTTPException(status_code=404, detail="Bucket not found")
+    assignments = (
+        db.query(CollectionAssignment)
+        .filter(CollectionAssignment.bucket_id == bucket_id)
+        .order_by(CollectionAssignment.assigned_date.desc())
+        .all()
+    )
+    return {"bucket_id": bucket_id, "bucket_name": bucket.bucket_name, "items": assignments, "total": len(assignments)}
 
 
 @app.get("/assignments")
 async def list_assignments(
     collector_id: Optional[str] = Query(None),
+    branch_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     skip: int = Query(0),
     limit: int = Query(20),
@@ -249,15 +364,17 @@ async def list_assignments(
     
     if collector_id:
         query = query.filter(CollectionAssignment.collector_user_id == collector_id)
+    if branch_id:
+        query = query.filter(CollectionAssignment.branch_id == branch_id)
     
     if status:
         query = query.filter(CollectionAssignment.status == status)
     
     total = query.count()
-    assignments = query.offset(skip).limit(limit).all()
+    assignments = query.order_by(CollectionAssignment.assigned_date.desc()).offset(skip).limit(limit).all()
     
     return {
-        "items": assignments,
+        "items": [assignment_response(assignment, db) for assignment in assignments],
         "total": total,
         "skip": skip,
         "limit": limit
@@ -282,9 +399,15 @@ async def get_collection_status(
         CollectionActivity.assignment_id == assignment.id
     ).order_by(CollectionActivity.activity_date.desc()).first()
     
+    bucket = db.query(CollectionBucket).filter(CollectionBucket.id == assignment.bucket_id).first()
     return {
         "loan_id": loan_id,
+        "customer_id": assignment.customer_id,
+        "branch_id": assignment.branch_id,
         "collector_id": assignment.collector_user_id,
+        "bucket_id": assignment.bucket_id,
+        "bucket_name": bucket.bucket_name if bucket else None,
+        "days_past_due": assignment.days_past_due,
         "status": assignment.status,
         "priority": assignment.priority,
         "outstanding_amount": assignment.outstanding_amount,

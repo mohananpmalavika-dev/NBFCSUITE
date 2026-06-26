@@ -55,6 +55,75 @@ paths:
       responses:
         '200':
           description: interest schedule details
+  /deposit-accounts/{account_id}/transactions:
+    get:
+      summary: List deposit account transactions
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: transaction list
+    post:
+      summary: Post a deposit transaction
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transaction_type, amount, description]
+              properties:
+                transaction_type:
+                  type: string
+                  enum: [credit, debit, interest, fee]
+                amount:
+                  type: number
+                description:
+                  type: string
+                reference:
+                  type: string
+                transaction_date:
+                  type: string
+                  format: date-time
+                metadata:
+                  type: object
+      responses:
+        '200':
+          description: transaction posted
+  /deposit-accounts/{account_id}/statement:
+    get:
+      summary: Download customer statement data for a deposit account
+      parameters:
+        - in: path
+          name: account_id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: from_date
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to_date
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: statement with opening balance, transactions, and closing balance
   /deposit-accounts/{account_id}/standing-instructions:
     post:
       summary: Add a standing instruction to a deposit account

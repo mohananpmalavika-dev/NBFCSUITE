@@ -14,11 +14,15 @@ CREATE TABLE IF NOT EXISTS collection_buckets (
 CREATE TABLE IF NOT EXISTS collection_assignments (
     id VARCHAR(36) PRIMARY KEY,
     loan_account_id VARCHAR(36) NOT NULL,
+    customer_id VARCHAR(36),
     collector_user_id VARCHAR(36) NOT NULL,
+    branch_id VARCHAR(36),
     assigned_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     bucket_id VARCHAR(36),
+    days_past_due INTEGER DEFAULT 0,
     status VARCHAR(50) DEFAULT 'active', -- active, resolved, escalated
     priority VARCHAR(50) DEFAULT 'medium', -- low, medium, high, urgent
+    outstanding_amount DECIMAL(15, 2),
     FOREIGN KEY (loan_account_id) REFERENCES loan_accounts(id),
     FOREIGN KEY (collector_user_id) REFERENCES users(id),
     FOREIGN KEY (bucket_id) REFERENCES collection_buckets(id)
@@ -27,7 +31,7 @@ CREATE TABLE IF NOT EXISTS collection_assignments (
 -- Collection activity logs
 CREATE TABLE IF NOT EXISTS collection_activities (
     id VARCHAR(36) PRIMARY KEY,
-    collection_assignment_id VARCHAR(36) NOT NULL,
+    assignment_id VARCHAR(36) NOT NULL,
     activity_type VARCHAR(50), -- call, sms, whatsapp, email, visit, promise_to_pay
     activity_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     notes TEXT,
@@ -37,7 +41,7 @@ CREATE TABLE IF NOT EXISTS collection_activities (
     gps_location JSONB,
     call_duration_seconds INTEGER,
     call_recording_url VARCHAR(500),
-    FOREIGN KEY (collection_assignment_id) REFERENCES collection_assignments(id) ON DELETE CASCADE
+    FOREIGN KEY (assignment_id) REFERENCES collection_assignments(id) ON DELETE CASCADE
 );
 
 -- Settlement negotiations
@@ -45,12 +49,12 @@ CREATE TABLE IF NOT EXISTS settlement_negotiations (
     id VARCHAR(36) PRIMARY KEY,
     loan_account_id VARCHAR(36) NOT NULL,
     outstanding_amount DECIMAL(15, 2),
-    settlement_offer_amount DECIMAL(15, 2),
+    offer_amount DECIMAL(15, 2),
     settlement_percentage DECIMAL(5, 2),
     offered_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     customer_response VARCHAR(50), -- accepted, rejected, counter_offered
     settlement_date DATE,
-    settlement_status VARCHAR(50), -- offered, accepted, completed, rejected
+    status VARCHAR(50) DEFAULT 'pending', -- offered, accepted, completed, rejected
     FOREIGN KEY (loan_account_id) REFERENCES loan_accounts(id)
 );
 
@@ -58,7 +62,7 @@ CREATE TABLE IF NOT EXISTS settlement_negotiations (
 CREATE TABLE IF NOT EXISTS npa_records (
     id VARCHAR(36) PRIMARY KEY,
     loan_account_id VARCHAR(36) NOT NULL UNIQUE,
-    npa_classification_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    classification_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     npa_type VARCHAR(50), -- substandard, doubtful, loss
     provision_percentage DECIMAL(5, 2),
     recovery_amount DECIMAL(15, 2),
@@ -86,9 +90,11 @@ CREATE TABLE IF NOT EXISTS legal_cases (
 
 -- Create indexes
 CREATE INDEX idx_collection_assignments_loan_account_id ON collection_assignments(loan_account_id);
+CREATE INDEX idx_collection_assignments_customer_id ON collection_assignments(customer_id);
 CREATE INDEX idx_collection_assignments_collector_id ON collection_assignments(collector_user_id);
+CREATE INDEX idx_collection_assignments_branch_id ON collection_assignments(branch_id);
 CREATE INDEX idx_collection_assignments_status ON collection_assignments(status);
-CREATE INDEX idx_collection_activities_assignment_id ON collection_activities(collection_assignment_id);
+CREATE INDEX idx_collection_activities_assignment_id ON collection_activities(assignment_id);
 CREATE INDEX idx_collection_activities_date ON collection_activities(activity_date);
 CREATE INDEX idx_settlement_negotiations_loan_account_id ON settlement_negotiations(loan_account_id);
 CREATE INDEX idx_npa_records_loan_account_id ON npa_records(loan_account_id);

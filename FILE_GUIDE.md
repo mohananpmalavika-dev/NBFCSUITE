@@ -29,6 +29,7 @@ Quick reference to understand the monorepo structure and where to find what.
 | `design/openapi-deposits.yaml` | OpenAPI spec: Deposits service |
 | `design/openapi-document.yaml` | OpenAPI spec: Document service |
 | `design/openapi-compliance.yaml` | OpenAPI spec: Compliance service |
+| `design/openapi-hrms.yaml` | OpenAPI spec: HRMS employee master service |
 
 ## 🔧 Backend Services
 
@@ -61,6 +62,8 @@ Similar structure — add endpoints as you implement features.
 | `infra/migrations/004_create_lms_tables.sql` | Loan accounts, EMI, Payments |
 | `infra/migrations/005_create_collections_tables.sql` | Collections, Settlements, NPA |
 | `infra/migrations/006_seed_data.sql` | Initial data (roles, products) |
+| `infra/migrations/010_create_deposits_tables.sql` | Deposits, transactions, statements |
+| `infra/migrations/014_create_hrms_tables.sql` | Employee master and branch/user mapping |
 | `infra/migrations/README.md` | How to run migrations |
 
 ## 🐳 Infrastructure & DevOps

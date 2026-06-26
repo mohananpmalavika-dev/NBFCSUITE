@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 
 const dashboardCards = [
   { title: 'Loans', value: 'Applications and accounts', href: '/loans' },
+  { title: 'Deposits', value: 'Savings, FD/RD and statements', href: '/deposits' },
   { title: 'Payments', value: 'EMI history and collection', href: '/payments' },
   { title: 'Documents', value: 'KYC and expiry tracking', href: '/documents' },
   { title: 'Profile', value: 'Customer 360 and risk', href: '/profile' },

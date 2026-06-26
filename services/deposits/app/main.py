@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, JSON, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
 from typing import Optional, List
 from uuid import uuid4
@@ -36,10 +36,26 @@ class DepositAccount(Base):
     deposit_type_id = Column(String, ForeignKey("deposit_types.id"))
     account_number = Column(String, unique=True, index=True)
     principal_amount = Column(Float)
+    current_balance = Column(Float)
     interest_rate = Column(Float)
     start_date = Column(DateTime)
     maturity_date = Column(DateTime)
     status = Column(String, default="active")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DepositTransaction(Base):
+    __tablename__ = "deposit_transactions"
+
+    id = Column(String, primary_key=True)
+    deposit_account_id = Column(String, ForeignKey("deposit_accounts.id"), index=True)
+    transaction_type = Column(String)
+    amount = Column(Float)
+    running_balance = Column(Float)
+    description = Column(String)
+    reference = Column(String, nullable=True, index=True)
+    transaction_date = Column(DateTime, default=datetime.utcnow, index=True)
+    metadata_ = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -82,6 +98,7 @@ class DepositAccountResponse(BaseModel):
     deposit_type_id: str
     account_number: str
     principal_amount: float
+    current_balance: float
     interest_rate: float
     start_date: datetime
     maturity_date: datetime
@@ -96,6 +113,29 @@ class InterestScheduleResponse(BaseModel):
     maturity_amount: float
     total_interest: float
     schedule: List[dict]
+
+
+class DepositTransactionCreate(BaseModel):
+    transaction_type: str = Field(pattern="^(credit|debit|interest|fee)$")
+    amount: float = Field(gt=0)
+    description: str
+    reference: Optional[str] = None
+    transaction_date: Optional[datetime] = None
+    metadata: Optional[dict] = None
+
+
+class DepositTransactionResponse(BaseModel):
+    id: str
+    deposit_account_id: str
+    transaction_type: str
+    amount: float
+    running_balance: float
+    description: str
+    reference: Optional[str]
+    transaction_date: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class StandingInstructionCreate(BaseModel):
@@ -126,6 +166,10 @@ def get_db() -> Session:
         yield db
     finally:
         db.close()
+
+
+def calculate_interest(principal: float, annual_rate: float, days: int) -> float:
+    return round(principal * annual_rate / 100 * max(days, 1) / 365, 2)
 
 
 @app.on_event("startup")
@@ -201,12 +245,24 @@ async def create_deposit_account(account_data: DepositAccountCreate, db: Session
         deposit_type_id=deposit_type.id,
         account_number=f"DA-{str(uuid4())[:10].upper()}",
         principal_amount=account_data.principal_amount,
+        current_balance=account_data.principal_amount,
         interest_rate=deposit_type.interest_rate,
         start_date=start_date,
         maturity_date=maturity_date,
         status="active"
     )
     db.add(account)
+    opening_transaction = DepositTransaction(
+        id=str(uuid4()),
+        deposit_account_id=account.id,
+        transaction_type="credit",
+        amount=account_data.principal_amount,
+        running_balance=account_data.principal_amount,
+        description="Opening deposit",
+        reference=f"OPEN-{account.account_number}",
+        transaction_date=start_date,
+    )
+    db.add(opening_transaction)
     db.commit()
     db.refresh(account)
     return account
@@ -246,8 +302,9 @@ async def customer_deposit_summary(customer_id: str, db: Session = Depends(get_d
     weighted_rate_amount = 0.0
     for account in accounts:
         by_status[account.status] = by_status.get(account.status, 0) + 1
-        total_principal += account.principal_amount or 0.0
-        weighted_rate_amount += (account.principal_amount or 0.0) * (account.interest_rate or 0.0)
+        balance = account.current_balance if account.current_balance is not None else account.principal_amount or 0.0
+        total_principal += balance
+        weighted_rate_amount += balance * (account.interest_rate or 0.0)
 
     average_interest_rate = round(weighted_rate_amount / total_principal, 2) if total_principal else 0.0
     return {
@@ -266,16 +323,119 @@ async def get_interest_schedule(account_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Deposit account not found")
 
     days = max(1, (account.maturity_date - account.start_date).days)
-    total_interest = round(account.principal_amount * account.interest_rate / 100 * days / 365, 2)
+    total_interest = calculate_interest(account.principal_amount, account.interest_rate, days)
     schedule = [{
         "date": account.maturity_date,
         "amount": round(account.principal_amount + total_interest, 2)
     }]
+    return InterestScheduleResponse(
+        deposit_account_id=account.id,
+        maturity_amount=round(account.principal_amount + total_interest, 2),
+        total_interest=total_interest,
+        schedule=schedule,
+    )
+
+
+@app.post("/deposit-accounts/{account_id}/transactions", response_model=DepositTransactionResponse)
+async def create_deposit_transaction(
+    account_id: str,
+    transaction: DepositTransactionCreate,
+    db: Session = Depends(get_db),
+):
+    account = db.query(DepositAccount).filter(DepositAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Deposit account not found")
+    if account.status != "active":
+        raise HTTPException(status_code=400, detail="Deposit account is not active")
+
+    current_balance = account.current_balance if account.current_balance is not None else account.principal_amount or 0.0
+    signed_amount = transaction.amount if transaction.transaction_type in {"credit", "interest"} else -transaction.amount
+    new_balance = round(current_balance + signed_amount, 2)
+    if new_balance < 0:
+        raise HTTPException(status_code=400, detail="Insufficient deposit balance")
+
+    account.current_balance = new_balance
+    db_transaction = DepositTransaction(
+        id=str(uuid4()),
+        deposit_account_id=account.id,
+        transaction_type=transaction.transaction_type,
+        amount=transaction.amount,
+        running_balance=new_balance,
+        description=transaction.description,
+        reference=transaction.reference,
+        transaction_date=transaction.transaction_date or datetime.utcnow(),
+        metadata_=transaction.metadata,
+    )
+    db.add(db_transaction)
+    db.commit()
+    db.refresh(db_transaction)
+    return db_transaction
+
+
+@app.get("/deposit-accounts/{account_id}/transactions", response_model=List[DepositTransactionResponse])
+async def list_deposit_transactions(
+    account_id: str,
+    skip: int = Query(0),
+    limit: int = Query(100),
+    db: Session = Depends(get_db),
+):
+    account = db.query(DepositAccount).filter(DepositAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Deposit account not found")
+    return (
+        db.query(DepositTransaction)
+        .filter(DepositTransaction.deposit_account_id == account_id)
+        .order_by(DepositTransaction.transaction_date.asc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+@app.get("/deposit-accounts/{account_id}/statement")
+async def get_account_statement(
+    account_id: str,
+    from_date: datetime = Query(...),
+    to_date: datetime = Query(...),
+    db: Session = Depends(get_db),
+):
+    account = db.query(DepositAccount).filter(DepositAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Deposit account not found")
+    if from_date > to_date:
+        raise HTTPException(status_code=400, detail="from_date must be before to_date")
+
+    opening_transaction = (
+        db.query(DepositTransaction)
+        .filter(
+            DepositTransaction.deposit_account_id == account_id,
+            DepositTransaction.transaction_date < from_date,
+        )
+        .order_by(DepositTransaction.transaction_date.desc(), DepositTransaction.created_at.desc())
+        .first()
+    )
+    transactions = (
+        db.query(DepositTransaction)
+        .filter(
+            DepositTransaction.deposit_account_id == account_id,
+            DepositTransaction.transaction_date > from_date,
+            DepositTransaction.transaction_date <= to_date,
+        )
+        .order_by(DepositTransaction.transaction_date.asc(), DepositTransaction.created_at.asc())
+        .all()
+    )
+
+    opening_balance = opening_transaction.running_balance if opening_transaction else account.principal_amount
+    closing_balance = transactions[-1].running_balance if transactions else opening_balance
     return {
-        "deposit_account_id": account.id,
-        "maturity_amount": round(account.principal_amount + total_interest, 2),
-        "total_interest": total_interest,
-        "schedule": schedule
+        "account_id": account.id,
+        "account_number": account.account_number,
+        "customer_id": account.customer_id,
+        "from_date": from_date,
+        "to_date": to_date,
+        "opening_balance": round(opening_balance, 2),
+        "closing_balance": round(closing_balance, 2),
+        "transactions": transactions,
     }
 
 
