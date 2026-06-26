@@ -1,8 +1,8 @@
 # NBFCSUITE Project Status
 
 **Project:** Universal Financial Institution Operating System
-**Current Phase:** Phase 1 - Core Services Implementation  
-**Overall Progress:** 65% (6 of 10 major tasks completed)
+**Current Phase:** Phase 2 - Core Banking & Collections  
+**Overall Progress:** 75% (Phase 1 complete; Phase 2 core services implemented)
 **Timeline Estimate:** 10-14 months to production
 
 ---
@@ -116,11 +116,13 @@
 
 **Estimated Completion:** June 2026
 
-### Phase 2: Enterprise Features (2-3 months)
+### Phase 2: Core Banking & Collections (2-3 months)
+- [x] Deposit Service (Savings, FD/RD accounts, interest, statements)
+- [x] Collections workflows (DPD buckets, branch assignments, activities)
+- [x] HRMS Core (employee master, user mapping, branch assignments)
+- [x] Customer Portal V1 (loan/deposit visibility, statement download)
 - [ ] CRM Service (Campaigns, Lifecycle)
 - [ ] Accounting Service (Ledger, GL)
-- [ ] Deposit Service (Savings, FDs)
-- [ ] HR Service (Employees, Payroll)
 - [ ] Multi-tenant RBAC
 
 ### Phase 3: Advanced AI & Analytics (2-3 months)

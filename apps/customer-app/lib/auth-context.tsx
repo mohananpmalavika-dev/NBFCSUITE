@@ -8,6 +8,11 @@ interface User {
   username: string;
   email: string;
   roles: Array<string | { id: string; name: string; description?: string | null }>;
+  organization_id?: string | null;
+  zone_id?: string | null;
+  region_id?: string | null;
+  area_id?: string | null;
+  branch_id?: string | null;
 }
 
 interface AuthContextType {
@@ -54,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       apiClient.getMe()
         .then(response => {
           setUser(response.data);
+          apiClient.setScope(response.data);
         })
         .catch(() => {
           logout();
@@ -79,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const userResponse = await apiClient.getMe();
       setUser(userResponse.data);
+      apiClient.setScope(userResponse.data);
     } catch (error) {
       console.error('Login failed:', error);
       throw error;

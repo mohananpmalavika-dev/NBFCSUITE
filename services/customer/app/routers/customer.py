@@ -1,9 +1,18 @@
 import re
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Header
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from ..models import BranchOffice, Customer, CustomerAddress, KYCDocument, CustomerFinancialProfile
+from ..models import (
+    AreaOffice,
+    BranchOffice,
+    Customer,
+    CustomerAddress,
+    CustomerFinancialProfile,
+    KYCDocument,
+    RegionalOffice,
+    ZonalOffice,
+)
 from ..schemas import (
     CustomerCreate, CustomerResponse, CustomerUpdate, AddressCreate,
     Customer360Response, CustomerListResponse, FinancialProfileUpdate,
@@ -17,6 +26,82 @@ router = APIRouter(prefix="/customers", tags=["customers"])
 
 PAN_PATTERN = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$")
 AADHAR_PATTERN = re.compile(r"^[2-9][0-9]{11}$")
+
+
+class PrincipalScope:
+    def __init__(
+        self,
+        organization_id: str | None = None,
+        zone_id: str | None = None,
+        region_id: str | None = None,
+        area_id: str | None = None,
+        branch_id: str | None = None,
+    ):
+        self.organization_id = organization_id
+        self.zone_id = zone_id
+        self.region_id = region_id
+        self.area_id = area_id
+        self.branch_id = branch_id
+
+    @property
+    def is_scoped(self) -> bool:
+        return any([self.organization_id, self.zone_id, self.region_id, self.area_id, self.branch_id])
+
+
+def get_principal_scope(
+    organization_id: str | None = Header(default=None, alias="X-Scope-Organization-Id"),
+    zone_id: str | None = Header(default=None, alias="X-Scope-Zone-Id"),
+    region_id: str | None = Header(default=None, alias="X-Scope-Region-Id"),
+    area_id: str | None = Header(default=None, alias="X-Scope-Area-Id"),
+    branch_id: str | None = Header(default=None, alias="X-Scope-Branch-Id"),
+    legacy_branch_id: str | None = Header(default=None, alias="X-Branch-Id"),
+) -> PrincipalScope:
+    return PrincipalScope(
+        organization_id=organization_id,
+        zone_id=zone_id,
+        region_id=region_id,
+        area_id=area_id,
+        branch_id=branch_id or legacy_branch_id,
+    )
+
+
+def _allowed_branch_ids(db: Session, scope: PrincipalScope) -> set[str] | None:
+    if not scope.is_scoped:
+        return None
+    if scope.branch_id:
+        return {scope.branch_id}
+
+    query = db.query(BranchOffice.id)
+    if scope.area_id:
+        query = query.filter(BranchOffice.area_office_id == scope.area_id)
+    elif scope.region_id:
+        query = query.join(AreaOffice).filter(AreaOffice.regional_office_id == scope.region_id)
+    elif scope.zone_id:
+        query = query.join(AreaOffice).join(RegionalOffice).filter(RegionalOffice.zonal_office_id == scope.zone_id)
+    elif scope.organization_id:
+        query = (
+            query.join(AreaOffice)
+            .join(RegionalOffice)
+            .join(ZonalOffice)
+            .filter(ZonalOffice.head_office_id == scope.organization_id)
+        )
+    return {row[0] for row in query.all()}
+
+
+def _assert_customer_in_scope(customer: Customer, db: Session, scope: PrincipalScope) -> None:
+    allowed = _allowed_branch_ids(db, scope)
+    if allowed is None:
+        return
+    if customer.branch_id not in allowed:
+        raise HTTPException(status_code=403, detail="Customer is outside the caller's branch scope")
+
+
+def _assert_branch_in_scope(branch_id: str | None, db: Session, scope: PrincipalScope) -> None:
+    if not branch_id:
+        return
+    allowed = _allowed_branch_ids(db, scope)
+    if allowed is not None and branch_id not in allowed:
+        raise HTTPException(status_code=403, detail="Branch is outside the caller's hierarchy scope")
 
 
 def _get_customer_or_404(customer_id: str, db: Session) -> Customer:
@@ -73,13 +158,19 @@ def _kyc_status(pan_valid: bool, aadhar_valid: bool) -> str:
 
 
 @router.post("", response_model=CustomerResponse)
-async def create_customer(customer: CustomerCreate, db: Session = Depends(get_db)):
+async def create_customer(
+    customer: CustomerCreate,
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
+):
     existing = db.query(Customer).filter(
         (Customer.email == customer.email) | (Customer.phone == customer.phone)
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Customer already exists")
-    _ensure_branch_exists(customer.branch_id, db)
+    selected_branch_id = customer.branch_id or scope.branch_id
+    _ensure_branch_exists(selected_branch_id, db)
+    _assert_branch_in_scope(selected_branch_id, db, scope)
 
     new_customer = Customer(
         id=str(uuid4()),
@@ -89,7 +180,7 @@ async def create_customer(customer: CustomerCreate, db: Session = Depends(get_db
         phone=customer.phone,
         dob=customer.dob,
         gender=customer.gender,
-        branch_id=customer.branch_id,
+        branch_id=selected_branch_id,
     )
     db.add(new_customer)
     db.commit()
@@ -98,13 +189,24 @@ async def create_customer(customer: CustomerCreate, db: Session = Depends(get_db
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse)
-async def get_customer(customer_id: str, db: Session = Depends(get_db)):
-    return _get_customer_or_404(customer_id, db)
+async def get_customer(
+    customer_id: str,
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
+):
+    customer = _get_customer_or_404(customer_id, db)
+    _assert_customer_in_scope(customer, db, scope)
+    return customer
 
 
 @router.get("/{customer_id}/360", response_model=Customer360Response)
-async def get_customer_360(customer_id: str, db: Session = Depends(get_db)):
+async def get_customer_360(
+    customer_id: str,
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
+):
     customer = _get_customer_or_404(customer_id, db)
+    _assert_customer_in_scope(customer, db, scope)
     addresses = db.query(CustomerAddress).filter(CustomerAddress.customer_id == customer_id).all()
     documents = db.query(KYCDocument).filter(KYCDocument.customer_id == customer_id).all()
     profile = db.query(CustomerFinancialProfile).filter(
@@ -120,10 +222,17 @@ async def get_customer_360(customer_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{customer_id}", response_model=CustomerResponse)
-async def update_customer(customer_id: str, update_data: CustomerUpdate, db: Session = Depends(get_db)):
+async def update_customer(
+    customer_id: str,
+    update_data: CustomerUpdate,
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
+):
     customer = _get_customer_or_404(customer_id, db)
+    _assert_customer_in_scope(customer, db, scope)
     update_fields = update_data.model_dump(exclude_unset=True)
     _ensure_branch_exists(update_fields.get("branch_id"), db)
+    _assert_branch_in_scope(update_fields.get("branch_id"), db, scope)
     for field, value in update_fields.items():
         setattr(customer, field, value)
     db.commit()
@@ -184,12 +293,18 @@ async def list_customers(
     branch_id: str | None = None,
     q: str | None = None,
     db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     query = db.query(Customer)
     if kyc_status:
         query = query.filter(Customer.kyc_status == kyc_status)
     if branch_id:
+        _assert_branch_in_scope(branch_id, db, scope)
         query = query.filter(Customer.branch_id == branch_id)
+    else:
+        allowed = _allowed_branch_ids(db, scope)
+        if allowed is not None:
+            query = query.filter(Customer.branch_id.in_(allowed))
     if q:
         search = f"%{q.strip()}%"
         query = query.filter(

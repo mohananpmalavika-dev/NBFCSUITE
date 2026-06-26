@@ -14,6 +14,7 @@ type JsonObject = Record<string, unknown>;
 
 export interface LoanApplicationPayload {
   customer_id: string;
+  branch_id?: string;
   product_code: string;
   applied_amount: number;
   tenure_months: number;
@@ -78,8 +79,28 @@ export const apiClient = {
   setToken: (token: string) => {
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   },
+  setScope: (scope: {
+    organization_id?: string | null;
+    zone_id?: string | null;
+    region_id?: string | null;
+    area_id?: string | null;
+    branch_id?: string | null;
+  }) => {
+    const headers = axiosInstance.defaults.headers.common;
+    delete headers['X-Scope-Organization-Id'];
+    delete headers['X-Scope-Zone-Id'];
+    delete headers['X-Scope-Region-Id'];
+    delete headers['X-Scope-Area-Id'];
+    delete headers['X-Scope-Branch-Id'];
+    if (scope.organization_id) headers['X-Scope-Organization-Id'] = scope.organization_id;
+    if (scope.zone_id) headers['X-Scope-Zone-Id'] = scope.zone_id;
+    if (scope.region_id) headers['X-Scope-Region-Id'] = scope.region_id;
+    if (scope.area_id) headers['X-Scope-Area-Id'] = scope.area_id;
+    if (scope.branch_id) headers['X-Scope-Branch-Id'] = scope.branch_id;
+  },
   clearToken: () => {
     delete axiosInstance.defaults.headers.common['Authorization'];
+    apiClient.setScope({});
   },
 
   // Auth Service
@@ -97,6 +118,8 @@ export const apiClient = {
   // Customer Service
   getCustomer: (customerId: string) =>
     axiosInstance.get(`/customers/${customerId}`),
+  getCustomers: (params?: { branch_id?: string; q?: string; kyc_status?: string; skip?: number; limit?: number }) =>
+    axiosInstance.get(`/customers`, { params }),
   updateCustomer: (customerId: string, data: JsonObject) =>
     axiosInstance.put(`/customers/${customerId}`, data),
   getFinancialProfile: (customerId: string) =>
@@ -145,12 +168,36 @@ export const apiClient = {
     axiosInstance.get(`/products`),
   applyForLoan: (data: LoanApplicationPayload) =>
     axiosInstance.post(`/applications`, data),
-  getLoanApplications: (customerId: string) =>
-    axiosInstance.get(`/applications`, { params: { customer_id: customerId } }),
+  getLoanApplications: (customerIdOrParams?: string | { customer_id?: string; branch_id?: string; status?: string; skip?: number; limit?: number }) => {
+    const params = typeof customerIdOrParams === 'string' ? { customer_id: customerIdOrParams } : customerIdOrParams;
+    return axiosInstance.get(`/applications`, { params });
+  },
+  submitLoanApplication: (applicationId: string) =>
+    axiosInstance.post(`/applications/${applicationId}/submit`),
+  underwriteLoanApplication: (applicationId: string) =>
+    axiosInstance.post(`/applications/${applicationId}/underwrite`),
+  decideLoanApplication: (
+    applicationId: string,
+    data: {
+      decision: 'approved' | 'rejected';
+      approved_amount?: number;
+      approved_tenure_months?: number;
+      approved_interest_rate?: number;
+      rejection_reason?: string;
+    },
+  ) => axiosInstance.post(`/applications/${applicationId}/decision`, data),
 
   // LMS Service
   getCustomerLoans: (customerId: string) =>
     axiosInstance.get(`/loans`, { params: { customer_id: customerId } }),
+  getLoans: (params?: { customer_id?: string; branch_id?: string; status?: string; skip?: number; limit?: number }) =>
+    axiosInstance.get(`/loans`, { params }),
+  getEmiSchedule: (loanId: string) =>
+    axiosInstance.get(`/loans/${loanId}/emi-schedule`),
+  disburseLoan: (loanId: string, data: { amount?: number; reference?: string }) =>
+    axiosInstance.post(`/loans/${loanId}/disburse`, data),
+  computeLoanOverdue: (loanId: string) =>
+    axiosInstance.post(`/loans/${loanId}/compute-overdue`),
   getLoanPayments: (loanId: string) =>
     axiosInstance.get(`/loans/${loanId}/payments`),
   makePayment: (loanId: string, data: PaymentPayload) =>

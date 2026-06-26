@@ -13,6 +13,20 @@ from app.security import hash_password, verify_password, create_access_token, de
 app = FastAPI(title="auth-service", version="0.1.0")
 
 
+def _token_payload(user: User, token_type: str = "access") -> dict:
+    return {
+        "sub": user.id,
+        "username": user.username,
+        "roles": [role.name for role in user.roles],
+        "typ": token_type,
+        "organization_id": user.organization_id,
+        "zone_id": user.zone_id,
+        "region_id": user.region_id,
+        "area_id": user.area_id,
+        "branch_id": user.branch_id,
+    }
+
+
 def _extract_bearer_token(authorization: str | None) -> str:
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(
@@ -50,11 +64,15 @@ async def startup():
     # Create sample roles if they don't exist
     db = next(get_db())
     if db.query(Role).count() == 0:
-        admin_role = Role(name="admin", description="Administrator")
-        user_role = Role(name="user", description="Regular User")
-        lender_role = Role(name="lender", description="Lender/Officer")
-        collector_role = Role(name="collector", description="Collections Officer")
-        db.add_all([admin_role, user_role, lender_role, collector_role])
+        roles = [
+            Role(name="admin", description="Administrator"),
+            Role(name="user", description="Regular User"),
+            Role(name="lender", description="Lender/Officer"),
+            Role(name="collector", description="Collections Officer"),
+            Role(name="branch_manager", description="Branch Manager"),
+            Role(name="regional_manager", description="Regional Manager"),
+        ]
+        db.add_all(roles)
         db.commit()
     db.close()
 
@@ -86,11 +104,9 @@ async def login(credentials: LoginRequest, db: Session = Depends(get_db)):
             detail="User is inactive"
         )
     
-    access_token = create_access_token(
-        data={"sub": user.id, "username": user.username, "typ": "access"}
-    )
+    access_token = create_access_token(data=_token_payload(user, "access"))
     refresh_token = create_access_token(
-        data={"sub": user.id, "username": user.username, "typ": "refresh"},
+        data=_token_payload(user, "refresh"),
         expires_delta=timedelta(days=7),
     )
     
@@ -114,9 +130,7 @@ async def refresh_token(payload: RefreshTokenRequest, db: Session = Depends(get_
             detail="User not found or inactive",
         )
 
-    access_token = create_access_token(
-        data={"sub": user.id, "username": user.username, "typ": "access"}
-    )
+    access_token = create_access_token(data=_token_payload(user, "access"))
     return TokenResponse(access_token=access_token, refresh_token=payload.refresh_token)
 
 
@@ -128,6 +142,11 @@ async def validate_token(current_user: User = Depends(get_current_user)):
         user_id=current_user.id,
         username=current_user.username,
         roles=[role.name for role in current_user.roles],
+        organization_id=current_user.organization_id,
+        zone_id=current_user.zone_id,
+        region_id=current_user.region_id,
+        area_id=current_user.area_id,
+        branch_id=current_user.branch_id,
     )
 
 
@@ -150,7 +169,12 @@ async def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
         username=user_data.username,
         email=user_data.email,
         hashed_password=hash_password(user_data.password),
-        is_active=True
+        is_active=True,
+        organization_id=user_data.organization_id,
+        zone_id=user_data.zone_id,
+        region_id=user_data.region_id,
+        area_id=user_data.area_id,
+        branch_id=user_data.branch_id,
     )
     
     # Assign default 'user' role

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Query
+from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Query, Header
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, JSON, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from pydantic import BaseModel
@@ -47,6 +47,7 @@ class LoanApplication(Base):
     
     id = Column(String, primary_key=True)
     customer_id = Column(String, index=True)
+    branch_id = Column(String, index=True, nullable=True)
     product_id = Column(String, ForeignKey("loan_products.id"))
     application_status = Column(String, default="draft")
     applied_amount = Column(Float)
@@ -58,6 +59,11 @@ class LoanApplication(Base):
     submitted_date = Column(DateTime, nullable=True)
     decision_date = Column(DateTime, nullable=True)
     disbursed_date = Column(DateTime, nullable=True)
+    disbursed_amount = Column(Float, nullable=True)
+    lms_booking_status = Column(String, default="not_started")
+    lms_loan_account_id = Column(String, nullable=True)
+    lms_booking_error = Column(String, nullable=True)
+    lms_disbursement_status = Column(String, default="not_started")
     rejection_reason = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -70,6 +76,9 @@ class ApplicationDocument(Base):
     application_id = Column(String, ForeignKey("loan_applications.id"))
     document_type = Column(String)
     document_url = Column(String)
+    document_service_id = Column(String, nullable=True)
+    verification_status = Column(String, default="pending")
+    ocr_result = Column(JSON, nullable=True)
     upload_date = Column(DateTime, default=datetime.utcnow)
 
 
@@ -89,6 +98,7 @@ class ApplicationScorecard(Base):
 # Pydantic Schemas
 class LoanApplicationCreate(BaseModel):
     customer_id: str
+    branch_id: Optional[str] = None
     product_code: str
     applied_amount: float
     tenure_months: int
@@ -97,6 +107,7 @@ class LoanApplicationCreate(BaseModel):
 class LoanApplicationResponse(BaseModel):
     id: str
     customer_id: str
+    branch_id: Optional[str] = None
     application_status: str
     applied_amount: float
     tenure_months: int
@@ -150,6 +161,7 @@ class LoanProductResponse(BaseModel):
 class LoanApplicationDetailResponse(BaseModel):
     id: str
     customer_id: str
+    branch_id: Optional[str] = None
     product_id: str
     application_status: str
     applied_amount: float
@@ -161,6 +173,10 @@ class LoanApplicationDetailResponse(BaseModel):
     submitted_date: Optional[datetime] = None
     decision_date: Optional[datetime] = None
     disbursed_date: Optional[datetime] = None
+    disbursed_amount: Optional[float] = None
+    lms_booking_status: Optional[str] = None
+    lms_loan_account_id: Optional[str] = None
+    lms_disbursement_status: Optional[str] = None
     rejection_reason: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -184,6 +200,8 @@ class UnderwritingDecisionResponse(BaseModel):
     sanctioned_amount: Optional[float] = None
     final_interest_rate: Optional[float] = None
     decision_date: Optional[datetime] = None
+    lms_booking_status: Optional[str] = None
+    lms_loan_account_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -193,6 +211,7 @@ class ApplicationDisbursementResponse(BaseModel):
     application_id: str
     status: str
     disbursed_date: datetime
+    disbursed_amount: Optional[float] = None
 
 
 # FastAPI App
@@ -205,6 +224,37 @@ def get_db() -> Session:
         yield db
     finally:
         db.close()
+
+
+class PrincipalScope:
+    def __init__(self, branch_id: Optional[str] = None):
+        self.branch_id = branch_id
+
+    @property
+    def is_scoped(self) -> bool:
+        return bool(self.branch_id)
+
+
+def get_principal_scope(
+    branch_id: Optional[str] = Header(default=None, alias="X-Scope-Branch-Id"),
+    legacy_branch_id: Optional[str] = Header(default=None, alias="X-Branch-Id"),
+) -> PrincipalScope:
+    return PrincipalScope(branch_id=branch_id or legacy_branch_id)
+
+
+def _assert_application_in_scope(application: LoanApplication, scope: PrincipalScope) -> None:
+    if not isinstance(scope, PrincipalScope):
+        return
+    if scope.is_scoped and application.branch_id != scope.branch_id:
+        raise HTTPException(status_code=403, detail="Application is outside the caller's branch scope")
+
+
+def _resolve_branch_id(requested_branch_id: Optional[str], scope: PrincipalScope) -> Optional[str]:
+    if not isinstance(scope, PrincipalScope):
+        return requested_branch_id
+    if scope.is_scoped and requested_branch_id and requested_branch_id != scope.branch_id:
+        raise HTTPException(status_code=403, detail="Branch is outside the caller's branch scope")
+    return requested_branch_id or scope.branch_id
 
 
 def compute_underwriting_score(application: LoanApplication) -> dict:
@@ -292,6 +342,82 @@ def trigger_underwriting_assistant(application: LoanApplication, event: str) -> 
             client.post(f"{findna_base}/underwriting-assistant/{application.id}", json=payload)
     except Exception:
         pass
+
+
+def register_document_with_document_service(
+    application: LoanApplication,
+    document_type: str,
+    document_name: str,
+    document_url: str,
+) -> dict:
+    """Best-effort Document Service registration with deterministic local fallback."""
+    try:
+        import httpx
+
+        document_base = os.getenv("DOCUMENT_BASE_URL", "http://localhost:8010")
+        payload = {
+            "subject_type": "loan_application",
+            "subject_id": application.id,
+            "document_type": document_type,
+            "document_name": document_name,
+            "document_url": document_url,
+            "metadata": {
+                "customer_id": application.customer_id,
+                "branch_id": application.branch_id,
+                "ocr_status": "queued",
+                "source_service": "los",
+            },
+        }
+        with httpx.Client(timeout=5.0) as client:
+            response = client.post(f"{document_base}/documents", json=payload)
+            response.raise_for_status()
+            return response.json()
+    except Exception as exc:
+        return {
+            "id": None,
+            "status": "pending",
+            "metadata": {
+                "ocr_status": "deferred",
+                "document_service_error": str(exc),
+            },
+        }
+
+
+def book_approved_application_in_lms(application: LoanApplication) -> None:
+    if application.lms_booking_status == "booked" and application.lms_loan_account_id:
+        return
+
+    application.lms_booking_status = "pending"
+    application.lms_booking_error = None
+
+    try:
+        import httpx
+
+        lms_base = os.getenv("LMS_BASE_URL", "http://localhost:8003")
+        payload = {
+            "application_id": application.id,
+            "customer_id": application.customer_id,
+            "branch_id": application.branch_id,
+            "product_id": application.product_id,
+            "sanction_amount": application.sanctioned_amount,
+            "tenure_months": application.tenure_months,
+            "interest_rate": application.final_interest_rate,
+        }
+
+        with httpx.Client(timeout=5.0) as client:
+            response = client.post(f"{lms_base}/loans", json=payload)
+            if response.status_code == 400 and "already exists" in response.text.lower():
+                application.lms_booking_status = "booked"
+                application.lms_booking_error = None
+                return
+            response.raise_for_status()
+            loan_record = response.json()
+            application.lms_booking_status = "booked"
+            application.lms_loan_account_id = loan_record.get("id")
+            application.lms_booking_error = None
+    except Exception as exc:
+        application.lms_booking_status = "failed"
+        application.lms_booking_error = str(exc)
 
 
 @app.get("/health")
@@ -390,18 +516,21 @@ async def get_product(product_code: str, db: Session = Depends(get_db)):
 @app.post("/applications", response_model=LoanApplicationResponse)
 async def create_application(
     app_data: LoanApplicationCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Create a new loan application."""
     from uuid import uuid4
     
     product = _get_product_by_code(app_data.product_code, db)
     _validate_terms(product, app_data.applied_amount, app_data.tenure_months)
+    branch_id = _resolve_branch_id(app_data.branch_id, scope)
     
     # Create application
     new_app = LoanApplication(
         id=str(uuid4()),
         customer_id=app_data.customer_id,
+        branch_id=branch_id,
         product_id=product.id,
         applied_amount=app_data.applied_amount,
         tenure_months=app_data.tenure_months,
@@ -419,7 +548,8 @@ async def create_application(
 @app.get("/applications/{application_id}", response_model=LoanApplicationResponse)
 async def get_application(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Get application details."""
     application = db.query(LoanApplication).filter(
@@ -428,6 +558,7 @@ async def get_application(
     
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
+    _assert_application_in_scope(application, scope)
     
     return application
 
@@ -435,7 +566,8 @@ async def get_application(
 @app.get("/applications/{application_id}/detail", response_model=LoanApplicationDetailResponse)
 async def get_application_detail(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Get detailed application data for underwriting and integration."""
     application = db.query(LoanApplication).filter(
@@ -444,6 +576,7 @@ async def get_application_detail(
     
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
+    _assert_application_in_scope(application, scope)
     
     return application
 
@@ -451,16 +584,21 @@ async def get_application_detail(
 @app.get("/applications")
 async def list_applications(
     customer_id: Optional[str] = Query(None),
+    branch_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     skip: int = Query(0),
     limit: int = Query(20),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """List applications with optional filters."""
     query = db.query(LoanApplication)
     
     if customer_id:
         query = query.filter(LoanApplication.customer_id == customer_id)
+    selected_branch_id = _resolve_branch_id(branch_id, scope)
+    if selected_branch_id:
+        query = query.filter(LoanApplication.branch_id == selected_branch_id)
     
     if status:
         query = query.filter(LoanApplication.application_status == status)
@@ -481,7 +619,8 @@ async def upload_document(
     application_id: str,
     document_type: str = Query(...),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Upload document for application."""
     from uuid import uuid4
@@ -492,27 +631,49 @@ async def upload_document(
     
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+    _assert_application_in_scope(app, scope)
     
     # Simulate file upload (in production, save to S3/blob storage)
     document_url = f"s3://nbfcsuite-documents/{application_id}/{file.filename}"
+    document_record = register_document_with_document_service(
+        app,
+        document_type,
+        file.filename,
+        document_url,
+    )
+    metadata = document_record.get("metadata") or {}
     
     doc = ApplicationDocument(
         id=str(uuid4()),
         application_id=application_id,
         document_type=document_type,
-        document_url=document_url
+        document_url=document_url,
+        document_service_id=document_record.get("id"),
+        verification_status=document_record.get("status", "pending"),
+        ocr_result={
+            "status": metadata.get("ocr_status", "queued"),
+            "document_service_id": document_record.get("id"),
+            "error": metadata.get("document_service_error"),
+        },
     )
     
     db.add(doc)
     db.commit()
     
-    return {"message": "Document uploaded", "document_url": document_url}
+    return {
+        "message": "Document uploaded",
+        "document_url": document_url,
+        "document_service_id": doc.document_service_id,
+        "verification_status": doc.verification_status,
+        "ocr_result": doc.ocr_result,
+    }
 
 
 @app.post("/applications/{application_id}/submit")
 async def submit_application(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Submit application for underwriting.
 
@@ -524,6 +685,7 @@ async def submit_application(
 
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
+    _assert_application_in_scope(application, scope)
     if application.application_status not in {"draft", "submitted"}:
         raise HTTPException(status_code=400, detail="Only draft applications can be submitted")
 
@@ -560,12 +722,14 @@ async def submit_application(
 @app.post("/applications/{application_id}/underwrite", response_model=ScorecardResponse)
 async def underwrite_application(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Run underwriting on a submitted loan application."""
     application = db.query(LoanApplication).filter(LoanApplication.id == application_id).first()
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
+    _assert_application_in_scope(application, scope)
     if application.application_status not in {"submitted", "under_review"}:
         raise HTTPException(status_code=400, detail="Only submitted applications can be underwritten")
 
@@ -582,12 +746,28 @@ async def underwrite_application(
 async def decide_application(
     application_id: str,
     decision: UnderwritingDecisionRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Approve or reject an application based on underwriting."""
     application = db.query(LoanApplication).filter(LoanApplication.id == application_id).first()
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
+    _assert_application_in_scope(application, scope)
+    if application.application_status == "approved" and decision.decision.lower() == "approved":
+        book_approved_application_in_lms(application)
+        db.commit()
+        db.refresh(application)
+        return UnderwritingDecisionResponse(
+            application_id=application.id,
+            status=application.application_status,
+            message="Application already approved",
+            sanctioned_amount=application.sanctioned_amount,
+            final_interest_rate=application.final_interest_rate,
+            decision_date=application.decision_date,
+            lms_booking_status=application.lms_booking_status,
+            lms_loan_account_id=application.lms_loan_account_id,
+        )
     if application.application_status not in {"submitted", "under_review"}:
         raise HTTPException(status_code=400, detail="Application is not ready for decision")
 
@@ -622,29 +802,10 @@ async def decide_application(
     if not scorecard:
         scorecard = create_or_update_scorecard(application, db)
 
-    # Phase 1 wiring: if approved, book the loan in LMS.
     if application.application_status == "approved":
-        try:
-            import httpx
-
-            lms_base = os.getenv("LMS_BASE_URL", "http://localhost:8003")
-
-            # LOS decision payload includes sanctioned_amount, tenure_months, final_interest_rate.
-            # LMS expects: application_id, customer_id, product_id, sanction_amount, tenure_months, interest_rate.
-            payload = {
-                "application_id": application.id,
-                "customer_id": application.customer_id,
-                "product_id": application.product_id,
-                "sanction_amount": application.sanctioned_amount,
-                "tenure_months": application.tenure_months,
-                "interest_rate": application.final_interest_rate,
-            }
-
-            with httpx.Client(timeout=5.0) as client:
-                client.post(f"{lms_base}/loans", json=payload)
-        except Exception:
-            # Do not fail LOS decision on downstream booking.
-            pass
+        book_approved_application_in_lms(application)
+        db.commit()
+        db.refresh(application)
 
     trigger_underwriting_assistant(application, f"decision_{application.application_status}")
 
@@ -654,25 +815,39 @@ async def decide_application(
         message=message,
         sanctioned_amount=application.sanctioned_amount,
         final_interest_rate=application.final_interest_rate,
-        decision_date=application.decision_date
+        decision_date=application.decision_date,
+        lms_booking_status=application.lms_booking_status,
+        lms_loan_account_id=application.lms_loan_account_id,
     )
 
 
 @app.post("/applications/{application_id}/disburse", response_model=ApplicationDisbursementResponse)
 async def mark_application_disbursed(
     application_id: str,
-    db: Session = Depends(get_db)
+    amount: Optional[float] = Query(None),
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Mark an approved application as disbursed after LMS disbursement succeeds."""
     application = db.query(LoanApplication).filter(LoanApplication.id == application_id).first()
     if not application:
         raise HTTPException(status_code=404, detail="Application not found")
+    _assert_application_in_scope(application, scope)
+    if application.application_status == "disbursed" and application.disbursed_date:
+        return {
+            "application_id": application.id,
+            "status": application.application_status,
+            "disbursed_date": application.disbursed_date,
+            "disbursed_amount": application.disbursed_amount,
+        }
     if application.application_status != "approved":
         raise HTTPException(status_code=400, detail="Only approved applications can be disbursed")
 
     disbursed_at = datetime.utcnow()
     application.application_status = "disbursed"
     application.disbursed_date = disbursed_at
+    application.disbursed_amount = amount or application.sanctioned_amount
+    application.lms_disbursement_status = "disbursed"
     db.commit()
     db.refresh(application)
     trigger_underwriting_assistant(application, "disbursed")
@@ -680,6 +855,7 @@ async def mark_application_disbursed(
         "application_id": application.id,
         "status": application.application_status,
         "disbursed_date": disbursed_at,
+        "disbursed_amount": application.disbursed_amount,
     }
 
 
@@ -687,9 +863,13 @@ async def mark_application_disbursed(
 @app.get("/applications/{application_id}/scorecard", response_model=ScorecardResponse)
 async def get_scorecard(
     application_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Get application scorecard."""
+    application = db.query(LoanApplication).filter(LoanApplication.id == application_id).first()
+    if application:
+        _assert_application_in_scope(application, scope)
     scorecard = db.query(ApplicationScorecard).filter(
         ApplicationScorecard.application_id == application_id
     ).first()

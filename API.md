@@ -210,18 +210,25 @@ curl -X POST http://localhost:8000/auth/login \
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/buckets` | List collection buckets |
-| GET | `/buckets/{id}/loans` | Get loans in bucket |
-| POST | `/collections/assign` | Assign loans to collectors |
-| GET | `/collections/{id}` | Get collection record |
-| POST | `/collections/{id}/note` | Log activity |
-| POST | `/collections/{id}/settlement` | Process settlement |
+| GET | `/buckets` | List DPD buckets with loan counts |
+| GET | `/buckets/{bucket_id}/loans` | Get assignments in a bucket |
+| POST | `/assignments` | Assign a delinquent loan to a collector |
+| GET | `/assignments` | List assignments by collector, branch, or status |
+| GET | `/loan/{loan_id}/status` | Get collection status and latest activity |
+| POST | `/loan/{loan_id}/activity` | Log call, visit, PTP, or other activity |
+| POST | `/loan/{loan_id}/settlement-offer` | Create a settlement offer |
+| POST | `/loan/{loan_id}/npa-classification` | Classify a delinquent loan as NPA |
 
 **Assign Loans Request:**
 ```json
 {
-  "loan_ids": ["loan-001", "loan-002"],
-  "collector_id": "user-collector-01"
+  "loan_account_id": "loan-001",
+  "customer_id": "cust-001",
+  "collector_user_id": "user-collector-01",
+  "branch_id": "branch-001",
+  "days_past_due": 45,
+  "outstanding_amount": 25000,
+  "priority": "high"
 }
 ```
 
@@ -237,7 +244,82 @@ curl -X POST http://localhost:8000/auth/login \
 
 ---
 
-### 6. FinDNA / AI Service
+### 6. Deposits Service
+
+**Port:** `8007`
+**Base URL:** `http://localhost:8007`
+
+#### Deposit Products, Accounts & Statements
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/deposit-types` | List CASA, FD, and RD product masters |
+| POST | `/deposit-accounts` | Open a deposit account |
+| GET | `/deposit-accounts` | List deposit accounts by customer or status |
+| GET | `/deposit-accounts/{account_id}` | Get deposit account details |
+| GET | `/deposit-accounts/{account_id}/interest-schedule` | Calculate interest and maturity value |
+| POST | `/deposit-accounts/{account_id}/transactions` | Post credit, debit, interest, or fee |
+| GET | `/deposit-accounts/{account_id}/transactions` | List account transactions |
+| GET | `/deposit-accounts/{account_id}/statement` | Get statement between two dates |
+| POST | `/deposit-accounts/{account_id}/standing-instructions` | Add a standing instruction |
+
+**Open Deposit Account Request:**
+```json
+{
+  "customer_id": "cust-001",
+  "deposit_type_code": "FD",
+  "principal_amount": 100000,
+  "start_date": "2026-01-01T00:00:00"
+}
+```
+
+**Post Transaction Request:**
+```json
+{
+  "transaction_type": "credit",
+  "amount": 5000,
+  "description": "Top-up",
+  "reference": "DEP-1",
+  "transaction_date": "2026-02-01T00:00:00"
+}
+```
+
+---
+
+### 7. HRMS Service
+
+**Port:** `8012`
+**Base URL:** `http://localhost:8012`
+
+#### Employee Master
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/employees` | Create an employee profile |
+| GET | `/employees` | List employees by branch, department, or status |
+| GET | `/employees/{employee_id}` | Get employee details |
+| PUT | `/employees/{employee_id}` | Update employee profile, status, or IAM mapping |
+| POST | `/employees/{employee_id}/assign-branch` | Assign an employee to a branch |
+
+**Create Employee Request:**
+```json
+{
+  "employee_number": "EMP-001",
+  "first_name": "Anika",
+  "last_name": "Rao",
+  "email": "anika.rao@example.com",
+  "phone": "9999999002",
+  "designation": "Collection Officer",
+  "department": "Collections",
+  "branch_id": "branch-001",
+  "user_id": "user-collector-01",
+  "joining_date": "2026-01-10T00:00:00"
+}
+```
+
+---
+
+### 8. FinDNA / AI Service
 
 **Port:** `8005`
 **Base URL:** `http://localhost:8005`

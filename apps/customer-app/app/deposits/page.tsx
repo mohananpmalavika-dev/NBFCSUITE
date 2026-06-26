@@ -37,6 +37,11 @@ function formatCurrency(value: number) {
   return `INR ${Number(value || 0).toLocaleString()}`;
 }
 
+function csvEscape(value: string | number | null | undefined) {
+  const normalized = String(value ?? '');
+  return `"${normalized.replace(/"/g, '""')}"`;
+}
+
 export default function DepositsPage() {
   const { user, token, isLoading } = useAuth();
   const router = useRouter();
@@ -93,6 +98,38 @@ export default function DepositsPage() {
 
     loadStatement();
   }, [selectedAccount]);
+
+  const downloadStatement = () => {
+    if (!selectedAccount || !statement) {
+      return;
+    }
+
+    const rows = [
+      ['Account Number', selectedAccount.account_number],
+      ['Opening Balance', statement.opening_balance],
+      ['Closing Balance', statement.closing_balance],
+      [],
+      ['Date', 'Description', 'Type', 'Amount', 'Running Balance', 'Reference'],
+      ...statement.transactions.map((transaction) => [
+        new Date(transaction.transaction_date).toLocaleDateString(),
+        transaction.description,
+        transaction.transaction_type,
+        transaction.amount,
+        transaction.running_balance,
+        transaction.reference || '',
+      ]),
+    ];
+    const csv = rows.map((row) => row.map(csvEscape).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${selectedAccount.account_number}-statement.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   if (isLoading) {
     return <div className="p-8 text-center">Loading...</div>;
@@ -167,15 +204,25 @@ export default function DepositsPage() {
                   </p>
                 </div>
                 {statement && (
-                  <div className="grid grid-cols-2 gap-3 text-right text-sm">
-                    <div>
-                      <p className="text-slate-500">Opening</p>
-                      <p className="font-semibold text-slate-950">{formatCurrency(statement.opening_balance)}</p>
+                  <div className="flex flex-col items-start gap-3 sm:items-end">
+                    <div className="grid grid-cols-2 gap-3 text-left text-sm sm:text-right">
+                      <div>
+                        <p className="text-slate-500">Opening</p>
+                        <p className="font-semibold text-slate-950">{formatCurrency(statement.opening_balance)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">Closing</p>
+                        <p className="font-semibold text-slate-950">{formatCurrency(statement.closing_balance)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-slate-500">Closing</p>
-                      <p className="font-semibold text-slate-950">{formatCurrency(statement.closing_balance)}</p>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={downloadStatement}
+                      disabled={statement.transactions.length === 0}
+                      className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Download CSV
+                    </button>
                   </div>
                 )}
               </div>

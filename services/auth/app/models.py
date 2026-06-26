@@ -22,6 +22,11 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
+    organization_id = Column(String, nullable=True, index=True)
+    zone_id = Column(String, nullable=True, index=True)
+    region_id = Column(String, nullable=True, index=True)
+    area_id = Column(String, nullable=True, index=True)
+    branch_id = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     roles = relationship("Role", secondary=user_roles, back_populates="users")

@@ -22,6 +22,11 @@ class Role(RoleBase):
 class UserBase(BaseModel):
     username: str
     email: str
+    organization_id: Optional[str] = None
+    zone_id: Optional[str] = None
+    region_id: Optional[str] = None
+    area_id: Optional[str] = None
+    branch_id: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -31,6 +36,11 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None
+    organization_id: Optional[str] = None
+    zone_id: Optional[str] = None
+    region_id: Optional[str] = None
+    area_id: Optional[str] = None
+    branch_id: Optional[str] = None
 
 
 class User(UserBase):
@@ -63,3 +73,8 @@ class TokenValidationResponse(BaseModel):
     user_id: str
     username: str
     roles: List[str] = []
+    organization_id: Optional[str] = None
+    zone_id: Optional[str] = None
+    region_id: Optional[str] = None
+    area_id: Optional[str] = None
+    branch_id: Optional[str] = None

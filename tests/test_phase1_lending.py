@@ -1,5 +1,6 @@
 import asyncio
 import os
+from datetime import datetime
 from pathlib import Path
 
 os.environ["DATABASE_URL"] = "sqlite:///C:/tmp/phase1_lending_test.db"
@@ -18,11 +19,14 @@ from sqlalchemy import text
 from services.los.app.main import (
     Base as LosBase,
     LoanApplicationCreate,
+    PrincipalScope as LosPrincipalScope,
     SessionLocal as LosSessionLocal,
     UnderwritingDecisionRequest,
     create_application,
     decide_application,
     engine as los_engine,
+    get_application,
+    list_applications,
     startup as los_startup,
     submit_application,
     underwrite_application,
@@ -32,10 +36,13 @@ from services.lms.app.main import (
     DisbursementRequest,
     LoanAccountCreate,
     PaymentRequest,
+    PrincipalScope as LmsPrincipalScope,
     SessionLocal as LmsSessionLocal,
+    compute_loan_overdue,
     create_loan,
     disburse_loan,
     engine as lms_engine,
+    get_loan,
     record_payment,
 )
 
@@ -102,6 +109,61 @@ def test_los_application_rules_and_decision_flow():
         db.close()
 
 
+def test_los_branch_scope_filters_and_denies_cross_branch_access():
+    LosBase.metadata.drop_all(bind=los_engine)
+    run(los_startup())
+    db = LosSessionLocal()
+    try:
+        scoped_application = run(
+            create_application(
+                LoanApplicationCreate(
+                    customer_id="customer-branch-1",
+                    branch_id="branch-1",
+                    product_code="PERSONAL_LOAN",
+                    applied_amount=100000,
+                    tenure_months=24,
+                ),
+                db,
+                LosPrincipalScope(branch_id="branch-1"),
+            )
+        )
+        other_application = run(
+            create_application(
+                LoanApplicationCreate(
+                    customer_id="customer-branch-2",
+                    branch_id="branch-2",
+                    product_code="PERSONAL_LOAN",
+                    applied_amount=100000,
+                    tenure_months=24,
+                ),
+                db,
+                LosPrincipalScope(branch_id="branch-2"),
+            )
+        )
+
+        branch_view = run(
+            list_applications(
+                customer_id=None,
+                branch_id=None,
+                status=None,
+                skip=0,
+                limit=20,
+                db=db,
+                scope=LosPrincipalScope(branch_id="branch-1"),
+            )
+        )
+        assert branch_view["total"] == 1
+        assert branch_view["items"][0].id == scoped_application.id
+
+        try:
+            run(get_application(other_application.id, db, LosPrincipalScope(branch_id="branch-1")))
+            assert False, "Expected cross-branch LOS read to be denied"
+        except HTTPException as exc:
+            assert exc.status_code == 403
+    finally:
+        db.close()
+
+
 def test_lms_booking_disbursement_schedule_and_payment_flow():
     LmsBase.metadata.drop_all(bind=lms_engine)
     LmsBase.metadata.create_all(bind=lms_engine)
@@ -149,5 +211,52 @@ def test_lms_booking_disbursement_schedule_and_payment_flow():
             {"loan_id": loan.id},
         ).scalar_one()
         assert first_emi == "paid"
+    finally:
+        db.close()
+
+
+def test_lms_branch_scope_and_overdue_penalty_flow():
+    LmsBase.metadata.drop_all(bind=lms_engine)
+    LmsBase.metadata.create_all(bind=lms_engine)
+    db = LmsSessionLocal()
+    try:
+        loan = run(
+            create_loan(
+                LoanAccountCreate(
+                    application_id="application-branch-1",
+                    customer_id="customer-1",
+                    branch_id="branch-1",
+                    product_id="prod-personal-loan",
+                    sanction_amount=120000,
+                    tenure_months=12,
+                    interest_rate=12,
+                    start_date=datetime(2026, 1, 1),
+                ),
+                db,
+                LmsPrincipalScope(branch_id="branch-1"),
+            )
+        )
+        assert loan.branch_id == "branch-1"
+
+        try:
+            run(get_loan(loan.id, db, LmsPrincipalScope(branch_id="branch-2")))
+            assert False, "Expected cross-branch LMS read to be denied"
+        except HTTPException as exc:
+            assert exc.status_code == 403
+
+        overdue = run(
+            compute_loan_overdue(
+                loan.id,
+                datetime(2026, 3, 15),
+                0.001,
+                db,
+                LmsPrincipalScope(branch_id="branch-1"),
+            )
+        )
+        assert overdue.days_past_due > 0
+        assert overdue.overdue_emi_count >= 1
+        assert overdue.penalty_amount > 0
+        db.refresh(loan)
+        assert loan.status == "delinquent"
     finally:
         db.close()

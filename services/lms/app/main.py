@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, Header
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, Session
 from pydantic import BaseModel
@@ -21,6 +21,7 @@ class LoanAccount(Base):
     id = Column(String, primary_key=True)
     application_id = Column(String, unique=True, index=True)
     customer_id = Column(String, index=True)
+    branch_id = Column(String, index=True, nullable=True)
     product_id = Column(String)
     account_number = Column("loan_account_number", String, unique=True, index=True)
     sanction_amount = Column(Float)
@@ -73,6 +74,7 @@ class EMIScheduleResponse(BaseModel):
     emi_amount: float
     principal_amount: float
     interest_amount: float
+    penalty_amount: float = 0.0
     status: str
     
     class Config:
@@ -84,6 +86,7 @@ class LoanAccountResponse(BaseModel):
     account_number: str
     application_id: str
     customer_id: str
+    branch_id: Optional[str] = None
     sanction_amount: float
     disbursed_amount: float
     outstanding_principal: float
@@ -98,6 +101,7 @@ class LoanAccountResponse(BaseModel):
 class LoanAccountCreate(BaseModel):
     application_id: str
     customer_id: str
+    branch_id: Optional[str] = None
     product_id: str
     sanction_amount: float
     tenure_months: int
@@ -145,6 +149,16 @@ class PaymentResponse(BaseModel):
         from_attributes = True
 
 
+class OverdueComputationResponse(BaseModel):
+    loan_id: str
+    branch_id: Optional[str] = None
+    days_past_due: int
+    overdue_emi_count: int
+    overdue_amount: float
+    penalty_amount: float
+    status: str
+
+
 # FastAPI App
 app = FastAPI(title="lms-service", version="0.1.0")
 
@@ -155,6 +169,37 @@ def get_db() -> Session:
         yield db
     finally:
         db.close()
+
+
+class PrincipalScope:
+    def __init__(self, branch_id: Optional[str] = None):
+        self.branch_id = branch_id
+
+    @property
+    def is_scoped(self) -> bool:
+        return bool(self.branch_id)
+
+
+def get_principal_scope(
+    branch_id: Optional[str] = Header(default=None, alias="X-Scope-Branch-Id"),
+    legacy_branch_id: Optional[str] = Header(default=None, alias="X-Branch-Id"),
+) -> PrincipalScope:
+    return PrincipalScope(branch_id=branch_id or legacy_branch_id)
+
+
+def _assert_loan_in_scope(loan: LoanAccount, scope: PrincipalScope) -> None:
+    if not isinstance(scope, PrincipalScope):
+        return
+    if scope.is_scoped and loan.branch_id != scope.branch_id:
+        raise HTTPException(status_code=403, detail="Loan is outside the caller's branch scope")
+
+
+def _resolve_branch_id(requested_branch_id: Optional[str], scope: PrincipalScope) -> Optional[str]:
+    if not isinstance(scope, PrincipalScope):
+        return requested_branch_id
+    if scope.is_scoped and requested_branch_id and requested_branch_id != scope.branch_id:
+        raise HTTPException(status_code=403, detail="Branch is outside the caller's branch scope")
+    return requested_branch_id or scope.branch_id
 
 
 @app.on_event("startup")
@@ -222,7 +267,8 @@ def trigger_findna_assistant(customer_id: str, assistant_type: str, source_refer
 @app.post("/loans", response_model=LoanAccountResponse)
 async def create_loan(
     loan_data: LoanAccountCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     from uuid import uuid4
 
@@ -230,6 +276,7 @@ async def create_loan(
     if existing:
         raise HTTPException(status_code=400, detail="Loan already exists for this application")
 
+    branch_id = _resolve_branch_id(loan_data.branch_id, scope)
     account_number = f"LA-{str(uuid4())[:8].upper()}"
     if loan_data.sanction_amount <= 0:
         raise HTTPException(status_code=400, detail="sanction_amount must be positive")
@@ -251,6 +298,7 @@ async def create_loan(
         id=str(uuid4()),
         application_id=loan_data.application_id,
         customer_id=loan_data.customer_id,
+        branch_id=branch_id,
         product_id=loan_data.product_id,
         account_number=account_number,
         sanction_amount=loan_data.sanction_amount,
@@ -307,7 +355,8 @@ async def ready():
 @app.get("/loans/{loan_id}", response_model=LoanAccountResponse)
 async def get_loan(
     loan_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Get loan account details."""
     loan = db.query(LoanAccount).filter(
@@ -316,6 +365,7 @@ async def get_loan(
     
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+    _assert_loan_in_scope(loan, scope)
     
     return loan
 
@@ -323,16 +373,21 @@ async def get_loan(
 @app.get("/loans")
 async def list_loans(
     customer_id: Optional[str] = Query(None),
+    branch_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     skip: int = Query(0),
     limit: int = Query(20),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """List loans with optional filters."""
     query = db.query(LoanAccount)
     
     if customer_id:
         query = query.filter(LoanAccount.customer_id == customer_id)
+    selected_branch_id = _resolve_branch_id(branch_id, scope)
+    if selected_branch_id:
+        query = query.filter(LoanAccount.branch_id == selected_branch_id)
     
     if status:
         query = query.filter(LoanAccount.status == status)
@@ -351,7 +406,8 @@ async def list_loans(
 @app.get("/loans/{loan_id}/emi-schedule")
 async def get_emi_schedule(
     loan_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Get EMI schedule for a loan."""
     loan = db.query(LoanAccount).filter(
@@ -360,6 +416,7 @@ async def get_emi_schedule(
     
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+    _assert_loan_in_scope(loan, scope)
     
     schedule = db.query(EMISchedule).filter(
         EMISchedule.loan_account_id == loan_id
@@ -377,15 +434,24 @@ async def get_emi_schedule(
 async def disburse_loan(
     loan_id: str,
     disbursement: DisbursementRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     loan = db.query(LoanAccount).filter(LoanAccount.id == loan_id).first()
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+    _assert_loan_in_scope(loan, scope)
     if loan.status not in {"active", "sanctioned"}:
         raise HTTPException(status_code=400, detail="Loan is not eligible for disbursement")
 
     amount = disbursement.amount if disbursement.amount is not None else loan.sanction_amount
+    if loan.disbursed_amount >= loan.sanction_amount and amount == loan.sanction_amount:
+        return {
+            "loan_id": loan.id,
+            "account_number": loan.account_number,
+            "disbursed_amount": loan.disbursed_amount,
+            "status": loan.status,
+        }
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Disbursement amount must be positive")
     if loan.disbursed_amount + amount > loan.sanction_amount:
@@ -401,7 +467,11 @@ async def disburse_loan(
 
         los_base = os.getenv("LOS_BASE_URL", "http://localhost:8002")
         with httpx.Client(timeout=5.0) as client:
-            client.post(f"{los_base}/applications/{loan.application_id}/disburse")
+            client.post(
+                f"{los_base}/applications/{loan.application_id}/disburse",
+                params={"amount": loan.disbursed_amount},
+                headers={"X-Scope-Branch-Id": loan.branch_id} if loan.branch_id else None,
+            )
     except Exception:
         pass
 
@@ -417,7 +487,8 @@ async def disburse_loan(
 async def record_payment(
     loan_id: str,
     payment: PaymentRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Record payment for a loan."""
     from uuid import uuid4
@@ -428,8 +499,21 @@ async def record_payment(
     
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+    _assert_loan_in_scope(loan, scope)
     if payment.amount <= 0:
         raise HTTPException(status_code=400, detail="Payment amount must be positive")
+    existing_payment = (
+        db.query(PaymentTransaction)
+        .filter(PaymentTransaction.loan_account_id == loan_id, PaymentTransaction.reference == payment.reference)
+        .first()
+    )
+    if existing_payment:
+        return {
+            "transaction_id": existing_payment.id,
+            "status": existing_payment.status,
+            "amount": existing_payment.amount,
+            "transaction_date": existing_payment.transaction_date,
+        }
     
     # Create payment transaction
     transaction_id = str(uuid4())
@@ -519,9 +603,14 @@ async def get_payment_history(
     loan_id: str,
     skip: int = Query(0),
     limit: int = Query(20),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Get payment history for a loan."""
+    loan = db.query(LoanAccount).filter(LoanAccount.id == loan_id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    _assert_loan_in_scope(loan, scope)
     payments = db.query(PaymentTransaction).filter(
         PaymentTransaction.loan_account_id == loan_id
     ).order_by(PaymentTransaction.transaction_date.desc()).offset(skip).limit(limit).all()
@@ -536,7 +625,8 @@ async def get_payment_history(
 @app.post("/loans/{loan_id}/foreclose")
 async def foreclose_loan(
     loan_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
 ):
     """Foreclose a loan."""
     loan = db.query(LoanAccount).filter(
@@ -545,6 +635,7 @@ async def foreclose_loan(
     
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+    _assert_loan_in_scope(loan, scope)
     
     # Calculate foreclosure amount (outstanding principal + interest + charges)
     foreclosure_amount = loan.outstanding_principal + loan.outstanding_interest
@@ -554,6 +645,77 @@ async def foreclose_loan(
         "foreclosure_amount": foreclosure_amount,
         "message": "Foreclosure quote generated"
     }
+
+
+@app.post("/loans/{loan_id}/compute-overdue", response_model=OverdueComputationResponse)
+async def compute_loan_overdue(
+    loan_id: str,
+    as_of: Optional[datetime] = Query(None),
+    penalty_rate_per_day: float = Query(0.001, ge=0),
+    db: Session = Depends(get_db),
+    scope: PrincipalScope = Depends(get_principal_scope),
+):
+    loan = db.query(LoanAccount).filter(LoanAccount.id == loan_id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    _assert_loan_in_scope(loan, scope)
+
+    effective_date = as_of or datetime.utcnow()
+    overdue_emis = (
+        db.query(EMISchedule)
+        .filter(
+            EMISchedule.loan_account_id == loan_id,
+            EMISchedule.status.in_(["pending", "overdue"]),
+            EMISchedule.due_date < effective_date,
+        )
+        .order_by(EMISchedule.due_date.asc())
+        .all()
+    )
+
+    max_dpd = 0
+    overdue_amount = 0.0
+    penalty_amount = 0.0
+    for emi in overdue_emis:
+        days_past_due = max(0, (effective_date - emi.due_date).days)
+        max_dpd = max(max_dpd, days_past_due)
+        emi.status = "overdue"
+        emi.penalty_amount = round((emi.emi_amount or 0) * penalty_rate_per_day * days_past_due, 2)
+        overdue_amount += emi.emi_amount or 0
+        penalty_amount += emi.penalty_amount or 0
+
+    if overdue_emis and loan.status not in {"closed", "written_off"}:
+        loan.status = "delinquent"
+
+    db.commit()
+
+    if overdue_emis:
+        try:
+            import httpx
+
+            collections_base = os.getenv("COLLECTIONS_BASE_URL", "http://localhost:8004")
+            payload = {
+                "loan_account_id": loan.id,
+                "customer_id": loan.customer_id,
+                "collector_user_id": "unassigned",
+                "branch_id": loan.branch_id,
+                "days_past_due": max_dpd,
+                "outstanding_amount": round((loan.outstanding_principal or 0) + (loan.outstanding_interest or 0), 2),
+                "priority": "high" if max_dpd >= 60 else "medium",
+            }
+            with httpx.Client(timeout=5.0) as client:
+                client.post(f"{collections_base}/assignments", json=payload)
+        except Exception:
+            pass
+
+    return OverdueComputationResponse(
+        loan_id=loan.id,
+        branch_id=loan.branch_id,
+        days_past_due=max_dpd,
+        overdue_emi_count=len(overdue_emis),
+        overdue_amount=round(overdue_amount, 2),
+        penalty_amount=round(penalty_amount, 2),
+        status=loan.status,
+    )
 
 
 @app.get("/")
