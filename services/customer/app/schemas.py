@@ -183,6 +183,10 @@ class Customer360Response(BaseModel):
     addresses: list[AddressResponse] = Field(default_factory=list)
     kyc_documents: list[DocumentResponse] = Field(default_factory=list)
     financial_profile: Optional["FinancialProfileResponse"] = None
+    timeline: list["CustomerTimelineResponse"] = Field(default_factory=list)
+    consents: list["CustomerConsentResponse"] = Field(default_factory=list)
+    party: Optional["CustomerPartyResponse"] = None
+    onboarding_gaps: list[str] = Field(default_factory=list)
 
 
 class OrganizationCreate(OfficeCreateBase):
@@ -401,3 +405,114 @@ class FinancialProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CustomerTimelineCreate(BaseModel):
+    event_type: str
+    event_description: Optional[str] = None
+    triggered_by: Optional[str] = None
+    event_metadata: Optional[dict] = None
+    document_reference_id: Optional[str] = None
+    related_product_id: Optional[str] = None
+
+
+class CustomerTimelineResponse(BaseModel):
+    id: str
+    customer_id: str
+    event_type: str
+    event_description: Optional[str] = None
+    event_timestamp: datetime
+    triggered_by: Optional[str] = None
+    event_metadata: Optional[dict] = None
+    document_reference_id: Optional[str] = None
+    related_product_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CustomerConsentCreate(BaseModel):
+    consent_type: str
+    consent_given: bool = True
+    consent_version: str = "1.0"
+    consent_document_url: Optional[str] = None
+    consent_expiry_date: Optional[datetime] = None
+
+
+class CustomerConsentResponse(BaseModel):
+    id: str
+    customer_id: str
+    consent_type: str
+    consent_status: str
+    consent_date: datetime
+    consent_version: Optional[str] = None
+    consent_document_url: Optional[str] = None
+    consent_expiry_date: Optional[datetime] = None
+    withdrawn_date: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class CustomerPartyUpsert(BaseModel):
+    party_type: str
+    party_name: str
+    party_code: Optional[str] = None
+    registration_number: Optional[str] = None
+    registration_authority: Optional[str] = None
+    party_status: str = "active"
+    tax_id: Optional[str] = None
+
+
+class CustomerPartyResponse(CustomerPartyUpsert):
+    id: str
+    customer_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class OnboardingWorkflowCreate(BaseModel):
+    workflow_name: str
+    product_type: str
+    customer_type: Optional[str] = None
+    workflow_stages: list[str] = Field(default_factory=list)
+    required_documents: list[str] = Field(default_factory=list)
+    required_compliance_checks: list[str] = Field(default_factory=list)
+    approval_levels: int = 1
+    is_active: bool = True
+
+
+class OnboardingWorkflowResponse(BaseModel):
+    id: str
+    workflow_name: str
+    product_type: str
+    customer_type: Optional[str] = None
+    workflow_stages: Optional[list[str]] = None
+    required_documents: Optional[list[str]] = None
+    required_compliance_checks: Optional[list[str]] = None
+    approval_levels: Optional[int] = None
+    is_active: bool
+    created_at: datetime
+
+    @field_validator("is_active", mode="before")
+    @classmethod
+    def parse_bool(cls, value):
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in {"1", "true", "yes", "active"}
+
+    class Config:
+        from_attributes = True
+
+
+class OnboardingReadinessResponse(BaseModel):
+    customer_id: str
+    ready: bool
+    completion_percentage: int
+    missing_fields: list[str]
+    missing_documents: list[str]
+    missing_compliance_checks: list[str]
+    workflow: Optional[OnboardingWorkflowResponse] = None

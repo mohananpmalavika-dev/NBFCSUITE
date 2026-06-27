@@ -12,12 +12,31 @@ if db_path.exists():
 
 from fastapi import HTTPException
 
-from services.customer.app.db import SessionLocal, init_db
+from services.customer.app.db import Base, SessionLocal, engine, init_db
 from services.customer.app.models import Customer, CustomerAddress, CustomerFinancialProfile, KYCDocument
 from services.customer.app.models_prospect import ProspectAddress, ProspectKYCDocument
-from services.customer.app.routers.customer import create_customer, get_customer_360
+from services.customer.app.routers.customer import (
+    add_customer_timeline_event,
+    create_customer,
+    create_onboarding_workflow,
+    get_customer_360,
+    get_onboarding_readiness,
+    list_customer_timeline,
+    record_customer_consent,
+    search_customers,
+    upsert_customer_party,
+    validate_customer_kyc,
+    withdraw_customer_consent,
+)
 from services.customer.app.routers.prospect import approve_prospect, create_prospect, search_customer_or_prospect
-from services.customer.app.schemas import CustomerCreate
+from services.customer.app.schemas import (
+    CustomerConsentCreate,
+    CustomerCreate,
+    CustomerPartyUpsert,
+    CustomerTimelineCreate,
+    KYCValidationRequest,
+    OnboardingWorkflowCreate,
+)
 from services.customer.app.schemas_prospect import (
     CustomerSearchRequest,
     ProspectApproveRequest,
@@ -29,8 +48,13 @@ def run(coro):
     return asyncio.run(coro)
 
 
-def test_enterprise_prospect_search_approval_and_customer_360_carryover():
+def reset_db():
+    Base.metadata.drop_all(bind=engine)
     init_db()
+
+
+def test_enterprise_prospect_search_approval_and_customer_360_carryover():
+    reset_db()
     db = SessionLocal()
     try:
         empty = run(search_customer_or_prospect(CustomerSearchRequest(phone="9888888888"), db))
@@ -144,7 +168,7 @@ def test_enterprise_prospect_search_approval_and_customer_360_carryover():
 
 
 def test_direct_customer_creation_generates_cif_and_checks_extended_ids():
-    init_db()
+    reset_db()
     db = SessionLocal()
     try:
         customer = run(
@@ -182,5 +206,141 @@ def test_direct_customer_creation_generates_cif_and_checks_extended_ids():
             raise AssertionError("Expected duplicate passport to fail")
         except HTTPException as exc:
             assert exc.status_code == 400
+    finally:
+        db.close()
+
+
+def test_customer_creation_enterprise_readiness_consent_party_and_timeline():
+    reset_db()
+    db = SessionLocal()
+    try:
+        workflow = run(
+            create_onboarding_workflow(
+                OnboardingWorkflowCreate(
+                    workflow_name="Gold Loan Individual Onboarding",
+                    product_type="gold_loan",
+                    customer_type="individual",
+                    workflow_stages=["identity", "documents", "compliance", "approval"],
+                    required_documents=["pan", "aadhar"],
+                    required_compliance_checks=["kyc", "pan", "aadhar"],
+                    approval_levels=3,
+                ),
+                db,
+            )
+        )
+        assert workflow.product_type == "gold_loan"
+
+        customer = run(
+            create_customer(
+                CustomerCreate(
+                    first_name="Rohan",
+                    last_name="Menon",
+                    email="rohan.menon@example.com",
+                    phone="9555555555",
+                    dob="1988-04-12",
+                    gender="M",
+                    passport="m1234567",
+                ),
+                db,
+            )
+        )
+
+        search_result = run(
+            search_customers(
+                phone=None,
+                email=None,
+                pan=None,
+                aadhar=None,
+                passport="m1234567",
+                voter_id=None,
+                driving_licence=None,
+                gstin=None,
+                cin=None,
+                customer_id=None,
+                db=db,
+            )
+        )
+        assert search_result["found"] is True
+        assert search_result["matches"][0]["customer_id"] == customer.id
+
+        party = run(
+            upsert_customer_party(
+                customer.id,
+                CustomerPartyUpsert(
+                    party_type="individual",
+                    party_name="Rohan Menon",
+                    party_code="PTY-ROHAN",
+                    tax_id="ABCDE1234F",
+                ),
+                db,
+            )
+        )
+        assert party.party_type == "individual"
+
+        consent = run(
+            record_customer_consent(
+                customer.id,
+                CustomerConsentCreate(consent_type="account_aggregation", consent_given=True),
+                db,
+            )
+        )
+        assert consent.consent_status == "given"
+
+        withdrawn = run(withdraw_customer_consent(customer.id, "account_aggregation", db=db))
+        assert withdrawn.consent_status == "withdrawn"
+
+        event = run(
+            add_customer_timeline_event(
+                customer.id,
+                CustomerTimelineCreate(
+                    event_type="branch_visit",
+                    event_description="Customer visited branch for gold loan onboarding",
+                    triggered_by="rm-1",
+                ),
+                db,
+            )
+        )
+        assert event.event_type == "branch_visit"
+
+        not_ready = run(get_onboarding_readiness(customer.id, product_type="gold_loan", db=db))
+        assert not_ready["ready"] is False
+        assert "pan" in not_ready["missing_documents"]
+        assert "kyc" in not_ready["missing_compliance_checks"]
+
+        run(
+            validate_customer_kyc(
+                customer.id,
+                KYCValidationRequest(pan="ABCDE1234F", aadhar="345678901234"),
+                db,
+            )
+        )
+        db.add(
+            KYCDocument(
+                id="enterprise-doc-pan",
+                customer_id=customer.id,
+                document_type="pan",
+                document_number="ABCDE1234F",
+                document_url="s3://docs/enterprise-pan.pdf",
+                verification_status="verified",
+            )
+        )
+        db.add(
+            KYCDocument(
+                id="enterprise-doc-aadhar",
+                customer_id=customer.id,
+                document_type="aadhar",
+                document_number="345678901234",
+                document_url="s3://docs/enterprise-aadhar.pdf",
+                verification_status="verified",
+            )
+        )
+        db.commit()
+
+        ready = run(get_onboarding_readiness(customer.id, product_type="gold_loan", db=db))
+        assert ready["ready"] is True
+
+        timeline = run(list_customer_timeline(customer.id, limit=20, db=db))
+        event_types = {item.event_type for item in timeline}
+        assert {"customer_created", "consent_recorded", "consent_withdrawn", "branch_visit", "kyc_validated"}.issubset(event_types)
     finally:
         db.close()

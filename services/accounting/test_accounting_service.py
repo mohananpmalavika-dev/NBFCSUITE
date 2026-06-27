@@ -2,7 +2,8 @@ import os
 import tempfile
 from pathlib import Path
 import importlib.util
-from fastapi.testclient import TestClient
+import pytest
+from httpx import AsyncClient, ASGITransport
 
 # Configure local SQLite database before importing the accounting app.
 TEST_DB_PATH = Path(tempfile.gettempdir()) / "accounting_service_test.db"
@@ -18,15 +19,19 @@ accounting_main = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(accounting_main)
 
 accounting_main.Base.metadata.create_all(bind=accounting_main.engine)
-client = TestClient(accounting_main.app)
 
 
-def teardown_module(module):
-    if TEST_DB_PATH.exists():
-        TEST_DB_PATH.unlink()
+@pytest.fixture(scope="module")
+async def client():
+    async with AsyncClient(
+        transport=ASGITransport(app=accounting_main.app),
+        base_url="http://testserver",
+    ) as async_client:
+        yield async_client
 
 
-def test_posting_rule_auto_posting_subledger_and_audit():
+@pytest.mark.asyncio
+async def test_posting_rule_auto_posting_subledger_and_audit(client):
     tenant_id = "tenant-local-accounting"
 
     rule_payload = {
@@ -37,7 +42,7 @@ def test_posting_rule_auto_posting_subledger_and_audit():
         "credit_account_code": "2200_CUSTOMER_DEPOSITS",
         "description": "Deposit receipt posting",
     }
-    rule_response = client.post("/posting-rules", json=rule_payload)
+    rule_response = await client.post("/posting-rules", json=rule_payload)
     assert rule_response.status_code == 200
     rule_data = rule_response.json()
     assert rule_data["tenant_id"] == tenant_id
@@ -55,18 +60,18 @@ def test_posting_rule_auto_posting_subledger_and_audit():
         "amount": 1500.0,
         "metadata": {"note": "local deposit posting"},
     }
-    posting_response = client.post("/gl-postings/auto", json=posting_payload)
+    posting_response = await client.post("/gl-postings/auto", json=posting_payload)
     assert posting_response.status_code == 200
     posting_data = posting_response.json()
     assert posting_data["posting_status"] == "posted"
     assert posting_data["source_reference"] == "deposit-test-ref"
     assert posting_data["idempotency_key"] == "local-test-001"
 
-    duplicate_response = client.post("/gl-postings/auto", json=posting_payload)
+    duplicate_response = await client.post("/gl-postings/auto", json=posting_payload)
     assert duplicate_response.status_code == 200
     assert duplicate_response.json()["id"] == posting_data["id"]
 
-    subledger_response = client.get(
+    subledger_response = await client.get(
         "/sub-ledger-entries",
         params={
             "tenant_id": tenant_id,
@@ -81,7 +86,7 @@ def test_posting_rule_auto_posting_subledger_and_audit():
     assert subledger_entries[0]["amount"] == 1500.0
     assert subledger_entries[0]["journal_entry_id"] == posting_data["id"]
 
-    audit_response = client.get(
+    audit_response = await client.get(
         "/audit-logs",
         params={"tenant_id": tenant_id, "entity": "gl_posting"},
     )
@@ -89,7 +94,7 @@ def test_posting_rule_auto_posting_subledger_and_audit():
     audit_entries = audit_response.json()
     assert any(entry["action"] == "create" for entry in audit_entries)
 
-    trial_balance_response = client.get(
+    trial_balance_response = await client.get(
         "/reports/trial-balance",
         params={"tenant_id": tenant_id},
     )

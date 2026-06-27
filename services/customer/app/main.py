@@ -3,9 +3,13 @@ from .routers.customer import router as customer_router
 from .routers.office import router as office_router
 from .routers.branch import router as branch_router
 from .routers.prospect import router as prospect_router
-from .routers.cif_routes import router as cif_router
 from .routers.eom import router as eom_router
 from .db import init_db
+
+try:
+    from .routers.cif_routes import router as cif_router
+except Exception:
+    cif_router = None
 
 
 app = FastAPI(title="customer-service", version="0.1.0")
@@ -13,8 +17,9 @@ app.include_router(customer_router)
 app.include_router(office_router)
 app.include_router(branch_router)
 app.include_router(prospect_router)
-app.include_router(cif_router)
 app.include_router(eom_router)
+if cif_router is not None:
+    app.include_router(cif_router)
 
 
 

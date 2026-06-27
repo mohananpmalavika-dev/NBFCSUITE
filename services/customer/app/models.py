@@ -79,6 +79,75 @@ class CustomerFinancialProfile(Base):
     last_updated = Column(DateTime, default=datetime.utcnow)
 
 
+class CustomerTimeline(Base):
+    __tablename__ = "customer_timeline"
+
+    id = Column(String, primary_key=True)
+    customer_id = Column(String, ForeignKey("customers.id"), nullable=False)
+    event_type = Column(String, nullable=False)
+    event_description = Column(String, nullable=True)
+    event_timestamp = Column(DateTime, default=datetime.utcnow)
+    triggered_by = Column(String, nullable=True)
+    event_metadata = Column(JSON, nullable=True)
+    document_reference_id = Column(String, nullable=True)
+    related_product_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    customer = relationship("Customer")
+
+
+class CustomerConsent(Base):
+    __tablename__ = "customer_consents"
+
+    id = Column(String, primary_key=True)
+    customer_id = Column(String, ForeignKey("customers.id"), nullable=False)
+    consent_type = Column(String, nullable=False)
+    consent_status = Column(String, default="given")
+    consent_date = Column(DateTime, default=datetime.utcnow)
+    consent_version = Column(String, default="1.0")
+    consent_document_url = Column(String, nullable=True)
+    consent_expiry_date = Column(DateTime, nullable=True)
+    withdrawn_date = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    customer = relationship("Customer")
+
+
+class CustomerParty(Base):
+    __tablename__ = "customer_parties"
+
+    id = Column(String, primary_key=True)
+    customer_id = Column(String, ForeignKey("customers.id"), unique=True, nullable=False)
+    party_type = Column(String, nullable=False)
+    party_name = Column(String, nullable=False)
+    party_code = Column(String, unique=True, nullable=True)
+    registration_number = Column(String, nullable=True)
+    registration_authority = Column(String, nullable=True)
+    party_status = Column(String, default="active")
+    tax_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    customer = relationship("Customer")
+
+
+class OnboardingWorkflow(Base):
+    __tablename__ = "onboarding_workflows"
+
+    id = Column(String, primary_key=True)
+    workflow_name = Column(String, nullable=False)
+    product_type = Column(String, nullable=False)
+    customer_type = Column(String, nullable=True)
+    workflow_stages = Column(JSON, nullable=True)
+    required_documents = Column(JSON, nullable=True)
+    required_compliance_checks = Column(JSON, nullable=True)
+    approval_levels = Column(Integer, nullable=True)
+    is_active = Column(String, default="true")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class HeadOffice(Base):
     __tablename__ = "head_offices"
 
