@@ -4,11 +4,7 @@ import { useState } from 'react';
 import { useCIFStore } from '@/lib/cif-store';
 import { cifApi } from '@/lib/cif-api';
 
-interface StageSearchProps {
-  onNext: () => void;
-}
-
-export default function StageSearch({ onNext }: StageSearchProps) {
+export default function StageSearch() {
   const { searchData, updateSearchData, setLoading, setError, setCustomerId, setCurrentStep } =
     useCIFStore();
   const [searchResults, setSearchResults] = useState<any | null>(null);
@@ -32,9 +28,11 @@ export default function StageSearch({ onNext }: StageSearchProps) {
       });
 
       setSearchResults(results);
-      if (results.found) {
+      if (results.found && results.customer_id) {
         setCustomerId(results.customer_id);
         setError(null);
+      } else {
+        setCustomerId('');
       }
     } catch (err: any) {
       setError(err.message || 'Search failed');

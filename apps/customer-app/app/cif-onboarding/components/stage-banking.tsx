@@ -23,8 +23,10 @@ export default function StageBanking({ onNext }: StageBankingProps) {
     setLoading(true);
     try {
       await cifApi.addBankingProfile(customerId, {
-        primary_bank_account: banking.primaryBank,
-        account_type: 'savings',
+        primary_bank_account: banking.accountNumber || '',
+        primary_bank_name: banking.primaryBank || '',
+        primary_account_type: 'savings',
+        average_balance: banking.averageBalance,
       });
 
       markStageComplete(11);

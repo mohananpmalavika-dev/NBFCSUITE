@@ -55,7 +55,7 @@ export default function StageApproval({ onNext }: StageApprovalProps) {
       const data = {
         approval_id: approvalId,
         approved: true,
-        notes: `${approvalLevels[level - 1].name} approval granted`,
+        comments: `${approvalLevels[level - 1].name} approval granted`,
         approved_by: 'system',
       };
 

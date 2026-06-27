@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useCIFStore } from '@/lib/cif-store';
-import { cifApi } from '@/lib/cif-api';
 import StageSearch from './components/stage-search';
 import StageProspect from './components/stage-prospect';
 import StageBasicDetails from './components/stage-basic-details';
@@ -86,7 +85,7 @@ export default function CIFOnboarding() {
   const renderStage = () => {
     switch (currentStep) {
       case 1:
-        return <StageSearch onNext={handleNext} />;
+        return <StageSearch />;
       case 2:
         return <StageProspect onNext={handleNext} />;
       case 3:

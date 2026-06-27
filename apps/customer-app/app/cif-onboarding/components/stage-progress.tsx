@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCIFStore } from '@/lib/cif-store';
 
 export default function StageProgress() {
-  const { cifId, customerId, behavior, financial, completedStages } = useCIFStore();
+  const { cifId, behavior, financial } = useCIFStore();
 
   return (
     <div className="space-y-6">

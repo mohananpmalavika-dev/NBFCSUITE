@@ -19,7 +19,6 @@ export default function StageReview({ onNext }: StageReviewProps) {
     documents,
     behavior,
     markStageComplete,
-    customerId,
     setCifId,
   } = useCIFStore();
 

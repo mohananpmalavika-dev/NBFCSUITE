@@ -35,7 +35,6 @@ export default function StageIdentity({ onNext }: StageIdentityProps) {
       const response = await cifApi.addIdentityDocument(customerId, {
         document_type: newDoc.type,
         document_number: newDoc.number,
-        expiry_date: '',
         document_file: newDoc.file,
       });
 
@@ -51,25 +50,6 @@ export default function StageIdentity({ onNext }: StageIdentityProps) {
       setError(err.message || 'Unable to upload document');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleNext = () => {
-    if (identityDocuments.length > 0) {
-      markStageComplete(4);
-      onNext();
-    }
-  };
-
-  const handleAddDocument = () => {
-    if (newDoc.type && newDoc.number && newDoc.file) {
-      addIdentityDocument({
-        type: newDoc.type,
-        number: newDoc.number,
-        file: newDoc.file,
-        extractedData: {},
-      });
-      setNewDoc({ type: 'pan', number: '', file: null });
     }
   };
 

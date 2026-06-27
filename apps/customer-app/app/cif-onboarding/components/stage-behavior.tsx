@@ -9,7 +9,7 @@ interface StageBehaviorProps {
 }
 
 export default function StageBehavior({ onNext }: StageBehaviorProps) {
-  const { customerId, financial, behavior, updateBehavior, setLoading, setError, markStageComplete } =
+  const { customerId, behavior, updateBehavior, setLoading, setError, markStageComplete } =
     useCIFStore();
   const [submitted, setSubmitted] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -23,12 +23,7 @@ export default function StageBehavior({ onNext }: StageBehaviorProps) {
     setAnalyzing(true);
     setLoading(true);
     try {
-      const response = await cifApi.analyzeBehavior(customerId, {
-        monthly_income: financial.monthlyIncome,
-        monthly_expense: financial.monthlyExpense,
-        total_assets: financial.assets,
-        total_liabilities: financial.liabilities,
-      });
+      const response = await cifApi.analyzeBehavior(customerId);
 
       updateBehavior({
         riskAppetite: response.risk_appetite,

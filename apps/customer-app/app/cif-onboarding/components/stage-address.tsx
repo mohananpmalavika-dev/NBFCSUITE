@@ -24,11 +24,15 @@ export default function StageAddress({ onNext }: StageAddressProps) {
     try {
       await cifApi.addAddress(customerId, {
         address_type: address.type || 'permanent',
-        street_address: address.street || '',
+        street_line1: address.street || '',
+        street_line2: '',
         city: address.city || '',
         state: address.state || '',
         postal_code: address.postalCode || '',
         country: address.country || 'India',
+        latitude: undefined,
+        longitude: undefined,
+        is_primary: true,
       });
 
       markStageComplete(5);

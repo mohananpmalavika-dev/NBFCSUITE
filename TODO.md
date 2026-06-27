@@ -1,28 +1,33 @@
-# TODO - CIF / Customer Creation (Tier-1 Banking/NBFC)
+# TODO - EOM / NBFC Brand & Branch Hierarchy
 
-## Plan Approval
-- [x] Review existing CIF/customer implementation
-- [x] Confirm implementation approach: (A) prospects + approve→CIF + (B) dedupe/search reuse customers table
-- [ ] Confirm CIF id format requirement: CIF000... sequential vs UUID acceptable
+## Step 1: Plan confirmation
+- [x] Confirm implementing EOM using new tables: eom_zones/eom_regions/eom_areas/eom_clusters/eom_branches (non-breaking for legacy schema).
 
-## Implementation Steps
-1. [ ] Create new DB migration(s): add `prospects` and minimal prospect-related tables + links to final CIF `customers`.
-2. [ ] Implement `/customers/search` endpoint supporting dedupe by: mobile, email, PAN, Aadhaar, passport, voter id, driving licence, GSTIN, CIN, customer_id.
-3. [ ] Implement `/prospects` endpoint: create prospect with `status=lead`.
-4. [ ] Implement prospect document/identity attachment endpoints (minimal; reuse existing upload patterns).
-5. [ ] Implement `/prospects/{id}/approve` endpoint:
-   - verify dedupe again
-   - generate authoritative CIF `customers.id`
-   - copy prospect data into customer tables
-   - update prospect status → `customer`
-6. [ ] Adjust existing `POST /customers` behavior:
-   - ensure it cannot create duplicates
-   - route to prospect flow (or reject in favor of search+prospect)
-7. [ ] Update Customer 360 to reflect CIF-only; ensure no prospect-based duplication.
-8. [ ] Add unit/integration tests for dedupe + approve flow.
+## Step 2: Create DB migration
+- [x] Add `infra/migrations/024_create_eom_tables.sql` with:
 
-## Verification
-- [ ] Run DB migrations
-- [ ] Run customer service and run tests
-- [ ] Validate `Customer Search → Existing CIF` and `Customer Search → Prospect → Approved CIF` end-to-end
+  - brands, legal_entities, business_units
+  - eom_zones, eom_regions, eom_areas, eom_clusters
+  - eom_branches
+  - departments, employees, employee_hierarchy
+  - customer_branch_mapping
+  - optional MVP: branch_limits, branch_vaults, branch_gl_mapping
+
+## Step 3: ORM models
+- [ ] Update `services/customer/app/models.py` with SQLAlchemy models for the EOM tables.
+
+## Step 4: Schemas + API endpoints
+- [ ] Add `services/customer/app/schemas_eom.py` (or equivalent) with request/response models.
+- [ ] Add `services/customer/app/routers/eom.py` implementing Super Admin-only create endpoints for:
+  - brands, legal-entities, business-units, zones, regions, areas, clusters, branches, departments
+
+## Step 5: Wire router
+- [ ] Update `services/customer/app/main.py` to register `/eom` router.
+
+## Step 6: Consistency check for tenant/user hierarchy scoping
+- [ ] Resolve potential type mismatch for `users.*_id` (UUID vs VARCHAR(36)) during migration.
+
+## Step 7: Run migrations + smoke tests
+- [ ] Run DB migrations.
+- [ ] Run unit/integration tests.
 

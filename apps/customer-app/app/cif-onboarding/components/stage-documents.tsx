@@ -23,15 +23,16 @@ export default function StageDocuments({ onNext }: StageDocumentsProps) {
       return;
     }
 
+    const file = newDoc.file;
     setLoading(true);
     try {
       await cifApi.addDocument(customerId, {
         document_type: newDoc.type,
         document_title: newDoc.title,
-        document_file: newDoc.file,
+        document_file: file,
       });
 
-      addDocument(newDoc);
+      addDocument({ type: newDoc.type, title: newDoc.title, file });
       setNewDoc({ type: 'income_proof', title: '', file: null });
       setError(null);
     } catch (err: any) {

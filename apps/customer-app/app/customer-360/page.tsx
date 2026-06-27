@@ -6,10 +6,9 @@ import { cifApi } from '@/lib/cif-api';
 import Link from 'next/link';
 
 export default function Customer360() {
-  const { customerId, cifId } = useCIFStore();
+  const { customerId, cifId, setError } = useCIFStore();
   const [customer360, setCustomer360] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {

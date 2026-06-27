@@ -26,6 +26,12 @@ export default function StageBasicDetails({ onNext }: StageBasicDetailsProps) {
       return;
     }
 
+    if (!basicDetails.dateOfBirth || !basicDetails.gender) {
+      setError('Please provide date of birth and gender');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       await cifApi.addBasicDetails(customerId, {
@@ -33,7 +39,7 @@ export default function StageBasicDetails({ onNext }: StageBasicDetailsProps) {
         gender: basicDetails.gender,
         occupation: basicDetails.occupation,
         marital_status: basicDetails.maritalStatus,
-        education: basicDetails.education,
+        education_level: basicDetails.education,
         pan: basicDetails.pan,
         aadhar: basicDetails.aadhar,
         nationality: 'India',

@@ -59,14 +59,15 @@ interface BasicDetailsRequest {
 
 interface AddressRequest {
   address_type: string;
-  street_address: string;
+  street_line1: string;
+  street_line2?: string;
   city: string;
   state: string;
   postal_code: string;
   country: string;
   latitude?: number;
   longitude?: number;
-  proof_document_id?: string;
+  is_primary?: boolean;
 }
 
 interface ContactRequest {
@@ -116,10 +117,6 @@ interface DocumentRequest {
   document_title: string;
   document_file: File;
   expiry_date?: string;
-}
-
-interface ComplianceCheckRequest {
-  initiated_by?: string;
 }
 
 interface ApprovalInitiateRequest {
@@ -188,15 +185,12 @@ class CIFApi {
 
   async searchFuzzy(params: SearchRequest): Promise<SearchResponse[]> {
     try {
-      const payload = {
-        mobile_number: params.mobile_number,
-        aadhar: params.aadhar_number,
-        pan: params.pan_number,
-        email: params.email,
-        customer_id: params.customer_id,
-      };
-      const response = await this.api.post('/search/fuzzy', payload);
-      return response.data;
+      const response = await this.api.get('/search/fuzzy', {
+        params: {
+          name: params.mobile_number || params.email || params.customer_id || params.pan_number || params.aadhar_number,
+        },
+      });
+      return response.data.potential_duplicates || [];
     } catch (error) {
       throw this.handleError(error);
     }
@@ -205,7 +199,7 @@ class CIFApi {
   // Stage 2: Prospect Creation
   async createProspect(data: ProspectRequest): Promise<ProspectResponse> {
     try {
-      const response = await this.api.post('/customer/prospect', data);
+      const response = await this.api.post('/prospect', data);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -214,7 +208,7 @@ class CIFApi {
 
   async getProspect(prospectId: string): Promise<any> {
     try {
-      const response = await this.api.get(`/customer/prospect/${prospectId}`);
+      const response = await this.api.get(`/prospect/${prospectId}`);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -223,7 +217,7 @@ class CIFApi {
 
   async convertProspectToCustomer(prospectId: string): Promise<any> {
     try {
-      const response = await this.api.post(`/customer/prospect/${prospectId}/convert`);
+      const response = await this.api.post(`/prospect/${prospectId}/convert`);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
@@ -278,7 +272,7 @@ class CIFApi {
     try {
       const payload = {
         address_type: data.address_type,
-        street_line1: data.street_address,
+        street_line1: data.street_line1,
         street_line2: data.street_line2,
         city: data.city,
         state: data.state,
@@ -393,6 +387,7 @@ class CIFApi {
           params: {
             document_category: data.document_type,
             document_type: data.document_type,
+            document_title: data.document_title,
             uploaded_by: 'system',
           },
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -482,7 +477,7 @@ class CIFApi {
         `/customer/${customerId}/approval/${data.approval_id}/checker`,
         { approved: data.approved, comments: data.comments },
         {
-          params: { checker_id: data.comments ? 'system' : 'system' },
+          params: { checker_id: data.approved_by || 'system' },
         }
       );
       return response.data;
@@ -497,7 +492,7 @@ class CIFApi {
         `/customer/${customerId}/approval/${data.approval_id}/manager`,
         { approved: data.approved, comments: data.comments },
         {
-          params: { manager_id: 'system' },
+          params: { manager_id: data.approved_by || 'system' },
         }
       );
       return response.data;
@@ -512,7 +507,7 @@ class CIFApi {
         `/customer/${customerId}/approval/${data.approval_id}/compliance`,
         { approved: data.approved, comments: data.comments },
         {
-          params: { compliance_officer_id: 'system' },
+          params: { compliance_officer_id: data.approved_by || 'system' },
         }
       );
       return response.data;
@@ -527,7 +522,7 @@ class CIFApi {
         `/customer/${customerId}/approval/${data.approval_id}/final`,
         { approved: data.approved, comments: data.comments },
         {
-          params: { final_approver_id: 'system' },
+          params: { final_approver_id: data.approved_by || 'system' },
         }
       );
       return response.data;

@@ -9,8 +9,7 @@ interface StageBusinessProps {
 }
 
 export default function StageBusiness({ onNext }: StageBusinessProps) {
-  const { customerId, employment, updateBusiness, setLoading, setError, markStageComplete } =
-    useCIFStore();
+  const { customerId, employment, setLoading, setError, markStageComplete } = useCIFStore();
   const [submitted, setSubmitted] = useState(false);
   const [business, setBusiness] = useState({
     businessName: '',
@@ -40,14 +39,8 @@ export default function StageBusiness({ onNext }: StageBusinessProps) {
         employment_type: employment.type,
         employer_name: business.businessName,
         designation: business.businessType,
-        monthly_salary: 0,
-        business_details: {
-          business_name: business.businessName,
-          business_type: business.businessType,
-          annual_turnover: parseFloat(business.annualTurnover),
-          employees: parseInt(business.employees),
-          registration_number: business.registrationNumber,
-        },
+        salary: business.annualTurnover ? parseFloat(business.annualTurnover) : 0,
+        experience_years: business.employees ? parseInt(business.employees, 10) : 0,
       });
 
       markStageComplete(9);

@@ -3,7 +3,7 @@ Customer Information File (CIF) API Endpoints
 RESTful API for all 18 stages of customer onboarding
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
@@ -838,6 +838,7 @@ async def upload_document(
     customer_id: str,
     document_category: str = Query(...),
     document_type: str = Query(...),
+    document_title: Optional[str] = Query(None),
     file: UploadFile = File(...),
     expiry_date: Optional[date] = Query(None),
     uploaded_by: str = Query(...),
@@ -850,7 +851,7 @@ async def upload_document(
     
     document = DocumentService.upload_document(
         db, customer_id, document_category, document_type,
-        file_path, file.filename, file.size, file.content_type,
+        file_path, document_title or file.filename, file.size, file.content_type,
         uploaded_by, expiry_date
     )
     
