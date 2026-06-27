@@ -260,6 +260,8 @@ class CustomerApprovalService:
     PLATFORM_WORKFLOW_CODE = os.getenv("CIF_APPROVAL_WORKFLOW_CODE", "CUSTOMER-APPROVAL")
     PLATFORM_TENANT_ID = os.getenv("PLATFORM_TENANT_ID", "default")
     PLATFORM_SERVICE_URL = os.getenv("PLATFORM_SERVICE_URL", "http://localhost:8018")
+    PLATFORM_TIMEOUT = float(os.getenv("PLATFORM_TIMEOUT", "10.0"))
+    ELIGIBILITY_RULE_SET_CODE = os.getenv("CIF_ELIGIBILITY_RULE_SET_CODE", "CUSTOMER-ONBOARDING-ELIGIBILITY")
 
     @staticmethod
     def _platform_tenant_id(customer_id: str, db: Session) -> str:
@@ -272,7 +274,51 @@ class CustomerApprovalService:
             import httpx
         except ImportError as exc:
             raise RuntimeError("httpx is required for platform workflow integration") from exc
-        return httpx.Client(base_url=CustomerApprovalService.PLATFORM_SERVICE_URL, timeout=5.0)
+        return httpx.Client(base_url=CustomerApprovalService.PLATFORM_SERVICE_URL, timeout=CustomerApprovalService.PLATFORM_TIMEOUT)
+
+    @staticmethod
+    def evaluate_customer_eligibility(db: Session, customer_id: str) -> Optional[dict]:
+        if not CustomerApprovalService.ELIGIBILITY_RULE_SET_CODE:
+            return None
+
+        customer = db.query(Customer).filter(Customer.id == customer_id).first()
+        if not customer:
+            return None
+
+        document_count = db.query(CustomerDocument).filter(CustomerDocument.customer_id == customer_id).count()
+        identity_docs = [doc.document_type for doc in db.query(CustomerDocument).filter(
+            CustomerDocument.customer_id == customer_id,
+            CustomerDocument.document_category == "identity",
+            CustomerDocument.is_latest == True,
+        ).all()]
+
+        context = {
+            "customer_id": customer.id,
+            "branch_id": customer.branch_id,
+            "customer_type": customer.customer_type,
+            "kyc_status": customer.kyc_status,
+            "approval_status": customer.approval_status,
+            "onboarding_completion_percentage": getattr(customer, "onboarding_completion_percentage", None),
+            "has_pan": bool(customer.pan),
+            "has_aadhar": bool(customer.aadhar),
+            "identity_document_types": identity_docs,
+            "document_count": document_count,
+        }
+
+        try:
+            with CustomerApprovalService._platform_client() as client:
+                response = client.post(
+                    "/rulesets/evaluate",
+                    json={
+                        "tenant_id": CustomerApprovalService._platform_tenant_id(customer_id, db),
+                        "rule_set_code": CustomerApprovalService.ELIGIBILITY_RULE_SET_CODE,
+                        "context": context,
+                    },
+                )
+                response.raise_for_status()
+                return response.json()
+        except Exception:
+            return None
 
     @staticmethod
     def _map_state_to_stage(state: Optional[str], default_stage: int = 1) -> int:
@@ -396,15 +442,61 @@ class CustomerApprovalService:
 class DocumentService:
     """Stage 15 - Document Vault Management"""
 
+    DOCUMENT_SERVICE_URL = os.getenv("DOCUMENT_SERVICE_URL", "http://localhost:8010")
+
     @staticmethod
-    def upload_document(db: Session, customer_id: str, 
+    def _document_service_client():
+        try:
+            import httpx
+        except ImportError as exc:
+            raise RuntimeError("httpx is required for document service integration") from exc
+        return httpx.Client(base_url=DocumentService.DOCUMENT_SERVICE_URL, timeout=30.0)
+
+    @staticmethod
+    def _upload_to_document_service(
+        customer_id: str,
+        document_category: str,
+        document_type: str,
+        file_name: str,
+        file_size: int,
+        mime_type: str,
+        uploaded_by: str,
+        file,
+        expiry_date: date = None,
+    ) -> Optional[dict]:
+        try:
+            with DocumentService._document_service_client() as client:
+                file.seek(0)
+                files = {
+                    "file": (file_name, file.read(), mime_type or "application/octet-stream")
+                }
+                payload = {
+                    "subject_type": "customer",
+                    "subject_id": customer_id,
+                    "document_category": document_category,
+                    "document_type": document_type,
+                    "document_name": file_name,
+                    "created_by": uploaded_by,
+                    "storage_location": "local",
+                }
+                if expiry_date is not None:
+                    payload["expiry_date"] = expiry_date.isoformat()
+
+                response = client.post("/documents/upload", data=payload, files=files)
+                response.raise_for_status()
+                return response.json()
+        except Exception:
+            return None
+
+    @staticmethod
+    def upload_document(db: Session, customer_id: str,
                        document_category: str, document_type: str,
-                       file_path: str, file_name: str, file_size: int,
+                       file: Optional[Any], file_name: str, file_size: int,
                        mime_type: str, uploaded_by: str,
                        expiry_date: date = None) -> CustomerDocument:
         """Upload and version document"""
         doc_id = str(uuid.uuid4())
-        
+
         # Mark previous versions as not latest
         previous_docs = db.query(CustomerDocument).filter(
             and_(
@@ -414,9 +506,38 @@ class DocumentService:
                 CustomerDocument.is_latest == True
             )
         ).all()
-        
+
         for prev_doc in previous_docs:
             prev_doc.is_latest = False
+
+        storage_location = "local"
+        document_url = None
+        file_path = None
+        version = len(previous_docs) + 1
+
+        if file is not None:
+            dms_result = DocumentService._upload_to_document_service(
+                customer_id=customer_id,
+                document_category=document_category,
+                document_type=document_type,
+                file_name=file_name,
+                file_size=file_size,
+                mime_type=mime_type,
+                uploaded_by=uploaded_by,
+                file=file.file,
+                expiry_date=expiry_date,
+            )
+            if dms_result:
+                storage_location = dms_result.get("storage_location", "central_document_service")
+                document_url = dms_result.get("document_url")
+                file_path = dms_result.get("storage_path")
+                version = int(dms_result.get("version") or version)
+
+        if not document_url:
+            # Fallback to local metadata only
+            file_path = file_path or f"/documents/{customer_id}/{file_name}"
+            document_url = document_url or file_path
+            storage_location = storage_location or "local"
 
         # Create new document
         document = CustomerDocument(
@@ -430,12 +551,15 @@ class DocumentService:
             mime_type=mime_type,
             upload_timestamp=datetime.utcnow(),
             uploaded_by=uploaded_by,
-            version=len(previous_docs) + 1,
+            version=version,
             is_latest=True,
             expiry_date=expiry_date,
-            storage_location="local",  # Can be s3, azure_blob, etc
-            document_status="active"
+            storage_location=storage_location,
+            document_status="active",
         )
+        if document_url:
+            document.document_url = document_url
+
         db.add(document)
         db.commit()
         return document

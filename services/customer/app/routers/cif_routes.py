@@ -17,6 +17,7 @@ from .services_cif import (
     HouseholdService, ConsentService, CustomerLifecycleStatus, OnboardingStage
 )
 from .models_cif import Customer, Prospect
+import uuid
 
 router = APIRouter(prefix="/api/v1/customer", tags=["CIF System"])
 
@@ -316,45 +317,54 @@ async def upload_identity_document(
 ):
     """Stage 4 - Upload identity document with OCR"""
     from .models_cif import CustomerIdentityDocument
-    import uuid
 
-    # Save file and extract OCR
-    file_path = f"/uploads/identity/{customer_id}/{uuid.uuid4()}_{file.filename}"
-    # TODO: Save file to storage
-    # TODO: Call OCR service to extract data
+    dms_document = DocumentService.upload_document(
+        db=db,
+        customer_id=customer_id,
+        document_category="identity",
+        document_type=document_type,
+        file=file,
+        file_name=file.filename,
+        file_size=file.size,
+        mime_type=file.content_type,
+        uploaded_by=customer_id,
+        expiry_date=expiry_date,
+    )
 
     doc = CustomerIdentityDocument(
         id=str(uuid.uuid4()),
         customer_id=customer_id,
         document_type=document_type,
         document_number=document_number,
-        document_url=file_path,
+        document_url=dms_document.document_url,
         document_file_name=file.filename,
         file_size=file.size,
         mime_type=file.content_type,
-        ocr_confidence_score=0.95,  # From OCR service
+        ocr_extracted_data={},
+        ocr_confidence_score=0.95,
         verification_status="pending",
         expiry_date=expiry_date,
-        is_primary=True
+        is_primary=True,
     )
     db.add(doc)
-    
+
     # Auto-fill customer fields
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if customer and document_type == "pan":
         customer.pan = document_number
     elif customer and document_type == "aadhar":
         customer.aadhar = document_number
-    
+
     db.commit()
     
     return {
         "success": True,
         "document_id": doc.id,
+        "document_service_id": getattr(dms_document, "id", None),
         "document_type": document_type,
         "ocr_confidence": doc.ocr_confidence_score,
         "verification_status": doc.verification_status,
-        "message": "Document uploaded and OCR processing started"
+        "message": "Document uploaded to central document vault and OCR processing started"
     }
 
 
@@ -706,15 +716,20 @@ async def initiate_approval(
     db: Session = Depends(get_db)
 ):
     """Stage 16 - Initiate approval workflow"""
+    eligibility = CustomerApprovalService.evaluate_customer_eligibility(db, customer_id)
     approval = CustomerApprovalService.initiate_approval(db, customer_id, initiated_by, notes)
-    return {
+    response = {
         "success": True,
         "approval_id": approval.id,
         "workflow_instance_id": approval.workflow_instance_id,
         "workflow_stage": 1,
         "status": "pending",
+        "eligibility": eligibility,
         "message": "Approval workflow initiated"
     }
+    if eligibility and eligibility.get("passed") is False:
+        response["message"] = "Approval workflow initiated, but customer is not eligible based on platform rule evaluation"
+    return response
 
 
 @router.post("/customer/{customer_id}/approval/{workflow_instance_id}/transition")
@@ -783,22 +798,26 @@ async def upload_document(
     db: Session = Depends(get_db)
 ):
     """Upload document to vault"""
-    import uuid
-    
-    file_path = f"/documents/{customer_id}/{uuid.uuid4()}_{file.filename}"
-    
     document = DocumentService.upload_document(
-        db, customer_id, document_category, document_type,
-        file_path, document_title or file.filename, file.size, file.content_type,
-        uploaded_by, expiry_date
+        db=db,
+        customer_id=customer_id,
+        document_category=document_category,
+        document_type=document_type,
+        file=file,
+        file_name=document_title or file.filename,
+        file_size=file.size,
+        mime_type=file.content_type,
+        uploaded_by=uploaded_by,
+        expiry_date=expiry_date,
     )
-    
+
     return {
         "success": True,
         "document_id": document.id,
         "category": document_category,
         "type": document_type,
         "version": document.version,
+        "document_url": document.document_url,
         "message": "Document uploaded successfully"
     }
 

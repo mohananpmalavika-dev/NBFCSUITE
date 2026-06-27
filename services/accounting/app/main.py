@@ -112,6 +112,50 @@ class TaxComputation(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class PostingRule(Base):
+    __tablename__ = "posting_rules"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "source_module", "source_event", name="uq_posting_rules_tenant_source"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    source_module = Column(String, index=True, nullable=False)
+    source_event = Column(String, index=True, nullable=False)
+    debit_account_code = Column(String, nullable=False)
+    credit_account_code = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    is_active = Column(String, default="true")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    entity = Column(String, nullable=False)
+    entity_id = Column(String, nullable=True)
+    action = Column(String, nullable=False)
+    payload = Column(JSON, nullable=True)
+    performed_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SubLedgerEntry(Base):
+    __tablename__ = "sub_ledger_entries"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    source_module = Column(String, nullable=False)
+    source_event = Column(String, nullable=False)
+    source_reference = Column(String, nullable=False)
+    journal_entry_id = Column(String, ForeignKey("journal_entries.id"), nullable=True)
+    amount = Column(Float, nullable=False)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class GLAccountResponse(BaseModel):
     id: str
     tenant_id: str
@@ -165,6 +209,58 @@ class JournalEntryResponse(BaseModel):
         from_attributes = True
 
 
+class PostingRuleCreate(BaseModel):
+    tenant_id: str
+    source_module: str
+    source_event: str
+    debit_account_code: str
+    credit_account_code: str
+    description: Optional[str] = None
+
+
+class PostingRuleResponse(BaseModel):
+    id: str
+    tenant_id: str
+    source_module: str
+    source_event: str
+    debit_account_code: str
+    credit_account_code: str
+    description: Optional[str] = None
+    is_active: str
+
+    class Config:
+        from_attributes = True
+
+
+class AuditLogResponse(BaseModel):
+    id: str
+    tenant_id: str
+    entity: str
+    entity_id: Optional[str] = None
+    action: str
+    payload: Optional[dict] = None
+    performed_by: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SubLedgerEntryResponse(BaseModel):
+    id: str
+    tenant_id: str
+    source_module: str
+    source_event: str
+    source_reference: str
+    journal_entry_id: Optional[str] = None
+    amount: float
+    metadata: Optional[dict] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class BankTransactionCreate(BaseModel):
     tenant_id: str
     reference: str
@@ -181,6 +277,7 @@ class AutomatedGLPostingRequest(BaseModel):
     source_event: str
     source_reference: str
     amount: float
+    description: Optional[str] = None
 
     debit_account_code: Optional[str] = None
     credit_account_code: Optional[str] = None
@@ -307,6 +404,116 @@ def _get_or_create_account(code: str, tenant_id: str, db: Session) -> GLAccount:
     db.add(account)
     db.flush()
     return account
+
+
+def _log_audit(
+    db: Session,
+    tenant_id: str,
+    entity: str,
+    entity_id: Optional[str],
+    action: str,
+    payload: Optional[dict] = None,
+    performed_by: Optional[str] = None,
+) -> None:
+    db.add(
+        AuditLog(
+            id=str(uuid4()),
+            tenant_id=tenant_id,
+            entity=entity,
+            entity_id=entity_id,
+            action=action,
+            payload=payload,
+            performed_by=performed_by,
+        )
+    )
+
+
+def _create_subledger_entry(
+    db: Session,
+    tenant_id: str,
+    source_module: str,
+    source_event: str,
+    source_reference: str,
+    amount: float,
+    journal_entry_id: Optional[str] = None,
+    metadata: Optional[dict] = None,
+) -> SubLedgerEntry:
+    entry = SubLedgerEntry(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        source_module=source_module,
+        source_event=source_event,
+        source_reference=source_reference,
+        journal_entry_id=journal_entry_id,
+        amount=amount,
+        metadata_json=metadata,
+    )
+    db.add(entry)
+    return entry
+
+
+def _resolve_posting_map(posting: AutomatedGLPostingRequest, db: Session) -> tuple[str, str, Optional[PostingRule]]:
+    if posting.debit_account_code and posting.credit_account_code:
+        return posting.debit_account_code, posting.credit_account_code, None
+
+    rule = (
+        db.query(PostingRule)
+        .filter(
+            PostingRule.tenant_id == posting.tenant_id,
+            PostingRule.source_module == posting.source_module,
+            PostingRule.source_event == posting.source_event,
+            PostingRule.is_active.in_(["true", "1", "yes", "active"]),
+        )
+        .first()
+    )
+    if rule:
+        return rule.debit_account_code, rule.credit_account_code, rule
+
+    mapped = DEFAULT_POSTING_MAP.get((posting.source_module, posting.source_event))
+    if mapped:
+        return mapped[0], mapped[1], None
+
+    raise HTTPException(status_code=400, detail="No GL posting map found for source module/event")
+
+
+def _posting_rule_response(rule: PostingRule) -> dict:
+    return {
+        "id": rule.id,
+        "tenant_id": rule.tenant_id,
+        "source_module": rule.source_module,
+        "source_event": rule.source_event,
+        "debit_account_code": rule.debit_account_code,
+        "credit_account_code": rule.credit_account_code,
+        "description": rule.description,
+        "is_active": rule.is_active,
+    }
+
+
+def _audit_log_response(log: AuditLog) -> dict:
+    return {
+        "id": log.id,
+        "tenant_id": log.tenant_id,
+        "entity": log.entity,
+        "entity_id": log.entity_id,
+        "action": log.action,
+        "payload": log.payload,
+        "performed_by": log.performed_by,
+        "created_at": log.created_at,
+    }
+
+
+def _subledger_response(entry: SubLedgerEntry) -> dict:
+    return {
+        "id": entry.id,
+        "tenant_id": entry.tenant_id,
+        "source_module": entry.source_module,
+        "source_event": entry.source_event,
+        "source_reference": entry.source_reference,
+        "journal_entry_id": entry.journal_entry_id,
+        "amount": entry.amount,
+        "metadata": entry.metadata_json,
+        "created_at": entry.created_at,
+    }
 
 
 def _financial_rows(accounts: list[GLAccount], account_types: set[str]):
@@ -568,6 +775,91 @@ async def list_journal_entries(
     }
 
 
+@app.post("/posting-rules", response_model=PostingRuleResponse)
+async def create_posting_rule(rule: PostingRuleCreate, db: Session = Depends(get_db)):
+    if not rule.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+
+    existing = (
+        db.query(PostingRule)
+        .filter(
+            PostingRule.tenant_id == rule.tenant_id,
+            PostingRule.source_module == rule.source_module,
+            PostingRule.source_event == rule.source_event,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Posting rule already exists for source module/event")
+
+    posting_rule = PostingRule(
+        id=str(uuid4()),
+        tenant_id=rule.tenant_id,
+        source_module=rule.source_module,
+        source_event=rule.source_event,
+        debit_account_code=rule.debit_account_code,
+        credit_account_code=rule.credit_account_code,
+        description=rule.description,
+        is_active="true",
+    )
+    db.add(posting_rule)
+    _log_audit(
+        db,
+        tenant_id=rule.tenant_id,
+        entity="posting_rule",
+        entity_id=posting_rule.id,
+        action="create",
+        payload={
+            "source_module": rule.source_module,
+            "source_event": rule.source_event,
+            "debit_account_code": rule.debit_account_code,
+            "credit_account_code": rule.credit_account_code,
+        },
+    )
+    db.commit()
+    db.refresh(posting_rule)
+    return posting_rule
+
+
+@app.get("/posting-rules", response_model=List[PostingRuleResponse])
+async def list_posting_rules(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return (
+        db.query(PostingRule)
+        .filter(PostingRule.tenant_id == tenant_id)
+        .order_by(PostingRule.source_module, PostingRule.source_event)
+        .all()
+    )
+
+
+@app.get("/audit-logs", response_model=List[AuditLogResponse])
+async def list_audit_logs(
+    tenant_id: str = Query(...),
+    entity: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AuditLog).filter(AuditLog.tenant_id == tenant_id)
+    if entity:
+        query = query.filter(AuditLog.entity == entity)
+    return query.order_by(AuditLog.created_at.desc()).all()
+
+
+@app.get("/sub-ledger-entries", response_model=List[SubLedgerEntryResponse])
+async def list_subledger_entries(
+    tenant_id: str = Query(...),
+    source_module: Optional[str] = Query(None),
+    source_event: Optional[str] = Query(None),
+    source_reference: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(SubLedgerEntry).filter(SubLedgerEntry.tenant_id == tenant_id)
+    if source_module:
+        query = query.filter(SubLedgerEntry.source_module == source_module)
+    if source_event:
+        query = query.filter(SubLedgerEntry.source_event == source_event)
+    if source_reference:
+        query = query.filter(SubLedgerEntry.source_reference == source_reference)
+    return query.order_by(SubLedgerEntry.created_at.desc()).all()
+
 
 @app.get("/gl-balances")
 async def gl_balances(tenant_id: str = Query(...), db: Session = Depends(get_db)):
@@ -637,14 +929,7 @@ async def create_automated_gl_posting(posting: AutomatedGLPostingRequest, db: Se
         if existing:
             return _journal_entry_response(existing)
 
-    debit_code = posting.debit_account_code
-    credit_code = posting.credit_account_code
-    if not debit_code or not credit_code:
-        mapped = DEFAULT_POSTING_MAP.get((posting.source_module, posting.source_event))
-        if not mapped:
-            raise HTTPException(status_code=400, detail="No GL posting map found for source module/event")
-        debit_code, credit_code = mapped
-
+    debit_code, credit_code, posting_rule = _resolve_posting_map(posting, db)
     debit_account = _get_or_create_account(debit_code, posting.tenant_id, db)
     credit_account = _get_or_create_account(credit_code, posting.tenant_id, db)
 
@@ -652,7 +937,7 @@ async def create_automated_gl_posting(posting: AutomatedGLPostingRequest, db: Se
         id=str(uuid4()),
         tenant_id=posting.tenant_id,
         entry_date=datetime.utcnow(),
-        description=f"{posting.source_module}.{posting.source_event}",
+        description=posting.description or f"{posting.source_module}.{posting.source_event}",
         reference=posting.source_reference,
         metadata_json=posting.metadata,
         posting_status="posted",
@@ -682,8 +967,37 @@ async def create_automated_gl_posting(posting: AutomatedGLPostingRequest, db: Se
         ),
     ]
     db.add_all(lines)
+
+    _create_subledger_entry(
+        db=db,
+        tenant_id=posting.tenant_id,
+        source_module=posting.source_module,
+        source_event=posting.source_event,
+        source_reference=posting.source_reference,
+        amount=posting.amount,
+        journal_entry_id=journal_entry.id,
+        metadata=posting.metadata,
+    )
+
     debit_account.balance += posting.amount
     credit_account.balance -= posting.amount
+
+    _log_audit(
+        db,
+        tenant_id=posting.tenant_id,
+        entity="gl_posting",
+        entity_id=journal_entry.id,
+        action="create",
+        payload={
+            "source_module": posting.source_module,
+            "source_event": posting.source_event,
+            "debit_account_code": debit_code,
+            "credit_account_code": credit_code,
+            "amount": posting.amount,
+            "posting_rule_id": posting_rule.id if posting_rule else None,
+        },
+    )
+
     db.commit()
     db.refresh(journal_entry)
     return _journal_entry_response(journal_entry)

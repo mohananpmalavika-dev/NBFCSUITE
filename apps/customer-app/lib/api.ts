@@ -167,6 +167,12 @@ export interface HrmsEmployeePayload {
   phone: string;
   designation: string;
   department: string;
+  department_id?: string;
+  designation_id?: string;
+  grade_id?: string;
+  position_id?: string;
+  manager_employee_id?: string;
+  official_email?: string;
   branch_id?: string;
   user_id?: string;
   employment_type?: string;
@@ -179,10 +185,63 @@ export interface HrmsEmployeeUpdatePayload {
   phone?: string;
   designation?: string;
   department?: string;
+  department_id?: string;
+  designation_id?: string;
+  grade_id?: string;
+  position_id?: string;
+  manager_employee_id?: string;
+  official_email?: string;
   branch_id?: string;
   user_id?: string;
   employment_type?: string;
   status?: string;
+}
+
+export interface HrmsDepartmentPayload {
+  tenant_id: string;
+  department_code: string;
+  department_name: string;
+  parent_department_id?: string;
+  department_head_employee_id?: string;
+  cost_center_code?: string;
+  profit_center_code?: string;
+  budget_owner_employee_id?: string;
+  annual_budget?: number;
+}
+
+export interface HrmsGradePayload {
+  tenant_id: string;
+  grade_code: string;
+  grade_name: string;
+  salary_band_min?: number;
+  salary_band_max?: number;
+  leave_entitlement_days?: number;
+  benefits?: Record<string, unknown>;
+  approval_limit?: number;
+  travel_class?: string;
+}
+
+export interface HrmsDesignationPayload {
+  tenant_id: string;
+  designation_code: string;
+  designation_name: string;
+  grade_id?: string;
+  salary_band_min?: number;
+  salary_band_max?: number;
+  approval_limit?: number;
+  reporting_level?: number;
+}
+
+export interface HrmsPositionPayload {
+  tenant_id: string;
+  position_code: string;
+  position_title: string;
+  department_id?: string;
+  designation_id?: string;
+  grade_id?: string;
+  branch_id?: string;
+  reports_to_position_id?: string;
+  approval_limit?: number;
 }
 
 export interface PayrollRunPayload {
@@ -407,6 +466,32 @@ export const apiClient = {
     axiosInstance.put(`/documents/${documentId}/expire`),
 
   // HRMS Service
+  getHrmsDepartments: (params?: { tenant_id?: string; status?: string }) =>
+    hrmsAxiosInstance.get(`/departments`, { params }),
+  createHrmsDepartment: (data: HrmsDepartmentPayload) =>
+    hrmsAxiosInstance.post(`/departments`, data),
+  updateHrmsDepartment: (departmentId: string, data: Partial<Omit<HrmsDepartmentPayload, 'tenant_id' | 'department_code'>>) =>
+    hrmsAxiosInstance.put(`/departments/${departmentId}`, data),
+  getHrmsGrades: (params?: { tenant_id?: string; status?: string }) =>
+    hrmsAxiosInstance.get(`/grades`, { params }),
+  createHrmsGrade: (data: HrmsGradePayload) =>
+    hrmsAxiosInstance.post(`/grades`, data),
+  updateHrmsGrade: (gradeId: string, data: Partial<Omit<HrmsGradePayload, 'tenant_id' | 'grade_code'>>) =>
+    hrmsAxiosInstance.put(`/grades/${gradeId}`, data),
+  getHrmsDesignations: (params?: { tenant_id?: string; status?: string }) =>
+    hrmsAxiosInstance.get(`/designations`, { params }),
+  createHrmsDesignation: (data: HrmsDesignationPayload) =>
+    hrmsAxiosInstance.post(`/designations`, data),
+  updateHrmsDesignation: (designationId: string, data: Partial<Omit<HrmsDesignationPayload, 'tenant_id' | 'designation_code'>>) =>
+    hrmsAxiosInstance.put(`/designations/${designationId}`, data),
+  getHrmsPositions: (params?: { tenant_id?: string; branch_id?: string; department_id?: string; status?: string }) =>
+    hrmsAxiosInstance.get(`/positions`, { params }),
+  createHrmsPosition: (data: HrmsPositionPayload) =>
+    hrmsAxiosInstance.post(`/positions`, data),
+  updateHrmsPosition: (positionId: string, data: Partial<Omit<HrmsPositionPayload, 'tenant_id' | 'position_code'>> & { occupied_by_employee_id?: string; status?: string }) =>
+    hrmsAxiosInstance.put(`/positions/${positionId}`, data),
+  vacateHrmsPosition: (positionId: string) =>
+    hrmsAxiosInstance.post(`/positions/${positionId}/vacate`),
   getEmployees: (params?: { tenant_id?: string; branch_id?: string; department?: string; status?: string; skip?: number; limit?: number }) =>
     hrmsAxiosInstance.get(`/employees`, { params }),
   createEmployee: (data: HrmsEmployeePayload) =>
@@ -485,6 +570,14 @@ export const apiClient = {
     }),
   createDepositTransaction: (accountId: string, data: DepositTransactionPayload) =>
     axiosInstance.post(`/deposit-accounts/${accountId}/transactions`, data),
+
+  // Accounting Service
+  getGlBalances: (tenantId: string) =>
+    axiosInstance.get(`/gl-balances`, { params: { tenant_id: tenantId } }),
+  getTrialBalance: (tenantId: string, startDate?: string, endDate?: string) =>
+    axiosInstance.get(`/reports/trial-balance`, {
+      params: { tenant_id: tenantId, start_date: startDate, end_date: endDate },
+    }),
 
   // Compliance Service
   runComplianceChecks: (customerId: string, data: JsonObject = {}) =>

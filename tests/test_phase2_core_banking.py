@@ -1,6 +1,6 @@
 import asyncio
 import os
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 os.environ["DATABASE_URL"] = "sqlite:///C:/tmp/phase2_core_banking_test.db"
@@ -35,13 +35,30 @@ from services.deposits.app.main import (
     startup as deposits_startup,
 )
 from services.hrms.app.main import (
+    AttendanceRecordCreate,
     Base as HrmsBase,
+    DepartmentCreate,
+    DesignationCreate,
     EmployeeCreate,
+    GradeCreate,
+    LeaveDecision,
+    LeaveRequestCreate,
+    PositionCreate,
     SessionLocal as HrmsSessionLocal,
+    create_attendance_record,
+    create_department,
+    create_designation,
     create_employee,
+    create_grade,
+    create_leave_request,
+    create_position,
+    decide_leave_request,
     engine as hrms_engine,
     get_employee,
+    list_attendance_records,
     list_employees,
+    list_leave_requests,
+    list_positions,
 )
 
 
@@ -213,5 +230,216 @@ def test_hrms_employee_master_branch_and_user_mapping():
             )
         )
         assert employees["total"] == 1
+    finally:
+        db.close()
+
+
+def test_hrms_organization_setup_position_occupancy_flow():
+    HrmsBase.metadata.drop_all(bind=hrms_engine)
+    HrmsBase.metadata.create_all(bind=hrms_engine)
+    db = HrmsSessionLocal()
+    try:
+        department = run(
+            create_department(
+                DepartmentCreate(
+                    tenant_id="tenant-a",
+                    department_code="COLL",
+                    department_name="Collections",
+                    cost_center_code="CC-COLL",
+                    profit_center_code="PC-COLL",
+                    annual_budget=2500000,
+                ),
+                db,
+            )
+        )
+        grade = run(
+            create_grade(
+                GradeCreate(
+                    tenant_id="tenant-a",
+                    grade_code="M1",
+                    grade_name="Manager 1",
+                    salary_band_min=600000,
+                    salary_band_max=1200000,
+                    leave_entitlement_days=24,
+                    approval_limit=100000,
+                    travel_class="Economy",
+                ),
+                db,
+            )
+        )
+        designation = run(
+            create_designation(
+                DesignationCreate(
+                    tenant_id="tenant-a",
+                    designation_code="BR-MGR",
+                    designation_name="Branch Manager",
+                    grade_id=grade.id,
+                    approval_limit=100000,
+                    reporting_level=4,
+                ),
+                db,
+            )
+        )
+        position = run(
+            create_position(
+                PositionCreate(
+                    tenant_id="tenant-a",
+                    position_code="POS-BM-001",
+                    position_title="Branch Manager",
+                    department_id=department.id,
+                    designation_id=designation.id,
+                    branch_id="branch-1",
+                ),
+                db,
+            )
+        )
+        assert position.status == "open"
+
+        employee = run(
+            create_employee(
+                EmployeeCreate(
+                    tenant_id="tenant-a",
+                    employee_number="EMP-BM-1",
+                    first_name="Meera",
+                    last_name="Iyer",
+                    email="meera.iyer@example.com",
+                    phone="9999999010",
+                    department_id=department.id,
+                    designation_id=designation.id,
+                    position_id=position.id,
+                    branch_id="branch-1",
+                ),
+                db,
+            )
+        )
+
+        assert employee.department == "Collections"
+        assert employee.designation == "Branch Manager"
+        assert employee.position_id == position.id
+
+        positions = run(
+            list_positions(
+                tenant_id="tenant-a",
+                branch_id="branch-1",
+                department_id=department.id,
+                status="occupied",
+                db=db,
+            )
+        )
+        assert len(positions) == 1
+        assert positions[0].occupied_by_employee_id == employee.id
+    finally:
+        db.close()
+
+
+def test_hrms_attendance_leave_and_branch_scope_flow():
+    HrmsBase.metadata.drop_all(bind=hrms_engine)
+    HrmsBase.metadata.create_all(bind=hrms_engine)
+    db = HrmsSessionLocal()
+    scoped_claims = {"tenant_id": "tenant-a", "branch_id": "branch-1", "area_id": "area-1"}
+    try:
+        employee = run(
+            create_employee(
+                EmployeeCreate(
+                    tenant_id="tenant-a",
+                    employee_number="EMP-SCOPE-1",
+                    first_name="Dev",
+                    last_name="Nair",
+                    email="dev.nair@example.com",
+                    phone="9999999011",
+                    designation="Operations Officer",
+                    department="Operations",
+                    area_id="area-1",
+                    branch_id="branch-1",
+                ),
+                db,
+                user_claims=scoped_claims,
+            )
+        )
+
+        attendance = run(
+            create_attendance_record(
+                AttendanceRecordCreate(
+                    tenant_id="tenant-a",
+                    employee_id=employee.id,
+                    attendance_date=date(2026, 6, 28),
+                    check_in_at=datetime(2026, 6, 28, 9, 30),
+                    check_out_at=datetime(2026, 6, 28, 18, 0),
+                    notes="Branch opening shift",
+                ),
+                db,
+                user_claims=scoped_claims,
+            )
+        )
+        assert attendance.branch_id == "branch-1"
+        assert attendance.work_hours == 8.5
+
+        attendance_list = run(
+            list_attendance_records(
+                tenant_id="tenant-a",
+                employee_id=None,
+                organization_id=None,
+                zone_id=None,
+                region_id=None,
+                area_id=None,
+                branch_id=None,
+                status="present",
+                start_date=date(2026, 6, 1),
+                end_date=date(2026, 6, 30),
+                skip=0,
+                limit=50,
+                db=db,
+                user_claims=scoped_claims,
+            )
+        )
+        assert attendance_list["total"] == 1
+
+        leave_request = run(
+            create_leave_request(
+                LeaveRequestCreate(
+                    tenant_id="tenant-a",
+                    employee_id=employee.id,
+                    leave_type="earned",
+                    start_date=date(2026, 7, 1),
+                    end_date=date(2026, 7, 3),
+                    reason="Family travel",
+                ),
+                db,
+                user_claims=scoped_claims,
+            )
+        )
+        assert leave_request.total_days == 3
+        assert leave_request.status == "pending"
+
+        approved = run(
+            decide_leave_request(
+                leave_request.id,
+                LeaveDecision(status="approved", approver_employee_id=employee.id, decision_notes="Approved"),
+                tenant_id="tenant-a",
+                db=db,
+                user_claims=scoped_claims,
+            )
+        )
+        assert approved.status == "approved"
+
+        leave_list = run(
+            list_leave_requests(
+                tenant_id="tenant-a",
+                employee_id=employee.id,
+                organization_id=None,
+                zone_id=None,
+                region_id=None,
+                area_id=None,
+                branch_id=None,
+                status="approved",
+                start_date=date(2026, 7, 1),
+                end_date=date(2026, 7, 31),
+                skip=0,
+                limit=50,
+                db=db,
+                user_claims=scoped_claims,
+            )
+        )
+        assert leave_list["total"] == 1
     finally:
         db.close()

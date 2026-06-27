@@ -265,6 +265,22 @@ async def create_deposit_account(account_data: DepositAccountCreate, db: Session
     db.add(opening_transaction)
     db.commit()
     db.refresh(account)
+
+    tenant_id = account.customer_id or "default"
+    post_accounting_event(
+        source_module="deposits",
+        source_event="deposit",
+        amount=account_data.principal_amount,
+        source_reference=opening_transaction.id,
+        idempotency_key=f"deposits-opening-{opening_transaction.id}",
+        tenant_id=tenant_id,
+        metadata={
+            "deposit_account_id": account.id,
+            "account_number": account.account_number,
+            "reference": opening_transaction.reference,
+        },
+    )
+
     return account
 
 
@@ -336,6 +352,40 @@ async def get_interest_schedule(account_id: str, db: Session = Depends(get_db)):
     )
 
 
+def _deposit_source_event(transaction_type: str) -> str:
+    if transaction_type in {"credit", "interest"}:
+        return "deposit"
+    return "withdrawal"
+
+
+def post_accounting_event(
+    source_module: str,
+    source_event: str,
+    amount: float,
+    source_reference: str,
+    idempotency_key: str,
+    tenant_id: str,
+    metadata: Optional[dict] = None,
+) -> None:
+    try:
+        import httpx
+
+        accounting_base = os.getenv("ACCOUNTING_BASE_URL", "http://localhost:8008")
+        payload = {
+            "tenant_id": tenant_id,
+            "source_module": source_module,
+            "source_event": source_event,
+            "source_reference": source_reference,
+            "amount": amount,
+            "idempotency_key": idempotency_key,
+            "metadata": metadata,
+        }
+        with httpx.Client(timeout=5.0) as client:
+            client.post(f"{accounting_base}/gl-postings/auto", json=payload)
+    except Exception:
+        pass
+
+
 @app.post("/deposit-accounts/{account_id}/transactions", response_model=DepositTransactionResponse)
 async def create_deposit_transaction(
     account_id: str,
@@ -369,6 +419,23 @@ async def create_deposit_transaction(
     db.add(db_transaction)
     db.commit()
     db.refresh(db_transaction)
+
+    tenant_id = account.customer_id or "default"
+    source_event = _deposit_source_event(transaction.transaction_type)
+    post_accounting_event(
+        source_module="deposits",
+        source_event=source_event,
+        amount=transaction.amount,
+        source_reference=db_transaction.id,
+        idempotency_key=f"deposits-transaction-{db_transaction.id}",
+        tenant_id=tenant_id,
+        metadata={
+            "deposit_account_id": account.id,
+            "transaction_type": transaction.transaction_type,
+            "reference": transaction.reference,
+        },
+    )
+
     return db_transaction
 
 

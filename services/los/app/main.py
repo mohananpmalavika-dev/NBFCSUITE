@@ -337,6 +337,36 @@ def get_ai_credit_decision(application: LoanApplication) -> dict:
         return {}
 
 
+def simulate_loan_product(application: LoanApplication, db: Session) -> dict:
+    """Call platform product simulation to validate eligibility and pricing."""
+    try:
+        import httpx
+
+        platform_base = os.getenv("PLATFORM_SERVICE_URL", "http://localhost:8018")
+        product = db.query(LoanProduct).filter(LoanProduct.id == application.product_id).first()
+        if not product:
+            return {}
+
+        payload = {
+            "tenant_id": application.branch_id or "default",
+            "product_code": product.product_code,
+            "customer_id": application.customer_id,
+            "requested_amount": application.applied_amount,
+            "tenure_months": application.tenure_months,
+            "attributes": {
+                "branch_id": application.branch_id,
+                "application_id": application.id,
+                "customer_id": application.customer_id,
+            },
+        }
+        with httpx.Client(timeout=10.0) as client:
+            response = client.post(f"{platform_base}/products/simulate", json=payload)
+            response.raise_for_status()
+            return response.json()
+    except Exception:
+        return {}
+
+
 def create_or_update_scorecard(application: LoanApplication, db: Session):
     scorecard_data = compute_underwriting_score(application)
     ai_decision = get_ai_credit_decision(application)
@@ -400,9 +430,9 @@ def register_document_with_document_service(
     application: LoanApplication,
     document_type: str,
     document_name: str,
-    document_url: str,
+    file: UploadFile,
 ) -> dict:
-    """Best-effort Document Service registration with deterministic local fallback."""
+    """Upload document to the central document service and return metadata."""
     try:
         import httpx
 
@@ -410,18 +440,17 @@ def register_document_with_document_service(
         payload = {
             "subject_type": "loan_application",
             "subject_id": application.id,
+            "document_category": "application",
             "document_type": document_type,
             "document_name": document_name,
-            "document_url": document_url,
-            "metadata": {
-                "customer_id": application.customer_id,
-                "branch_id": application.branch_id,
-                "ocr_status": "queued",
-                "source_service": "los",
-            },
+            "created_by": application.customer_id,
+            "storage_location": "local",
         }
-        with httpx.Client(timeout=5.0) as client:
-            response = client.post(f"{document_base}/documents", json=payload)
+        files = {
+            "file": (file.filename, file.file.read(), file.content_type or "application/octet-stream")
+        }
+        with httpx.Client(timeout=10.0) as client:
+            response = client.post(f"{document_base}/documents/upload", data=payload, files=files)
             response.raise_for_status()
             return response.json()
     except Exception as exc:
@@ -765,9 +794,18 @@ async def submit_application(
         # Do not fail LOS submit on downstream scoring.
         pass
 
+    product_simulation = simulate_loan_product(application, db)
     trigger_underwriting_assistant(application, "submitted")
 
-    return {"message": "Application submitted", "application_id": application.id}
+    response = {
+        "message": "Application submitted",
+        "application_id": application.id,
+        "product_simulation": product_simulation,
+    }
+    if product_simulation and product_simulation.get("eligible") is False:
+        response["message"] = "Application submitted, but product simulation indicates potential ineligibility"
+
+    return response
 
 
 

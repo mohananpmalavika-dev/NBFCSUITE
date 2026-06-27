@@ -351,6 +351,42 @@ class TestDepositsService:
         get_response = client.get(f"{DEPOSITS_SERVICE}/deposit-accounts/{account_id}")
         assert get_response.status_code == 200
 
+    def test_deposit_account_posts_to_accounting(self, headers):
+        client = httpx.Client()
+
+        deposit_types_response = client.get(f"{DEPOSITS_SERVICE}/deposit-types")
+        assert deposit_types_response.status_code == 200
+        deposit_types = deposit_types_response.json()
+        assert isinstance(deposit_types, list)
+        assert len(deposit_types) > 0
+        deposit_type_code = deposit_types[0]["code"]
+
+        principal_amount = 5000.0
+        response = client.post(
+            f"{DEPOSITS_SERVICE}/deposit-accounts",
+            headers=headers,
+            json={
+                "customer_id": DEFAULT_TENANT_ID,
+                "deposit_type_code": deposit_type_code,
+                "principal_amount": principal_amount,
+            }
+        )
+        assert response.status_code == 200
+        account = response.json()
+        assert account["customer_id"] == DEFAULT_TENANT_ID
+
+        trial_balance_response = client.get(
+            f"{ACCOUNTING_SERVICE}/reports/trial-balance",
+            headers=headers,
+            params={"tenant_id": DEFAULT_TENANT_ID},
+        )
+        assert trial_balance_response.status_code == 200
+        trial_balance = trial_balance_response.json()
+        assert trial_balance["tenant_id"] == DEFAULT_TENANT_ID
+        assert trial_balance["is_balanced"] is True
+        assert trial_balance["total_debit"] == principal_amount
+        assert trial_balance["total_credit"] == principal_amount
+
 
 class TestAccountingService:
     """Test Accounting Microservice endpoints"""
@@ -785,6 +821,91 @@ class TestEndToEndWorkflow:
         assert trial_balance["is_balanced"] is True
         assert trial_balance["total_debit"] == 25000.0
         assert trial_balance["total_credit"] == 25000.0
+
+    def test_accounting_posting_rules_and_subledger_entries(self, headers):
+        client = httpx.Client()
+        tenant_id = f"tenant-accounting-{uuid4().hex[:8]}"
+
+        rule_payload = {
+            "tenant_id": tenant_id,
+            "source_module": "deposits",
+            "source_event": "deposit",
+            "debit_account_code": "1000_CASH",
+            "credit_account_code": "2200_CUSTOMER_DEPOSITS",
+            "description": "Deposit receipt posting",
+        }
+        rule_response = client.post(
+            f"{ACCOUNTING_SERVICE}/posting-rules",
+            headers=headers,
+            json=rule_payload,
+        )
+        assert rule_response.status_code == 200
+        rule_data = rule_response.json()
+        assert rule_data["tenant_id"] == tenant_id
+        assert rule_data["source_module"] == "deposits"
+
+        list_response = client.get(
+            f"{ACCOUNTING_SERVICE}/posting-rules",
+            headers=headers,
+            params={"tenant_id": tenant_id},
+        )
+        assert list_response.status_code == 200
+        rules = list_response.json()
+        assert any(r["source_event"] == "deposit" for r in rules)
+
+        posting_payload = {
+            "tenant_id": tenant_id,
+            "idempotency_key": f"rule-test-{uuid4().hex}",
+            "source_module": "deposits",
+            "source_event": "deposit",
+            "source_reference": "rule-test-ref",
+            "amount": 12345.67,
+            "metadata": {"note": "rule-based deposit"},
+        }
+        posting_response = client.post(
+            f"{ACCOUNTING_SERVICE}/gl-postings/auto",
+            headers=headers,
+            json=posting_payload,
+        )
+        assert posting_response.status_code == 200
+        posting = posting_response.json()
+        assert posting["posting_status"] == "posted"
+        assert posting["source_reference"] == "rule-test-ref"
+
+        subledger_response = client.get(
+            f"{ACCOUNTING_SERVICE}/sub-ledger-entries",
+            headers=headers,
+            params={
+                "tenant_id": tenant_id,
+                "source_module": "deposits",
+                "source_event": "deposit",
+                "source_reference": "rule-test-ref",
+            },
+        )
+        assert subledger_response.status_code == 200
+        entries = subledger_response.json()
+        assert len(entries) == 1
+        assert entries[0]["amount"] == 12345.67
+
+        audit_response = client.get(
+            f"{ACCOUNTING_SERVICE}/audit-logs",
+            headers=headers,
+            params={"tenant_id": tenant_id, "entity": "gl_posting"},
+        )
+        assert audit_response.status_code == 200
+        audit_logs = audit_response.json()
+        assert any(log["action"] == "create" for log in audit_logs)
+
+        balance_response = client.get(
+            f"{ACCOUNTING_SERVICE}/reports/trial-balance",
+            headers=headers,
+            params={"tenant_id": tenant_id},
+        )
+        assert balance_response.status_code == 200
+        trial_balance = balance_response.json()
+        assert trial_balance["is_balanced"] is True
+        assert trial_balance["total_debit"] == 12345.67
+        assert trial_balance["total_credit"] == 12345.67
 
 
 if __name__ == "__main__":

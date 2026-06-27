@@ -211,6 +211,8 @@ async def upload_document(
     expiry_date: Optional[datetime] = Form(None),
     created_by: Optional[str] = Form(None),
     storage_location: Optional[str] = Form("local"),
+    metadata: Optional[str] = Form(None),
+):
     db_metadata = None
     if metadata:
         try:

@@ -10,6 +10,7 @@ const dashboardCards = [
   { title: 'Loans', value: 'Applications and accounts', href: '/loans' },
   { title: 'Deposits', value: 'Savings, FD/RD and statements', href: '/deposits' },
   { title: 'Payments', value: 'EMI history and collection', href: '/payments' },
+  { title: 'Accounting', value: 'Ledger and trial balance reporting', href: '/accounting' },
   { title: 'Branch Portal', value: 'CIF, underwriting and disbursement queue', href: '/branch' },
   { title: 'EOM Master Data', value: 'Enterprise organization and branch mapping', href: '/eom' },
   { title: 'HRMS', value: 'Employee master, branch assignments and payroll', href: '/hrms' },

@@ -276,6 +276,35 @@ def trigger_findna_assistant(customer_id: str, assistant_type: str, source_refer
         pass
 
 
+def post_accounting_event(
+    source_module: str,
+    source_event: str,
+    amount: float,
+    source_reference: str,
+    idempotency_key: str,
+    tenant_id: str,
+    metadata: Optional[dict] = None,
+) -> None:
+    """Best-effort accounting posting hook; should not block core LMS flows."""
+    try:
+        import httpx
+
+        accounting_base = os.getenv("ACCOUNTING_BASE_URL", "http://localhost:8008")
+        payload = {
+            "tenant_id": tenant_id,
+            "source_module": source_module,
+            "source_event": source_event,
+            "source_reference": source_reference,
+            "amount": amount,
+            "idempotency_key": idempotency_key,
+            "metadata": metadata,
+        }
+        with httpx.Client(timeout=5.0) as client:
+            client.post(f"{accounting_base}/gl-postings/auto", json=payload)
+    except Exception:
+        pass
+
+
 @app.post("/loans", response_model=LoanAccountResponse)
 async def create_loan(
     loan_data: LoanAccountCreate,
@@ -487,6 +516,17 @@ async def disburse_loan(
     except Exception:
         pass
 
+    tenant_id = loan.branch_id or loan.customer_id or "default"
+    post_accounting_event(
+        source_module="loans",
+        source_event="disbursement",
+        amount=loan.disbursed_amount,
+        source_reference=loan.id,
+        idempotency_key=f"lms-disbursement-{loan.id}-{loan.disbursed_amount}",
+        tenant_id=tenant_id,
+        metadata={"application_id": loan.application_id, "branch_id": loan.branch_id},
+    )
+
     return {
         "loan_id": loan.id,
         "account_number": loan.account_number,
@@ -589,6 +629,17 @@ async def record_payment(
     except Exception:
         # Do not fail LMS payment on downstream collections logging
         pass
+
+    tenant_id = loan.branch_id or loan.customer_id or "default"
+    post_accounting_event(
+        source_module="loans",
+        source_event="payment",
+        amount=payment.amount,
+        source_reference=transaction_id,
+        idempotency_key=f"lms-payment-{transaction_id}",
+        tenant_id=tenant_id,
+        metadata={"loan_id": loan_id, "reference": payment.reference},
+    )
 
     trigger_findna_assistant(
         customer_id=loan.customer_id,

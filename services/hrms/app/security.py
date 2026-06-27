@@ -1,10 +1,6 @@
 from typing import Optional
 
 from fastapi import Header, HTTPException, status
-from sqlalchemy.orm import Session
-
-from app.main import SessionLocal  # reuse hrms db session
-from sqlalchemy import text
 
 
 def get_current_user_claims(
