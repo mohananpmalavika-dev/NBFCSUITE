@@ -5,12 +5,38 @@ from sqlalchemy.orm import relationship
 from .db import Base
 
 
+class Enterprise(Base):
+    __tablename__ = "enterprises"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, nullable=False)
+
+    enterprise_code = Column(String, nullable=False)
+    enterprise_name = Column(String, nullable=False)
+    logo_url = Column(String)
+    vision = Column(String)
+    mission = Column(String)
+    corporate_address = Column(String)
+    corporate_office = Column(String)
+    country = Column(String, default="India")
+    currency = Column(String, default="INR")
+    timezone = Column(String, default="Asia/Kolkata")
+    financial_year_start = Column(String, default="04-01")
+    financial_year_end = Column(String, default="03-31")
+
+    status = Column(String, default="active")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Brand(Base):
     __tablename__ = "brands"
 
     id = Column(String, primary_key=True)
     tenant_id = Column(String, nullable=False)
 
+    enterprise_id = Column(String, ForeignKey("enterprises.id"), nullable=True)
     brand_code = Column(String, nullable=False)
     brand_name = Column(String, nullable=False)
 
@@ -35,6 +61,8 @@ class Brand(Base):
     created_by = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
+
+    enterprise = relationship("Enterprise")
 
 
 class LegalEntity(Base):
@@ -76,8 +104,30 @@ class BusinessUnit(Base):
     business_unit_name = Column(String, nullable=False)
     head = Column(String)
     status = Column(String, default="active")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
     legal_entity = relationship("LegalEntity")
+
+
+class Division(Base):
+    __tablename__ = "divisions"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, nullable=False)
+
+    business_unit_id = Column(String, ForeignKey("business_units.id"), nullable=False)
+    division_code = Column(String, nullable=False)
+    division_name = Column(String, nullable=False)
+    division_head = Column(String)
+    status = Column(String, default="active")
+
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    business_unit = relationship("BusinessUnit")
 
 
 class EOMZone(Base):
@@ -87,12 +137,17 @@ class EOMZone(Base):
     tenant_id = Column(String, nullable=False)
 
     business_unit_id = Column(String, ForeignKey("business_units.id"), nullable=False)
+    division_id = Column(String, ForeignKey("divisions.id"), nullable=True)
     zone_code = Column(String, nullable=False)
     zone_name = Column(String, nullable=False)
     zone_head = Column(String)
     status = Column(String, default="active")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
     business_unit = relationship("BusinessUnit")
+    division = relationship("Division")
 
 
 class EOMRegion(Base):
@@ -107,6 +162,9 @@ class EOMRegion(Base):
     regional_manager = Column(String)
     office_address = Column(String)
     status = Column(String, default="active")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
     zone = relationship("EOMZone")
 
@@ -123,6 +181,9 @@ class EOMArea(Base):
     area_manager = Column(String)
     office_address = Column(String)
     status = Column(String, default="active")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
     region = relationship("EOMRegion")
 
@@ -137,6 +198,10 @@ class EOMCluster(Base):
     cluster_code = Column(String, nullable=False)
     cluster_name = Column(String, nullable=False)
     cluster_manager = Column(String)
+    status = Column(String, default="active")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
     area = relationship("EOMArea")
 
@@ -200,6 +265,25 @@ class Department(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
 
 
+class Team(Base):
+    __tablename__ = "teams"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, nullable=False)
+
+    department_id = Column(String, ForeignKey("departments.id"), nullable=False)
+    team_code = Column(String, nullable=False)
+    team_name = Column(String, nullable=False)
+    team_lead_employee_id = Column(String, ForeignKey("employees.id"), nullable=True)
+
+    status = Column(String, default="active")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    department = relationship("Department")
+
+
 class Employee(Base):
     __tablename__ = "employees"
 
@@ -218,6 +302,76 @@ class Employee(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
 
 
+class Position(Base):
+    __tablename__ = "positions"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, nullable=False)
+
+    department_id = Column(String, ForeignKey("departments.id"), nullable=True)
+    team_id = Column(String, ForeignKey("teams.id"), nullable=True)
+    position_code = Column(String, nullable=False)
+    position_title = Column(String, nullable=False)
+    reports_to_position_id = Column(String, ForeignKey("positions.id"), nullable=True)
+    grade = Column(String)
+    employment_type = Column(String, default="full_time")
+
+    status = Column(String, default="open")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    department = relationship("Department")
+    team = relationship("Team", foreign_keys=[team_id])
+    reports_to = relationship("Position", remote_side=[id])
+
+
+class Vendor(Base):
+    __tablename__ = "vendors"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, nullable=False)
+
+    vendor_code = Column(String, nullable=False)
+    vendor_name = Column(String, nullable=False)
+    vendor_type = Column(String)
+    contact_person = Column(String)
+    email = Column(String)
+    phone = Column(String)
+    gst = Column(String)
+    pan = Column(String)
+
+    status = Column(String, default="active")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Asset(Base):
+    __tablename__ = "assets"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, nullable=False)
+
+    asset_code = Column(String, nullable=False)
+    asset_name = Column(String, nullable=False)
+    asset_type = Column(String)
+    branch_id = Column(String, ForeignKey("eom_branches.id"), nullable=True)
+    department_id = Column(String, ForeignKey("departments.id"), nullable=True)
+    assigned_employee_id = Column(String, ForeignKey("employees.id"), nullable=True)
+    vendor_id = Column(String, ForeignKey("vendors.id"), nullable=True)
+    purchase_value = Column(Float, default=0)
+
+    status = Column(String, default="active")
+    created_by = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    branch = relationship("EOMBranch")
+    department = relationship("Department")
+    vendor = relationship("Vendor")
+
+
 class EmployeeHierarchy(Base):
     __tablename__ = "employee_hierarchy"
 
@@ -228,6 +382,7 @@ class EmployeeHierarchy(Base):
     brand_id = Column(String, ForeignKey("brands.id"), nullable=True)
     legal_entity_id = Column(String, ForeignKey("legal_entities.id"), nullable=True)
     business_unit_id = Column(String, ForeignKey("business_units.id"), nullable=True)
+    division_id = Column(String, ForeignKey("divisions.id"), nullable=True)
     zone_id = Column(String, ForeignKey("eom_zones.id"), nullable=True)
     region_id = Column(String, ForeignKey("eom_regions.id"), nullable=True)
     area_id = Column(String, ForeignKey("eom_areas.id"), nullable=True)

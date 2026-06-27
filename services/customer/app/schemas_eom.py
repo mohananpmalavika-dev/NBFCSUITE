@@ -7,7 +7,23 @@ class BaseEOMCreate(BaseModel):
     tenant_id: str
 
 
+class EnterpriseCreate(BaseEOMCreate):
+    enterprise_code: str
+    enterprise_name: str
+    logo_url: Optional[str] = None
+    vision: Optional[str] = None
+    mission: Optional[str] = None
+    corporate_address: Optional[str] = None
+    corporate_office: Optional[str] = None
+    country: Optional[str] = "India"
+    currency: Optional[str] = "INR"
+    timezone: Optional[str] = "Asia/Kolkata"
+    financial_year_start: Optional[str] = "04-01"
+    financial_year_end: Optional[str] = "03-31"
+
+
 class BrandCreate(BaseEOMCreate):
+    enterprise_id: Optional[str] = None
     brand_code: str
     brand_name: str
     legal_name: Optional[str] = None
@@ -50,8 +66,16 @@ class BusinessUnitCreate(BaseEOMCreate):
     head: Optional[str] = None
 
 
+class DivisionCreate(BaseEOMCreate):
+    business_unit_id: str
+    division_code: str
+    division_name: str
+    division_head: Optional[str] = None
+
+
 class ZoneCreate(BaseEOMCreate):
     business_unit_id: str
+    division_id: Optional[str] = None
     zone_code: str
     zone_name: str
     zone_head: Optional[str] = None
@@ -118,11 +142,50 @@ class DepartmentCreate(BaseEOMCreate):
     department_name: str
 
 
+class TeamCreate(BaseEOMCreate):
+    department_id: str
+    team_code: str
+    team_name: str
+    team_lead_employee_id: Optional[str] = None
+
+
 class EmployeeCreate(BaseEOMCreate):
     employee_name: str
     employee_code: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
+
+
+class PositionCreate(BaseEOMCreate):
+    position_code: str
+    position_title: str
+    department_id: Optional[str] = None
+    team_id: Optional[str] = None
+    reports_to_position_id: Optional[str] = None
+    grade: Optional[str] = None
+    employment_type: Optional[str] = "full_time"
+
+
+class VendorCreate(BaseEOMCreate):
+    vendor_code: str
+    vendor_name: str
+    vendor_type: Optional[str] = None
+    contact_person: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    gst: Optional[str] = None
+    pan: Optional[str] = None
+
+
+class AssetCreate(BaseEOMCreate):
+    asset_code: str
+    asset_name: str
+    asset_type: Optional[str] = None
+    branch_id: Optional[str] = None
+    department_id: Optional[str] = None
+    assigned_employee_id: Optional[str] = None
+    vendor_id: Optional[str] = None
+    purchase_value: Optional[float] = 0
 
 
 class EmployeeHierarchyCreate(BaseEOMCreate):
@@ -131,6 +194,7 @@ class EmployeeHierarchyCreate(BaseEOMCreate):
     brand_id: Optional[str] = None
     legal_entity_id: Optional[str] = None
     business_unit_id: Optional[str] = None
+    division_id: Optional[str] = None
     zone_id: Optional[str] = None
     region_id: Optional[str] = None
     area_id: Optional[str] = None
@@ -145,6 +209,17 @@ class CustomerBranchMappingCreate(BaseEOMCreate):
     customer_id: str
     branch_id: str
     transferred_by: Optional[str] = None
+
+
+class EnterpriseResponse(EnterpriseCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class BrandResponse(BrandCreate):
@@ -170,6 +245,17 @@ class LegalEntityResponse(LegalEntityCreate):
 
 
 class BusinessUnitResponse(BusinessUnitCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DivisionResponse(DivisionCreate):
     id: str
     status: str
     created_by: Optional[str] = None
@@ -247,7 +333,51 @@ class DepartmentResponse(DepartmentCreate):
         from_attributes = True
 
 
+class TeamResponse(TeamCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class EmployeeResponse(EmployeeCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PositionResponse(PositionCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class VendorResponse(VendorCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AssetResponse(AssetCreate):
     id: str
     status: str
     created_by: Optional[str] = None
@@ -279,4 +409,24 @@ class CustomerBranchMappingResponse(CustomerBranchMappingCreate):
 
     class Config:
         from_attributes = True
+
+
+class EOMSummaryResponse(BaseModel):
+    enterprises: int
+    brands: int
+    legal_entities: int
+    business_units: int
+    divisions: int
+    zones: int
+    regions: int
+    areas: int
+    clusters: int
+    branches: int
+    departments: int
+    teams: int
+    positions: int
+    employees: int
+    vendors: int
+    assets: int
+    customer_branch_mappings: int
 

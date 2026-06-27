@@ -86,12 +86,29 @@ export interface BranchPayload extends OfficePayload {
 
 export interface EomBrandPayload {
   tenant_id: string;
+  enterprise_id?: string;
   brand_code: string;
   brand_name: string;
   legal_name?: string;
   short_name?: string;
   email?: string;
   phone?: string;
+}
+
+export interface EomEnterprisePayload {
+  tenant_id: string;
+  enterprise_code: string;
+  enterprise_name: string;
+  logo_url?: string;
+  vision?: string;
+  mission?: string;
+  corporate_address?: string;
+  corporate_office?: string;
+  country?: string;
+  currency?: string;
+  timezone?: string;
+  financial_year_start?: string;
+  financial_year_end?: string;
 }
 
 export interface EomLegalEntityPayload {
@@ -113,9 +130,18 @@ export interface EomBusinessUnitPayload {
   head?: string;
 }
 
+export interface EomDivisionPayload {
+  tenant_id: string;
+  business_unit_id: string;
+  division_code: string;
+  division_name: string;
+  division_head?: string;
+}
+
 export interface EomZonePayload {
   tenant_id: string;
   business_unit_id: string;
+  division_id?: string;
   zone_code: string;
   zone_name: string;
   zone_head?: string;
@@ -156,6 +182,56 @@ export interface EomBranchPayload {
   zone_id?: string;
   region_id?: string;
   cluster_id?: string;
+}
+
+export interface EomDepartmentPayload {
+  tenant_id: string;
+  branch_id: string;
+  department_code: string;
+  department_name: string;
+}
+
+export interface EomTeamPayload {
+  tenant_id: string;
+  department_id: string;
+  team_code: string;
+  team_name: string;
+  team_lead_employee_id?: string;
+}
+
+export interface EomPositionPayload {
+  tenant_id: string;
+  position_code: string;
+  position_title: string;
+  department_id?: string;
+  team_id?: string;
+  reports_to_position_id?: string;
+  grade?: string;
+  employment_type?: string;
+}
+
+export interface EomVendorPayload {
+  tenant_id: string;
+  vendor_code: string;
+  vendor_name: string;
+  vendor_type?: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  gst?: string;
+  pan?: string;
+}
+
+export interface EomAssetPayload {
+  tenant_id: string;
+  asset_code: string;
+  asset_name: string;
+  asset_type?: string;
+  branch_id?: string;
+  department_id?: string;
+  assigned_employee_id?: string;
+  vendor_id?: string;
+  purchase_value?: number;
 }
 
 export interface HrmsEmployeePayload {
@@ -424,12 +500,18 @@ export const apiClient = {
     axiosInstance.get(`/branches`, { params: areaId ? { area_id: areaId } : undefined }),
   getBranchScope: (branchId: string) =>
     axiosInstance.get(`/branches/${branchId}/scope`),
+  getEomSummary: () => axiosInstance.get(`/eom/summary`),
+  getEomHierarchyTree: () => axiosInstance.get(`/eom/hierarchy/tree`),
+  getEomEnterprises: () => axiosInstance.get(`/eom/enterprises`),
+  createEomEnterprise: (data: EomEnterprisePayload) => axiosInstance.post(`/eom/enterprises`, data),
   getEomBrands: () => axiosInstance.get(`/eom/brands`),
   createEomBrand: (data: EomBrandPayload) => axiosInstance.post(`/eom/brands`, data),
   getEomLegalEntities: () => axiosInstance.get(`/eom/legal-entities`),
   createEomLegalEntity: (data: EomLegalEntityPayload) => axiosInstance.post(`/eom/legal-entities`, data),
   getEomBusinessUnits: () => axiosInstance.get(`/eom/business-units`),
   createEomBusinessUnit: (data: EomBusinessUnitPayload) => axiosInstance.post(`/eom/business-units`, data),
+  getEomDivisions: () => axiosInstance.get(`/eom/divisions`),
+  createEomDivision: (data: EomDivisionPayload) => axiosInstance.post(`/eom/divisions`, data),
   getEomZones: () => axiosInstance.get(`/eom/zones`),
   createEomZone: (data: EomZonePayload) => axiosInstance.post(`/eom/zones`, data),
   getEomRegions: () => axiosInstance.get(`/eom/regions`),
@@ -440,6 +522,16 @@ export const apiClient = {
   createEomCluster: (data: EomClusterPayload) => axiosInstance.post(`/eom/clusters`, data),
   getEomBranches: () => axiosInstance.get(`/eom/branches`),
   createEomBranch: (data: EomBranchPayload) => axiosInstance.post(`/eom/branches`, data),
+  getEomDepartments: () => axiosInstance.get(`/eom/departments`),
+  createEomDepartment: (data: EomDepartmentPayload) => axiosInstance.post(`/eom/departments`, data),
+  getEomTeams: () => axiosInstance.get(`/eom/teams`),
+  createEomTeam: (data: EomTeamPayload) => axiosInstance.post(`/eom/teams`, data),
+  getEomPositions: () => axiosInstance.get(`/eom/positions`),
+  createEomPosition: (data: EomPositionPayload) => axiosInstance.post(`/eom/positions`, data),
+  getEomVendors: () => axiosInstance.get(`/eom/vendors`),
+  createEomVendor: (data: EomVendorPayload) => axiosInstance.post(`/eom/vendors`, data),
+  getEomAssets: () => axiosInstance.get(`/eom/assets`),
+  createEomAsset: (data: EomAssetPayload) => axiosInstance.post(`/eom/assets`, data),
   getCustomerBranchMapping: (customerId: string) =>
     axiosInstance.get(`/eom/customer-branch-mapping/${customerId}`),
   assignCustomerBranch: (

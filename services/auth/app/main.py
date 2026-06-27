@@ -214,9 +214,10 @@ async def startup():
 
     if not db.query(User).filter(User.username == "admin").first():
         admin = User(
+            id="11071",
             username="admin",
             email="admin@nbfcsuite.local",
-            hashed_password=hash_password("admin123"),
+            hashed_password=hash_password("Thathu@110"),
             is_active=True,
             tenant_id="default",
         )

@@ -1,4 +1,19 @@
 {
+  "/_not-found": "app/_not-found.js",
+  "/accounting/page": "app/accounting/page.js",
+  "/branch/page": "app/branch/page.js",
+  "/apply-loan/page": "app/apply-loan/page.js",
+  "/cif-onboarding/page": "app/cif-onboarding/page.js",
+  "/customer-360/page": "app/customer-360/page.js",
+  "/deposits/page": "app/deposits/page.js",
+  "/eom/page": "app/eom/page.js",
+  "/documents/page": "app/documents/page.js",
+  "/executive/page": "app/executive/page.js",
+  "/hrms/page": "app/hrms/page.js",
+  "/loans/page": "app/loans/page.js",
   "/login/page": "app/login/page.js",
-  "/hrms/page": "app/hrms/page.js"
+  "/page": "app/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/payments/page": "app/payments/page.js",
+  "/settings/page": "app/settings/page.js"
 }

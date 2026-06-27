@@ -858,7 +858,8 @@ async def list_subledger_entries(
         query = query.filter(SubLedgerEntry.source_event == source_event)
     if source_reference:
         query = query.filter(SubLedgerEntry.source_reference == source_reference)
-    return query.order_by(SubLedgerEntry.created_at.desc()).all()
+    entries = query.order_by(SubLedgerEntry.created_at.desc()).all()
+    return [_subledger_response(entry) for entry in entries]
 
 
 @app.get("/gl-balances")
