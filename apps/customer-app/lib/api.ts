@@ -46,6 +46,7 @@ export interface DepositTransactionPayload {
 export interface DocumentPayload {
   subject_type: string;
   subject_id: string;
+  document_category?: string;
   document_type: string;
   document_name: string;
   document_url: string;
@@ -400,6 +401,8 @@ export const apiClient = {
     axiosInstance.get(`/documents/expiring`, { params: { subject_type: 'customer', subject_id: customerId, days } }),
   createDocument: (data: DocumentPayload) =>
     axiosInstance.post(`/documents`, data),
+  uploadDocumentFile: (data: FormData) =>
+    axiosInstance.post(`/documents/upload`, data),
   expireDocument: (documentId: string) =>
     axiosInstance.put(`/documents/${documentId}/expire`),
 

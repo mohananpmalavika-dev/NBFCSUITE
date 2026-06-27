@@ -59,20 +59,26 @@ export default function DocumentsPage() {
     setUploading(true);
     setMessage('');
     try {
-      await apiClient.createDocument({
-        subject_type: 'customer',
-        subject_id: user.id,
-        document_type: file.name.split('.').pop()?.toUpperCase() || 'OTHER',
-        document_name: file.name,
-        document_url: `local-upload://${encodeURIComponent(file.name)}`,
-        metadata: {
+      const formData = new FormData();
+      formData.append('subject_type', 'customer');
+      formData.append('subject_id', user.id);
+      formData.append('document_category', 'KYC');
+      formData.append('document_type', file.name.split('.').pop()?.toUpperCase() || 'OTHER');
+      formData.append('document_name', file.name);
+      formData.append('file', file);
+      formData.append('created_by', user.id);
+      formData.append(
+        'metadata',
+        JSON.stringify({
           original_filename: file.name,
           size_bytes: file.size,
           source_service: 'customer-app',
           source_reference_id: user.id,
-        },
-      });
-      setMessage('Document registered successfully.');
+        }),
+      );
+
+      await apiClient.uploadDocumentFile(formData);
+      setMessage('Document uploaded successfully.');
       event.target.value = '';
       await loadDocuments();
     } catch {
