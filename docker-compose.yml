@@ -319,6 +319,69 @@ services:
       timeout: 5s
       retries: 5
 
+  # Wealth Management Service
+  wealth-service:
+    build:
+      context: ./services/wealth
+      dockerfile: Dockerfile
+    container_name: nbfcsuite-wealth
+    environment:
+      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+    ports:
+      - "8015:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Insurance Service
+  insurance-service:
+    build:
+      context: ./services/insurance
+      dockerfile: Dockerfile
+    container_name: nbfcsuite-insurance
+    environment:
+      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+    ports:
+      - "8016:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Procurement & Vendor Management Service
+  procurement-service:
+    build:
+      context: ./services/procurement
+      dockerfile: Dockerfile
+    container_name: nbfcsuite-procurement
+    environment:
+      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+    ports:
+      - "8017:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Frontend Web App
   web-app:
     build:

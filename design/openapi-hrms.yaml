@@ -18,6 +18,7 @@ paths:
                 first_name: { type: string }
                 last_name: { type: string }
                 email: { type: string }
+                tenant_id: { type: string, default: default }
                 phone: { type: string }
                 designation: { type: string }
                 department: { type: string }
@@ -79,6 +80,76 @@ paths:
       responses:
         '200':
           description: employee branch assignment updated
+  /payroll/runs:
+    post:
+      summary: Create a tenant payroll run
+      responses:
+        '200':
+          description: payroll run created
+    get:
+      summary: List tenant payroll runs
+      parameters:
+        - in: query
+          name: tenant_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        '200':
+          description: payroll runs
+  /payroll/runs/{run_id}/slips:
+    post:
+      summary: Add an employee payslip to a payroll run
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: payslip created
+    get:
+      summary: List payslips in a payroll run
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: tenant_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: payslips
+  /payroll/runs/{run_id}/finalize:
+    post:
+      summary: Finalize a payroll run
+      parameters:
+        - in: path
+          name: run_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: tenant_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: payroll run finalized
+  /payroll/summary:
+    get:
+      summary: Summarize payroll by tenant and period
+      parameters:
+        - in: query
+          name: tenant_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: payroll summary
   /health:
     get:
       summary: HRMS health check

@@ -120,6 +120,62 @@ class AICreditDecision(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class AIModelVersion(Base):
+    __tablename__ = "ai_model_versions"
+
+    id = Column(String, primary_key=True)
+    model_name = Column(String, index=True, nullable=False)
+    version = Column(String, index=True, nullable=False)
+    model_type = Column(String, index=True, nullable=False)
+    status = Column(String, default="candidate", index=True)
+    metrics = Column(JSON, nullable=True)
+    training_dataset_id = Column(String, nullable=True)
+    promoted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AITrainingDataset(Base):
+    __tablename__ = "ai_training_datasets"
+
+    id = Column(String, primary_key=True)
+    dataset_name = Column(String, index=True, nullable=False)
+    source_window_start = Column(DateTime, nullable=True)
+    source_window_end = Column(DateTime, nullable=True)
+    row_count = Column(Integer, default=0)
+    feature_schema = Column(JSON, nullable=True)
+    label_schema = Column(JSON, nullable=True)
+    status = Column(String, default="prepared", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AIModelFeedback(Base):
+    __tablename__ = "ai_model_feedback"
+
+    id = Column(String, primary_key=True)
+    model_name = Column(String, index=True, nullable=False)
+    model_version = Column(String, index=True, nullable=True)
+    subject_type = Column(String, index=True)
+    subject_id = Column(String, index=True)
+    prediction = Column(JSON, nullable=True)
+    actual_outcome = Column(JSON, nullable=True)
+    feedback_source = Column(String, nullable=True)
+    captured_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AITrainingRun(Base):
+    __tablename__ = "ai_training_runs"
+
+    id = Column(String, primary_key=True)
+    model_name = Column(String, index=True, nullable=False)
+    dataset_id = Column(String, index=True, nullable=False)
+    base_model_version = Column(String, nullable=True)
+    candidate_model_version = Column(String, nullable=False)
+    status = Column(String, default="completed", index=True)
+    metrics = Column(JSON, nullable=True)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+
+
 # Pydantic Schemas
 class IncomeData(BaseModel):
     monthly_income: Optional[float] = None
@@ -298,6 +354,102 @@ class ExplanationResponse(BaseModel):
     contribution: float
     direction: str  # positive or negative
     explanation: str
+
+
+class AIModelVersionCreate(BaseModel):
+    model_name: str
+    version: str
+    model_type: str
+    status: str = "candidate"
+    metrics: Optional[dict] = None
+    training_dataset_id: Optional[str] = None
+
+
+class AIModelVersionResponse(BaseModel):
+    id: str
+    model_name: str
+    version: str
+    model_type: str
+    status: str
+    metrics: Optional[dict] = None
+    training_dataset_id: Optional[str] = None
+    promoted_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AITrainingDatasetCreate(BaseModel):
+    dataset_name: str
+    source_window_start: Optional[datetime] = None
+    source_window_end: Optional[datetime] = None
+    row_count: int = 0
+    feature_schema: Optional[dict] = None
+    label_schema: Optional[dict] = None
+
+
+class AITrainingDatasetResponse(BaseModel):
+    id: str
+    dataset_name: str
+    source_window_start: Optional[datetime] = None
+    source_window_end: Optional[datetime] = None
+    row_count: int
+    feature_schema: Optional[dict] = None
+    label_schema: Optional[dict] = None
+    status: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AIModelFeedbackCreate(BaseModel):
+    model_name: str
+    model_version: Optional[str] = None
+    subject_type: str
+    subject_id: str
+    prediction: Optional[dict] = None
+    actual_outcome: Optional[dict] = None
+    feedback_source: Optional[str] = None
+
+
+class AIModelFeedbackResponse(BaseModel):
+    id: str
+    model_name: str
+    model_version: Optional[str]
+    subject_type: str
+    subject_id: str
+    prediction: Optional[dict]
+    actual_outcome: Optional[dict]
+    feedback_source: Optional[str]
+    captured_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AITrainingRunCreate(BaseModel):
+    model_name: str
+    dataset_id: str
+    base_model_version: Optional[str] = None
+    candidate_model_version: str
+    metrics: Optional[dict] = None
+
+
+class AITrainingRunResponse(BaseModel):
+    id: str
+    model_name: str
+    dataset_id: str
+    base_model_version: Optional[str]
+    candidate_model_version: str
+    status: str
+    metrics: Optional[dict]
+    started_at: datetime
+    completed_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
 
 
 # FastAPI App
@@ -1408,6 +1560,206 @@ async def get_score_explanations(
         "customer_id": customer_id,
         "explanations": explanations,
         "base_score": 750
+    }
+
+
+@app.post("/ai/training-datasets", response_model=AITrainingDatasetResponse)
+async def create_training_dataset(payload: AITrainingDatasetCreate, db: Session = Depends(get_db)):
+    from uuid import uuid4
+
+    if payload.source_window_start and payload.source_window_end and payload.source_window_end < payload.source_window_start:
+        raise HTTPException(status_code=400, detail="source_window_end must be after source_window_start")
+    dataset = AITrainingDataset(
+        id=str(uuid4()),
+        dataset_name=payload.dataset_name,
+        source_window_start=payload.source_window_start,
+        source_window_end=payload.source_window_end,
+        row_count=payload.row_count,
+        feature_schema=payload.feature_schema,
+        label_schema=payload.label_schema,
+    )
+    db.add(dataset)
+    db.commit()
+    db.refresh(dataset)
+    return dataset
+
+
+@app.get("/ai/training-datasets", response_model=List[AITrainingDatasetResponse])
+async def list_training_datasets(
+    status: Optional[str] = Query(None),
+    skip: int = Query(0),
+    limit: int = Query(50),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AITrainingDataset)
+    if status:
+        query = query.filter(AITrainingDataset.status == status)
+    return query.order_by(AITrainingDataset.created_at.desc()).offset(skip).limit(limit).all()
+
+
+@app.post("/ai/model-versions", response_model=AIModelVersionResponse)
+async def create_model_version(payload: AIModelVersionCreate, db: Session = Depends(get_db)):
+    from uuid import uuid4
+
+    existing = (
+        db.query(AIModelVersion)
+        .filter(AIModelVersion.model_name == payload.model_name, AIModelVersion.version == payload.version)
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Model version already exists")
+    if payload.training_dataset_id:
+        dataset = db.query(AITrainingDataset).filter(AITrainingDataset.id == payload.training_dataset_id).first()
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Training dataset not found")
+    version = AIModelVersion(
+        id=str(uuid4()),
+        model_name=payload.model_name,
+        version=payload.version,
+        model_type=payload.model_type,
+        status=payload.status,
+        metrics=payload.metrics,
+        training_dataset_id=payload.training_dataset_id,
+        promoted_at=datetime.utcnow() if payload.status == "active" else None,
+    )
+    db.add(version)
+    db.commit()
+    db.refresh(version)
+    return version
+
+
+@app.get("/ai/model-versions", response_model=List[AIModelVersionResponse])
+async def list_model_versions(
+    model_name: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AIModelVersion)
+    if model_name:
+        query = query.filter(AIModelVersion.model_name == model_name)
+    if status:
+        query = query.filter(AIModelVersion.status == status)
+    return query.order_by(AIModelVersion.created_at.desc()).all()
+
+
+@app.post("/ai/model-versions/{version_id}/promote", response_model=AIModelVersionResponse)
+async def promote_model_version(version_id: str, db: Session = Depends(get_db)):
+    version = db.query(AIModelVersion).filter(AIModelVersion.id == version_id).first()
+    if not version:
+        raise HTTPException(status_code=404, detail="Model version not found")
+    active_versions = db.query(AIModelVersion).filter(
+        AIModelVersion.model_name == version.model_name,
+        AIModelVersion.status == "active",
+    ).all()
+    for active in active_versions:
+        active.status = "retired"
+    version.status = "active"
+    version.promoted_at = datetime.utcnow()
+    db.commit()
+    db.refresh(version)
+    return version
+
+
+@app.post("/ai/feedback", response_model=AIModelFeedbackResponse)
+async def capture_model_feedback(payload: AIModelFeedbackCreate, db: Session = Depends(get_db)):
+    from uuid import uuid4
+
+    feedback = AIModelFeedback(
+        id=str(uuid4()),
+        model_name=payload.model_name,
+        model_version=payload.model_version,
+        subject_type=payload.subject_type,
+        subject_id=payload.subject_id,
+        prediction=payload.prediction,
+        actual_outcome=payload.actual_outcome,
+        feedback_source=payload.feedback_source,
+    )
+    db.add(feedback)
+    db.commit()
+    db.refresh(feedback)
+    return feedback
+
+
+@app.get("/ai/feedback", response_model=List[AIModelFeedbackResponse])
+async def list_model_feedback(
+    model_name: Optional[str] = Query(None),
+    subject_type: Optional[str] = Query(None),
+    skip: int = Query(0),
+    limit: int = Query(50),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AIModelFeedback)
+    if model_name:
+        query = query.filter(AIModelFeedback.model_name == model_name)
+    if subject_type:
+        query = query.filter(AIModelFeedback.subject_type == subject_type)
+    return query.order_by(AIModelFeedback.captured_at.desc()).offset(skip).limit(limit).all()
+
+
+@app.post("/ai/training-runs", response_model=AITrainingRunResponse)
+async def create_training_run(payload: AITrainingRunCreate, db: Session = Depends(get_db)):
+    from uuid import uuid4
+
+    dataset = db.query(AITrainingDataset).filter(AITrainingDataset.id == payload.dataset_id).first()
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Training dataset not found")
+    run = AITrainingRun(
+        id=str(uuid4()),
+        model_name=payload.model_name,
+        dataset_id=payload.dataset_id,
+        base_model_version=payload.base_model_version,
+        candidate_model_version=payload.candidate_model_version,
+        metrics=payload.metrics or {},
+        status="completed",
+        completed_at=datetime.utcnow(),
+    )
+    dataset.status = "used"
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+@app.get("/ai/training-runs", response_model=List[AITrainingRunResponse])
+async def list_training_runs(
+    model_name: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AITrainingRun)
+    if model_name:
+        query = query.filter(AITrainingRun.model_name == model_name)
+    if status:
+        query = query.filter(AITrainingRun.status == status)
+    return query.order_by(AITrainingRun.started_at.desc()).all()
+
+
+@app.get("/ai/continuous-improvement/summary")
+async def continuous_improvement_summary(db: Session = Depends(get_db)):
+    datasets = db.query(AITrainingDataset).all()
+    versions = db.query(AIModelVersion).all()
+    feedback = db.query(AIModelFeedback).all()
+    runs = db.query(AITrainingRun).all()
+    feedback_by_model: dict[str, int] = {}
+    for item in feedback:
+        feedback_by_model[item.model_name] = feedback_by_model.get(item.model_name, 0) + 1
+    active_models = [
+        {
+            "model_name": version.model_name,
+            "version": version.version,
+            "model_type": version.model_type,
+            "metrics": version.metrics or {},
+        }
+        for version in versions
+        if version.status == "active"
+    ]
+    return {
+        "generated_at": datetime.utcnow(),
+        "dataset_count": len(datasets),
+        "feedback_count": len(feedback),
+        "training_run_count": len(runs),
+        "active_models": active_models,
+        "feedback_by_model": feedback_by_model,
     }
 
 

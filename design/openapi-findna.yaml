@@ -149,6 +149,69 @@ paths:
                     additionalProperties:
                       type: string
 
+  /ai/training-datasets:
+    post:
+      summary: Register a prepared AI training dataset
+      responses:
+        '200':
+          description: training dataset created
+    get:
+      summary: List AI training datasets
+      responses:
+        '200':
+          description: training datasets
+  /ai/model-versions:
+    post:
+      summary: Register an AI model version
+      responses:
+        '200':
+          description: model version created
+    get:
+      summary: List AI model versions
+      responses:
+        '200':
+          description: model versions
+  /ai/model-versions/{version_id}/promote:
+    post:
+      summary: Promote a model version to active
+      parameters:
+        - in: path
+          name: version_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: model version promoted
+  /ai/feedback:
+    post:
+      summary: Capture production prediction feedback
+      responses:
+        '200':
+          description: feedback captured
+    get:
+      summary: List model feedback
+      responses:
+        '200':
+          description: model feedback
+  /ai/training-runs:
+    post:
+      summary: Record a model training run
+      responses:
+        '200':
+          description: training run recorded
+    get:
+      summary: List model training runs
+      responses:
+        '200':
+          description: training runs
+  /ai/continuous-improvement/summary:
+    get:
+      summary: Summarize datasets, feedback, training runs, and active models
+      responses:
+        '200':
+          description: continuous improvement summary
+
   /collections-assistant/{customer_id}:
     post:
       summary: AI collections strategy assistant for a customer

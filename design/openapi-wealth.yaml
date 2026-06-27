@@ -1,0 +1,97 @@
+openapi: 3.0.3
+info:
+  title: Wealth Management Service API
+  version: 0.1.0
+paths:
+  /schemes:
+    post:
+      summary: Create a tenant mutual fund scheme
+      responses:
+        '200':
+          description: Scheme created
+    get:
+      summary: List tenant mutual fund schemes
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Schemes
+  /schemes/{scheme_code}/nav:
+    post:
+      summary: Update a scheme NAV
+      parameters:
+        - in: path
+          name: scheme_code
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: NAV updated
+  /investments:
+    post:
+      summary: Post a purchase or redemption
+      responses:
+        '200':
+          description: Investment transaction posted
+    get:
+      summary: List tenant investment transactions
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Investments
+  /sips:
+    post:
+      summary: Create a SIP mandate
+      responses:
+        '200':
+          description: SIP created
+    get:
+      summary: List SIP mandates
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: SIP mandates
+  /sips/{sip_id}/run:
+    post:
+      summary: Execute a SIP installment
+      parameters:
+        - in: path
+          name: sip_id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: SIP investment posted
+  /portfolio/{customer_id}:
+    get:
+      summary: Analyze customer portfolio
+      parameters:
+        - in: path
+          name: customer_id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Portfolio positions and allocation
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Healthy
+components:
+  parameters:
+    TenantId:
+      in: query
+      name: tenant_id
+      required: true
+      schema:
+        type: string
