@@ -336,6 +336,84 @@ export interface PayrollSlipPayload {
   tax_amount: number;
 }
 
+export interface GlAccountPayload {
+  tenant_id: string;
+  account_code: string;
+  account_name: string;
+  account_type: string;
+  parent_account_id?: string;
+  category?: string;
+  currency?: string;
+  branch_id?: string;
+  branch_specific?: string;
+  posting_allowed?: string;
+  status?: string;
+  opening_balance?: number;
+  financial_year?: string;
+}
+
+export interface CoaSeedPayload {
+  tenant_id: string;
+  currency?: string;
+  financial_year?: string;
+}
+
+export interface PostingRulePayload {
+  tenant_id: string;
+  source_module: string;
+  source_event: string;
+  debit_account_code: string;
+  credit_account_code: string;
+  description?: string;
+}
+
+export interface AccountingPostingLine {
+  gl_account_id?: string;
+  account_code?: string;
+  debit: number;
+  credit: number;
+  description?: string;
+  branch_id?: string;
+  currency?: string;
+  cost_center?: string;
+  profit_center?: string;
+}
+
+export interface PostingEnginePayload {
+  tenant_id: string;
+  source_module: string;
+  source_event: string;
+  source_reference: string;
+  description?: string;
+  idempotency_key?: string;
+  branch_id?: string;
+  business_date?: string;
+  financial_year?: string;
+  currency?: string;
+  metadata?: JsonObject;
+  lines: AccountingPostingLine[];
+}
+
+export interface VoucherPayload {
+  tenant_id: string;
+  voucher_type: string;
+  voucher_date?: string;
+  description: string;
+  reference?: string;
+  branch_id?: string;
+  currency?: string;
+  created_by?: string;
+  metadata?: JsonObject;
+  lines: AccountingPostingLine[];
+}
+
+export interface DayEndClosePayload {
+  tenant_id: string;
+  business_date: string;
+  branch_id?: string;
+  closed_by?: string;
+}
+
 export const apiClient = {
   setToken: (token: string) => {
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -664,12 +742,60 @@ export const apiClient = {
     axiosInstance.post(`/deposit-accounts/${accountId}/transactions`, data),
 
   // Accounting Service
+  getAccountingDashboard: (tenantId: string) =>
+    axiosInstance.get(`/dashboard`, { params: { tenant_id: tenantId } }),
+  getGlAccounts: (tenantId: string) =>
+    axiosInstance.get(`/gl-accounts`, { params: { tenant_id: tenantId } }),
+  getGlAccountSummary: (tenantId: string) =>
+    axiosInstance.get(`/gl-accounts/summary`, { params: { tenant_id: tenantId } }),
+  getGlAccountHierarchy: (tenantId: string) =>
+    axiosInstance.get(`/gl-accounts/hierarchy`, { params: { tenant_id: tenantId } }),
+  seedDefaultGlAccounts: (data: CoaSeedPayload) =>
+    axiosInstance.post(`/gl-accounts/seed-defaults`, data),
+  createGlAccount: (data: GlAccountPayload) =>
+    axiosInstance.post(`/gl-accounts`, data),
+  updateGlAccount: (accountId: string, tenantId: string, data: Partial<Omit<GlAccountPayload, 'tenant_id' | 'account_code'>>) =>
+    axiosInstance.put(`/gl-accounts/${accountId}`, data, { params: { tenant_id: tenantId } }),
   getGlBalances: (tenantId: string) =>
     axiosInstance.get(`/gl-balances`, { params: { tenant_id: tenantId } }),
+  getGlLedger: (tenantId: string, params?: { financial_year?: string; branch_id?: string }) =>
+    axiosInstance.get(`/gl-ledger`, { params: { tenant_id: tenantId, ...params } }),
+  getPostingRules: (tenantId: string) =>
+    axiosInstance.get(`/posting-rules`, { params: { tenant_id: tenantId } }),
+  createPostingRule: (data: PostingRulePayload) =>
+    axiosInstance.post(`/posting-rules`, data),
+  getJournalEntries: (tenantId: string) =>
+    axiosInstance.get(`/journal-entries`, { params: { tenant_id: tenantId } }),
+  validateAccountingPosting: (tenantId: string, lines: AccountingPostingLine[]) =>
+    axiosInstance.post(`/posting-engine/validate`, { tenant_id: tenantId, lines }),
+  postAccountingEngine: (data: PostingEnginePayload) =>
+    axiosInstance.post(`/posting-engine/post`, data),
+  createVoucher: (data: VoucherPayload) =>
+    axiosInstance.post(`/vouchers`, data),
+  getVouchers: (tenantId: string, params?: { status?: string; voucher_type?: string }) =>
+    axiosInstance.get(`/vouchers`, { params: { tenant_id: tenantId, ...params } }),
+  verifyVoucher: (voucherId: string, tenantId: string, performedBy?: string) =>
+    axiosInstance.post(`/vouchers/${voucherId}/verify`, { tenant_id: tenantId, performed_by: performedBy }),
+  approveVoucher: (voucherId: string, tenantId: string, performedBy?: string) =>
+    axiosInstance.post(`/vouchers/${voucherId}/approve`, { tenant_id: tenantId, performed_by: performedBy }),
+  postVoucher: (voucherId: string, tenantId: string, performedBy?: string) =>
+    axiosInstance.post(`/vouchers/${voucherId}/post`, { tenant_id: tenantId, performed_by: performedBy }),
   getTrialBalance: (tenantId: string, startDate?: string, endDate?: string) =>
     axiosInstance.get(`/reports/trial-balance`, {
       params: { tenant_id: tenantId, start_date: startDate, end_date: endDate },
     }),
+  getProfitLoss: (tenantId: string, startDate?: string, endDate?: string) =>
+    axiosInstance.get(`/reports/profit-loss`, {
+      params: { tenant_id: tenantId, start_date: startDate, end_date: endDate },
+    }),
+  getBalanceSheet: (tenantId: string, asOf?: string) =>
+    axiosInstance.get(`/reports/balance-sheet`, {
+      params: { tenant_id: tenantId, as_of: asOf },
+    }),
+  closeDayEnd: (data: DayEndClosePayload) =>
+    axiosInstance.post(`/day-end/close`, data),
+  getDayEndCloses: (tenantId: string) =>
+    axiosInstance.get(`/day-end/closes`, { params: { tenant_id: tenantId } }),
 
   // Compliance Service
   runComplianceChecks: (customerId: string, data: JsonObject = {}) =>

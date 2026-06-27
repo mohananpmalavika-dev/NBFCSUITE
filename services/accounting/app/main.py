@@ -24,8 +24,18 @@ class GLAccount(Base):
     account_code = Column(String, index=True, nullable=False)
     account_name = Column(String, nullable=False)
     account_type = Column(String, nullable=False)
+    parent_account_id = Column(String, ForeignKey("gl_accounts.id"), nullable=True)
+    category = Column(String, nullable=True)
+    currency = Column(String, default="INR")
+    branch_id = Column(String, nullable=True, index=True)
+    branch_specific = Column(String, default="false")
+    posting_allowed = Column(String, default="true")
+    status = Column(String, default="active")
+    opening_balance = Column(Float, default=0.0)
+    financial_year = Column(String, nullable=True)
     balance = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    parent = relationship("GLAccount", remote_side=[id])
 
 
 
@@ -46,6 +56,10 @@ class JournalEntry(Base):
     source_module = Column(String, nullable=True, index=True)
     source_event = Column(String, nullable=True, index=True)
     source_reference = Column(String, nullable=True, index=True)
+    business_date = Column(DateTime, nullable=True)
+    financial_year = Column(String, nullable=True)
+    branch_id = Column(String, nullable=True, index=True)
+    voucher_id = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     lines = relationship("JournalLine", back_populates="journal_entry")
 
@@ -58,6 +72,10 @@ class JournalLine(Base):
     gl_account_id = Column(String, ForeignKey("gl_accounts.id"))
     debit = Column(Float, default=0.0)
     credit = Column(Float, default=0.0)
+    currency = Column(String, default="INR")
+    branch_id = Column(String, nullable=True, index=True)
+    cost_center = Column(String, nullable=True)
+    profit_center = Column(String, nullable=True)
     description = Column(String, nullable=True)
     journal_entry = relationship("JournalEntry", back_populates="lines")
 
@@ -156,12 +174,99 @@ class SubLedgerEntry(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class GLBalance(Base):
+    __tablename__ = "gl_balances"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "gl_account_id", "branch_id", "currency", "financial_year", name="uq_gl_balances_scope"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    gl_account_id = Column(String, ForeignKey("gl_accounts.id"), nullable=False)
+    branch_id = Column(String, nullable=True, index=True)
+    currency = Column(String, default="INR")
+    financial_year = Column(String, nullable=False)
+    opening_balance = Column(Float, default=0.0)
+    total_debit = Column(Float, default=0.0)
+    total_credit = Column(Float, default=0.0)
+    closing_balance = Column(Float, default=0.0)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Voucher(Base):
+    __tablename__ = "vouchers"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "voucher_number", name="uq_vouchers_tenant_number"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    voucher_number = Column(String, nullable=False, index=True)
+    voucher_type = Column(String, nullable=False, index=True)
+    voucher_date = Column(DateTime, default=datetime.utcnow)
+    description = Column(String)
+    reference = Column(String, nullable=True)
+    branch_id = Column(String, nullable=True, index=True)
+    currency = Column(String, default="INR")
+    status = Column(String, default="draft", index=True)
+    created_by = Column(String, nullable=True)
+    verified_by = Column(String, nullable=True)
+    approved_by = Column(String, nullable=True)
+    posted_journal_entry_id = Column(String, ForeignKey("journal_entries.id"), nullable=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+    lines = relationship("VoucherLine", back_populates="voucher")
+
+
+class VoucherLine(Base):
+    __tablename__ = "voucher_lines"
+
+    id = Column(String, primary_key=True)
+    voucher_id = Column(String, ForeignKey("vouchers.id"), nullable=False)
+    gl_account_id = Column(String, ForeignKey("gl_accounts.id"), nullable=False)
+    debit = Column(Float, default=0.0)
+    credit = Column(Float, default=0.0)
+    description = Column(String, nullable=True)
+    cost_center = Column(String, nullable=True)
+    profit_center = Column(String, nullable=True)
+    voucher = relationship("Voucher", back_populates="lines")
+
+
+class DayEndClose(Base):
+    __tablename__ = "day_end_closes"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "business_date", "branch_id", name="uq_day_end_tenant_date_branch"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    business_date = Column(DateTime, nullable=False)
+    branch_id = Column(String, nullable=True, index=True)
+    status = Column(String, default="closed")
+    trial_balance_debit = Column(Float, default=0.0)
+    trial_balance_credit = Column(Float, default=0.0)
+    is_balanced = Column(String, default="true")
+    checks = Column(JSON, nullable=True)
+    closed_by = Column(String, nullable=True)
+    closed_at = Column(DateTime, default=datetime.utcnow)
+
+
 class GLAccountResponse(BaseModel):
     id: str
     tenant_id: str
     account_code: str
     account_name: str
     account_type: str
+    parent_account_id: Optional[str] = None
+    category: Optional[str] = None
+    currency: Optional[str] = None
+    branch_id: Optional[str] = None
+    branch_specific: Optional[str] = None
+    posting_allowed: Optional[str] = None
+    status: Optional[str] = None
+    opening_balance: Optional[float] = 0.0
+    financial_year: Optional[str] = None
     balance: float
 
     class Config:
@@ -173,13 +278,45 @@ class GLAccountCreate(BaseModel):
     account_code: str
     account_name: str
     account_type: str
+    parent_account_id: Optional[str] = None
+    category: Optional[str] = None
+    currency: Optional[str] = "INR"
+    branch_id: Optional[str] = None
+    branch_specific: Optional[str] = "false"
+    posting_allowed: Optional[str] = "true"
+    status: Optional[str] = "active"
+    opening_balance: Optional[float] = 0.0
+    financial_year: Optional[str] = None
 
+
+class GLAccountUpdate(BaseModel):
+    account_name: Optional[str] = None
+    account_type: Optional[str] = None
+    parent_account_id: Optional[str] = None
+    category: Optional[str] = None
+    currency: Optional[str] = None
+    branch_id: Optional[str] = None
+    branch_specific: Optional[str] = None
+    posting_allowed: Optional[str] = None
+    status: Optional[str] = None
+    opening_balance: Optional[float] = None
+    financial_year: Optional[str] = None
+
+
+class COASeedRequest(BaseModel):
+    tenant_id: str
+    currency: Optional[str] = "INR"
+    financial_year: Optional[str] = None
 
 
 class JournalLineCreate(BaseModel):
     gl_account_id: str
     debit: float = 0.0
     credit: float = 0.0
+    branch_id: Optional[str] = None
+    currency: Optional[str] = "INR"
+    cost_center: Optional[str] = None
+    profit_center: Optional[str] = None
     description: Optional[str] = None
 
 
@@ -189,6 +326,9 @@ class JournalEntryCreate(BaseModel):
     description: str
     reference: Optional[str] = None
     metadata: Optional[dict] = None
+    branch_id: Optional[str] = None
+    business_date: Optional[datetime] = None
+    financial_year: Optional[str] = None
     lines: List[JournalLineCreate]
 
 
@@ -204,6 +344,10 @@ class JournalEntryResponse(BaseModel):
     source_module: Optional[str] = None
     source_event: Optional[str] = None
     source_reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    business_date: Optional[datetime] = None
+    financial_year: Optional[str] = None
+    voucher_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -278,6 +422,10 @@ class AutomatedGLPostingRequest(BaseModel):
     source_reference: str
     amount: float
     description: Optional[str] = None
+    branch_id: Optional[str] = None
+    business_date: Optional[datetime] = None
+    financial_year: Optional[str] = None
+    currency: Optional[str] = "INR"
 
     debit_account_code: Optional[str] = None
     credit_account_code: Optional[str] = None
@@ -350,6 +498,107 @@ class BankStatementResponse(BaseModel):
         from_attributes = True
 
 
+class PostingEngineLine(BaseModel):
+    gl_account_id: Optional[str] = None
+    account_code: Optional[str] = None
+    debit: float = 0.0
+    credit: float = 0.0
+    description: Optional[str] = None
+    branch_id: Optional[str] = None
+    currency: Optional[str] = "INR"
+    cost_center: Optional[str] = None
+    profit_center: Optional[str] = None
+
+
+class PostingValidationRequest(BaseModel):
+    tenant_id: str
+    lines: List[PostingEngineLine]
+
+
+class PostingEngineRequest(BaseModel):
+    tenant_id: str
+    source_module: str
+    source_event: str
+    source_reference: str
+    description: Optional[str] = None
+    idempotency_key: Optional[str] = None
+    branch_id: Optional[str] = None
+    business_date: Optional[datetime] = None
+    financial_year: Optional[str] = None
+    currency: Optional[str] = "INR"
+    metadata: Optional[dict] = None
+    lines: List[PostingEngineLine]
+
+
+class VoucherLineCreate(BaseModel):
+    gl_account_id: str
+    debit: float = 0.0
+    credit: float = 0.0
+    description: Optional[str] = None
+    cost_center: Optional[str] = None
+    profit_center: Optional[str] = None
+
+
+class VoucherCreate(BaseModel):
+    tenant_id: str
+    voucher_type: str
+    voucher_date: Optional[datetime] = None
+    description: str
+    reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    currency: Optional[str] = "INR"
+    created_by: Optional[str] = None
+    metadata: Optional[dict] = None
+    lines: List[VoucherLineCreate]
+
+
+class VoucherActionRequest(BaseModel):
+    tenant_id: str
+    performed_by: Optional[str] = None
+
+
+class VoucherResponse(BaseModel):
+    id: str
+    tenant_id: str
+    voucher_number: str
+    voucher_type: str
+    voucher_date: datetime
+    description: str
+    reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    currency: str
+    status: str
+    posted_journal_entry_id: Optional[str] = None
+    metadata: Optional[dict] = None
+
+    class Config:
+        from_attributes = True
+
+
+class DayEndCloseRequest(BaseModel):
+    tenant_id: str
+    business_date: datetime
+    branch_id: Optional[str] = None
+    closed_by: Optional[str] = None
+
+
+class DayEndCloseResponse(BaseModel):
+    id: str
+    tenant_id: str
+    business_date: datetime
+    branch_id: Optional[str] = None
+    status: str
+    trial_balance_debit: float
+    trial_balance_credit: float
+    is_balanced: str
+    checks: Optional[dict] = None
+    closed_by: Optional[str] = None
+    closed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 app = FastAPI(title="accounting-service", version="0.1.0")
 
 
@@ -382,6 +631,41 @@ DEFAULT_ACCOUNT_NAMES = {
     "5200_TAX_EXPENSE": ("Tax Expense", "expense"),
 }
 
+DEFAULT_NBFC_COA = [
+    {"account_code": "100000", "account_name": "Assets", "account_type": "asset", "category": "Assets", "posting_allowed": "false"},
+    {"account_code": "110000", "account_name": "Cash", "account_type": "asset", "category": "Assets", "parent_code": "100000", "posting_allowed": "false"},
+    {"account_code": "111000", "account_name": "Branch Cash", "account_type": "asset", "category": "Assets", "parent_code": "110000"},
+    {"account_code": "112000", "account_name": "Vault Cash", "account_type": "asset", "category": "Assets", "parent_code": "110000"},
+    {"account_code": "120000", "account_name": "Loans", "account_type": "asset", "category": "Assets", "parent_code": "100000"},
+    {"account_code": "130000", "account_name": "Gold Loan", "account_type": "asset", "category": "Assets", "parent_code": "100000"},
+    {"account_code": "140000", "account_name": "Deposits", "account_type": "asset", "category": "Assets", "parent_code": "100000"},
+    {"account_code": "150000", "account_name": "Treasury", "account_type": "asset", "category": "Assets", "parent_code": "100000"},
+    {"account_code": "200000", "account_name": "Liabilities", "account_type": "liability", "category": "Liabilities", "posting_allowed": "false"},
+    {"account_code": "210000", "account_name": "Customer Deposits", "account_type": "liability", "category": "Liabilities", "parent_code": "200000"},
+    {"account_code": "220000", "account_name": "Borrowings", "account_type": "liability", "category": "Liabilities", "parent_code": "200000"},
+    {"account_code": "300000", "account_name": "Capital", "account_type": "equity", "category": "Capital", "posting_allowed": "false"},
+    {"account_code": "310000", "account_name": "Share Capital", "account_type": "equity", "category": "Capital", "parent_code": "300000"},
+    {"account_code": "400000", "account_name": "Income", "account_type": "revenue", "category": "Income", "posting_allowed": "false"},
+    {"account_code": "410000", "account_name": "Interest Income", "account_type": "revenue", "category": "Income", "parent_code": "400000"},
+    {"account_code": "420000", "account_name": "Processing Fee Income", "account_type": "revenue", "category": "Income", "parent_code": "400000"},
+    {"account_code": "500000", "account_name": "Expenses", "account_type": "expense", "category": "Expenses", "posting_allowed": "false"},
+    {"account_code": "510000", "account_name": "Operating Expenses", "account_type": "expense", "category": "Expenses", "parent_code": "500000"},
+    {"account_code": "520000", "account_name": "Employee Expenses", "account_type": "expense", "category": "Expenses", "parent_code": "500000"},
+    {"account_code": "900000", "account_name": "Off Balance Sheet", "account_type": "off_balance", "category": "Off Balance Sheet", "posting_allowed": "false"},
+    {"account_code": "910000", "account_name": "Guarantees", "account_type": "off_balance", "category": "Off Balance Sheet", "parent_code": "900000"},
+    {"account_code": "990000", "account_name": "Memo Accounts", "account_type": "memo", "category": "Memo Accounts", "posting_allowed": "false"},
+]
+
+
+def _current_financial_year(moment: Optional[datetime] = None) -> str:
+    value = moment or datetime.utcnow()
+    start_year = value.year if value.month >= 4 else value.year - 1
+    return f"{start_year}-{str(start_year + 1)[-2:]}"
+
+
+def _is_truthy(value: Optional[str]) -> bool:
+    return str(value or "").lower() in {"true", "1", "yes", "active", "allowed"}
+
 
 def _get_or_create_account(code: str, tenant_id: str, db: Session) -> GLAccount:
     account = (
@@ -399,11 +683,225 @@ def _get_or_create_account(code: str, tenant_id: str, db: Session) -> GLAccount:
         account_code=code,
         account_name=name,
         account_type=account_type,
+        category=account_type,
+        currency="INR",
+        posting_allowed="true",
+        status="active",
         balance=0.0,
     )
     db.add(account)
     db.flush()
     return account
+
+
+def _get_postable_account_by_id(account_id: str, tenant_id: str, db: Session) -> GLAccount:
+    account = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id, GLAccount.id == account_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail=f"GL account not found for tenant: {account_id}")
+    if not _is_truthy(account.posting_allowed):
+        raise HTTPException(status_code=400, detail=f"Posting is not allowed for GL account {account.account_code}")
+    if str(account.status or "").lower() not in {"active", ""}:
+        raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is not active")
+    return account
+
+
+def _get_postable_account_by_code(account_code: str, tenant_id: str, db: Session) -> GLAccount:
+    account = _get_or_create_account(account_code, tenant_id, db)
+    if not _is_truthy(account.posting_allowed):
+        raise HTTPException(status_code=400, detail=f"Posting is not allowed for GL account {account.account_code}")
+    if str(account.status or "").lower() not in {"active", ""}:
+        raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is not active")
+    return account
+
+
+def _validate_parent_account(
+    db: Session,
+    tenant_id: str,
+    parent_account_id: Optional[str],
+    account_id: Optional[str] = None,
+) -> Optional[GLAccount]:
+    if not parent_account_id:
+        return None
+    if account_id and parent_account_id == account_id:
+        raise HTTPException(status_code=400, detail="GL account cannot be its own parent")
+    parent = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id, GLAccount.id == parent_account_id).first()
+    if not parent:
+        raise HTTPException(status_code=404, detail="Parent GL account not found for tenant")
+    seen = {account_id} if account_id else set()
+    cursor = parent
+    while cursor:
+        if cursor.id in seen:
+            raise HTTPException(status_code=400, detail="Parent GL account would create a cycle")
+        seen.add(cursor.id)
+        if not cursor.parent_account_id:
+            break
+        cursor = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id, GLAccount.id == cursor.parent_account_id).first()
+    return parent
+
+
+def _account_tree_node(account: GLAccount) -> dict:
+    return {
+        "id": account.id,
+        "account_code": account.account_code,
+        "account_name": account.account_name,
+        "account_type": account.account_type,
+        "category": account.category,
+        "currency": account.currency,
+        "branch_specific": account.branch_specific,
+        "posting_allowed": account.posting_allowed,
+        "status": account.status,
+        "balance": account.balance,
+        "children": [],
+    }
+
+
+def _build_coa_tree(accounts: list[GLAccount]) -> list[dict]:
+    nodes = {account.id: _account_tree_node(account) for account in accounts}
+    roots = []
+    for account in accounts:
+        node = nodes[account.id]
+        if account.parent_account_id and account.parent_account_id in nodes:
+            nodes[account.parent_account_id]["children"].append(node)
+        else:
+            roots.append(node)
+    return roots
+
+
+def _validate_double_entry(lines: List[PostingEngineLine]) -> dict:
+    if not lines or len(lines) < 2:
+        raise HTTPException(status_code=400, detail="Posting must contain at least two lines")
+    total_debit = round(sum(line.debit or 0.0 for line in lines), 2)
+    total_credit = round(sum(line.credit or 0.0 for line in lines), 2)
+    if total_debit <= 0 or total_credit <= 0:
+        raise HTTPException(status_code=400, detail="Posting must include debit and credit values")
+    if total_debit != total_credit:
+        raise HTTPException(status_code=400, detail="Posting must be balanced")
+    for line in lines:
+        if (line.debit or 0.0) < 0 or (line.credit or 0.0) < 0:
+            raise HTTPException(status_code=400, detail="Debit and credit cannot be negative")
+        if (line.debit or 0.0) > 0 and (line.credit or 0.0) > 0:
+            raise HTTPException(status_code=400, detail="A posting line cannot contain both debit and credit")
+        if not line.gl_account_id and not line.account_code:
+            raise HTTPException(status_code=400, detail="Each posting line needs gl_account_id or account_code")
+    return {"total_debit": total_debit, "total_credit": total_credit, "is_balanced": True}
+
+
+def _update_gl_balance(
+    db: Session,
+    tenant_id: str,
+    account: GLAccount,
+    debit: float,
+    credit: float,
+    branch_id: Optional[str],
+    currency: Optional[str],
+    financial_year: Optional[str],
+) -> None:
+    fy = financial_year or _current_financial_year()
+    balance = (
+        db.query(GLBalance)
+        .filter(
+            GLBalance.tenant_id == tenant_id,
+            GLBalance.gl_account_id == account.id,
+            GLBalance.branch_id == branch_id,
+            GLBalance.currency == (currency or account.currency or "INR"),
+            GLBalance.financial_year == fy,
+        )
+        .first()
+    )
+    if not balance:
+        balance = GLBalance(
+            id=str(uuid4()),
+            tenant_id=tenant_id,
+            gl_account_id=account.id,
+            branch_id=branch_id,
+            currency=currency or account.currency or "INR",
+            financial_year=fy,
+            opening_balance=account.opening_balance or 0.0,
+            total_debit=0.0,
+            total_credit=0.0,
+            closing_balance=account.opening_balance or 0.0,
+        )
+        db.add(balance)
+    balance.total_debit = round((balance.total_debit or 0.0) + (debit or 0.0), 2)
+    balance.total_credit = round((balance.total_credit or 0.0) + (credit or 0.0), 2)
+    balance.closing_balance = round((balance.opening_balance or 0.0) + balance.total_debit - balance.total_credit, 2)
+    balance.updated_at = datetime.utcnow()
+
+
+def _post_journal(
+    db: Session,
+    tenant_id: str,
+    description: str,
+    lines: List[PostingEngineLine],
+    reference: Optional[str] = None,
+    metadata: Optional[dict] = None,
+    entry_date: Optional[datetime] = None,
+    posting_status: str = "posted",
+    idempotency_key: Optional[str] = None,
+    source_module: Optional[str] = None,
+    source_event: Optional[str] = None,
+    source_reference: Optional[str] = None,
+    branch_id: Optional[str] = None,
+    business_date: Optional[datetime] = None,
+    financial_year: Optional[str] = None,
+    voucher_id: Optional[str] = None,
+) -> JournalEntry:
+    _validate_double_entry(lines)
+    journal_entry = JournalEntry(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        entry_date=entry_date or datetime.utcnow(),
+        description=description,
+        reference=reference,
+        metadata_json=metadata,
+        posting_status=posting_status,
+        idempotency_key=idempotency_key,
+        source_module=source_module,
+        source_event=source_event,
+        source_reference=source_reference,
+        business_date=business_date,
+        financial_year=financial_year or _current_financial_year(business_date or entry_date),
+        branch_id=branch_id,
+        voucher_id=voucher_id,
+    )
+    db.add(journal_entry)
+    db.flush()
+
+    for line in lines:
+        account = (
+            _get_postable_account_by_id(line.gl_account_id, tenant_id, db)
+            if line.gl_account_id
+            else _get_postable_account_by_code(line.account_code or "", tenant_id, db)
+        )
+        debit = line.debit or 0.0
+        credit = line.credit or 0.0
+        db.add(
+            JournalLine(
+                id=str(uuid4()),
+                journal_entry_id=journal_entry.id,
+                gl_account_id=account.id,
+                debit=debit,
+                credit=credit,
+                currency=line.currency or account.currency or "INR",
+                branch_id=line.branch_id or branch_id,
+                cost_center=line.cost_center,
+                profit_center=line.profit_center,
+                description=line.description,
+            )
+        )
+        account.balance += debit
+        account.balance -= credit
+        _update_gl_balance(
+            db=db,
+            tenant_id=tenant_id,
+            account=account,
+            debit=debit,
+            credit=credit,
+            branch_id=line.branch_id or branch_id,
+            currency=line.currency or account.currency or "INR",
+            financial_year=journal_entry.financial_year,
+        )
+    return journal_entry
 
 
 def _log_audit(
@@ -550,7 +1048,34 @@ def _journal_entry_response(entry: JournalEntry) -> dict:
         "source_module": entry.source_module,
         "source_event": entry.source_event,
         "source_reference": entry.source_reference,
+        "branch_id": entry.branch_id,
+        "business_date": entry.business_date,
+        "financial_year": entry.financial_year,
+        "voucher_id": entry.voucher_id,
     }
+
+
+def _voucher_response(voucher: Voucher) -> dict:
+    return {
+        "id": voucher.id,
+        "tenant_id": voucher.tenant_id,
+        "voucher_number": voucher.voucher_number,
+        "voucher_type": voucher.voucher_type,
+        "voucher_date": voucher.voucher_date,
+        "description": voucher.description,
+        "reference": voucher.reference,
+        "branch_id": voucher.branch_id,
+        "currency": voucher.currency,
+        "status": voucher.status,
+        "posted_journal_entry_id": voucher.posted_journal_entry_id,
+        "metadata": voucher.metadata_json,
+    }
+
+
+def _next_voucher_number(tenant_id: str, voucher_type: str, db: Session) -> str:
+    prefix = voucher_type.upper().replace("-", "_")[:8]
+    count = db.query(Voucher).filter(Voucher.tenant_id == tenant_id, Voucher.voucher_type == voucher_type).count() + 1
+    return f"{prefix}-{datetime.utcnow().strftime('%Y%m%d')}-{count:05d}"
 
 
 def _period_filter(query, start_date: Optional[datetime], end_date: Optional[datetime]):
@@ -675,12 +1200,23 @@ async def create_gl_account(account: GLAccountCreate, db: Session = Depends(get_
     if existing:
         raise HTTPException(status_code=400, detail="GL account code already exists for tenant")
 
+    _validate_parent_account(db, account.tenant_id, account.parent_account_id)
+
     new_account = GLAccount(
         id=str(uuid4()),
         tenant_id=account.tenant_id,
         account_code=account.account_code,
         account_name=account.account_name,
         account_type=account.account_type,
+        parent_account_id=account.parent_account_id,
+        category=account.category or account.account_type,
+        currency=account.currency or "INR",
+        branch_id=account.branch_id,
+        branch_specific=account.branch_specific or "false",
+        posting_allowed=account.posting_allowed or "true",
+        status=account.status or "active",
+        opening_balance=account.opening_balance or 0.0,
+        financial_year=account.financial_year,
         balance=0.0
     )
 
@@ -691,8 +1227,112 @@ async def create_gl_account(account: GLAccountCreate, db: Session = Depends(get_
 
 
 @app.get("/gl-accounts", response_model=List[GLAccountResponse])
-async def list_gl_accounts(tenant_id: str = Query(...), db: Session = Depends(get_db)):
-    return db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all()
+async def list_gl_accounts(
+    tenant_id: str = Query(...),
+    category: Optional[str] = Query(None),
+    account_type: Optional[str] = Query(None),
+    posting_allowed: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id)
+    if category:
+        query = query.filter(GLAccount.category == category)
+    if account_type:
+        query = query.filter(GLAccount.account_type == account_type)
+    if posting_allowed:
+        query = query.filter(GLAccount.posting_allowed == posting_allowed)
+    if status:
+        query = query.filter(GLAccount.status == status)
+    return query.order_by(GLAccount.account_code).all()
+
+
+@app.get("/gl-accounts/summary")
+async def gl_account_summary(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    accounts = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all()
+    categories: dict[str, dict] = {}
+    for account in accounts:
+        key = account.category or account.account_type or "Uncategorized"
+        if key not in categories:
+            categories[key] = {"category": key, "count": 0, "posting_allowed": 0, "control_accounts": 0, "balance": 0.0}
+        categories[key]["count"] += 1
+        if _is_truthy(account.posting_allowed):
+            categories[key]["posting_allowed"] += 1
+        else:
+            categories[key]["control_accounts"] += 1
+        categories[key]["balance"] = round(categories[key]["balance"] + (account.balance or 0.0), 2)
+    return {
+        "tenant_id": tenant_id,
+        "total_accounts": len(accounts),
+        "posting_accounts": sum(1 for account in accounts if _is_truthy(account.posting_allowed)),
+        "control_accounts": sum(1 for account in accounts if not _is_truthy(account.posting_allowed)),
+        "categories": sorted(categories.values(), key=lambda row: row["category"]),
+    }
+
+
+@app.get("/gl-accounts/hierarchy")
+async def gl_account_hierarchy(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    accounts = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).order_by(GLAccount.account_code).all()
+    return {"tenant_id": tenant_id, "items": _build_coa_tree(accounts)}
+
+
+@app.post("/gl-accounts/seed-defaults")
+async def seed_default_gl_accounts(request: COASeedRequest, db: Session = Depends(get_db)):
+    if not request.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+    existing_by_code = {
+        account.account_code: account
+        for account in db.query(GLAccount).filter(GLAccount.tenant_id == request.tenant_id).all()
+    }
+    created = []
+    for item in DEFAULT_NBFC_COA:
+        if item["account_code"] in existing_by_code:
+            continue
+        parent = existing_by_code.get(item.get("parent_code"))
+        account = GLAccount(
+            id=str(uuid4()),
+            tenant_id=request.tenant_id,
+            account_code=item["account_code"],
+            account_name=item["account_name"],
+            account_type=item["account_type"],
+            parent_account_id=parent.id if parent else None,
+            category=item["category"],
+            currency=request.currency or "INR",
+            branch_specific=item.get("branch_specific", "false"),
+            posting_allowed=item.get("posting_allowed", "true"),
+            status="active",
+            opening_balance=0.0,
+            financial_year=request.financial_year,
+            balance=0.0,
+        )
+        db.add(account)
+        db.flush()
+        existing_by_code[account.account_code] = account
+        created.append(account.account_code)
+    _log_audit(
+        db,
+        request.tenant_id,
+        "gl_account",
+        None,
+        "seed_defaults",
+        {"created": created, "count": len(created)},
+    )
+    db.commit()
+    return {"tenant_id": request.tenant_id, "created": created, "created_count": len(created)}
+
+
+@app.put("/gl-accounts/{account_id}", response_model=GLAccountResponse)
+async def update_gl_account(account_id: str, payload: GLAccountUpdate, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    account = db.query(GLAccount).filter(GLAccount.id == account_id, GLAccount.tenant_id == tenant_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="GL account not found for tenant")
+    if payload.parent_account_id is not None:
+        _validate_parent_account(db, tenant_id, payload.parent_account_id, account_id=account.id)
+    for field, value in payload.dict(exclude_unset=True).items():
+        setattr(account, field, value)
+    db.commit()
+    db.refresh(account)
+    return account
 
 
 
@@ -709,45 +1349,32 @@ async def create_journal_entry(entry: JournalEntryCreate, db: Session = Depends(
     if round(total_debit, 2) != round(total_credit, 2):
         raise HTTPException(status_code=400, detail="Journal entry must be balanced")
 
-    account_ids = {line.gl_account_id for line in entry.lines}
-    accounts = (
-        db.query(GLAccount)
-        .filter(GLAccount.tenant_id == entry.tenant_id, GLAccount.id.in_(account_ids))
-        .all()
-    )
-    account_by_id = {account.id: account for account in accounts}
-    missing_account_ids = account_ids - set(account_by_id)
-    if missing_account_ids:
-        missing = ", ".join(sorted(missing_account_ids))
-        raise HTTPException(status_code=404, detail=f"GL account(s) not found for tenant: {missing}")
-
-    journal_entry = JournalEntry(
-        id=str(uuid4()),
-        tenant_id=entry.tenant_id,
-        entry_date=entry.entry_date or datetime.utcnow(),
-        description=entry.description,
-        reference=entry.reference,
-        metadata_json=entry.metadata,
-        posting_status="posted",
-    )
-    db.add(journal_entry)
-
-    for line in entry.lines:
-        gl_account = account_by_id[line.gl_account_id]
-
-        journal_line = JournalLine(
-            id=str(uuid4()),
-            journal_entry_id=journal_entry.id,
+    posting_lines = [
+        PostingEngineLine(
             gl_account_id=line.gl_account_id,
             debit=line.debit,
             credit=line.credit,
-            description=line.description
+            branch_id=line.branch_id,
+            currency=line.currency,
+            cost_center=line.cost_center,
+            profit_center=line.profit_center,
+            description=line.description,
         )
-        db.add(journal_line)
-        if line.debit:
-            gl_account.balance += line.debit
-        if line.credit:
-            gl_account.balance -= line.credit
+        for line in entry.lines
+    ]
+
+    journal_entry = _post_journal(
+        db=db,
+        tenant_id=entry.tenant_id,
+        description=entry.description,
+        lines=posting_lines,
+        entry_date=entry.entry_date or datetime.utcnow(),
+        reference=entry.reference,
+        metadata=entry.metadata,
+        branch_id=entry.branch_id,
+        business_date=entry.business_date,
+        financial_year=entry.financial_year,
+    )
 
     db.commit()
     db.refresh(journal_entry)
@@ -862,10 +1489,327 @@ async def list_subledger_entries(
     return [_subledger_response(entry) for entry in entries]
 
 
+@app.post("/posting-engine/validate")
+async def validate_posting(request: PostingValidationRequest, db: Session = Depends(get_db)):
+    result = _validate_double_entry(request.lines)
+    resolved_accounts = []
+    for line in request.lines:
+        account = (
+            _get_postable_account_by_id(line.gl_account_id, request.tenant_id, db)
+            if line.gl_account_id
+            else _get_postable_account_by_code(line.account_code or "", request.tenant_id, db)
+        )
+        resolved_accounts.append(
+            {
+                "account_id": account.id,
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "debit": line.debit,
+                "credit": line.credit,
+            }
+        )
+    return {**result, "lines": resolved_accounts}
+
+
+@app.post("/posting-engine/post", response_model=JournalEntryResponse)
+async def post_engine_transaction(request: PostingEngineRequest, db: Session = Depends(get_db)):
+    if request.idempotency_key:
+        existing = (
+            db.query(JournalEntry)
+            .filter(JournalEntry.tenant_id == request.tenant_id, JournalEntry.idempotency_key == request.idempotency_key)
+            .first()
+        )
+        if existing:
+            return _journal_entry_response(existing)
+
+    journal_entry = _post_journal(
+        db=db,
+        tenant_id=request.tenant_id,
+        description=request.description or f"{request.source_module}.{request.source_event}",
+        lines=request.lines,
+        reference=request.source_reference,
+        metadata=request.metadata,
+        idempotency_key=request.idempotency_key,
+        source_module=request.source_module,
+        source_event=request.source_event,
+        source_reference=request.source_reference,
+        branch_id=request.branch_id,
+        business_date=request.business_date,
+        financial_year=request.financial_year,
+    )
+    _create_subledger_entry(
+        db=db,
+        tenant_id=request.tenant_id,
+        source_module=request.source_module,
+        source_event=request.source_event,
+        source_reference=request.source_reference,
+        amount=sum(line.debit for line in request.lines),
+        journal_entry_id=journal_entry.id,
+        metadata=request.metadata,
+    )
+    _log_audit(
+        db,
+        tenant_id=request.tenant_id,
+        entity="posting_engine",
+        entity_id=journal_entry.id,
+        action="post",
+        payload={"source_module": request.source_module, "source_event": request.source_event},
+    )
+    db.commit()
+    db.refresh(journal_entry)
+    return _journal_entry_response(journal_entry)
+
+
+@app.post("/vouchers", response_model=VoucherResponse)
+async def create_voucher(voucher: VoucherCreate, db: Session = Depends(get_db)):
+    if not voucher.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+    engine_lines = [
+        PostingEngineLine(
+            gl_account_id=line.gl_account_id,
+            debit=line.debit,
+            credit=line.credit,
+            description=line.description,
+            cost_center=line.cost_center,
+            profit_center=line.profit_center,
+            branch_id=voucher.branch_id,
+            currency=voucher.currency,
+        )
+        for line in voucher.lines
+    ]
+    _validate_double_entry(engine_lines)
+    for line in voucher.lines:
+        _get_postable_account_by_id(line.gl_account_id, voucher.tenant_id, db)
+
+    new_voucher = Voucher(
+        id=str(uuid4()),
+        tenant_id=voucher.tenant_id,
+        voucher_number=_next_voucher_number(voucher.tenant_id, voucher.voucher_type, db),
+        voucher_type=voucher.voucher_type,
+        voucher_date=voucher.voucher_date or datetime.utcnow(),
+        description=voucher.description,
+        reference=voucher.reference,
+        branch_id=voucher.branch_id,
+        currency=voucher.currency or "INR",
+        status="draft",
+        created_by=voucher.created_by,
+        metadata_json=voucher.metadata,
+    )
+    db.add(new_voucher)
+    db.flush()
+    for line in voucher.lines:
+        db.add(
+            VoucherLine(
+                id=str(uuid4()),
+                voucher_id=new_voucher.id,
+                gl_account_id=line.gl_account_id,
+                debit=line.debit,
+                credit=line.credit,
+                description=line.description,
+                cost_center=line.cost_center,
+                profit_center=line.profit_center,
+            )
+        )
+    _log_audit(db, voucher.tenant_id, "voucher", new_voucher.id, "create", {"voucher_type": voucher.voucher_type}, voucher.created_by)
+    db.commit()
+    db.refresh(new_voucher)
+    return _voucher_response(new_voucher)
+
+
+@app.get("/vouchers")
+async def list_vouchers(
+    tenant_id: str = Query(...),
+    status: Optional[str] = Query(None),
+    voucher_type: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Voucher).filter(Voucher.tenant_id == tenant_id)
+    if status:
+        query = query.filter(Voucher.status == status)
+    if voucher_type:
+        query = query.filter(Voucher.voucher_type == voucher_type)
+    items = query.order_by(Voucher.voucher_date.desc()).all()
+    return {"items": [_voucher_response(item) for item in items], "total": len(items)}
+
+
+@app.post("/vouchers/{voucher_id}/verify", response_model=VoucherResponse)
+async def verify_voucher(voucher_id: str, request: VoucherActionRequest, db: Session = Depends(get_db)):
+    voucher = db.query(Voucher).filter(Voucher.id == voucher_id, Voucher.tenant_id == request.tenant_id).first()
+    if not voucher:
+        raise HTTPException(status_code=404, detail="Voucher not found for tenant")
+    if voucher.status != "draft":
+        raise HTTPException(status_code=400, detail="Only draft vouchers can be verified")
+    voucher.status = "verified"
+    voucher.verified_by = request.performed_by
+    voucher.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "voucher", voucher.id, "verify", None, request.performed_by)
+    db.commit()
+    db.refresh(voucher)
+    return _voucher_response(voucher)
+
+
+@app.post("/vouchers/{voucher_id}/approve", response_model=VoucherResponse)
+async def approve_voucher(voucher_id: str, request: VoucherActionRequest, db: Session = Depends(get_db)):
+    voucher = db.query(Voucher).filter(Voucher.id == voucher_id, Voucher.tenant_id == request.tenant_id).first()
+    if not voucher:
+        raise HTTPException(status_code=404, detail="Voucher not found for tenant")
+    if voucher.status != "verified":
+        raise HTTPException(status_code=400, detail="Only verified vouchers can be approved")
+    voucher.status = "approved"
+    voucher.approved_by = request.performed_by
+    voucher.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "voucher", voucher.id, "approve", None, request.performed_by)
+    db.commit()
+    db.refresh(voucher)
+    return _voucher_response(voucher)
+
+
+@app.post("/vouchers/{voucher_id}/post", response_model=JournalEntryResponse)
+async def post_voucher(voucher_id: str, request: VoucherActionRequest, db: Session = Depends(get_db)):
+    voucher = db.query(Voucher).filter(Voucher.id == voucher_id, Voucher.tenant_id == request.tenant_id).first()
+    if not voucher:
+        raise HTTPException(status_code=404, detail="Voucher not found for tenant")
+    if voucher.status != "approved":
+        raise HTTPException(status_code=400, detail="Only approved vouchers can be posted")
+
+    lines = [
+        PostingEngineLine(
+            gl_account_id=line.gl_account_id,
+            debit=line.debit,
+            credit=line.credit,
+            description=line.description,
+            branch_id=voucher.branch_id,
+            currency=voucher.currency,
+            cost_center=line.cost_center,
+            profit_center=line.profit_center,
+        )
+        for line in voucher.lines
+    ]
+    journal_entry = _post_journal(
+        db=db,
+        tenant_id=request.tenant_id,
+        description=voucher.description,
+        lines=lines,
+        reference=voucher.reference or voucher.voucher_number,
+        metadata=voucher.metadata_json,
+        source_module="accounting",
+        source_event=f"{voucher.voucher_type}.voucher",
+        source_reference=voucher.voucher_number,
+        branch_id=voucher.branch_id,
+        business_date=voucher.voucher_date,
+        voucher_id=voucher.id,
+    )
+    voucher.status = "posted"
+    voucher.posted_journal_entry_id = journal_entry.id
+    voucher.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "voucher", voucher.id, "post", {"journal_entry_id": journal_entry.id}, request.performed_by)
+    db.commit()
+    db.refresh(journal_entry)
+    return _journal_entry_response(journal_entry)
+
+
 @app.get("/gl-balances")
 async def gl_balances(tenant_id: str = Query(...), db: Session = Depends(get_db)):
     accounts = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all()
     return {"accounts": accounts}
+
+
+@app.get("/gl-ledger")
+async def gl_ledger(
+    tenant_id: str = Query(...),
+    financial_year: Optional[str] = Query(None),
+    branch_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(GLBalance).filter(GLBalance.tenant_id == tenant_id)
+    if financial_year:
+        query = query.filter(GLBalance.financial_year == financial_year)
+    if branch_id:
+        query = query.filter(GLBalance.branch_id == branch_id)
+    balances = query.all()
+    accounts = {account.id: account for account in db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all()}
+    rows = []
+    for balance in balances:
+        account = accounts.get(balance.gl_account_id)
+        rows.append(
+            {
+                "gl_account_id": balance.gl_account_id,
+                "gl_number": account.account_code if account else None,
+                "account_code": account.account_code if account else None,
+                "account_name": account.account_name if account else None,
+                "branch": balance.branch_id or "all",
+                "branch_id": balance.branch_id,
+                "currency": balance.currency,
+                "financial_year": balance.financial_year,
+                "opening_balance": balance.opening_balance,
+                "debit": balance.total_debit,
+                "credit": balance.total_credit,
+                "balance": balance.closing_balance,
+                "closing_balance": balance.closing_balance,
+            }
+        )
+    return {"items": rows, "total": len(rows)}
+
+
+@app.get("/dashboard")
+async def accounting_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    trial = await trial_balance(tenant_id=tenant_id, start_date=None, end_date=None, db=db)
+    vouchers_pending = (
+        db.query(Voucher)
+        .filter(Voucher.tenant_id == tenant_id, Voucher.status.in_(["draft", "verified", "approved"]))
+        .count()
+    )
+    return {
+        "tenant_id": tenant_id,
+        "chart_of_accounts": db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).count(),
+        "posting_rules": db.query(PostingRule).filter(PostingRule.tenant_id == tenant_id).count(),
+        "journal_entries": db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id).count(),
+        "subledger_entries": db.query(SubLedgerEntry).filter(SubLedgerEntry.tenant_id == tenant_id).count(),
+        "pending_vouchers": vouchers_pending,
+        "trial_balance": {
+            "total_debit": trial["total_debit"],
+            "total_credit": trial["total_credit"],
+            "is_balanced": trial["is_balanced"],
+        },
+    }
+
+
+@app.post("/day-end/close", response_model=DayEndCloseResponse)
+async def close_day(request: DayEndCloseRequest, db: Session = Depends(get_db)):
+    existing = (
+        db.query(DayEndClose)
+        .filter(
+            DayEndClose.tenant_id == request.tenant_id,
+            DayEndClose.business_date == request.business_date,
+            DayEndClose.branch_id == request.branch_id,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Day end is already closed for this scope")
+    trial = await trial_balance(tenant_id=request.tenant_id, start_date=None, end_date=request.business_date, db=db)
+    close = DayEndClose(
+        id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        business_date=request.business_date,
+        branch_id=request.branch_id,
+        status="closed" if trial["is_balanced"] else "exception",
+        trial_balance_debit=trial["total_debit"],
+        trial_balance_credit=trial["total_credit"],
+        is_balanced="true" if trial["is_balanced"] else "false",
+        checks={"trial_balance_rows": len(trial["rows"])},
+        closed_by=request.closed_by,
+    )
+    db.add(close)
+    _log_audit(db, request.tenant_id, "day_end", close.id, "close", close.checks, request.closed_by)
+    db.commit()
+    db.refresh(close)
+    return close
+
+
+@app.get("/day-end/closes", response_model=List[DayEndCloseResponse])
+async def list_day_end_closes(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return db.query(DayEndClose).filter(DayEndClose.tenant_id == tenant_id).order_by(DayEndClose.business_date.desc()).all()
 
 
 
@@ -931,43 +1875,38 @@ async def create_automated_gl_posting(posting: AutomatedGLPostingRequest, db: Se
             return _journal_entry_response(existing)
 
     debit_code, credit_code, posting_rule = _resolve_posting_map(posting, db)
-    debit_account = _get_or_create_account(debit_code, posting.tenant_id, db)
-    credit_account = _get_or_create_account(credit_code, posting.tenant_id, db)
-
-    journal_entry = JournalEntry(
-        id=str(uuid4()),
+    journal_entry = _post_journal(
+        db=db,
         tenant_id=posting.tenant_id,
-        entry_date=datetime.utcnow(),
         description=posting.description or f"{posting.source_module}.{posting.source_event}",
         reference=posting.source_reference,
-        metadata_json=posting.metadata,
-        posting_status="posted",
+        metadata=posting.metadata,
         idempotency_key=posting.idempotency_key,
         source_module=posting.source_module,
         source_event=posting.source_event,
         source_reference=posting.source_reference,
+        branch_id=posting.branch_id,
+        business_date=posting.business_date,
+        financial_year=posting.financial_year,
+        lines=[
+            PostingEngineLine(
+                account_code=debit_code,
+                debit=posting.amount,
+                credit=0.0,
+                currency=posting.currency,
+                branch_id=posting.branch_id,
+                description=f"Debit for {posting.source_module}.{posting.source_event}",
+            ),
+            PostingEngineLine(
+                account_code=credit_code,
+                debit=0.0,
+                credit=posting.amount,
+                currency=posting.currency,
+                branch_id=posting.branch_id,
+                description=f"Credit for {posting.source_module}.{posting.source_event}",
+            ),
+        ],
     )
-    db.add(journal_entry)
-
-    lines = [
-        JournalLine(
-            id=str(uuid4()),
-            journal_entry_id=journal_entry.id,
-            gl_account_id=debit_account.id,
-            debit=posting.amount,
-            credit=0.0,
-            description=f"Debit for {posting.source_module}.{posting.source_event}",
-        ),
-        JournalLine(
-            id=str(uuid4()),
-            journal_entry_id=journal_entry.id,
-            gl_account_id=credit_account.id,
-            debit=0.0,
-            credit=posting.amount,
-            description=f"Credit for {posting.source_module}.{posting.source_event}",
-        ),
-    ]
-    db.add_all(lines)
 
     _create_subledger_entry(
         db=db,
@@ -979,9 +1918,6 @@ async def create_automated_gl_posting(posting: AutomatedGLPostingRequest, db: Se
         journal_entry_id=journal_entry.id,
         metadata=posting.metadata,
     )
-
-    debit_account.balance += posting.amount
-    credit_account.balance -= posting.amount
 
     _log_audit(
         db,
