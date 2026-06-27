@@ -460,11 +460,15 @@ class CIFApi {
   // Stage 16: Approval Workflow
   async initiateApproval(customerId: string, data: ApprovalInitiateRequest): Promise<any> {
     try {
+      const params: Record<string, string> = { initiated_by: data.initiated_by };
+      if (data.notes) {
+        params.notes = data.notes;
+      }
       const response = await this.api.post(
         `/customer/${customerId}/approval/initiate`,
         undefined,
         {
-          params: { initiated_by: data.initiated_by },
+          params,
         }
       );
       return response.data;

@@ -702,10 +702,11 @@ async def get_customer_network(customer_id: str, db: Session = Depends(get_db)):
 async def initiate_approval(
     customer_id: str,
     initiated_by: str = Query(...),
+    notes: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
     """Stage 16 - Initiate approval workflow"""
-    approval = CustomerApprovalService.initiate_approval(db, customer_id, initiated_by)
+    approval = CustomerApprovalService.initiate_approval(db, customer_id, initiated_by, notes)
     return {
         "success": True,
         "approval_id": approval.id,

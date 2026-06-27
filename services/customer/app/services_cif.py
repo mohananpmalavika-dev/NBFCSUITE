@@ -290,7 +290,7 @@ class CustomerApprovalService:
         return default_stage
 
     @staticmethod
-    def initiate_approval(db: Session, customer_id: str, initiated_by: str) -> CustomerApproval:
+    def initiate_approval(db: Session, customer_id: str, initiated_by: str, notes: Optional[str] = None) -> CustomerApproval:
         """Initiate customer approval workflow"""
         approval = CustomerApproval(
             id=str(uuid.uuid4()),
@@ -316,6 +316,8 @@ class CustomerApprovalService:
                 "initiated_by": initiated_by,
             },
         }
+        if notes:
+            payload["context"]["notes"] = notes
 
         with CustomerApprovalService._platform_client() as client:
             response = client.post("/workflows/start", json=payload)
@@ -388,100 +390,6 @@ class CustomerApprovalService:
 
         db.commit()
         db.refresh(approval)
-        return approval
-
-    @staticmethod
-    def checker_approval(db: Session, approval_id: str, checker_id: str, 
-                         approved: bool, comments: str = None) -> CustomerApproval:
-        """Checker level approval"""
-        approval = db.query(CustomerApproval).filter(CustomerApproval.id == approval_id).first()
-        if not approval:
-            raise ValueError("Approval not found")
-
-        if approved:
-            approval.checker_id = checker_id
-            approval.checker_approved_at = datetime.utcnow()
-            approval.checker_comments = comments
-            approval.workflow_stage = 2
-        else:
-            approval.approval_status = "rejected"
-            approval.rejection_reason = comments
-
-        db.commit()
-        return approval
-
-    @staticmethod
-    def manager_approval(db: Session, approval_id: str, manager_id: str,
-                        approved: bool, comments: str = None) -> CustomerApproval:
-        """Manager level approval"""
-        approval = db.query(CustomerApproval).filter(CustomerApproval.id == approval_id).first()
-        if not approval:
-            raise ValueError("Approval not found")
-
-        if approved:
-            approval.manager_id = manager_id
-            approval.manager_approved_at = datetime.utcnow()
-            approval.manager_comments = comments
-            approval.workflow_stage = 3
-        else:
-            approval.approval_status = "rejected"
-            approval.rejection_reason = comments
-
-        db.commit()
-        return approval
-
-    @staticmethod
-    def compliance_approval(db: Session, approval_id: str, compliance_officer_id: str,
-                           approved: bool, comments: str = None) -> CustomerApproval:
-        """Compliance level approval"""
-        approval = db.query(CustomerApproval).filter(CustomerApproval.id == approval_id).first()
-        if not approval:
-            raise ValueError("Approval not found")
-
-        if approved:
-            approval.compliance_officer_id = compliance_officer_id
-            approval.compliance_approved_at = datetime.utcnow()
-            approval.compliance_comments = comments
-            approval.workflow_stage = 4
-        else:
-            approval.approval_status = "rejected"
-            approval.rejection_reason = comments
-
-        db.commit()
-        return approval
-
-    @staticmethod
-    def final_approval(db: Session, approval_id: str, final_approver_id: str,
-                      approved: bool, comments: str = None) -> CustomerApproval:
-        """Final approval and CIF generation"""
-        approval = db.query(CustomerApproval).filter(CustomerApproval.id == approval_id).first()
-        if not approval:
-            raise ValueError("Approval not found")
-
-        if approved:
-            approval.final_approver_id = final_approver_id
-            approval.final_approval_at = datetime.utcnow()
-            approval.final_approval_comments = comments
-            approval.approval_status = "approved"
-
-            # Generate CIF
-            cif_id = CIFGenerationService.generate_cif(db, approval.customer_id)
-            approval.cif_generated_on = datetime.utcnow()
-
-            # Update customer
-            customer = db.query(Customer).filter(Customer.id == approval.customer_id).first()
-            if customer:
-                customer.approval_status = "approved"
-        else:
-            approval.approval_status = "rejected"
-            approval.rejection_reason = comments
-            
-            # Update customer
-            customer = db.query(Customer).filter(Customer.id == approval.customer_id).first()
-            if customer:
-                customer.approval_status = "rejected"
-
-        db.commit()
         return approval
 
 
