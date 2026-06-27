@@ -8,6 +8,7 @@ interface User {
   username: string;
   email: string;
   roles: Array<string | { id: string; name: string; description?: string | null }>;
+  tenant_id?: string | null;
   organization_id?: string | null;
   zone_id?: string | null;
   region_id?: string | null;

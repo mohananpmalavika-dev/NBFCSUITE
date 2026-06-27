@@ -1,6 +1,7 @@
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from typing import Optional
+import secrets
 import jwt
 from app.config import settings
 
@@ -13,6 +14,18 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
+
+
+def hash_secret(secret: str) -> str:
+    return pwd_context.hash(secret)
+
+
+def verify_secret(raw_secret: str, hashed_secret: str) -> bool:
+    return pwd_context.verify(raw_secret, hashed_secret)
+
+
+def generate_secret(length: int = 32) -> str:
+    return secrets.token_urlsafe(length)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):

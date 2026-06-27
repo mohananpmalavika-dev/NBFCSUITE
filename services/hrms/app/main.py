@@ -172,6 +172,8 @@ class PayrollSlipResponse(BaseModel):
         from_attributes = True
 
 
+from app.security import get_current_user_claims, scope_filter_columns
+
 app = FastAPI(title="hrms-service", version="0.1.0")
 
 
@@ -201,6 +203,22 @@ def _payroll_run(run_id: str, tenant_id: str, db: Session) -> PayrollRun:
     return run
 
 
+def _resolve_tenant_id(tenant_id: str | None, user_claims: dict) -> str:
+    claim_tenant_id = user_claims.get("tenant_id")
+    if not claim_tenant_id:
+        raise HTTPException(status_code=401, detail="Missing tenant context for HRMS request")
+    if tenant_id and tenant_id != claim_tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
+    return claim_tenant_id
+
+
+def _resolve_branch_id(branch_id: str | None, user_claims: dict) -> str | None:
+    claim_branch_id = user_claims.get("branch_id")
+    if claim_branch_id and branch_id and branch_id != claim_branch_id:
+        raise HTTPException(status_code=403, detail="Branch is outside the caller's scope")
+    return branch_id or claim_branch_id
+
+
 @app.on_event("startup")
 async def startup():
     Base.metadata.create_all(bind=engine)
@@ -217,7 +235,12 @@ async def ready():
 
 
 @app.post("/employees", response_model=EmployeeResponse)
-async def create_employee(employee: EmployeeCreate, db: Session = Depends(get_db)):
+async def create_employee(
+    employee: EmployeeCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(employee.tenant_id, user_claims)
     existing = (
         db.query(Employee)
         .filter((Employee.employee_number == employee.employee_number) | (Employee.email == employee.email))
@@ -227,13 +250,13 @@ async def create_employee(employee: EmployeeCreate, db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail="Employee number or email already exists")
 
     if employee.user_id:
-        user_mapping = db.query(Employee).filter(Employee.user_id == employee.user_id).first()
+        user_mapping = db.query(Employee).filter(Employee.user_id == employee.user_id, Employee.tenant_id == tenant_id).first()
         if user_mapping:
             raise HTTPException(status_code=400, detail="IAM user is already linked to an employee")
 
     db_employee = Employee(
         id=str(uuid4()),
-        tenant_id=employee.tenant_id,
+        tenant_id=tenant_id,
         employee_number=employee.employee_number,
         user_id=employee.user_id,
         branch_id=employee.branch_id,
@@ -262,10 +285,11 @@ async def list_employees(
     skip: int = Query(0),
     limit: int = Query(50),
     db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
 ):
-    query = db.query(Employee)
-    if tenant_id:
-        query = query.filter(Employee.tenant_id == tenant_id)
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    branch_id = _resolve_branch_id(branch_id, user_claims)
+    query = db.query(Employee).filter(Employee.tenant_id == tenant_id)
     if branch_id:
         query = query.filter(Employee.branch_id == branch_id)
     if department:
@@ -279,20 +303,30 @@ async def list_employees(
 
 
 @app.get("/employees/{employee_id}", response_model=EmployeeResponse)
-async def get_employee(employee_id: str, db: Session = Depends(get_db)):
-    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+async def get_employee(
+    employee_id: str,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    employee = db.query(Employee).filter(Employee.id == employee_id, Employee.tenant_id == tenant_id).first()
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     return employee
 
 
 @app.post("/payroll/runs", response_model=PayrollRunResponse)
-async def create_payroll_run(payload: PayrollRunCreate, db: Session = Depends(get_db)):
+async def create_payroll_run(
+    payload: PayrollRunCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
     if payload.period_end < payload.period_start:
         raise HTTPException(status_code=400, detail="period_end must be after period_start")
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
     run = PayrollRun(
         id=str(uuid4()),
-        tenant_id=payload.tenant_id,
+        tenant_id=tenant_id,
         run_name=payload.run_name or f"Payroll {payload.period_start.date()} to {payload.period_end.date()}",
         period_start=payload.period_start,
         period_end=payload.period_end,
@@ -305,10 +339,12 @@ async def create_payroll_run(payload: PayrollRunCreate, db: Session = Depends(ge
 
 @app.get("/payroll/runs", response_model=List[PayrollRunResponse])
 async def list_payroll_runs(
-    tenant_id: str = Query(...),
+    tenant_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
 ):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
     query = db.query(PayrollRun).filter(PayrollRun.tenant_id == tenant_id)
     if status:
         query = query.filter(PayrollRun.status == status)
@@ -316,13 +352,19 @@ async def list_payroll_runs(
 
 
 @app.post("/payroll/runs/{run_id}/slips", response_model=PayrollSlipResponse)
-async def add_payroll_slip(run_id: str, payload: PayrollSlipCreate, db: Session = Depends(get_db)):
-    run = _payroll_run(run_id, payload.tenant_id, db)
+async def add_payroll_slip(
+    run_id: str,
+    payload: PayrollSlipCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    run = _payroll_run(run_id, tenant_id, db)
     if run.status != "draft":
         raise HTTPException(status_code=400, detail="Only draft payroll runs can be edited")
     employee = (
         db.query(Employee)
-        .filter(Employee.id == payload.employee_id, Employee.tenant_id == payload.tenant_id)
+        .filter(Employee.id == payload.employee_id, Employee.tenant_id == tenant_id)
         .first()
     )
     if not employee:
@@ -367,7 +409,13 @@ async def add_payroll_slip(run_id: str, payload: PayrollSlipCreate, db: Session 
 
 
 @app.get("/payroll/runs/{run_id}/slips", response_model=List[PayrollSlipResponse])
-async def list_payroll_slips(run_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+async def list_payroll_slips(
+    run_id: str,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
     _payroll_run(run_id, tenant_id, db)
     return (
         db.query(PayrollSlip)
@@ -378,7 +426,13 @@ async def list_payroll_slips(run_id: str, tenant_id: str = Query(...), db: Sessi
 
 
 @app.post("/payroll/runs/{run_id}/finalize", response_model=PayrollRunResponse)
-async def finalize_payroll_run(run_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+async def finalize_payroll_run(
+    run_id: str,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
     run = _payroll_run(run_id, tenant_id, db)
     if run.status == "finalized":
         return run
@@ -397,11 +451,13 @@ async def finalize_payroll_run(run_id: str, tenant_id: str = Query(...), db: Ses
 
 @app.get("/payroll/summary")
 async def payroll_summary(
-    tenant_id: str = Query(...),
+    tenant_id: Optional[str] = Query(None),
     period_start: Optional[datetime] = Query(None),
     period_end: Optional[datetime] = Query(None),
     db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
 ):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
     query = db.query(PayrollRun).filter(PayrollRun.tenant_id == tenant_id)
     if period_start:
         query = query.filter(PayrollRun.period_end >= period_start)
@@ -419,8 +475,14 @@ async def payroll_summary(
 
 
 @app.put("/employees/{employee_id}", response_model=EmployeeResponse)
-async def update_employee(employee_id: str, update: EmployeeUpdate, db: Session = Depends(get_db)):
-    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+async def update_employee(
+    employee_id: str,
+    update: EmployeeUpdate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    employee = db.query(Employee).filter(Employee.id == employee_id, Employee.tenant_id == tenant_id).first()
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
 
@@ -447,8 +509,10 @@ async def assign_employee_branch(
     employee_id: str,
     branch_id: str = Query(...),
     db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
 ):
-    employee = db.query(Employee).filter(Employee.id == employee_id).first()
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    employee = db.query(Employee).filter(Employee.id == employee_id, Employee.tenant_id == tenant_id).first()
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     employee.branch_id = branch_id
