@@ -154,6 +154,56 @@ async def _run_accounting_test():
         voucher = voucher_response.json()
         assert voucher["status"] == "draft"
 
+        receipt_response = await client.post(
+            "/vouchers",
+            json={
+                "tenant_id": tenant_id,
+                "voucher_type": "receipt",
+                "description": "Customer cash receipt",
+                "reference": "RCPT-001",
+                "branch_id": "branch-001",
+                "payment_mode": "upi",
+                "payment_reference": "UPI-REF-1234",
+                "payment_details": {"note": "Receipt via UPI"},
+                "created_by": "tester",
+                "lines": [
+                    {"gl_account_id": expense_account["id"], "debit": 250.0, "credit": 0.0},
+                    {"gl_account_id": cash_account["id"], "debit": 0.0, "credit": 250.0},
+                ],
+            },
+        )
+        assert receipt_response.status_code == 200
+        receipt_voucher = receipt_response.json()
+        assert receipt_voucher["voucher_type"] == "receipt"
+        assert receipt_voucher["payment_mode"] == "upi"
+        assert receipt_voucher["payment_reference"] == "UPI-REF-1234"
+        assert receipt_voucher["payment_details"]["note"] == "Receipt via UPI"
+
+        receipt_verify_response = await client.post(
+            f"/vouchers/{receipt_voucher['id']}/verify",
+            json={"tenant_id": tenant_id, "performed_by": "verifier"},
+        )
+        assert receipt_verify_response.status_code == 200
+        assert receipt_verify_response.json()["status"] == "verified"
+        receipt_approve_response = await client.post(
+            f"/vouchers/{receipt_voucher['id']}/approve",
+            json={"tenant_id": tenant_id, "performed_by": "approver"},
+        )
+        assert receipt_approve_response.status_code == 200
+        assert receipt_approve_response.json()["status"] == "approved"
+        receipt_post_response = await client.post(
+            f"/vouchers/{receipt_voucher['id']}/post",
+            json={"tenant_id": tenant_id, "performed_by": "poster"},
+        )
+        assert receipt_post_response.status_code == 200
+        assert receipt_post_response.json()["posting_status"] == "posted"
+        receipt_reverse_response = await client.post(
+            f"/vouchers/{receipt_voucher['id']}/reverse",
+            json={"tenant_id": tenant_id, "performed_by": "reverser"},
+        )
+        assert receipt_reverse_response.status_code == 200
+        assert receipt_reverse_response.json()["status"] == "reversed"
+
         verify_response = await client.post(
             f"/vouchers/{voucher['id']}/verify",
             json={"tenant_id": tenant_id, "performed_by": "verifier"},

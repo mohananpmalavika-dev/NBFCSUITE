@@ -214,6 +214,9 @@ class Voucher(Base):
     verified_by = Column(String, nullable=True)
     approved_by = Column(String, nullable=True)
     posted_journal_entry_id = Column(String, ForeignKey("journal_entries.id"), nullable=True)
+    payment_mode = Column(String, nullable=True, index=True)
+    payment_reference = Column(String, nullable=True)
+    payment_details = Column(JSON, nullable=True)
     metadata_json = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
@@ -570,6 +573,18 @@ class VoucherLineCreate(BaseModel):
     profit_center: Optional[str] = None
 
 
+class VoucherLineResponse(BaseModel):
+    gl_account_id: str
+    debit: float
+    credit: float
+    description: Optional[str] = None
+    cost_center: Optional[str] = None
+    profit_center: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 class VoucherCreate(BaseModel):
     tenant_id: str
     voucher_type: str
@@ -578,6 +593,9 @@ class VoucherCreate(BaseModel):
     reference: Optional[str] = None
     branch_id: Optional[str] = None
     currency: Optional[str] = "INR"
+    payment_mode: Optional[str] = None
+    payment_reference: Optional[str] = None
+    payment_details: Optional[dict] = None
     created_by: Optional[str] = None
     metadata: Optional[dict] = None
     lines: List[VoucherLineCreate]
@@ -600,6 +618,13 @@ class VoucherResponse(BaseModel):
     currency: str
     status: str
     posted_journal_entry_id: Optional[str] = None
+    payment_mode: Optional[str] = None
+    payment_reference: Optional[str] = None
+    payment_details: Optional[dict] = None
+    created_by: Optional[str] = None
+    verified_by: Optional[str] = None
+    approved_by: Optional[str] = None
+    lines: List[VoucherLineResponse] = []
     metadata: Optional[dict] = None
 
     class Config:
@@ -1238,6 +1263,23 @@ def _voucher_response(voucher: Voucher) -> dict:
         "currency": voucher.currency,
         "status": voucher.status,
         "posted_journal_entry_id": voucher.posted_journal_entry_id,
+        "created_by": voucher.created_by,
+        "verified_by": voucher.verified_by,
+        "approved_by": voucher.approved_by,
+        "lines": [
+            {
+                "gl_account_id": line.gl_account_id,
+                "debit": line.debit,
+                "credit": line.credit,
+                "description": line.description,
+                "cost_center": line.cost_center,
+                "profit_center": line.profit_center,
+            }
+            for line in voucher.lines
+        ],
+        "payment_mode": voucher.payment_mode,
+        "payment_reference": voucher.payment_reference,
+        "payment_details": voucher.payment_details,
         "metadata": voucher.metadata_json,
     }
 
@@ -1856,6 +1898,10 @@ async def post_engine_transaction(request: PostingEngineRequest, db: Session = D
 async def create_voucher(voucher: VoucherCreate, db: Session = Depends(get_db)):
     if not voucher.tenant_id:
         raise HTTPException(status_code=400, detail="tenant_id is required")
+    if voucher.voucher_type == "receipt" and not voucher.payment_mode:
+        raise HTTPException(status_code=400, detail="payment_mode is required for receipt vouchers")
+    if voucher.voucher_type == "receipt" and voucher.payment_mode != "cash" and not voucher.payment_reference:
+        raise HTTPException(status_code=400, detail="payment_reference is required for non-cash receipt vouchers")
     engine_lines = [
         PostingEngineLine(
             gl_account_id=line.gl_account_id,
@@ -1885,6 +1931,9 @@ async def create_voucher(voucher: VoucherCreate, db: Session = Depends(get_db)):
         currency=voucher.currency or "INR",
         status="draft",
         created_by=voucher.created_by,
+        payment_mode=voucher.payment_mode,
+        payment_reference=voucher.payment_reference,
+        payment_details=voucher.payment_details,
         metadata_json=voucher.metadata,
     )
     db.add(new_voucher)
@@ -1902,7 +1951,7 @@ async def create_voucher(voucher: VoucherCreate, db: Session = Depends(get_db)):
                 profit_center=line.profit_center,
             )
         )
-    _log_audit(db, voucher.tenant_id, "voucher", new_voucher.id, "create", {"voucher_type": voucher.voucher_type}, voucher.created_by)
+    _log_audit(db, voucher.tenant_id, "voucher", new_voucher.id, "create", {"voucher_type": voucher.voucher_type, "payment_mode": voucher.payment_mode}, voucher.created_by)
     db.commit()
     db.refresh(new_voucher)
     return _voucher_response(new_voucher)

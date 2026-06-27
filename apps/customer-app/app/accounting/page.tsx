@@ -58,6 +58,17 @@ interface TrialBalanceRow {
   credit: number;
 }
 
+interface VoucherLine {
+  gl_account_id: string;
+  debit: number;
+  credit: number;
+  description?: string | null;
+  cost_center?: string | null;
+  profit_center?: string | null;
+}
+
+type PaymentMode = 'cash' | 'cheque' | 'upi' | 'rtgs' | 'neft' | 'imps';
+
 interface Voucher {
   id: string;
   voucher_number: string;
@@ -66,6 +77,11 @@ interface Voucher {
   reference?: string | null;
   status: string;
   posted_journal_entry_id?: string | null;
+  voucher_date?: string;
+  payment_mode?: PaymentMode | null;
+  payment_reference?: string | null;
+  payment_details?: Record<string, unknown> | null;
+  lines?: VoucherLine[];
 }
 
 interface LedgerRow {
@@ -222,10 +238,15 @@ export default function AccountingPage() {
     voucher_type: 'journal',
     description: '',
     reference: '',
-    debit_account_id: '',
-    credit_account_id: '',
-    amount: '0',
+    voucher_date: new Date().toISOString().slice(0, 10),
     branch_id: '',
+    payment_mode: 'cash' as PaymentMode,
+    payment_reference: '',
+    payment_details: { note: '' },
+    lines: [
+      { gl_account_id: '', debit: 0, credit: 0, description: '' },
+      { gl_account_id: '', debit: 0, credit: 0, description: '' },
+    ],
   });
   const [dayEndForm, setDayEndForm] = useState({
     business_date: new Date().toISOString().slice(0, 10),
@@ -288,9 +309,15 @@ export default function AccountingPage() {
   }
 
   const amount = Number(postingForm.amount || 0);
-  const voucherAmount = Number(voucherForm.amount || 0);
+  const voucherTotalDebit = voucherForm.lines.reduce((sum, line) => sum + Number(line.debit || 0), 0);
+  const voucherTotalCredit = voucherForm.lines.reduce((sum, line) => sum + Number(line.credit || 0), 0);
+  const voucherLinesComplete = voucherForm.lines.every((line) => line.gl_account_id && (line.debit > 0 || line.credit > 0));
+  const voucherBalanced = voucherTotalDebit === voucherTotalCredit && voucherTotalDebit > 0;
+  const isReceipt = voucherForm.voucher_type === 'receipt';
+  const receiptModeValid = !isReceipt || !!voucherForm.payment_mode;
+  const receiptReferenceValid = !isReceipt || voucherForm.payment_mode === 'cash' || !!voucherForm.payment_reference;
   const canPost = postingForm.debit_account_id && postingForm.credit_account_id && amount > 0;
-  const canCreateVoucher = voucherForm.debit_account_id && voucherForm.credit_account_id && voucherAmount > 0 && voucherForm.description;
+  const canCreateVoucher = voucherForm.description && voucherBalanced && voucherLinesComplete && receiptModeValid && receiptReferenceValid;
 
   if (isLoading || !token) {
     return <div className="p-8 text-center">Loading accounting data...</div>;
@@ -719,14 +746,32 @@ export default function AccountingPage() {
                         voucher_type: voucherForm.voucher_type,
                         description: voucherForm.description,
                         reference: voucherForm.reference,
+                        voucher_date: voucherForm.voucher_date,
                         branch_id: voucherForm.branch_id || undefined,
+                        payment_mode: voucherForm.voucher_type === 'receipt' ? voucherForm.payment_mode : undefined,
+                        payment_reference: voucherForm.voucher_type === 'receipt' ? voucherForm.payment_reference : undefined,
+                        payment_details: voucherForm.voucher_type === 'receipt' ? voucherForm.payment_details : undefined,
                         created_by: user?.username || 'system',
+                        lines: voucherForm.lines.map((line) => ({
+                          gl_account_id: line.gl_account_id,
+                          debit: Number(line.debit || 0),
+                          credit: Number(line.credit || 0),
+                          description: line.description || undefined,
+                        })),
+                      });
+                      setVoucherForm({
+                        ...voucherForm,
+                        description: '',
+                        reference: '',
+                        branch_id: '',
+                        payment_mode: 'cash',
+                        payment_reference: '',
+                        payment_details: { note: '' },
                         lines: [
-                          { gl_account_id: voucherForm.debit_account_id, debit: voucherAmount, credit: 0 },
-                          { gl_account_id: voucherForm.credit_account_id, debit: 0, credit: voucherAmount },
+                          { gl_account_id: '', debit: 0, credit: 0, description: '' },
+                          { gl_account_id: '', debit: 0, credit: 0, description: '' },
                         ],
                       });
-                      setVoucherForm({ ...voucherForm, description: '', reference: '', amount: '0' });
                     },
                     'Voucher created.',
                   );
@@ -741,19 +786,135 @@ export default function AccountingPage() {
                   <option value="credit_note">Credit Note</option>
                   <option value="debit_note">Debit Note</option>
                 </select>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" type="date" value={voucherForm.voucher_date} onChange={(e) => setVoucherForm({ ...voucherForm, voucher_date: e.target.value })} />
+                  <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" placeholder="Branch ID" value={voucherForm.branch_id} onChange={(e) => setVoucherForm({ ...voucherForm, branch_id: e.target.value })} />
+                </div>
                 <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" placeholder="Description" value={voucherForm.description} onChange={(e) => setVoucherForm({ ...voucherForm, description: e.target.value })} />
                 <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" placeholder="Reference" value={voucherForm.reference} onChange={(e) => setVoucherForm({ ...voucherForm, reference: e.target.value })} />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <select className="h-10 rounded-md border border-slate-300 px-3 text-sm" value={voucherForm.debit_account_id} onChange={(e) => setVoucherForm({ ...voucherForm, debit_account_id: e.target.value })}>
-                    <option value="">Debit account</option>
-                    {selectableAccounts.map((account) => <option key={account.id} value={account.id}>{accountLabel(account)}</option>)}
-                  </select>
-                  <select className="h-10 rounded-md border border-slate-300 px-3 text-sm" value={voucherForm.credit_account_id} onChange={(e) => setVoucherForm({ ...voucherForm, credit_account_id: e.target.value })}>
-                    <option value="">Credit account</option>
-                    {selectableAccounts.map((account) => <option key={account.id} value={account.id}>{accountLabel(account)}</option>)}
-                  </select>
+                {voucherForm.voucher_type === 'receipt' && (
+                  <div className="grid gap-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <select
+                        className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                        value={voucherForm.payment_mode}
+                        onChange={(e) => setVoucherForm({ ...voucherForm, payment_mode: e.target.value as PaymentMode })}
+                      >
+                        <option value="cash">Cash</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="upi">UPI</option>
+                        <option value="rtgs">RTGS</option>
+                        <option value="neft">NEFT</option>
+                        <option value="imps">IMPS</option>
+                      </select>
+                      <input
+                        className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                        placeholder={voucherForm.payment_mode === 'cash' ? 'Cash receipt note' : 'Transaction reference'}
+                        value={voucherForm.payment_reference}
+                        onChange={(e) => setVoucherForm({ ...voucherForm, payment_reference: e.target.value })}
+                      />
+                    </div>
+                    <input
+                      className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                      placeholder="Payment details (bank name, UPI ID, cheque number, notes)"
+                      value={voucherForm.payment_details.note}
+                      onChange={(e) => setVoucherForm({ ...voucherForm, payment_details: { ...voucherForm.payment_details, note: e.target.value } })}
+                    />
+                  </div>
+                )}
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-slate-900">Journal Lines</p>
+                    <button
+                      type="button"
+                      className="rounded-md border border-slate-300 bg-white px-3 py-1 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                      onClick={() => setVoucherForm({
+                        ...voucherForm,
+                        lines: [...voucherForm.lines, { gl_account_id: '', debit: 0, credit: 0, description: '' }],
+                      })}
+                    >
+                      Add line
+                    </button>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {voucherForm.lines.map((line, index) => (
+                      <div key={index} className="grid gap-3 sm:grid-cols-[1.3fr_1fr_1fr_1fr_auto] items-end">
+                        <select
+                          className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                          value={line.gl_account_id}
+                          onChange={(e) => {
+                            const gl_account_id = e.target.value;
+                            setVoucherForm({
+                              ...voucherForm,
+                              lines: voucherForm.lines.map((item, idx) => idx === index ? { ...item, gl_account_id } : item),
+                            });
+                          }}
+                        >
+                          <option value="">Select GL account</option>
+                          {selectableAccounts.map((account) => (
+                            <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                          ))}
+                        </select>
+                        <input
+                          className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                          type="number"
+                          placeholder="Debit"
+                          value={line.debit}
+                          onChange={(e) => {
+                            const debit = Number(e.target.value);
+                            setVoucherForm({
+                              ...voucherForm,
+                              lines: voucherForm.lines.map((item, idx) => idx === index ? { ...item, debit, credit: debit > 0 ? 0 : item.credit } : item),
+                            });
+                          }}
+                        />
+                        <input
+                          className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                          type="number"
+                          placeholder="Credit"
+                          value={line.credit}
+                          onChange={(e) => {
+                            const credit = Number(e.target.value);
+                            setVoucherForm({
+                              ...voucherForm,
+                              lines: voucherForm.lines.map((item, idx) => idx === index ? { ...item, credit, debit: credit > 0 ? 0 : item.debit } : item),
+                            });
+                          }}
+                        />
+                        <input
+                          className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                          placeholder="Line description"
+                          value={line.description}
+                          onChange={(e) => {
+                            const description = e.target.value;
+                            setVoucherForm({
+                              ...voucherForm,
+                              lines: voucherForm.lines.map((item, idx) => idx === index ? { ...item, description } : item),
+                            });
+                          }}
+                        />
+                        <button
+                          type="button"
+                          disabled={voucherForm.lines.length <= 2}
+                          className="h-10 rounded-md border border-slate-300 bg-slate-100 px-3 text-sm text-slate-700 hover:bg-slate-200 disabled:opacity-50"
+                          onClick={() => setVoucherForm({
+                            ...voucherForm,
+                            lines: voucherForm.lines.filter((_, idx) => idx !== index),
+                          })}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-sm text-slate-700">
+                    <span>Total Debit: {money(voucherTotalDebit)}</span>
+                    <span>Total Credit: {money(voucherTotalCredit)}</span>
+                    <span className={voucherBalanced ? 'text-emerald-700' : 'text-rose-700'}>
+                      {voucherBalanced ? 'Balanced' : 'Not balanced'}
+                    </span>
+                  </div>
                 </div>
-                <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" type="number" value={voucherForm.amount} onChange={(e) => setVoucherForm({ ...voucherForm, amount: e.target.value })} />
                 <button disabled={!!busyAction || !canCreateVoucher} className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50">
                   {busyAction === 'voucher' ? 'Saving...' : 'Create Voucher'}
                 </button>
@@ -777,7 +938,7 @@ export default function AccountingPage() {
                           <p className="text-slate-500">{voucher.description}</p>
                         </td>
                         <td className="px-3 py-2 text-slate-700">{voucher.voucher_type}</td>
-                        <td className="px-3 py-2 text-slate-700">{voucher.status}</td>
+                        <td className="px-3 py-2 text-slate-700">{voucher.status}{voucher.payment_mode ? ` · ${voucher.payment_mode.toUpperCase()}` : ''}</td>
                         <td className="px-3 py-2">
                           <div className="flex flex-wrap gap-2">
                             {voucher.status === 'draft' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('verify', () => apiClient.verifyVoucher(voucher.id, tenantId, user?.username), 'Voucher verified.')}>Verify</button>}
@@ -785,6 +946,12 @@ export default function AccountingPage() {
                             {voucher.status === 'approved' && <button className="rounded-md bg-blue-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('post-voucher', () => apiClient.postVoucher(voucher.id, tenantId, user?.username), 'Voucher posted.')}>Post</button>}
                             {voucher.status === 'posted' && <button className="rounded-md bg-rose-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('reverse-voucher', () => apiClient.reverseVoucher(voucher.id, tenantId, user?.username), 'Voucher reversed.')}>Reverse</button>}
                           </div>
+                          {voucher.posted_journal_entry_id && (
+                            <p className="mt-2 text-xs text-slate-500">Journal: {voucher.posted_journal_entry_id}</p>
+                          )}
+                          {voucher.payment_reference && (
+                            <p className="mt-1 text-xs text-slate-500">Payment Ref: {voucher.payment_reference}</p>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -374,6 +374,8 @@ export interface PostingRulePayload {
   lines?: PostingRuleLinePayload[];
 }
 
+export type PaymentMode = 'cash' | 'cheque' | 'upi' | 'rtgs' | 'neft' | 'imps';
+
 export interface AccountingPostingLine {
   gl_account_id?: string;
   account_code?: string;
@@ -409,6 +411,9 @@ export interface VoucherPayload {
   reference?: string;
   branch_id?: string;
   currency?: string;
+  payment_mode?: PaymentMode;
+  payment_reference?: string;
+  payment_details?: JsonObject;
   created_by?: string;
   metadata?: JsonObject;
   lines: AccountingPostingLine[];
