@@ -50,11 +50,14 @@ async def main():
                 {'gl_account_id': cash_account['id'], 'debit': 0.0, 'credit': 250.0},
             ],
         })
+        print('payment create', voucher_response.status_code, voucher_response.text)
         voucher = voucher_response.json()
-        await client.post(f"/vouchers/{voucher['id']}/verify", json={'tenant_id': tenant_id, 'performed_by': 'verifier'})
-        await client.post(f"/vouchers/{voucher['id']}/approve", json={'tenant_id': tenant_id, 'performed_by': 'approver'})
+        verify_response = await client.post(f"/vouchers/{voucher['id']}/verify", json={'tenant_id': tenant_id, 'performed_by': 'verifier'})
+        print('verify', verify_response.status_code, verify_response.text)
+        approve_response = await client.post(f"/vouchers/{voucher['id']}/approve", json={'tenant_id': tenant_id, 'performed_by': 'approver'})
+        print('approve', approve_response.status_code, approve_response.text)
         post_response = await client.post(f"/vouchers/{voucher['id']}/post", json={'tenant_id': tenant_id, 'performed_by': 'poster'})
-        print('payment_post', post_response.status_code, post_response.text)
+        print('payment post', post_response.status_code, post_response.text)
 
         receipt_response = await client.post('/vouchers', json={
             'tenant_id': tenant_id,
@@ -71,18 +74,20 @@ async def main():
                 {'gl_account_id': cash_account['id'], 'debit': 0.0, 'credit': 250.0},
             ],
         })
+        print('receipt create', receipt_response.status_code, receipt_response.text)
         receipt_voucher = receipt_response.json()
-        await client.post(f"/vouchers/{receipt_voucher['id']}/verify", json={'tenant_id': tenant_id, 'performed_by': 'verifier'})
-        await client.post(f"/vouchers/{receipt_voucher['id']}/approve", json={'tenant_id': tenant_id, 'performed_by': 'approver'})
-        receipt_post = await client.post(f"/vouchers/{receipt_voucher['id']}/post", json={'tenant_id': tenant_id, 'performed_by': 'poster'})
-        print('receipt_post', receipt_post.status_code, receipt_post.text)
-        receipt_reverse = await client.post(f"/vouchers/{receipt_voucher['id']}/reverse", json={'tenant_id': tenant_id, 'performed_by': 'reverser'})
-        print('receipt_reverse', receipt_reverse.status_code, receipt_reverse.text)
+        verify_response = await client.post(f"/vouchers/{receipt_voucher['id']}/verify", json={'tenant_id': tenant_id, 'performed_by': 'verifier'})
+        approve_response = await client.post(f"/vouchers/{receipt_voucher['id']}/approve", json={'tenant_id': tenant_id, 'performed_by': 'approver'})
+        post_response = await client.post(f"/vouchers/{receipt_voucher['id']}/post", json={'tenant_id': tenant_id, 'performed_by': 'poster'})
+        print('receipt post', post_response.status_code, post_response.text)
+        reverse_response = await client.post(f"/vouchers/{receipt_voucher['id']}/reverse", json={'tenant_id': tenant_id, 'performed_by': 'reverser'})
+        print('receipt reverse', reverse_response.status_code, reverse_response.text)
 
-        payment_reverse = await client.post(f"/vouchers/{voucher['id']}/reverse", json={'tenant_id': tenant_id, 'performed_by': 'reverser'})
-        print('payment_reverse', payment_reverse.status_code, payment_reverse.text)
+        payment_reverse_response = await client.post(f"/vouchers/{voucher['id']}/reverse", json={'tenant_id': tenant_id, 'performed_by': 'reverser'})
+        print('payment reverse', payment_reverse_response.status_code, payment_reverse_response.text)
 
         ledger_response = await client.get('/gl-ledger', params={'tenant_id': tenant_id})
-        print('ledger', ledger_response.json())
+        print('ledger', ledger_response.status_code, ledger_response.json())
 
-asyncio.run(main())
+if __name__ == '__main__':
+    asyncio.run(main())

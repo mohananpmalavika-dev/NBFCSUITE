@@ -2324,6 +2324,8 @@ async def reverse_gl_posting(
         source_module=original.source_module,
         source_event=f"{original.source_event or 'journal'}.reversal",
         source_reference=original.source_reference,
+        branch_id=original.branch_id,
+        financial_year=original.financial_year or _current_financial_year(original.entry_date),
     )
     db.add(reversal)
 
@@ -2335,17 +2337,28 @@ async def reverse_gl_posting(
         )
         if not account:
             raise HTTPException(status_code=404, detail="GL account not found for tenant")
-        db.add(
-            JournalLine(
-                id=str(uuid4()),
-                journal_entry_id=reversal.id,
-                gl_account_id=line.gl_account_id,
-                debit=line.credit,
-                credit=line.debit,
-                description=f"Reversal of {line.id}",
-            )
+        journal_line = JournalLine(
+            id=str(uuid4()),
+            journal_entry_id=reversal.id,
+            gl_account_id=line.gl_account_id,
+            debit=line.credit,
+            credit=line.debit,
+            currency=line.currency or account.currency or "INR",
+            branch_id=line.branch_id or original.branch_id,
+            description=f"Reversal of {line.id}",
         )
+        db.add(journal_line)
         account.balance += (line.credit or 0.0) - (line.debit or 0.0)
+        _update_gl_balance(
+            db=db,
+            tenant_id=tenant_id,
+            account=account,
+            debit=journal_line.debit or 0.0,
+            credit=journal_line.credit or 0.0,
+            branch_id=journal_line.branch_id,
+            currency=journal_line.currency,
+            financial_year=reversal.financial_year,
+        )
 
     original.posting_status = "reversed"
     db.commit()
