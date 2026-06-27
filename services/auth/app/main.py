@@ -11,7 +11,14 @@ from app.models import (
     Permission,
     UserSession,
     APIKey,
+    Device,
+    UserGroup,
+    LoginHistory,
+    AuditLog,
+    OTPCode,
+    AttributePolicy,
     OAuthClient,
+    OAuthAuthorizationCode,
     ExternalIdentityProvider,
     ApprovalRule,
     TenantConfiguration,
@@ -34,12 +41,23 @@ from app.schemas import (
     OAuthClientCreate,
     OAuthClient as OAuthClientSchema,
     OAuthClientResponse,
+    OAuthAuthorizeRequest,
+    OAuthAuthorizeResponse,
+    OAuthTokenRequest,
     ExternalIdentityProviderCreate,
     ExternalIdentityProvider as ExternalIdentityProviderSchema,
     ApprovalRuleCreate,
     ApprovalRule as ApprovalRuleSchema,
     TenantConfigurationCreate,
     TenantConfiguration as TenantConfigurationSchema,
+    UserGroupCreate,
+    UserGroup as UserGroupSchema,
+    LoginHistory as LoginHistorySchema,
+    AuditLog as AuditLogSchema,
+    OTPRequest,
+    OTPVerify,
+    AttributePolicyBase,
+    AttributePolicy as AttributePolicySchema,
 )
 from app.security import (
     hash_password,
@@ -49,6 +67,8 @@ from app.security import (
     hash_secret,
     verify_secret,
     generate_secret,
+    create_otp_code,
+    verify_otp_code,
 )
 
 app = FastAPI(title="auth-service", version="0.1.0")
@@ -87,6 +107,7 @@ def _token_payload(user: User, token_type: str = "access") -> dict:
         "region_id": user.region_id,
         "area_id": user.area_id,
         "branch_id": user.branch_id,
+        "access_branch_ids": user.access_branch_ids,
     }
 
 
@@ -399,6 +420,9 @@ async def create_user(user_data: UserCreate, db: Session = Depends(get_db)):
         region_id=user_data.region_id,
         area_id=user_data.area_id,
         branch_id=user_data.branch_id,
+        access_branch_ids=user_data.access_branch_ids,
+        mfa_enabled=user_data.mfa_enabled or False,
+        mfa_method=user_data.mfa_method,
     )
 
     if hasattr(user_data, "roles") and user_data.roles:
@@ -451,6 +475,12 @@ async def update_user(
         user.area_id = payload.area_id
     if payload.branch_id is not None:
         user.branch_id = payload.branch_id
+    if payload.access_branch_ids is not None:
+        user.access_branch_ids = payload.access_branch_ids
+    if payload.mfa_enabled is not None:
+        user.mfa_enabled = payload.mfa_enabled
+    if payload.mfa_method is not None:
+        user.mfa_method = payload.mfa_method
     if payload.roles is not None:
         if "admin" not in [role.name for role in current_user.roles] and current_user.id != user.id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to assign roles")
@@ -551,6 +581,215 @@ async def remove_permission_from_role(role_id: str, permission_id: str, db: Sess
     db.commit()
     db.refresh(role)
     return role
+
+
+@app.post("/auth/groups", response_model=UserGroupSchema)
+async def create_group(payload: UserGroupCreate, current_user: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
+    if db.query(UserGroup).filter(UserGroup.name == payload.name).first():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Group already exists")
+    group = UserGroup(name=payload.name, description=payload.description)
+    db.add(group)
+    db.commit()
+    db.refresh(group)
+    return group
+
+
+@app.get("/auth/groups", response_model=list[UserGroupSchema])
+async def list_groups(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(UserGroup).all()
+
+
+@app.post("/auth/groups/{group_id}/users/{user_id}")
+async def add_user_to_group(group_id: str, user_id: str, current_user: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
+    group = db.query(UserGroup).filter(UserGroup.id == group_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
+    if not group or not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group or user not found")
+    if user not in group.users:
+        group.users.append(user)
+        db.commit()
+    return {"detail": "User added to group"}
+
+
+@app.delete("/auth/groups/{group_id}/users/{user_id}")
+async def remove_user_from_group(group_id: str, user_id: str, current_user: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
+    group = db.query(UserGroup).filter(UserGroup.id == group_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
+    if not group or not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group or user not found")
+    if user in group.users:
+        group.users.remove(user)
+        db.commit()
+    return {"detail": "User removed from group"}
+
+
+@app.get("/auth/users/{user_id}/groups", response_model=list[UserGroupSchema])
+async def list_user_groups(user_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if current_user.id != user.id and "admin" not in [role.name for role in current_user.roles]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this user's groups")
+    return user.groups
+
+
+@app.get("/auth/users/{user_id}/login-history", response_model=list[LoginHistorySchema])
+async def list_login_history(user_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.id != user_id and "admin" not in [role.name for role in current_user.roles]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view login history")
+    return db.query(LoginHistory).filter(LoginHistory.user_id == user_id).order_by(LoginHistory.created_at.desc()).all()
+
+
+@app.get("/auth/audit-logs", response_model=list[AuditLogSchema])
+async def list_audit_logs(current_user: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
+    return db.query(AuditLog).order_by(AuditLog.created_at.desc()).all()
+
+
+@app.post("/auth/otp/request")
+async def request_otp(payload: OTPRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == payload.user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    code, hashed_code = create_otp_code(user.id, payload.purpose)
+    otp = OTPCode(
+        user_id=user.id,
+        code_hash=hashed_code,
+        purpose=payload.purpose,
+        expires_at=datetime.utcnow() + timedelta(minutes=10),
+    )
+    db.add(otp)
+    db.commit()
+    return {"detail": "OTP generated", "otp_code": code}
+
+
+@app.post("/auth/otp/verify")
+async def verify_otp(payload: OTPVerify, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    otp = (
+        db.query(OTPCode)
+        .filter(OTPCode.user_id == payload.user_id, OTPCode.purpose == payload.purpose, OTPCode.is_used == False)
+        .order_by(OTPCode.created_at.desc())
+        .first()
+    )
+    if not otp:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OTP not found")
+    if otp.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP expired")
+    if not verify_otp_code(payload.code, otp.code_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid OTP")
+    otp.is_used = True
+    db.commit()
+    return {"detail": "OTP verified"}
+
+
+@app.post("/auth/policies", response_model=AttributePolicySchema)
+async def create_attribute_policy(payload: AttributePolicyBase, current_user: User = Depends(require_role("admin")), db: Session = Depends(get_db)):
+    policy = AttributePolicy(
+        tenant_id=current_user.tenant_id,
+        resource_type=payload.resource_type,
+        action=payload.action,
+        conditions=payload.conditions,
+        effect=payload.effect or "allow",
+        created_at=datetime.utcnow(),
+    )
+    db.add(policy)
+    db.commit()
+    db.refresh(policy)
+    return policy
+
+
+@app.get("/auth/policies", response_model=list[AttributePolicySchema])
+async def list_attribute_policies(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return db.query(AttributePolicy).all()
+
+
+@app.post("/auth/oauth/authorize", response_model=OAuthAuthorizeResponse)
+async def oauth_authorize(
+    payload: OAuthAuthorizeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    client = db.query(OAuthClient).filter(OAuthClient.client_id == payload.client_id, OAuthClient.is_active == True).first()
+    if not client:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OAuth client not found")
+    if payload.redirect_uri not in (client.redirect_uris or []):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid redirect URI")
+
+    if payload.scope:
+        allowed_scopes = client.scopes or []
+        if any(scope not in allowed_scopes for scope in payload.scope):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Requested scope is not allowed")
+
+    code = generate_secret(24)
+    auth_code = OAuthAuthorizationCode(
+        code=code,
+        client_id=client.client_id,
+        user_id=current_user.id,
+        redirect_uri=payload.redirect_uri,
+        scope=payload.scope,
+        expires_at=datetime.utcnow() + timedelta(minutes=10),
+        used=False,
+        created_at=datetime.utcnow(),
+    )
+    db.add(auth_code)
+    db.commit()
+    db.refresh(auth_code)
+    return OAuthAuthorizeResponse(
+        code=auth_code.code,
+        redirect_uri=auth_code.redirect_uri,
+        state=payload.state,
+        expires_at=auth_code.expires_at,
+    )
+
+
+@app.post("/auth/oauth/token", response_model=TokenResponse)
+async def oauth_token(payload: OAuthTokenRequest, db: Session = Depends(get_db)):
+    if payload.grant_type != "authorization_code":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported grant type")
+
+    client = db.query(OAuthClient).filter(OAuthClient.client_id == payload.client_id, OAuthClient.is_active == True).first()
+    if not client or not verify_secret(payload.client_secret, client.client_secret_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid client credentials")
+
+    auth_code = (
+        db.query(OAuthAuthorizationCode)
+        .filter(OAuthAuthorizationCode.code == payload.code, OAuthAuthorizationCode.used == False)
+        .first()
+    )
+    if not auth_code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Authorization code not found or already used")
+    if auth_code.client_id != client.client_id or auth_code.redirect_uri != payload.redirect_uri:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Authorization code mismatch")
+    if auth_code.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Authorization code expired")
+
+    user = db.query(User).filter(User.id == auth_code.user_id).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
+
+    auth_code.used = True
+    db.commit()
+
+    access_token = create_access_token(data=_token_payload(user, "access"))
+    refresh_token = create_access_token(
+        data=_token_payload(user, "refresh"),
+        expires_delta=timedelta(days=settings.refresh_token_expire_days),
+    )
+
+    session = UserSession(
+        user_id=user.id,
+        refresh_token_hash=hash_secret(refresh_token),
+        device_name="oauth-client",
+        device_type="oauth",
+        ip_address=None,
+        created_at=datetime.utcnow(),
+        expires_at=datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days),
+        last_used_at=datetime.utcnow(),
+        is_active=True,
+    )
+    db.add(session)
+    db.commit()
+
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
 
 @app.get("/auth/sessions", response_model=list[UserSessionSchema])

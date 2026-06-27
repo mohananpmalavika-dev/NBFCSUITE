@@ -40,6 +40,16 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
+def create_otp_code(user_id: str, purpose: str, expire_minutes: int = 10) -> tuple[str, str]:
+    code = str(secrets.randbelow(10**6)).zfill(6)
+    hashed = hash_secret(code)
+    return code, hashed
+
+
+def verify_otp_code(raw_code: str, hashed_code: str) -> bool:
+    return verify_secret(raw_code, hashed_code)
+
+
 def decode_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])

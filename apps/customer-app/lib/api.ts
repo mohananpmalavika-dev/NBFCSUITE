@@ -304,6 +304,28 @@ export const apiClient = {
     axiosInstance.post(`/auth/approval-rules`, data),
   listApprovalRules: () =>
     axiosInstance.get(`/auth/approval-rules`),
+  createGroup: (data: { name: string; description?: string }) =>
+    axiosInstance.post(`/auth/groups`, data),
+  listGroups: () =>
+    axiosInstance.get(`/auth/groups`),
+  addUserToGroup: (groupId: string, userId: string) =>
+    axiosInstance.post(`/auth/groups/${groupId}/users/${userId}`),
+  removeUserFromGroup: (groupId: string, userId: string) =>
+    axiosInstance.delete(`/auth/groups/${groupId}/users/${userId}`),
+  listUserGroups: (userId: string) =>
+    axiosInstance.get(`/auth/users/${userId}/groups`),
+  listLoginHistory: (userId: string) =>
+    axiosInstance.get(`/auth/users/${userId}/login-history`),
+  listAuditLogs: () =>
+    axiosInstance.get(`/auth/audit-logs`),
+  requestOtp: (data: { user_id: string; purpose: string }) =>
+    axiosInstance.post(`/auth/otp/request`, data),
+  verifyOtp: (data: { user_id: string; code: string; purpose: string }) =>
+    axiosInstance.post(`/auth/otp/verify`, data),
+  createAttributePolicy: (data: { resource_type: string; action: string; conditions?: Record<string, unknown>; effect?: string }) =>
+    axiosInstance.post(`/auth/policies`, data),
+  listAttributePolicies: () =>
+    axiosInstance.get(`/auth/policies`),
 
   // Customer Service
   getCustomer: (customerId: string) =>

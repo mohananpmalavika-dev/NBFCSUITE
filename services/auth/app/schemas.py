@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 
 class PermissionBase(BaseModel):
@@ -45,6 +45,9 @@ class UserBase(BaseModel):
     region_id: Optional[str] = None
     area_id: Optional[str] = None
     branch_id: Optional[str] = None
+    access_branch_ids: Optional[List[str]] = None
+    mfa_enabled: Optional[bool] = None
+    mfa_method: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -61,6 +64,9 @@ class UserUpdate(BaseModel):
     region_id: Optional[str] = None
     area_id: Optional[str] = None
     branch_id: Optional[str] = None
+    access_branch_ids: Optional[List[str]] = None
+    mfa_enabled: Optional[bool] = None
+    mfa_method: Optional[str] = None
     roles: Optional[List[str]] = None
 
 
@@ -68,8 +74,12 @@ class User(UserBase):
     id: str
     is_active: bool
     created_at: datetime
+    updated_at: datetime
     roles: List[Role] = []
     permissions: List[str] = []
+    groups: List[UserGroup] = []
+    access_branch_ids: Optional[List[str]] = None
+    last_login_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -118,6 +128,83 @@ class APIKeyResponse(APIKey):
     key: str
 
 
+class UserGroupBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class UserGroupCreate(UserGroupBase):
+    pass
+
+
+class UserGroup(UserGroupBase):
+    id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class LoginHistoryBase(BaseModel):
+    event_type: str
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    success: Optional[bool] = True
+    details: Optional[Dict[str, Any]] = None
+
+
+class LoginHistory(LoginHistoryBase):
+    id: str
+    user_id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AuditLogBase(BaseModel):
+    action: str
+    resource: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None
+    tenant_id: Optional[str] = None
+
+
+class AuditLog(AuditLogBase):
+    id: str
+    user_id: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class OTPRequest(BaseModel):
+    user_id: str
+    purpose: str
+
+
+class OTPVerify(BaseModel):
+    user_id: str
+    code: str
+    purpose: str
+
+
+class AttributePolicyBase(BaseModel):
+    resource_type: str
+    action: str
+    conditions: Optional[Dict[str, Any]] = None
+    effect: Optional[str] = "allow"
+
+
+class AttributePolicy(AttributePolicyBase):
+    id: str
+    tenant_id: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class OAuthClientBase(BaseModel):
     name: str
     redirect_uris: Optional[List[str]] = None
@@ -144,6 +231,28 @@ class OAuthClientResponse(OAuthClient):
 
     class Config:
         from_attributes = True
+
+
+class OAuthAuthorizeRequest(BaseModel):
+    client_id: str
+    redirect_uri: str
+    scope: Optional[List[str]] = None
+    state: Optional[str] = None
+
+
+class OAuthAuthorizeResponse(BaseModel):
+    code: str
+    redirect_uri: str
+    state: Optional[str] = None
+    expires_at: datetime
+
+
+class OAuthTokenRequest(BaseModel):
+    client_id: str
+    client_secret: str
+    code: str
+    redirect_uri: str
+    grant_type: str = "authorization_code"
 
 
 class ExternalIdentityProviderBase(BaseModel):

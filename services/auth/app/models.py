@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Table, JSON
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Table, JSON, Integer
 from sqlalchemy.orm import declarative_base, relationship
 from datetime import datetime
 from uuid import uuid4
@@ -20,6 +20,13 @@ role_permissions = Table(
     Column('permission_id', String, ForeignKey('permissions.id'))
 )
 
+user_groups = Table(
+    'user_groups',
+    Base.metadata,
+    Column('user_id', String, ForeignKey('users.id')),
+    Column('group_id', String, ForeignKey('groups.id'))
+)
+
 
 class User(Base):
     __tablename__ = "users"
@@ -35,13 +42,22 @@ class User(Base):
     region_id = Column(String, nullable=True, index=True)
     area_id = Column(String, nullable=True, index=True)
     branch_id = Column(String, nullable=True, index=True)
+    access_branch_ids = Column(JSON, nullable=True)
+    mfa_enabled = Column(Boolean, default=False)
+    mfa_method = Column(String, nullable=True)
+    mfa_secret = Column(String, nullable=True)
+    last_login_at = Column(DateTime, nullable=True)
+    failed_login_attempts = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     roles = relationship("Role", secondary=user_roles, back_populates="users")
+    groups = relationship("UserGroup", secondary=user_groups, back_populates="users")
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
     devices = relationship("Device", back_populates="user", cascade="all, delete-orphan")
+    login_history = relationship("LoginHistory", back_populates="user", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
 
     @property
     def permissions(self):
@@ -118,6 +134,88 @@ class Device(Base):
     metadata = Column(JSON, nullable=True)
 
     user = relationship("User", back_populates="devices")
+
+
+class UserGroup(Base):
+    __tablename__ = "groups"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    name = Column(String, unique=True, nullable=False)
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    users = relationship("User", secondary=user_groups, back_populates="groups")
+
+
+class LoginHistory(Base):
+    __tablename__ = "login_history"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    user_id = Column(String, ForeignKey('users.id'), nullable=False)
+    event_type = Column(String, nullable=False)
+    ip_address = Column(String, nullable=True)
+    user_agent = Column(String, nullable=True)
+    success = Column(Boolean, default=True)
+    details = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="login_history")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    user_id = Column(String, ForeignKey('users.id'), nullable=True)
+    action = Column(String, nullable=False)
+    resource = Column(String, nullable=True)
+    details = Column(JSON, nullable=True)
+    tenant_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="audit_logs")
+
+
+class OTPCode(Base):
+    __tablename__ = "otp_codes"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    user_id = Column(String, ForeignKey('users.id'), nullable=False)
+    code_hash = Column(String, nullable=False)
+    purpose = Column(String, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    is_used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+
+
+class AttributePolicy(Base):
+    __tablename__ = "attribute_policies"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    tenant_id = Column(String, nullable=True)
+    resource_type = Column(String, nullable=False)
+    action = Column(String, nullable=False)
+    conditions = Column(JSON, nullable=True)
+    effect = Column(String, nullable=False, default="allow")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class OAuthAuthorizationCode(Base):
+    __tablename__ = "oauth_authorization_codes"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    code = Column(String, unique=True, nullable=False)
+    client_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey('users.id'), nullable=False)
+    redirect_uri = Column(String, nullable=False)
+    scope = Column(JSON, nullable=True)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
 
 
 class OAuthClient(Base):
