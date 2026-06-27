@@ -126,6 +126,14 @@ class FinancialProfileRequest(BaseModel):
     credit_score: Optional[int] = None
 
 
+class BankingProfileRequest(BaseModel):
+    primary_bank_account_number: Optional[str] = None
+    primary_bank_ifsc: Optional[str] = None
+    primary_bank_name: Optional[str] = None
+    primary_account_type: Optional[str] = None
+    average_balance: Optional[float] = None
+
+
 class ApprovalActionRequest(BaseModel):
     approved: bool
     comments: Optional[str] = None
@@ -300,10 +308,10 @@ async def create_basic_details(
 @router.post("/customer/{customer_id}/identity-document", status_code=201)
 async def upload_identity_document(
     customer_id: str,
-    document_type: str = Query(...),
+    document_type: str = Form(...),
     file: UploadFile = File(...),
-    document_number: Optional[str] = Query(None),
-    expiry_date: Optional[date] = Query(None),
+    document_number: Optional[str] = Form(None),
+    expiry_date: Optional[date] = Form(None),
     db: Session = Depends(get_db)
 ):
     """Stage 4 - Upload identity document with OCR"""
@@ -525,6 +533,40 @@ async def add_financial_profile(
         "profile_id": profile.id,
         "annual_income": request.annual_income,
         "message": "Financial profile added successfully"
+    }
+
+
+# ============================================================================
+# STAGE 11: BANKING PROFILE
+# ============================================================================
+
+@router.post("/customer/{customer_id}/banking-profile", status_code=201)
+async def add_banking_profile(
+    customer_id: str,
+    request: BankingProfileRequest,
+    db: Session = Depends(get_db)
+):
+    """Stage 11 - Add customer banking profile"""
+    from .models_cif import CustomerBankingProfile
+    import uuid
+
+    customer = db.query(Customer).filter(Customer.id == customer_id).first()
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    banking = CustomerBankingProfile(
+        id=str(uuid.uuid4()),
+        customer_id=customer_id,
+        **request.dict()
+    )
+    db.add(banking)
+    db.commit()
+    
+    return {
+        "success": True,
+        "banking_profile_id": banking.id,
+        "primary_bank_name": request.primary_bank_name,
+        "message": "Banking profile added successfully"
     }
 
 

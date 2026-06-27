@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 const dashboardCards = [
+  { title: '🆔 CIF Onboarding', value: '18-stage customer onboarding process', href: '/cif-onboarding', featured: true },
   { title: 'Loans', value: 'Applications and accounts', href: '/loans' },
   { title: 'Deposits', value: 'Savings, FD/RD and statements', href: '/deposits' },
   { title: 'Payments', value: 'EMI history and collection', href: '/payments' },
   { title: 'Branch Portal', value: 'CIF, underwriting and disbursement queue', href: '/branch' },
   { title: 'Documents', value: 'KYC and expiry tracking', href: '/documents' },
   { title: 'Profile', value: 'Customer 360 and risk', href: '/profile' },
-  { title: 'Branch Portal', value: 'CIF, LOS and LMS operations', href: '/branch' },
+  { title: 'Customer 360', value: 'Complete customer view with all products', href: '/customer-360', featured: true },
   { title: 'Executive', value: 'Portfolio and AI risk summary', href: '/executive' },
   { title: 'Apply Loan', value: 'New loan request', href: '/apply-loan' },
   { title: 'Settings', value: 'Preferences and security', href: '/settings' },
@@ -44,15 +45,23 @@ export default function Home() {
         </section>
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {dashboardCards.map((card) => (
+          {dashboardCards.map((card: any) => (
             <Link
               key={card.href}
               href={card.href}
-              className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-300 hover:shadow-md"
+              className={`rounded-lg border p-5 shadow-sm transition ${
+                card.featured
+                  ? 'border-blue-400 bg-gradient-to-br from-blue-50 to-blue-100 hover:border-blue-500 hover:shadow-md'
+                  : 'border-slate-200 bg-white hover:border-blue-300 hover:shadow-md'
+              }`}
             >
-              <h2 className="text-lg font-semibold text-slate-950">{card.title}</h2>
-              <p className="mt-2 text-sm text-slate-600">{card.value}</p>
-              <p className="mt-4 text-sm font-medium text-blue-700">Open</p>
+              <h2 className={`text-lg font-semibold ${card.featured ? 'text-blue-900' : 'text-slate-950'}`}>
+                {card.title}
+              </h2>
+              <p className={`mt-2 text-sm ${card.featured ? 'text-blue-800' : 'text-slate-600'}`}>
+                {card.value}
+              </p>
+              <p className="mt-4 text-sm font-medium text-blue-700">Open →</p>
             </Link>
           ))}
         </section>

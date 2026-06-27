@@ -9,4 +9,13 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
 
+  customer:
+    build: ../services/customer
+    ports:
+      - "8001:8000"
+    volumes:
+      - ../services/customer/app:/app/app:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+
 # Additional services (los, lms, collections, findna) can be added similarly.
