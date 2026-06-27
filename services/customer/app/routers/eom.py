@@ -1,8 +1,13 @@
+import os
 from datetime import datetime
+from typing import Optional, List
+from uuid import uuid4
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from ..db import get_db
+from ..models import Customer
 from ..models_eom import (
     Brand,
     LegalEntity,
@@ -21,29 +26,49 @@ from ..models_eom import (
 
 from ..schemas_eom import (
     BrandCreate,
-    LegalEntityCreate,
+    BrandResponse,
     BusinessUnitCreate,
-    ZoneCreate,
-    RegionCreate,
-    AreaCreate,
+    BusinessUnitResponse,
     ClusterCreate,
-    BranchCreate,
+    ClusterResponse,
+    CustomerBranchMappingCreate,
+    CustomerBranchMappingResponse,
     DepartmentCreate,
+    DepartmentResponse,
     EmployeeCreate,
     EmployeeHierarchyCreate,
+    EmployeeHierarchyResponse,
+    EmployeeResponse,
+    LegalEntityCreate,
+    LegalEntityResponse,
+    RegionCreate,
+    RegionResponse,
+    AreaCreate,
+    AreaResponse,
+    ZoneCreate,
+    ZoneResponse,
+    BranchCreate,
+    BranchResponse,
 )
 
 router = APIRouter(prefix="/eom", tags=["eom"])
 
 
 def _require_super_admin():
-    # Repository currently lacks a shared auth dependency in the inspected files.
-    # Implementing a placeholder guard here that will be upgraded once the auth integration is located.
-    # For now, we enforce via an HTTP 501 to make the missing integration explicit.
-    raise HTTPException(status_code=501, detail="Super Admin guard not implemented in this service yet")
+    # Placeholder guard: actual auth integration is not present in this repo.
+    # Set REQUIRE_SUPER_ADMIN=true in the environment to enforce the 501 failure mode.
+    if os.getenv("REQUIRE_SUPER_ADMIN", "false").lower() in {"1", "true", "yes"}:
+        raise HTTPException(status_code=501, detail="Super Admin guard not implemented in this service yet")
 
 
-@router.post("/brands")
+def _get_or_404(db: Session, model, entity_id: str, label: str):
+    entity = db.query(model).filter(model.id == entity_id).first()
+    if not entity:
+        raise HTTPException(status_code=404, detail=f"{label} not found")
+    return entity
+
+
+@router.post("/brands", response_model=BrandResponse)
 async def create_brand(payload: BrandCreate, db: Session = Depends(get_db)):
     # Super Admin only
     _require_super_admin()
@@ -86,7 +111,7 @@ async def create_brand(payload: BrandCreate, db: Session = Depends(get_db)):
     return brand
 
 
-@router.post("/legal-entities")
+@router.post("/legal-entities", response_model=LegalEntityResponse)
 async def create_legal_entity(payload: LegalEntityCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
@@ -124,7 +149,7 @@ async def create_legal_entity(payload: LegalEntityCreate, db: Session = Depends(
     return entity
 
 
-@router.post("/business-units")
+@router.post("/business-units", response_model=BusinessUnitResponse)
 async def create_business_unit(payload: BusinessUnitCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
@@ -150,7 +175,7 @@ async def create_business_unit(payload: BusinessUnitCreate, db: Session = Depend
     return bu
 
 
-@router.post("/zones")
+@router.post("/zones", response_model=ZoneResponse)
 async def create_zone(payload: ZoneCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
@@ -176,7 +201,7 @@ async def create_zone(payload: ZoneCreate, db: Session = Depends(get_db)):
     return z
 
 
-@router.post("/regions")
+@router.post("/regions", response_model=RegionResponse)
 async def create_region(payload: RegionCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
@@ -203,7 +228,7 @@ async def create_region(payload: RegionCreate, db: Session = Depends(get_db)):
     return r
 
 
-@router.post("/areas")
+@router.post("/areas", response_model=AreaResponse)
 async def create_area(payload: AreaCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
@@ -230,7 +255,7 @@ async def create_area(payload: AreaCreate, db: Session = Depends(get_db)):
     return a
 
 
-@router.post("/clusters")
+@router.post("/clusters", response_model=ClusterResponse)
 async def create_cluster(payload: ClusterCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
@@ -255,19 +280,22 @@ async def create_cluster(payload: ClusterCreate, db: Session = Depends(get_db)):
     return c
 
 
-@router.post("/branches")
+@router.post("/branches", response_model=BranchResponse)
 async def create_branch(payload: BranchCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
-    # Simple uniqueness check by branch_code
-    existing = db.query(EOMBranch).filter(EOMBranch.branch_code == payload.branch_code).first()
+    branch_code = payload.branch_code
+    if not branch_code:
+        branch_code = payload.branch_name.strip().upper().replace(" ", "-")[:32]
+    existing = db.query(EOMBranch).filter(EOMBranch.branch_code == branch_code).first()
     if existing:
         raise HTTPException(status_code=409, detail="Branch already exists")
 
+    branch_id = str(branch_code).strip()[:36].ljust(36, "0") if branch_code else str(uuid4())
     b = EOMBranch(
-        id=str(payload.branch_code).strip()[:36].ljust(36, "0"),
+        id=branch_id,
         tenant_id=payload.tenant_id,
-        branch_code=payload.branch_code,
+        branch_code=branch_code,
         zone_id=payload.zone_id,
         region_id=payload.region_id,
         area_id=payload.area_id,
@@ -305,7 +333,7 @@ async def create_branch(payload: BranchCreate, db: Session = Depends(get_db)):
     return b
 
 
-@router.post("/departments")
+@router.post("/departments", response_model=DepartmentResponse)
 async def create_department(payload: DepartmentCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
@@ -333,7 +361,7 @@ async def create_department(payload: DepartmentCreate, db: Session = Depends(get
     return d
 
 
-@router.post("/employees")
+@router.post("/employees", response_model=EmployeeResponse)
 async def create_employee(payload: EmployeeCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
@@ -355,7 +383,7 @@ async def create_employee(payload: EmployeeCreate, db: Session = Depends(get_db)
     return e
 
 
-@router.post("/employee-hierarchy")
+@router.post("/employee-hierarchy", response_model=EmployeeHierarchyResponse)
 async def create_employee_hierarchy(payload: EmployeeHierarchyCreate, db: Session = Depends(get_db)):
     _require_super_admin()
 
@@ -382,4 +410,207 @@ async def create_employee_hierarchy(payload: EmployeeHierarchyCreate, db: Sessio
     db.commit()
     db.refresh(eh)
     return eh
+
+
+@router.get("/brands", response_model=list[BrandResponse])
+async def list_brands(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(Brand).offset(skip).limit(limit).all()
+
+
+@router.get("/brands/{brand_id}", response_model=BrandResponse)
+async def get_brand(brand_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, Brand, brand_id, "Brand")
+
+
+@router.get("/legal-entities", response_model=list[LegalEntityResponse])
+async def list_legal_entities(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(LegalEntity).offset(skip).limit(limit).all()
+
+
+@router.get("/legal-entities/{entity_id}", response_model=LegalEntityResponse)
+async def get_legal_entity(entity_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, LegalEntity, entity_id, "Legal Entity")
+
+
+@router.get("/business-units", response_model=list[BusinessUnitResponse])
+async def list_business_units(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(BusinessUnit).offset(skip).limit(limit).all()
+
+
+@router.get("/business-units/{business_unit_id}", response_model=BusinessUnitResponse)
+async def get_business_unit(business_unit_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, BusinessUnit, business_unit_id, "Business Unit")
+
+
+@router.get("/zones", response_model=list[ZoneResponse])
+async def list_zones(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(EOMZone).offset(skip).limit(limit).all()
+
+
+@router.get("/zones/{zone_id}", response_model=ZoneResponse)
+async def get_zone(zone_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, EOMZone, zone_id, "Zone")
+
+
+@router.get("/regions", response_model=list[RegionResponse])
+async def list_regions(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(EOMRegion).offset(skip).limit(limit).all()
+
+
+@router.get("/regions/{region_id}", response_model=RegionResponse)
+async def get_region(region_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, EOMRegion, region_id, "Region")
+
+
+@router.get("/areas", response_model=list[AreaResponse])
+async def list_areas(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(EOMArea).offset(skip).limit(limit).all()
+
+
+@router.get("/areas/{area_id}", response_model=AreaResponse)
+async def get_area(area_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, EOMArea, area_id, "Area")
+
+
+@router.get("/clusters", response_model=list[ClusterResponse])
+async def list_clusters(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(EOMCluster).offset(skip).limit(limit).all()
+
+
+@router.get("/clusters/{cluster_id}", response_model=ClusterResponse)
+async def get_cluster(cluster_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, EOMCluster, cluster_id, "Cluster")
+
+
+@router.get("/branches", response_model=list[BranchResponse])
+async def list_branches(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(EOMBranch).offset(skip).limit(limit).all()
+
+
+@router.get("/branches/{branch_id}", response_model=BranchResponse)
+async def get_branch(branch_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, EOMBranch, branch_id, "Branch")
+
+
+@router.get("/departments", response_model=list[DepartmentResponse])
+async def list_departments(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(Department).offset(skip).limit(limit).all()
+
+
+@router.get("/departments/{department_id}", response_model=DepartmentResponse)
+async def get_department(department_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, Department, department_id, "Department")
+
+
+@router.get("/employees", response_model=list[EmployeeResponse])
+async def list_employees(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(Employee).offset(skip).limit(limit).all()
+
+
+@router.get("/employees/{employee_id}", response_model=EmployeeResponse)
+async def get_employee(employee_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, Employee, employee_id, "Employee")
+
+
+@router.get("/employee-hierarchy", response_model=list[EmployeeHierarchyResponse])
+async def list_employee_hierarchy(
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+):
+    return db.query(EmployeeHierarchy).offset(skip).limit(limit).all()
+
+
+@router.get("/employee-hierarchy/{hierarchy_id}", response_model=EmployeeHierarchyResponse)
+async def get_employee_hierarchy(hierarchy_id: str, db: Session = Depends(get_db)):
+    return _get_or_404(db, EmployeeHierarchy, hierarchy_id, "Employee Hierarchy")
+
+
+@router.post("/customer-branch-mapping", response_model=CustomerBranchMappingResponse)
+async def create_customer_branch_mapping(payload: CustomerBranchMappingCreate, db: Session = Depends(get_db)):
+    customer = db.query(Customer).filter(Customer.id == payload.customer_id).first()
+    if customer is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    branch = db.query(EOMBranch).filter(EOMBranch.id == payload.branch_id).first()
+    if branch is None:
+        raise HTTPException(status_code=404, detail="Branch not found")
+
+    existing = (
+        db.query(CustomerBranchMapping)
+        .filter(CustomerBranchMapping.customer_id == customer.id, CustomerBranchMapping.status == "active")
+        .order_by(CustomerBranchMapping.effective_from.desc())
+        .first()
+    )
+
+    if existing and existing.branch_id == branch.id:
+        raise HTTPException(status_code=409, detail="Customer is already assigned to this branch")
+
+    mapping = CustomerBranchMapping(
+        id=str(uuid4()),
+        tenant_id=payload.tenant_id,
+        customer_id=customer.id,
+        branch_id=branch.id,
+        effective_from=datetime.utcnow(),
+        status="active",
+        transferred_from_branch_id=existing.branch_id if existing else None,
+        transferred_by=payload.transferred_by,
+        transferred_at=datetime.utcnow() if existing else None,
+    )
+
+    if existing:
+        existing.status = "transferred"
+        existing.effective_to = mapping.effective_from
+        db.add(existing)
+
+    db.add(mapping)
+    db.commit()
+    db.refresh(mapping)
+    return mapping
+
+
+@router.get("/customer-branch-mapping/{customer_id}", response_model=list[CustomerBranchMappingResponse])
+async def get_customer_branch_mapping(customer_id: str, db: Session = Depends(get_db)):
+    _get_or_404(db, Customer, customer_id, "Customer")
+    return db.query(CustomerBranchMapping).filter(CustomerBranchMapping.customer_id == customer_id).order_by(CustomerBranchMapping.effective_from.desc()).all()
 

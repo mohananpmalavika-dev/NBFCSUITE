@@ -11,6 +11,7 @@ interface StageBasicDetailsProps {
 export default function StageBasicDetails({ onNext }: StageBasicDetailsProps) {
   const {
     customerId,
+    prospectData,
     basicDetails,
     updateBasicDetails,
     setLoading,
@@ -35,6 +36,8 @@ export default function StageBasicDetails({ onNext }: StageBasicDetailsProps) {
     setLoading(true);
     try {
       await cifApi.addBasicDetails(customerId, {
+        first_name: prospectData.firstName,
+        last_name: prospectData.lastName,
         date_of_birth: basicDetails.dateOfBirth,
         gender: basicDetails.gender,
         occupation: basicDetails.occupation,

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Optional, List
 from pydantic import BaseModel, Field
 
@@ -85,7 +86,7 @@ class BranchCreate(BaseEOMCreate):
     area_id: str
     cluster_id: Optional[str] = None
 
-    branch_code: str
+    branch_code: Optional[str] = None
     branch_name: str
     short_name: Optional[str] = None
     branch_type: Optional[str] = None
@@ -138,4 +139,144 @@ class EmployeeHierarchyCreate(BaseEOMCreate):
     department_id: Optional[str] = None
 
     position_title: Optional[str] = None
+
+
+class CustomerBranchMappingCreate(BaseEOMCreate):
+    customer_id: str
+    branch_id: str
+    transferred_by: Optional[str] = None
+
+
+class BrandResponse(BrandCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class LegalEntityResponse(LegalEntityCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BusinessUnitResponse(BusinessUnitCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ZoneResponse(ZoneCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class RegionResponse(RegionCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AreaResponse(AreaCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ClusterResponse(ClusterCreate):
+    id: str
+    status: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BranchResponse(BranchCreate):
+    id: str
+    branch_code: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DepartmentResponse(DepartmentCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EmployeeResponse(EmployeeCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EmployeeHierarchyResponse(EmployeeHierarchyCreate):
+    id: str
+    status: str
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CustomerBranchMappingResponse(CustomerBranchMappingCreate):
+    id: str
+    status: str
+    effective_from: datetime
+    effective_to: Optional[datetime] = None
+    transferred_from_branch_id: Optional[str] = None
+    transferred_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
