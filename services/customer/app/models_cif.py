@@ -781,7 +781,9 @@ class CustomerApproval(Base):
     customer_id = Column(String(36), ForeignKey("customers.id"), nullable=False)
 
     # Workflow
+    workflow_instance_id = Column(String(36), unique=True, nullable=True, index=True)
     workflow_stage = Column(Integer, nullable=True)
+    current_state = Column(String(100), nullable=True)
     approval_status = Column(String(50), default="pending")  # pending, approved, rejected, escalated
 
     # Initiation

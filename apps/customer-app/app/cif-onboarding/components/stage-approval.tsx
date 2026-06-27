@@ -8,18 +8,19 @@ interface StageApprovalProps {
   onNext: () => void;
 }
 
+const approvalLevels = [
+  { level: 1, name: 'Checker', role: 'checker', action: 'checker_approve', description: 'Validates completeness' },
+  { level: 2, name: 'Manager', role: 'manager', action: 'manager_approve', description: 'Business approval' },
+  { level: 3, name: 'Compliance', role: 'compliance_officer', action: 'compliance_approve', description: 'Compliance sign-off' },
+  { level: 4, name: 'Final Approver', role: 'final_approver', action: 'final_approve', description: 'Executive approval' },
+];
+
 export default function StageApproval({ onNext }: StageApprovalProps) {
   const { customerId, setLoading, setError, markStageComplete } = useCIFStore();
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
-  const [approvalId, setApprovalId] = useState<string | null>(null);
+  const [workflowInstanceId, setWorkflowInstanceId] = useState<string | null>(null);
   const [currentLevel, setCurrentLevel] = useState(0);
-
-  const approvalLevels = [
-    { level: 1, name: 'Checker', role: 'Validates completeness' },
-    { level: 2, name: 'Manager', role: 'Business approval' },
-    { level: 3, name: 'Compliance', role: 'Compliance sign-off' },
-    { level: 4, name: 'Final Approver', role: 'Executive approval' },
-  ];
+  const [currentState, setCurrentState] = useState<string | null>(null);
 
   const handleInitiateApproval = async () => {
     if (!customerId) {
@@ -34,8 +35,9 @@ export default function StageApproval({ onNext }: StageApprovalProps) {
         notes: 'CIF onboarding initiated',
       });
 
-      setApprovalId(response.approval_id);
-      setApprovalStatus('checker_pending');
+      setWorkflowInstanceId(response.workflow_instance_id);
+      setApprovalStatus(response.status || 'pending');
+      setCurrentState(response.current_state || null);
       setCurrentLevel(0);
     } catch (err: any) {
       setError(err.message);
@@ -45,34 +47,34 @@ export default function StageApproval({ onNext }: StageApprovalProps) {
   };
 
   const handleApproveLevel = async (level: number) => {
-    if (!customerId || !approvalId) {
+    if (!customerId || !workflowInstanceId) {
       setError('Missing approval details');
+      return;
+    }
+
+    const target = approvalLevels.find((item) => item.level === level);
+    if (!target) {
+      setError('Invalid approval level');
       return;
     }
 
     setLoading(true);
     try {
-      const data = {
-        approval_id: approvalId,
+      const response = await cifApi.transitionApproval(customerId, {
+        workflow_instance_id: workflowInstanceId,
+        action: target.action,
+        actor_id: 'system',
+        actor_role: target.role,
         approved: true,
-        comments: `${approvalLevels[level - 1].name} approval granted`,
-        approved_by: 'system',
-      };
+        comments: `${target.name} approval granted`,
+      });
 
-      if (level === 1) {
-        await cifApi.checkerApproval(customerId, data);
-      } else if (level === 2) {
-        await cifApi.managerApproval(customerId, data);
-      } else if (level === 3) {
-        await cifApi.complianceApproval(customerId, data);
-      } else if (level === 4) {
-        await cifApi.finalApproval(customerId, data);
-      }
+      setApprovalStatus(response.status || approvalStatus);
+      setCurrentState(response.current_state || currentState);
+      setCurrentLevel(response.stage || level);
 
-      setCurrentLevel(level);
-
-      if (level === 4) {
-        // All levels approved
+      if (response.stage === 4 || level === 4) {
+        // Final stages complete
         markStageComplete(16);
         setTimeout(() => onNext(), 1500);
       }

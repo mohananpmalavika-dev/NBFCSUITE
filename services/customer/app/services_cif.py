@@ -3,6 +3,7 @@ Customer Information File (CIF) Service Layer
 Handles all customer operations across 18 stages
 """
 
+import os
 import uuid
 from datetime import datetime, date
 from typing import Optional, List, Dict, Any
@@ -256,6 +257,38 @@ class CIFGenerationService:
 class CustomerApprovalService:
     """Stage 16 - Multi-level Approval Workflow"""
 
+    PLATFORM_WORKFLOW_CODE = os.getenv("CIF_APPROVAL_WORKFLOW_CODE", "CUSTOMER-APPROVAL")
+    PLATFORM_TENANT_ID = os.getenv("PLATFORM_TENANT_ID", "default")
+    PLATFORM_SERVICE_URL = os.getenv("PLATFORM_SERVICE_URL", "http://localhost:8018")
+
+    @staticmethod
+    def _platform_tenant_id(customer_id: str, db: Session) -> str:
+        customer = db.query(Customer).filter(Customer.id == customer_id).first()
+        return customer.branch_id if customer and customer.branch_id else CustomerApprovalService.PLATFORM_TENANT_ID
+
+    @staticmethod
+    def _platform_client():
+        try:
+            import httpx
+        except ImportError as exc:
+            raise RuntimeError("httpx is required for platform workflow integration") from exc
+        return httpx.Client(base_url=CustomerApprovalService.PLATFORM_SERVICE_URL, timeout=5.0)
+
+    @staticmethod
+    def _map_state_to_stage(state: Optional[str], default_stage: int = 1) -> int:
+        if not state:
+            return default_stage
+        normalized = state.lower()
+        if "checker" in normalized:
+            return 1
+        if "manager" in normalized:
+            return 2
+        if "compliance" in normalized:
+            return 3
+        if "final" in normalized or "approved" in normalized or "completed" in normalized:
+            return 4
+        return default_stage
+
     @staticmethod
     def initiate_approval(db: Session, customer_id: str, initiated_by: str) -> CustomerApproval:
         """Initiate customer approval workflow"""
@@ -268,7 +301,93 @@ class CustomerApprovalService:
             initiated_by=initiated_by
         )
         db.add(approval)
+        db.flush()
+
+        tenant_id = CustomerApprovalService._platform_tenant_id(customer_id, db)
+        payload = {
+            "tenant_id": tenant_id,
+            "workflow_code": CustomerApprovalService.PLATFORM_WORKFLOW_CODE,
+            "subject_type": "customer",
+            "subject_id": customer_id,
+            "business_key": approval.id,
+            "context": {
+                "customer_id": customer_id,
+                "approval_id": approval.id,
+                "initiated_by": initiated_by,
+            },
+        }
+
+        with CustomerApprovalService._platform_client() as client:
+            response = client.post("/workflows/start", json=payload)
+            response.raise_for_status()
+            workflow_data = response.json()
+
+        approval.workflow_instance_id = workflow_data.get("id")
+        approval.current_state = workflow_data.get("current_state")
+        approval.workflow_stage = CustomerApprovalService._map_state_to_stage(workflow_data.get("current_state"), 1)
+        approval.approval_status = workflow_data.get("status") or "pending"
+
         db.commit()
+        db.refresh(approval)
+        return approval
+
+    @staticmethod
+    def transition_approval(
+        db: Session,
+        workflow_instance_id: str,
+        customer_id: str,
+        action: str,
+        actor_id: str,
+        actor_role: str,
+        comments: Optional[str],
+        approved: bool,
+    ) -> CustomerApproval:
+        """Execute a generic workflow transition through the platform kernel"""
+        approval = db.query(CustomerApproval).filter(
+            CustomerApproval.workflow_instance_id == workflow_instance_id,
+            CustomerApproval.customer_id == customer_id,
+        ).first()
+        if not approval:
+            raise ValueError("Approval workflow instance not found")
+
+        tenant_id = CustomerApprovalService._platform_tenant_id(customer_id, db)
+        transition_payload = {
+            "tenant_id": tenant_id,
+            "action": action,
+            "actor_id": actor_id,
+            "actor_role": actor_role,
+            "notes": comments,
+            "context_patch": {
+                "approved": approved,
+                "comments": comments,
+            },
+        }
+        with CustomerApprovalService._platform_client() as client:
+            response = client.post(f"/workflows/instances/{workflow_instance_id}/transition", json=transition_payload)
+            response.raise_for_status()
+            workflow_data = response.json()
+
+        approval.current_state = workflow_data.get("current_state")
+        approval.workflow_stage = CustomerApprovalService._map_state_to_stage(workflow_data.get("current_state"), approval.workflow_stage or 1)
+        approval.approval_status = "approved" if approved and workflow_data.get("status") == "completed" else approval.approval_status
+        if not approved:
+            approval.approval_status = "rejected"
+
+        if workflow_data.get("status") == "completed" and approved:
+            customer = db.query(Customer).filter(Customer.id == approval.customer_id).first()
+            if customer:
+                customer.approval_status = "approved"
+            if not approval.cif_generated_on:
+                CIFGenerationService.generate_cif(db, approval.customer_id)
+                approval.cif_generated_on = datetime.utcnow()
+
+        if workflow_data.get("status") == "completed" and not approved:
+            customer = db.query(Customer).filter(Customer.id == approval.customer_id).first()
+            if customer:
+                customer.approval_status = "rejected"
+
+        db.commit()
+        db.refresh(approval)
         return approval
 
     @staticmethod

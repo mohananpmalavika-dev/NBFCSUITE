@@ -125,10 +125,12 @@ interface ApprovalInitiateRequest {
 }
 
 interface ApprovalRequest {
-  approval_id: string;
+  workflow_instance_id: string;
+  action: string;
+  actor_id: string;
+  actor_role: string;
   approved: boolean;
   comments?: string;
-  approved_by?: string;
 }
 
 interface Customer360Response {
@@ -471,58 +473,17 @@ class CIFApi {
     }
   }
 
-  async checkerApproval(customerId: string, data: ApprovalRequest): Promise<any> {
+  async transitionApproval(customerId: string, data: ApprovalRequest): Promise<any> {
     try {
       const response = await this.api.post(
-        `/customer/${customerId}/approval/${data.approval_id}/checker`,
+        `/customer/${customerId}/approval/${data.workflow_instance_id}/transition`,
         { approved: data.approved, comments: data.comments },
         {
-          params: { checker_id: data.approved_by || 'system' },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  async managerApproval(customerId: string, data: ApprovalRequest): Promise<any> {
-    try {
-      const response = await this.api.post(
-        `/customer/${customerId}/approval/${data.approval_id}/manager`,
-        { approved: data.approved, comments: data.comments },
-        {
-          params: { manager_id: data.approved_by || 'system' },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  async complianceApproval(customerId: string, data: ApprovalRequest): Promise<any> {
-    try {
-      const response = await this.api.post(
-        `/customer/${customerId}/approval/${data.approval_id}/compliance`,
-        { approved: data.approved, comments: data.comments },
-        {
-          params: { compliance_officer_id: data.approved_by || 'system' },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  async finalApproval(customerId: string, data: ApprovalRequest): Promise<any> {
-    try {
-      const response = await this.api.post(
-        `/customer/${customerId}/approval/${data.approval_id}/final`,
-        { approved: data.approved, comments: data.comments },
-        {
-          params: { final_approver_id: data.approved_by || 'system' },
+          params: {
+            action: data.action,
+            actor_id: data.actor_id,
+            actor_role: data.actor_role,
+          },
         }
       );
       return response.data;

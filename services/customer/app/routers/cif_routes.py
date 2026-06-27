@@ -709,109 +709,46 @@ async def initiate_approval(
     return {
         "success": True,
         "approval_id": approval.id,
+        "workflow_instance_id": approval.workflow_instance_id,
         "workflow_stage": 1,
         "status": "pending",
         "message": "Approval workflow initiated"
     }
 
 
-@router.post("/customer/{customer_id}/approval/{approval_id}/checker")
-async def checker_approval(
+@router.post("/customer/{customer_id}/approval/{workflow_instance_id}/transition")
+async def transition_approval(
     customer_id: str,
-    approval_id: str,
-    checker_id: str = Query(...),
-    request: ApprovalActionRequest = None,
+    workflow_instance_id: str,
+    request: ApprovalActionRequest,
+    action: str = Query(...),
+    actor_id: str = Query(...),
+    actor_role: str = Query(...),
     db: Session = Depends(get_db)
 ):
-    """Checker level approval"""
+    """Execute a generic workflow transition on customer approval workflow"""
     if not request:
         raise HTTPException(status_code=400, detail="Request body required")
-    
-    approval = CustomerApprovalService.checker_approval(
-        db, approval_id, checker_id, request.approved, request.comments
+
+    approval = CustomerApprovalService.transition_approval(
+        db,
+        workflow_instance_id,
+        customer_id,
+        action,
+        actor_id,
+        actor_role,
+        request.comments,
+        request.approved,
     )
-    
+
     return {
         "success": True,
         "approval_id": approval.id,
+        "workflow_instance_id": approval.workflow_instance_id,
         "status": approval.approval_status,
         "stage": approval.workflow_stage,
-        "message": "Checker approval processed"
-    }
-
-
-@router.post("/customer/{customer_id}/approval/{approval_id}/manager")
-async def manager_approval(
-    customer_id: str,
-    approval_id: str,
-    manager_id: str = Query(...),
-    request: ApprovalActionRequest = None,
-    db: Session = Depends(get_db)
-):
-    """Manager level approval"""
-    if not request:
-        raise HTTPException(status_code=400, detail="Request body required")
-    
-    approval = CustomerApprovalService.manager_approval(
-        db, approval_id, manager_id, request.approved, request.comments
-    )
-    
-    return {
-        "success": True,
-        "approval_id": approval.id,
-        "status": approval.approval_status,
-        "stage": approval.workflow_stage,
-        "message": "Manager approval processed"
-    }
-
-
-@router.post("/customer/{customer_id}/approval/{approval_id}/compliance")
-async def compliance_approval(
-    customer_id: str,
-    approval_id: str,
-    compliance_officer_id: str = Query(...),
-    request: ApprovalActionRequest = None,
-    db: Session = Depends(get_db)
-):
-    """Compliance officer approval"""
-    if not request:
-        raise HTTPException(status_code=400, detail="Request body required")
-    
-    approval = CustomerApprovalService.compliance_approval(
-        db, approval_id, compliance_officer_id, request.approved, request.comments
-    )
-    
-    return {
-        "success": True,
-        "approval_id": approval.id,
-        "status": approval.approval_status,
-        "stage": approval.workflow_stage,
-        "message": "Compliance approval processed"
-    }
-
-
-@router.post("/customer/{customer_id}/approval/{approval_id}/final")
-async def final_approval(
-    customer_id: str,
-    approval_id: str,
-    final_approver_id: str = Query(...),
-    request: ApprovalActionRequest = None,
-    db: Session = Depends(get_db)
-):
-    """Final approval and CIF generation"""
-    if not request:
-        raise HTTPException(status_code=400, detail="Request body required")
-    
-    approval = CustomerApprovalService.final_approval(
-        db, approval_id, final_approver_id, request.approved, request.comments
-    )
-    
-    return {
-        "success": True,
-        "approval_id": approval.id,
-        "status": approval.approval_status,
-        "cif_id": approval.customer.cif_id if approval.customer.cif_id else "Pending generation",
-        "message": "Final approval processed - CIF generated!" if approval.cif_generated_on else "Application rejected"
+        "current_state": approval.current_state,
+        "message": "Workflow transition processed"
     }
 
 
