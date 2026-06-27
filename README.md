@@ -42,6 +42,10 @@ To create a modular, scalable, and multi-tenant platform that can be used by a w
 *   **Containerization:** Docker
 *   **Orchestration:** Kubernetes
 
+## Implemented Platform Kernel
+
+The repo now includes `services/platform`, a reusable kernel service for product factory definitions, tenant-scoped rule sets, configurable workflows, and an idempotent domain-event outbox. This is the foundation for replacing hardcoded approval, eligibility, pricing, and inter-service handoff logic across lending, deposits, gold loan, forex, HRMS, procurement, and future modules.
+
 
 
 Of course. Building a comprehensive, AI-first "Financial Institution Operating System" (FI-OS) is a significant but highly valuable undertaking. A well-structured plan is critical for success.

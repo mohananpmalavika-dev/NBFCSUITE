@@ -255,7 +255,7 @@ async def create_employee(employee: EmployeeCreate, db: Session = Depends(get_db
 
 @app.get("/employees")
 async def list_employees(
-    tenant_id: Optional[str] = Query(None),
+    tenant_id: Optional[str] = None,
     branch_id: Optional[str] = Query(None),
     department: Optional[str] = Query(None),
     status: Optional[str] = Query(None),

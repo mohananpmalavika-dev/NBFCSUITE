@@ -176,15 +176,53 @@ def _kyc_status(pan_valid: bool, aadhar_valid: bool) -> str:
     return "pending"
 
 
+def _generate_cif_id(db: Session) -> str:
+    sequence = db.query(Customer).count() + 1
+    while True:
+        cif_id = f"CIF{sequence:012d}"
+        if not db.query(Customer).filter(Customer.id == cif_id).first():
+            return cif_id
+        sequence += 1
+
+
+def _normalize_identity(value: str | None, uppercase: bool = True) -> str | None:
+    if not value:
+        return None
+    normalized = value.strip()
+    return normalized.upper() if uppercase else normalized
+
+
+def _normalize_aadhar(aadhar: str | None) -> str | None:
+    return re.sub(r"\D", "", aadhar or "") or None
+
+
+def _customer_duplicate_filter(customer: CustomerCreate):
+    filters = []
+    values = {
+        "email": customer.email,
+        "phone": customer.phone,
+        "pan": _normalize_identity(customer.pan),
+        "aadhar": _normalize_aadhar(customer.aadhar),
+        "passport": _normalize_identity(customer.passport),
+        "voter_id": _normalize_identity(customer.voter_id),
+        "driving_licence": _normalize_identity(customer.driving_licence),
+        "gstin": _normalize_identity(customer.gstin),
+        "cin": _normalize_identity(customer.cin),
+    }
+    for field, value in values.items():
+        if value:
+            filters.append(getattr(Customer, field) == value)
+    return filters, values
+
+
 @router.post("", response_model=CustomerResponse)
 async def create_customer(
     customer: CustomerCreate,
     db: Session = Depends(get_db),
     scope: PrincipalScope = Depends(get_principal_scope),
 ):
-    existing = db.query(Customer).filter(
-        (Customer.email == customer.email) | (Customer.phone == customer.phone)
-    ).first()
+    filters, identity_values = _customer_duplicate_filter(customer)
+    existing = db.query(Customer).filter(or_(*filters)).first() if filters else None
     if existing:
         raise HTTPException(status_code=400, detail="Customer already exists")
     selected_branch_id = customer.branch_id or (scope.branch_id if isinstance(scope, PrincipalScope) else None)
@@ -192,13 +230,21 @@ async def create_customer(
     _assert_branch_in_scope(selected_branch_id, db, scope)
 
     new_customer = Customer(
-        id=str(uuid4()),
+        id=_generate_cif_id(db),
         first_name=customer.first_name,
         last_name=customer.last_name,
         email=customer.email,
         phone=customer.phone,
         dob=customer.dob,
         gender=customer.gender,
+        pan=identity_values["pan"],
+        aadhar=identity_values["aadhar"],
+        passport=identity_values["passport"],
+        voter_id=identity_values["voter_id"],
+        driving_licence=identity_values["driving_licence"],
+        gstin=identity_values["gstin"],
+        cin=identity_values["cin"],
+        customer_type=customer.customer_type or "individual",
         branch_id=selected_branch_id,
     )
     db.add(new_customer)

@@ -1,45 +1,28 @@
-# TODO.md — Phase 4: Enterprise Readiness & Ecosystem (Months 20–24)
+# TODO - CIF / Customer Creation (Tier-1 Banking/NBFC)
 
-## Planned Deliverables
+## Plan Approval
+- [x] Review existing CIF/customer implementation
+- [x] Confirm implementation approach: (A) prospects + approve→CIF + (B) dedupe/search reuse customers table
+- [ ] Confirm CIF id format requirement: CIF000... sequential vs UUID acceptable
 
-### A) Full-Fledged Accounting Module
-- [x] Standardize tenant scoping across **all** accounting endpoints (no cross-tenant reads/writes; fix uniqueness rules).
-- [x] Harden GL account uniqueness to be **per tenant** (and adjust code accordingly).
-- [x] Add robust automated GL posting contract:
-  - [x] idempotency key support
-  - [x] posting status (posted/reversed/failed)
-  - [x] source linkage via `source_module/source_event/source_reference`
-- [x] Implement period-aware financial statement generation:
-  - [x] Trial Balance by date/period
-  - [x] P&L by date/period with correct revenue/expense classification
-  - [x] Balance Sheet by date/period with correct asset/liability/equity rollups
-- [x] Add GST/TDS MVP:
-  - [x] tax master data per tenant
-  - [x] tax computation breakdown
-  - [x] generation of corresponding journal lines (not only tax amount)
-- [x] Extend OpenAPI spec for accounting to reflect new endpoints/inputs.
+## Implementation Steps
+1. [ ] Create new DB migration(s): add `prospects` and minimal prospect-related tables + links to final CIF `customers`.
+2. [ ] Implement `/customers/search` endpoint supporting dedupe by: mobile, email, PAN, Aadhaar, passport, voter id, driving licence, GSTIN, CIN, customer_id.
+3. [ ] Implement `/prospects` endpoint: create prospect with `status=lead`.
+4. [ ] Implement prospect document/identity attachment endpoints (minimal; reuse existing upload patterns).
+5. [ ] Implement `/prospects/{id}/approve` endpoint:
+   - verify dedupe again
+   - generate authoritative CIF `customers.id`
+   - copy prospect data into customer tables
+   - update prospect status → `customer`
+6. [ ] Adjust existing `POST /customers` behavior:
+   - ensure it cannot create duplicates
+   - route to prospect flow (or reject in favor of search+prospect)
+7. [ ] Update Customer 360 to reflect CIF-only; ensure no prospect-based duplication.
+8. [ ] Add unit/integration tests for dedupe + approve flow.
 
-### B) Advanced CRM & Reporting
-- [x] Add Report Builder backend:
-  - [x] report definition schema
-  - [x] execute report endpoint with server-side validation
-  - [x] initial support for CRM data sources
-- [x] Add Dashboard Builder backend:
-  - [x] dashboard/widget schema
-  - [x] render/resolve dashboard endpoint
-- [x] Provide CEO Command Center default dashboard config.
-- [x] Extend CRM OpenAPI spec.
-
-### C) Multi-Tenancy Architecture
-- [x] Add tenant configuration + branding backend data model (MVP).
-- [x] Ensure auth/RBAC context carries `tenant_id` and services enforce it consistently.
-- [x] Add tenant_id indexes where missing.
-- [x] Add/adjust migrations for new accounting/CRM tables.
-
-## Follow-up / Validation
-- [ ] Run integration tests in `tests/integration/test_microservices.py` (attempted; local services timed out).
-- [x] Add an end-to-end scenario covering:
-  - [x] create lead → opportunity → CRM report
-  - [x] trigger posting → generate Trial Balance for the same tenant
-- [x] Validate tenant isolation using two tenants with overlapping identifiers.
+## Verification
+- [ ] Run DB migrations
+- [ ] Run customer service and run tests
+- [ ] Validate `Customer Search → Existing CIF` and `Customer Search → Prospect → Approved CIF` end-to-end
 

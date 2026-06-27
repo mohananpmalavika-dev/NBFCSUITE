@@ -382,6 +382,27 @@ services:
       timeout: 5s
       retries: 5
 
+  # Platform Kernel Service: Product Factory, Rules, Workflow, Event Outbox
+  platform-service:
+    build:
+      context: ./services/platform
+      dockerfile: Dockerfile
+    container_name: nbfcsuite-platform
+    environment:
+      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+    ports:
+      - "8018:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Frontend Web App
   web-app:
     build:

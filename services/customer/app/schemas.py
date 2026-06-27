@@ -11,6 +11,14 @@ class CustomerCreate(BaseModel):
     dob: str
     gender: str
     branch_id: Optional[str] = None
+    pan: Optional[str] = None
+    aadhar: Optional[str] = None
+    passport: Optional[str] = None
+    voter_id: Optional[str] = None
+    driving_licence: Optional[str] = None
+    gstin: Optional[str] = None
+    cin: Optional[str] = None
+    customer_type: Optional[str] = "individual"
 
 
 class CustomerUpdate(BaseModel):
@@ -21,6 +29,12 @@ class CustomerUpdate(BaseModel):
     pan: Optional[str] = None
     aadhar: Optional[str] = None
     branch_id: Optional[str] = None
+    passport: Optional[str] = None
+    voter_id: Optional[str] = None
+    driving_licence: Optional[str] = None
+    gstin: Optional[str] = None
+    cin: Optional[str] = None
+    lifecycle_status: Optional[str] = None
 
 
 class CustomerResponse(BaseModel):
@@ -32,7 +46,14 @@ class CustomerResponse(BaseModel):
     kyc_status: str
     pan: Optional[str] = None
     aadhar: Optional[str] = None
+    passport: Optional[str] = None
+    voter_id: Optional[str] = None
+    driving_licence: Optional[str] = None
+    gstin: Optional[str] = None
+    cin: Optional[str] = None
     branch_id: Optional[str] = None
+    customer_type: Optional[str] = None
+    lifecycle_status: Optional[str] = None
     created_at: datetime
 
     class Config:

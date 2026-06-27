@@ -3,6 +3,9 @@ from sqlalchemy import Column, String, DateTime, Integer, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from .db import Base
 
+# Prospect models live in models_prospect.py (loaded by init_db via imports in routers)
+
+
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -17,7 +20,16 @@ class Customer(Base):
     kyc_status = Column(String, default="pending")
     pan = Column(String, unique=True, nullable=True)
     aadhar = Column(String, unique=True, nullable=True)
+    passport = Column(String, unique=True, nullable=True)
+    voter_id = Column(String, unique=True, nullable=True)
+    driving_licence = Column(String, unique=True, nullable=True)
+    gstin = Column(String, unique=True, nullable=True)
+    cin = Column(String, unique=True, nullable=True)
     branch_id = Column(String, ForeignKey("branches.id"), nullable=True)
+    customer_type = Column(String, default="individual")
+    lifecycle_status = Column(String, default="active")
+    source_prospect_id = Column(String, nullable=True)
+    onboarding_metadata = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

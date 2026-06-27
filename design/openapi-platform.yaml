@@ -1,0 +1,121 @@
+openapi: 3.0.3
+info:
+  title: Platform Kernel Service API
+  version: 0.1.0
+paths:
+  /products:
+    post:
+      summary: Create a configurable financial product definition
+      responses:
+        '200':
+          description: Product definition created
+    get:
+      summary: List tenant product definitions
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Product definitions
+  /products/{product_code}:
+    get:
+      summary: Get latest active product definition
+      parameters:
+        - in: path
+          name: product_code
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Product definition
+  /products/simulate:
+    post:
+      summary: Run product eligibility and pricing simulation
+      responses:
+        '200':
+          description: Simulation result
+  /rulesets:
+    post:
+      summary: Create a reusable rule set
+      responses:
+        '200':
+          description: Rule set created
+  /rulesets/evaluate:
+    post:
+      summary: Evaluate a rule set or inline rules against context
+      responses:
+        '200':
+          description: Rule evaluation
+  /workflows:
+    post:
+      summary: Create a workflow definition
+      responses:
+        '200':
+          description: Workflow created
+  /workflows/start:
+    post:
+      summary: Start a workflow instance for a business subject
+      responses:
+        '200':
+          description: Workflow instance started
+  /workflows/instances/{instance_id}/transition:
+    post:
+      summary: Move a workflow instance using an allowed transition
+      parameters:
+        - in: path
+          name: instance_id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Workflow transitioned
+  /workflows/instances:
+    get:
+      summary: List workflow instances
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Workflow instances
+  /events:
+    post:
+      summary: Publish a domain event to the outbox
+      responses:
+        '200':
+          description: Event published
+    get:
+      summary: List tenant domain events
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Domain events
+  /events/{event_id}/mark-processed:
+    post:
+      summary: Mark a domain event as processed by a consumer
+      parameters:
+        - in: path
+          name: event_id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Event processed
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Healthy
+components:
+  parameters:
+    TenantId:
+      in: query
+      name: tenant_id
+      required: true
+      schema:
+        type: string

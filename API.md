@@ -433,6 +433,29 @@ curl -X POST http://localhost:8000/auth/login \
 
 ---
 
+### 11. Platform Kernel Service
+
+**Port:** `8018`
+**Base URL:** `http://localhost:8018`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/products` | Create a configurable product definition |
+| GET | `/products` | List product definitions by tenant, family, or status |
+| GET | `/products/{product_code}` | Get the latest active tenant product |
+| POST | `/products/simulate` | Evaluate eligibility and pricing for a product |
+| POST | `/rulesets` | Create a reusable business rule set |
+| POST | `/rulesets/evaluate` | Evaluate stored or inline rules against request context |
+| POST | `/workflows` | Create a configurable workflow definition |
+| POST | `/workflows/start` | Start a workflow instance for a business subject |
+| POST | `/workflows/instances/{instance_id}/transition` | Apply an allowed workflow action |
+| GET | `/workflows/instances` | List workflow instances |
+| POST | `/events` | Publish an idempotent domain event to the outbox |
+| GET | `/events` | List domain events |
+| POST | `/events/{event_id}/mark-processed` | Mark an event consumed by a worker |
+
+---
+
 ## Error Responses
 
 All services follow a consistent error response format:
