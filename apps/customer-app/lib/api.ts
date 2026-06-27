@@ -358,13 +358,20 @@ export interface CoaSeedPayload {
   financial_year?: string;
 }
 
+export interface PostingRuleLinePayload {
+  account_code: string;
+  direction: 'debit' | 'credit';
+  description?: string;
+}
+
 export interface PostingRulePayload {
   tenant_id: string;
   source_module: string;
   source_event: string;
-  debit_account_code: string;
-  credit_account_code: string;
+  debit_account_code?: string;
+  credit_account_code?: string;
   description?: string;
+  lines?: PostingRuleLinePayload[];
 }
 
 export interface AccountingPostingLine {
@@ -760,14 +767,20 @@ export const apiClient = {
     axiosInstance.get(`/gl-balances`, { params: { tenant_id: tenantId } }),
   getGlLedger: (tenantId: string, params?: { financial_year?: string; branch_id?: string }) =>
     axiosInstance.get(`/gl-ledger`, { params: { tenant_id: tenantId, ...params } }),
+  getSubLedgerSummary: (tenantId: string) =>
+    axiosInstance.get(`/sub-ledger-summary`, { params: { tenant_id: tenantId } }),
   getPostingRules: (tenantId: string) =>
     axiosInstance.get(`/posting-rules`, { params: { tenant_id: tenantId } }),
   createPostingRule: (data: PostingRulePayload) =>
     axiosInstance.post(`/posting-rules`, data),
   getJournalEntries: (tenantId: string) =>
     axiosInstance.get(`/journal-entries`, { params: { tenant_id: tenantId } }),
-  validateAccountingPosting: (tenantId: string, lines: AccountingPostingLine[]) =>
-    axiosInstance.post(`/posting-engine/validate`, { tenant_id: tenantId, lines }),
+  validateAccountingPosting: (
+    tenantId: string,
+    lines: AccountingPostingLine[],
+    context?: { source_module?: string; source_event?: string; source_reference?: string },
+  ) =>
+    axiosInstance.post(`/posting-engine/validate`, { tenant_id: tenantId, ...context, lines }),
   postAccountingEngine: (data: PostingEnginePayload) =>
     axiosInstance.post(`/posting-engine/post`, data),
   createVoucher: (data: VoucherPayload) =>
@@ -780,6 +793,8 @@ export const apiClient = {
     axiosInstance.post(`/vouchers/${voucherId}/approve`, { tenant_id: tenantId, performed_by: performedBy }),
   postVoucher: (voucherId: string, tenantId: string, performedBy?: string) =>
     axiosInstance.post(`/vouchers/${voucherId}/post`, { tenant_id: tenantId, performed_by: performedBy }),
+  reverseVoucher: (voucherId: string, tenantId: string, performedBy?: string) =>
+    axiosInstance.post(`/vouchers/${voucherId}/reverse`, { tenant_id: tenantId, performed_by: performedBy }),
   getTrialBalance: (tenantId: string, startDate?: string, endDate?: string) =>
     axiosInstance.get(`/reports/trial-balance`, {
       params: { tenant_id: tenantId, start_date: startDate, end_date: endDate },

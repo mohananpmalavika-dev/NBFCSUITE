@@ -84,6 +84,28 @@ interface LedgerRow {
   closing_balance: number;
 }
 
+interface SubLedgerSummaryRow {
+  source_module: string;
+  ledger_name: string;
+  transaction_count: number;
+  total_amount: number;
+  last_entry_at?: string | null;
+  rollup_to: string;
+}
+
+interface PostingRuleLineForm {
+  account_code: string;
+  direction: 'debit' | 'credit';
+  description: string;
+}
+
+interface PostingRuleForm {
+  source_module: string;
+  source_event: string;
+  description: string;
+  lines: PostingRuleLineForm[];
+}
+
 interface Dashboard {
   chart_of_accounts: number;
   posting_rules: number;
@@ -152,8 +174,10 @@ export default function AccountingPage() {
   const [coaTree, setCoaTree] = useState<CoaTreeNode[]>([]);
   const [trialRows, setTrialRows] = useState<TrialBalanceRow[]>([]);
   const [ledgerRows, setLedgerRows] = useState<LedgerRow[]>([]);
+  const [subLedgerSummaryRows, setSubLedgerSummaryRows] = useState<SubLedgerSummaryRow[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [dayEndRows, setDayEndRows] = useState<Array<{ id: string; business_date: string; status: string; is_balanced: string }>>([]);
+  const [postingPipeline, setPostingPipeline] = useState<Record<string, any> | null>(null);
 
   const tenantId = user?.tenant_id || user?.branch_id || user?.organization_id || user?.id || 'default';
 
@@ -170,12 +194,14 @@ export default function AccountingPage() {
     status: 'active',
     financial_year: '2026-27',
   });
-  const [ruleForm, setRuleForm] = useState({
+  const [ruleForm, setRuleForm] = useState<PostingRuleForm>({
     source_module: 'loans',
     source_event: 'disbursement',
-    debit_account_code: '',
-    credit_account_code: '',
     description: '',
+    lines: [
+      { account_code: '', direction: 'debit', description: '' },
+      { account_code: '', direction: 'credit', description: '' },
+    ],
   });
   const [postingForm, setPostingForm] = useState({
     source_module: 'manual',
@@ -187,6 +213,11 @@ export default function AccountingPage() {
     amount: '0',
     branch_id: '',
   });
+  const [postingRules, setPostingRules] = useState<any[]>([]);
+
+  const canCreateRule = ruleForm.lines.some((line) => line.account_code) &&
+    ruleForm.lines.some((line) => line.direction === 'debit' && line.account_code) &&
+    ruleForm.lines.some((line) => line.direction === 'credit' && line.account_code);
   const [voucherForm, setVoucherForm] = useState({
     voucher_type: 'journal',
     description: '',
@@ -209,13 +240,15 @@ export default function AccountingPage() {
   const refresh = useCallback(async () => {
     if (!token || !tenantId) return;
     try {
-      const [dashboardRes, accountsRes, trialRes, ledgerRes, vouchersRes, dayEndRes] = await Promise.all([
+      const [dashboardRes, accountsRes, trialRes, ledgerRes, subLedgerRes, vouchersRes, dayEndRes, postingRulesRes] = await Promise.all([
         apiClient.getAccountingDashboard(tenantId),
         apiClient.getGlAccounts(tenantId),
         apiClient.getTrialBalance(tenantId),
         apiClient.getGlLedger(tenantId),
+        apiClient.getSubLedgerSummary(tenantId),
         apiClient.getVouchers(tenantId),
         apiClient.getDayEndCloses(tenantId),
+        apiClient.getPostingRules(tenantId),
       ]);
       setDashboard(dashboardRes.data);
       setAccounts(accountsRes.data || []);
@@ -227,8 +260,10 @@ export default function AccountingPage() {
       setCoaTree(hierarchyRes.data.items || []);
       setTrialRows(trialRes.data.rows || []);
       setLedgerRows(ledgerRes.data.items || []);
+      setSubLedgerSummaryRows(subLedgerRes.data.items || []);
       setVouchers(vouchersRes.data.items || []);
       setDayEndRows(dayEndRes.data || []);
+      setPostingRules(postingRulesRes.data || []);
     } catch (error) {
       setMessage(errorText(error, 'Unable to load accounting workspace.'));
     }
@@ -451,7 +486,15 @@ export default function AccountingPage() {
                     'rule',
                     async () => {
                       await apiClient.createPostingRule({ tenant_id: tenantId, ...ruleForm });
-                      setRuleForm({ ...ruleForm, description: '' });
+                      setRuleForm({
+                        source_module: ruleForm.source_module,
+                        source_event: ruleForm.source_event,
+                        description: '',
+                        lines: [
+                          { account_code: '', direction: 'debit', description: '' },
+                          { account_code: '', direction: 'credit', description: '' },
+                        ],
+                      });
                     },
                     'Posting rule created.',
                   );
@@ -462,14 +505,116 @@ export default function AccountingPage() {
                   <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" value={ruleForm.source_module} onChange={(e) => setRuleForm({ ...ruleForm, source_module: e.target.value })} />
                   <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" value={ruleForm.source_event} onChange={(e) => setRuleForm({ ...ruleForm, source_event: e.target.value })} />
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" placeholder="Debit GL Code" value={ruleForm.debit_account_code} onChange={(e) => setRuleForm({ ...ruleForm, debit_account_code: e.target.value })} />
-                  <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" placeholder="Credit GL Code" value={ruleForm.credit_account_code} onChange={(e) => setRuleForm({ ...ruleForm, credit_account_code: e.target.value })} />
+                <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" placeholder="Description" value={ruleForm.description} onChange={(e) => setRuleForm({ ...ruleForm, description: e.target.value })} />
+                <div className="space-y-3">
+                  {ruleForm.lines.map((line, index) => (
+                    <div key={index} className="grid gap-3 sm:grid-cols-4 items-end">
+                      <select
+                        className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                        value={line.direction}
+                        onChange={(e) => {
+                          const direction = e.target.value as 'debit' | 'credit';
+                          setRuleForm({
+                            ...ruleForm,
+                            lines: ruleForm.lines.map((item, idx) =>
+                              idx === index ? { ...item, direction } : item,
+                            ),
+                          });
+                        }}
+                      >
+                        <option value="debit">Debit</option>
+                        <option value="credit">Credit</option>
+                      </select>
+                      <select
+                        className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                        value={line.account_code}
+                        onChange={(e) => {
+                          const account_code = e.target.value;
+                          setRuleForm({
+                            ...ruleForm,
+                            lines: ruleForm.lines.map((item, idx) =>
+                              idx === index ? { ...item, account_code } : item,
+                            ),
+                          });
+                        }}
+                      >
+                        <option value="">Select GL account</option>
+                        {selectableAccounts.map((account) => (
+                          <option key={account.id} value={account.account_code}>
+                            {accountLabel(account)}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                        placeholder="Line description"
+                        value={line.description}
+                        onChange={(e) => {
+                          const description = e.target.value;
+                          setRuleForm({
+                            ...ruleForm,
+                            lines: ruleForm.lines.map((item, idx) =>
+                              idx === index ? { ...item, description } : item,
+                            ),
+                          });
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="h-10 rounded-md border border-slate-300 bg-slate-100 px-3 text-sm text-slate-700 hover:bg-slate-200"
+                        onClick={() => setRuleForm({
+                          ...ruleForm,
+                          lines: ruleForm.lines.filter((_, idx) => idx !== index),
+                        })}
+                        disabled={ruleForm.lines.length <= 1}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
                 </div>
-                <button disabled={!!busyAction || !ruleForm.debit_account_code || !ruleForm.credit_account_code} className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50">
+                <button
+                  type="button"
+                  onClick={() => setRuleForm({
+                    ...ruleForm,
+                    lines: [...ruleForm.lines, { account_code: '', direction: 'debit', description: '' }],
+                  })}
+                  className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Add posting line
+                </button>
+                <button
+                  disabled={!!busyAction || !canCreateRule}
+                  className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                >
                   {busyAction === 'rule' ? 'Saving...' : 'Create Posting Rule'}
                 </button>
               </form>
+
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-base font-semibold text-slate-950">Existing Posting Rules</h3>
+                <div className="mt-3 space-y-3">
+                  {postingRules.length === 0 ? (
+                    <p className="text-sm text-slate-600">No posting rules defined yet.</p>
+                  ) : (
+                    postingRules.map((rule) => (
+                      <div key={rule.id} className="rounded-md border border-slate-200 bg-white p-3 text-sm">
+                        <p className="font-semibold text-slate-900">{rule.source_module} / {rule.source_event}</p>
+                        <p className="text-slate-500">{rule.description || 'No description'}</p>
+                        <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                          {rule.lines?.map((line: any, index: number) => (
+                            <div key={index} className="rounded border border-slate-100 bg-slate-50 p-2 text-slate-700">
+                              <p className="text-xs uppercase text-slate-500">{line.direction}</p>
+                              <p>{line.account_code}</p>
+                              {line.description && <p className="text-xs text-slate-500">{line.description}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
 
               <form
                 className="grid gap-3"
@@ -478,21 +623,32 @@ export default function AccountingPage() {
                   runAction(
                     'posting',
                     async () => {
-                      await apiClient.postAccountingEngine({
+                      const sourceReference = postingForm.source_reference || `MAN-${Date.now()}`;
+                      const lines = [
+                        { gl_account_id: postingForm.debit_account_id, debit: amount, credit: 0, branch_id: postingForm.branch_id || undefined },
+                        { gl_account_id: postingForm.credit_account_id, debit: 0, credit: amount, branch_id: postingForm.branch_id || undefined },
+                      ];
+                      const validationResponse = await apiClient.validateAccountingPosting(tenantId, lines, {
+                        source_module: postingForm.source_module,
+                        source_event: postingForm.source_event,
+                        source_reference: sourceReference,
+                      });
+                      if (!validationResponse.data?.is_balanced) {
+                        throw new Error('Posting must balance before it can be posted.');
+                      }
+                      const postingResponse = await apiClient.postAccountingEngine({
                         tenant_id: tenantId,
                         source_module: postingForm.source_module,
                         source_event: postingForm.source_event,
-                        source_reference: postingForm.source_reference || `MAN-${Date.now()}`,
+                        source_reference: sourceReference,
                         description: postingForm.description,
                         branch_id: postingForm.branch_id || undefined,
-                        lines: [
-                          { gl_account_id: postingForm.debit_account_id, debit: amount, credit: 0, branch_id: postingForm.branch_id || undefined },
-                          { gl_account_id: postingForm.credit_account_id, debit: 0, credit: amount, branch_id: postingForm.branch_id || undefined },
-                        ],
+                        lines,
                       });
+                      setPostingPipeline(postingResponse.data?.pipeline || null);
                       setPostingForm({ ...postingForm, source_reference: '', description: '', amount: '0' });
                     },
-                    'Transaction posted.',
+                    'Transaction posted through the validation, entry, GL, sub-ledger, and audit pipeline.',
                   );
                 }}
               >
@@ -517,6 +673,35 @@ export default function AccountingPage() {
                   {busyAction === 'posting' ? 'Posting...' : 'Validate & Post'}
                 </button>
               </form>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold text-slate-950">Posting pipeline</h3>
+                <p className="mt-1 text-sm text-slate-600">Every transaction passes through validation, posting-rule resolution, debit/credit entries, GL updates, sub-ledger capture, and audit logging.</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {postingPipeline ? (
+                    Object.entries(postingPipeline).map(([stage, details]) => {
+                      const pipelineDetails = details as { status?: string; is_balanced?: boolean; rule?: unknown; entry_id?: string };
+                      const ruleApplied = Boolean(pipelineDetails.rule);
+                      return (
+                        <div key={stage} className="rounded-md border border-slate-200 bg-white p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{stage.replace(/_/g, ' ')}</p>
+                          <p className="mt-1 text-sm font-medium text-slate-900">{String(pipelineDetails.status || 'pending')}</p>
+                          {pipelineDetails.is_balanced !== undefined && (
+                            <p className="mt-1 text-xs text-slate-500">Balanced: {pipelineDetails.is_balanced ? 'Yes' : 'No'}</p>
+                          )}
+                          {ruleApplied && (
+                            <p className="mt-1 text-xs text-slate-500">Rule applied</p>
+                          )}
+                          {pipelineDetails.entry_id && (
+                            <p className="mt-1 break-all text-xs text-slate-500">Entry ID: {pipelineDetails.entry_id}</p>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-sm text-slate-600">Submit a posting to see the pipeline stages here.</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -598,6 +783,7 @@ export default function AccountingPage() {
                             {voucher.status === 'draft' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('verify', () => apiClient.verifyVoucher(voucher.id, tenantId, user?.username), 'Voucher verified.')}>Verify</button>}
                             {voucher.status === 'verified' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('approve', () => apiClient.approveVoucher(voucher.id, tenantId, user?.username), 'Voucher approved.')}>Approve</button>}
                             {voucher.status === 'approved' && <button className="rounded-md bg-blue-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('post-voucher', () => apiClient.postVoucher(voucher.id, tenantId, user?.username), 'Voucher posted.')}>Post</button>}
+                            {voucher.status === 'posted' && <button className="rounded-md bg-rose-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('reverse-voucher', () => apiClient.reverseVoucher(voucher.id, tenantId, user?.username), 'Voucher reversed.')}>Reverse</button>}
                           </div>
                         </td>
                       </tr>
@@ -635,42 +821,76 @@ export default function AccountingPage() {
                   </table>
                 </div>
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-slate-950">General Ledger Book</h2>
-                <div className="mt-3 overflow-x-auto">
-                  <table className="w-full min-w-[900px] text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 text-left text-slate-500">
-                        <th className="px-3 py-2">GL Number</th>
-                        <th className="px-3 py-2">Branch</th>
-                        <th className="px-3 py-2">Currency</th>
-                        <th className="px-3 py-2 text-right">Opening</th>
-                        <th className="px-3 py-2 text-right">Debit</th>
-                        <th className="px-3 py-2 text-right">Credit</th>
-                        <th className="px-3 py-2 text-right">Balance</th>
-                        <th className="px-3 py-2 text-right">Closing</th>
-                        <th className="px-3 py-2">FY</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ledgerRows.map((row) => (
-                        <tr key={`${row.gl_account_id}-${row.financial_year}-${row.branch_id || 'all'}`} className="border-b border-slate-100">
-                          <td className="px-3 py-2 text-slate-900">
-                            <p className="font-medium">{row.gl_number || row.account_code}</p>
-                            <p className="text-xs text-slate-500">{row.account_name}</p>
-                          </td>
-                          <td className="px-3 py-2 text-slate-700">{row.branch || row.branch_id || 'All'}</td>
-                          <td className="px-3 py-2 text-slate-700">{row.currency}</td>
-                          <td className="px-3 py-2 text-right text-slate-900">{money(row.opening_balance)}</td>
-                          <td className="px-3 py-2 text-right text-slate-900">{money(row.debit)}</td>
-                          <td className="px-3 py-2 text-right text-slate-900">{money(row.credit)}</td>
-                          <td className="px-3 py-2 text-right text-slate-900">{money(row.balance)}</td>
-                          <td className="px-3 py-2 text-right text-slate-900">{money(row.closing_balance)}</td>
-                          <td className="px-3 py-2 text-slate-700">{row.financial_year}</td>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-950">Product Ledgers</h2>
+                  <p className="mt-1 text-sm text-slate-600">Each product ledger posts into the same journal stream and rolls up into the general ledger.</p>
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full min-w-[720px] text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-left text-slate-500">
+                          <th className="px-3 py-2">Ledger</th>
+                          <th className="px-3 py-2">Module</th>
+                          <th className="px-3 py-2 text-right">Transactions</th>
+                          <th className="px-3 py-2 text-right">Total</th>
+                          <th className="px-3 py-2">Roll-up</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {subLedgerSummaryRows.map((row) => (
+                          <tr key={`${row.source_module}-${row.ledger_name}`} className="border-b border-slate-100">
+                            <td className="px-3 py-2 text-slate-900">
+                              <p className="font-medium">{row.ledger_name}</p>
+                              <p className="text-xs text-slate-500">{row.last_entry_at ? new Date(row.last_entry_at).toLocaleString() : 'No entries yet'}</p>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">{row.source_module}</td>
+                            <td className="px-3 py-2 text-right text-slate-900">{row.transaction_count}</td>
+                            <td className="px-3 py-2 text-right text-slate-900">{money(row.total_amount)}</td>
+                            <td className="px-3 py-2 text-slate-700">{row.rollup_to}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-950">General Ledger Book</h2>
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full min-w-[900px] text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-left text-slate-500">
+                          <th className="px-3 py-2">GL Number</th>
+                          <th className="px-3 py-2">Branch</th>
+                          <th className="px-3 py-2">Currency</th>
+                          <th className="px-3 py-2 text-right">Opening</th>
+                          <th className="px-3 py-2 text-right">Debit</th>
+                          <th className="px-3 py-2 text-right">Credit</th>
+                          <th className="px-3 py-2 text-right">Balance</th>
+                          <th className="px-3 py-2 text-right">Closing</th>
+                          <th className="px-3 py-2">FY</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {ledgerRows.map((row) => (
+                          <tr key={`${row.gl_account_id}-${row.financial_year}-${row.branch_id || 'all'}`} className="border-b border-slate-100">
+                            <td className="px-3 py-2 text-slate-900">
+                              <p className="font-medium">{row.gl_number || row.account_code}</p>
+                              <p className="text-xs text-slate-500">{row.account_name}</p>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">{row.branch || row.branch_id || 'All'}</td>
+                            <td className="px-3 py-2 text-slate-700">{row.currency}</td>
+                            <td className="px-3 py-2 text-right text-slate-900">{money(row.opening_balance)}</td>
+                            <td className="px-3 py-2 text-right text-slate-900">{money(row.debit)}</td>
+                            <td className="px-3 py-2 text-right text-slate-900">{money(row.credit)}</td>
+                            <td className="px-3 py-2 text-right text-slate-900">{money(row.balance)}</td>
+                            <td className="px-3 py-2 text-right text-slate-900">{money(row.closing_balance)}</td>
+                            <td className="px-3 py-2 text-slate-700">{row.financial_year}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>

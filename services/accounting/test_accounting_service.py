@@ -120,6 +120,9 @@ async def _run_accounting_test():
             "/posting-engine/validate",
             json={
                 "tenant_id": tenant_id,
+                "source_module": "deposits",
+                "source_event": "deposit",
+                "source_reference": "deposit-test-ref",
                 "lines": [
                     {"gl_account_id": expense_account["id"], "debit": 250.0, "credit": 0.0},
                     {"gl_account_id": cash_account["id"], "debit": 0.0, "credit": 250.0},
@@ -127,7 +130,10 @@ async def _run_accounting_test():
             },
         )
         assert validation_response.status_code == 200
-        assert validation_response.json()["is_balanced"] is True
+        validation_payload = validation_response.json()
+        assert validation_payload["is_balanced"] is True
+        assert validation_payload["pipeline"]["validation"]["is_balanced"] is True
+        assert validation_payload["pipeline"]["posting_rule"]["status"] in {"matched", "default_map", "manual"}
 
         voucher_response = await client.post(
             "/vouchers",
@@ -167,6 +173,13 @@ async def _run_accounting_test():
         assert post_voucher_response.status_code == 200
         assert post_voucher_response.json()["posting_status"] == "posted"
 
+        reverse_response = await client.post(
+            f"/vouchers/{voucher['id']}/reverse",
+            json={"tenant_id": tenant_id, "performed_by": "reverser"},
+        )
+        assert reverse_response.status_code == 200
+        assert reverse_response.json()["status"] == "reversed"
+
         rule_payload = {
             "tenant_id": tenant_id,
             "source_module": "deposits",
@@ -183,6 +196,22 @@ async def _run_accounting_test():
         assert rule_data["source_event"] == "deposit"
         assert rule_data["debit_account_code"] == "1000_CASH"
         assert rule_data["credit_account_code"] == "2200_CUSTOMER_DEPOSITS"
+
+        multi_line_rule_payload = {
+            "tenant_id": tenant_id,
+            "source_module": "loans",
+            "source_event": "disbursement",
+            "description": "Loan disbursement posting",
+            "lines": [
+                {"account_code": "1200_LOAN_RECEIVABLE", "direction": "debit"},
+                {"account_code": "1000_CASH", "direction": "credit"},
+            ],
+        }
+        multi_line_rule_response = await client.post("/posting-rules", json=multi_line_rule_payload)
+        assert multi_line_rule_response.status_code == 200
+        multi_line_rule_data = multi_line_rule_response.json()
+        assert multi_line_rule_data["lines"][0]["account_code"] == "1200_LOAN_RECEIVABLE"
+        assert multi_line_rule_data["lines"][0]["direction"] == "debit"
 
         posting_payload = {
             "tenant_id": tenant_id,
@@ -219,6 +248,11 @@ async def _run_accounting_test():
         assert subledger_entries[0]["amount"] == 1500.0
         assert subledger_entries[0]["journal_entry_id"] == posting_data["id"]
 
+        summary_response = await client.get("/sub-ledger-summary", params={"tenant_id": tenant_id})
+        assert summary_response.status_code == 200
+        summary_rows = summary_response.json()["items"]
+        assert any(row["source_module"] == "deposits" and row["ledger_name"] == "Deposit Ledger" for row in summary_rows)
+
         audit_response = await client.get(
             "/audit-logs",
             params={"tenant_id": tenant_id, "entity": "gl_posting"},
@@ -234,8 +268,8 @@ async def _run_accounting_test():
         assert trial_balance_response.status_code == 200
         trial_balance = trial_balance_response.json()
         assert trial_balance["is_balanced"] is True
-        assert trial_balance["total_debit"] == 1750.0
-        assert trial_balance["total_credit"] == 1750.0
+        assert trial_balance["total_debit"] == 1500.0
+        assert trial_balance["total_credit"] == 1500.0
 
         ledger_response = await client.get("/gl-ledger", params={"tenant_id": tenant_id})
         assert ledger_response.status_code == 200

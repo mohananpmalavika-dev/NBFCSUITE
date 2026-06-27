@@ -140,8 +140,9 @@ class PostingRule(Base):
     tenant_id = Column(String, index=True, nullable=False)
     source_module = Column(String, index=True, nullable=False)
     source_event = Column(String, index=True, nullable=False)
-    debit_account_code = Column(String, nullable=False)
-    credit_account_code = Column(String, nullable=False)
+    debit_account_code = Column(String, nullable=True)
+    credit_account_code = Column(String, nullable=True)
+    posting_lines = Column(JSON, nullable=True)
     description = Column(String, nullable=True)
     is_active = Column(String, default="true")
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -353,13 +354,26 @@ class JournalEntryResponse(BaseModel):
         from_attributes = True
 
 
+class PostingRuleLineCreate(BaseModel):
+    account_code: str
+    direction: str
+    description: Optional[str] = None
+
+
+class PostingRuleLineResponse(BaseModel):
+    account_code: str
+    direction: str
+    description: Optional[str] = None
+
+
 class PostingRuleCreate(BaseModel):
     tenant_id: str
     source_module: str
     source_event: str
-    debit_account_code: str
-    credit_account_code: str
+    debit_account_code: Optional[str] = None
+    credit_account_code: Optional[str] = None
     description: Optional[str] = None
+    lines: Optional[List[PostingRuleLineCreate]] = None
 
 
 class PostingRuleResponse(BaseModel):
@@ -367,10 +381,11 @@ class PostingRuleResponse(BaseModel):
     tenant_id: str
     source_module: str
     source_event: str
-    debit_account_code: str
-    credit_account_code: str
+    debit_account_code: Optional[str] = None
+    credit_account_code: Optional[str] = None
     description: Optional[str] = None
     is_active: str
+    lines: List[PostingRuleLineResponse] = []
 
     class Config:
         from_attributes = True
@@ -403,6 +418,15 @@ class SubLedgerEntryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class SubLedgerSummaryItem(BaseModel):
+    source_module: str
+    ledger_name: str
+    transaction_count: int
+    total_amount: float
+    last_entry_at: Optional[datetime] = None
+    rollup_to: str = "General Ledger"
 
 
 class BankTransactionCreate(BaseModel):
@@ -512,6 +536,9 @@ class PostingEngineLine(BaseModel):
 
 class PostingValidationRequest(BaseModel):
     tenant_id: str
+    source_module: Optional[str] = None
+    source_event: Optional[str] = None
+    source_reference: Optional[str] = None
     lines: List[PostingEngineLine]
 
 
@@ -528,6 +555,10 @@ class PostingEngineRequest(BaseModel):
     currency: Optional[str] = "INR"
     metadata: Optional[dict] = None
     lines: List[PostingEngineLine]
+
+
+class PostingEnginePostResponse(JournalEntryResponse):
+    pipeline: Optional[dict] = None
 
 
 class VoucherLineCreate(BaseModel):
@@ -617,6 +648,16 @@ DEFAULT_POSTING_MAP = {
     ("deposits", "withdrawal"): ("2200_CUSTOMER_DEPOSITS", "1000_CASH"),
     ("forex", "transaction"): ("1000_CASH", "4100_FOREX_INCOME"),
     ("gold", "disbursement"): ("1210_GOLD_LOAN_RECEIVABLE", "1000_CASH"),
+}
+
+SUB_LEDGER_LEDGER_MAP = {
+    "loans": "Customer Loan Ledger",
+    "deposit": "Deposit Ledger",
+    "deposits": "Deposit Ledger",
+    "gold": "Gold Loan Ledger",
+    "forex": "Forex Ledger",
+    "vendor": "Vendor Ledger",
+    "employee": "Employee Ledger",
 }
 
 DEFAULT_ACCOUNT_NAMES = {
@@ -950,9 +991,86 @@ def _create_subledger_entry(
     return entry
 
 
-def _resolve_posting_map(posting: AutomatedGLPostingRequest, db: Session) -> tuple[str, str, Optional[PostingRule]]:
+def _normalize_posting_rule_lines(rule: Optional[PostingRule]) -> List[dict]:
+    if not rule:
+        return []
+    if isinstance(rule.posting_lines, list):
+        return [
+            {
+                "account_code": str(line.get("account_code", "")).strip(),
+                "direction": str(line.get("direction", "debit")).strip().lower(),
+                "description": line.get("description"),
+            }
+            for line in rule.posting_lines
+            if line
+        ]
+    if rule.debit_account_code or rule.credit_account_code:
+        return [
+            {"account_code": rule.debit_account_code, "direction": "debit"},
+            {"account_code": rule.credit_account_code, "direction": "credit"},
+        ]
+    return []
+
+
+def _build_posting_lines_from_rule(
+    rule: Optional[PostingRule],
+    amount: float,
+    branch_id: Optional[str] = None,
+    currency: Optional[str] = None,
+    description_prefix: Optional[str] = None,
+) -> List[PostingEngineLine]:
+    normalized_lines = _normalize_posting_rule_lines(rule)
+    if not normalized_lines:
+        raise HTTPException(status_code=400, detail="Posting rule has no configured lines")
+
+    posting_lines = []
+    for line in normalized_lines:
+        account_code = line.get("account_code")
+        direction = str(line.get("direction", "debit")).lower()
+        if not account_code:
+            raise HTTPException(status_code=400, detail="Posting rule line is missing account_code")
+        if direction not in {"debit", "credit"}:
+            raise HTTPException(status_code=400, detail="Posting rule line direction must be debit or credit")
+        posting_lines.append(
+            PostingEngineLine(
+                account_code=account_code,
+                debit=amount if direction == "debit" else 0.0,
+                credit=amount if direction == "credit" else 0.0,
+                currency=currency or "INR",
+                branch_id=branch_id,
+                description=line.get("description") or f"{description_prefix or 'Posting'} {direction}",
+            )
+        )
+    return posting_lines
+
+
+def _resolve_posting_map(
+    posting: AutomatedGLPostingRequest,
+    db: Session,
+    amount: float,
+    branch_id: Optional[str] = None,
+    currency: Optional[str] = None,
+    description_prefix: Optional[str] = None,
+) -> tuple[List[PostingEngineLine], Optional[PostingRule]]:
     if posting.debit_account_code and posting.credit_account_code:
-        return posting.debit_account_code, posting.credit_account_code, None
+        return [
+            PostingEngineLine(
+                account_code=posting.debit_account_code,
+                debit=amount,
+                credit=0.0,
+                currency=currency or "INR",
+                branch_id=branch_id,
+                description=f"{description_prefix or 'Posting'} debit",
+            ),
+            PostingEngineLine(
+                account_code=posting.credit_account_code,
+                debit=0.0,
+                credit=amount,
+                currency=currency or "INR",
+                branch_id=branch_id,
+                description=f"{description_prefix or 'Posting'} credit",
+            ),
+        ], None
 
     rule = (
         db.query(PostingRule)
@@ -965,13 +1083,38 @@ def _resolve_posting_map(posting: AutomatedGLPostingRequest, db: Session) -> tup
         .first()
     )
     if rule:
-        return rule.debit_account_code, rule.credit_account_code, rule
+        return _build_posting_lines_from_rule(rule, amount, branch_id, currency, description_prefix), rule
 
     mapped = DEFAULT_POSTING_MAP.get((posting.source_module, posting.source_event))
     if mapped:
-        return mapped[0], mapped[1], None
+        return [
+            PostingEngineLine(
+                account_code=mapped[0],
+                debit=amount,
+                credit=0.0,
+                currency=currency or "INR",
+                branch_id=branch_id,
+                description=f"{description_prefix or 'Posting'} debit",
+            ),
+            PostingEngineLine(
+                account_code=mapped[1],
+                debit=0.0,
+                credit=amount,
+                currency=currency or "INR",
+                branch_id=branch_id,
+                description=f"{description_prefix or 'Posting'} credit",
+            ),
+        ], None
 
     raise HTTPException(status_code=400, detail="No GL posting map found for source module/event")
+
+
+def _posting_rule_line_response(line: dict) -> dict:
+    return {
+        "account_code": line.get("account_code"),
+        "direction": line.get("direction", "debit"),
+        "description": line.get("description"),
+    }
 
 
 def _posting_rule_response(rule: PostingRule) -> dict:
@@ -984,6 +1127,10 @@ def _posting_rule_response(rule: PostingRule) -> dict:
         "credit_account_code": rule.credit_account_code,
         "description": rule.description,
         "is_active": rule.is_active,
+        "lines": [
+            _posting_rule_line_response(line)
+            for line in _normalize_posting_rule_lines(rule)
+        ],
     }
 
 
@@ -1012,6 +1159,10 @@ def _subledger_response(entry: SubLedgerEntry) -> dict:
         "metadata": entry.metadata_json,
         "created_at": entry.created_at,
     }
+
+
+def _subledger_ledger_name(source_module: str) -> str:
+    return SUB_LEDGER_LEDGER_MAP.get(source_module.lower(), f"{source_module.replace('_', ' ').title()} Ledger")
 
 
 def _financial_rows(accounts: list[GLAccount], account_types: set[str]):
@@ -1052,6 +1203,25 @@ def _journal_entry_response(entry: JournalEntry) -> dict:
         "business_date": entry.business_date,
         "financial_year": entry.financial_year,
         "voucher_id": entry.voucher_id,
+    }
+
+
+def _posting_pipeline(
+    *,
+    validation_status: str = "passed",
+    validation_balanced: bool = True,
+    posting_rule_status: str = "manual",
+    posting_rule: Optional[dict] = None,
+    subledger_entry_id: Optional[str] = None,
+) -> dict:
+    return {
+        "validation": {"status": validation_status, "is_balanced": validation_balanced},
+        "posting_rule": {"status": posting_rule_status, "rule": posting_rule},
+        "debit_entry": {"status": "recorded"},
+        "credit_entry": {"status": "recorded"},
+        "gl_update": {"status": "applied"},
+        "audit_log": {"status": "recorded"},
+        "subledger": {"status": "recorded", "entry_id": subledger_entry_id},
     }
 
 
@@ -1406,6 +1576,8 @@ async def list_journal_entries(
 async def create_posting_rule(rule: PostingRuleCreate, db: Session = Depends(get_db)):
     if not rule.tenant_id:
         raise HTTPException(status_code=400, detail="tenant_id is required")
+    if not rule.lines and not (rule.debit_account_code and rule.credit_account_code):
+        raise HTTPException(status_code=400, detail="Provide either lines or debit/credit account codes")
 
     existing = (
         db.query(PostingRule)
@@ -1419,13 +1591,31 @@ async def create_posting_rule(rule: PostingRuleCreate, db: Session = Depends(get
     if existing:
         raise HTTPException(status_code=400, detail="Posting rule already exists for source module/event")
 
+    normalized_lines = []
+    if rule.lines:
+        for line in rule.lines:
+            normalized_lines.append(
+                {
+                    "account_code": line.account_code,
+                    "direction": str(line.direction or "debit").lower(),
+                    "description": line.description,
+                }
+            )
+
+    debit_account_code = rule.debit_account_code
+    credit_account_code = rule.credit_account_code
+    if normalized_lines:
+        debit_account_code = next((line["account_code"] for line in normalized_lines if line["direction"] == "debit"), None)
+        credit_account_code = next((line["account_code"] for line in normalized_lines if line["direction"] == "credit"), None)
+
     posting_rule = PostingRule(
         id=str(uuid4()),
         tenant_id=rule.tenant_id,
         source_module=rule.source_module,
         source_event=rule.source_event,
-        debit_account_code=rule.debit_account_code,
-        credit_account_code=rule.credit_account_code,
+        debit_account_code=debit_account_code,
+        credit_account_code=credit_account_code,
+        posting_lines=normalized_lines or None,
         description=rule.description,
         is_active="true",
     )
@@ -1439,23 +1629,25 @@ async def create_posting_rule(rule: PostingRuleCreate, db: Session = Depends(get
         payload={
             "source_module": rule.source_module,
             "source_event": rule.source_event,
-            "debit_account_code": rule.debit_account_code,
-            "credit_account_code": rule.credit_account_code,
+            "debit_account_code": debit_account_code,
+            "credit_account_code": credit_account_code,
+            "lines": normalized_lines,
         },
     )
     db.commit()
     db.refresh(posting_rule)
-    return posting_rule
+    return _posting_rule_response(posting_rule)
 
 
 @app.get("/posting-rules", response_model=List[PostingRuleResponse])
 async def list_posting_rules(tenant_id: str = Query(...), db: Session = Depends(get_db)):
-    return (
+    rules = (
         db.query(PostingRule)
         .filter(PostingRule.tenant_id == tenant_id)
         .order_by(PostingRule.source_module, PostingRule.source_event)
         .all()
     )
+    return [_posting_rule_response(rule) for rule in rules]
 
 
 @app.get("/audit-logs", response_model=List[AuditLogResponse])
@@ -1489,6 +1681,43 @@ async def list_subledger_entries(
     return [_subledger_response(entry) for entry in entries]
 
 
+@app.get("/sub-ledger-summary")
+async def subledger_summary(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    entries = db.query(SubLedgerEntry).filter(SubLedgerEntry.tenant_id == tenant_id).all()
+    grouped: dict[str, dict] = {}
+    for entry in entries:
+        key = entry.source_module.lower()
+        summary = grouped.setdefault(
+            key,
+            {
+                "source_module": entry.source_module,
+                "ledger_name": _subledger_ledger_name(entry.source_module),
+                "transaction_count": 0,
+                "total_amount": 0.0,
+                "last_entry_at": None,
+                "rollup_to": "General Ledger",
+            },
+        )
+        summary["transaction_count"] += 1
+        summary["total_amount"] += entry.amount or 0.0
+        if summary["last_entry_at"] is None or (entry.created_at and entry.created_at > summary["last_entry_at"]):
+            summary["last_entry_at"] = entry.created_at
+
+    items = [
+        {
+            "source_module": item["source_module"],
+            "ledger_name": item["ledger_name"],
+            "transaction_count": item["transaction_count"],
+            "total_amount": round(item["total_amount"], 2),
+            "last_entry_at": item["last_entry_at"],
+            "rollup_to": item["rollup_to"],
+        }
+        for item in grouped.values()
+    ]
+    items.sort(key=lambda row: (row["ledger_name"].lower(), row["source_module"].lower()))
+    return {"items": items, "total": len(items)}
+
+
 @app.post("/posting-engine/validate")
 async def validate_posting(request: PostingValidationRequest, db: Session = Depends(get_db)):
     result = _validate_double_entry(request.lines)
@@ -1508,10 +1737,54 @@ async def validate_posting(request: PostingValidationRequest, db: Session = Depe
                 "credit": line.credit,
             }
         )
-    return {**result, "lines": resolved_accounts}
+
+    posting_rule = None
+    posting_rule_status = "manual"
+    if request.source_module and request.source_event:
+        rule = (
+            db.query(PostingRule)
+            .filter(
+                PostingRule.tenant_id == request.tenant_id,
+                PostingRule.source_module == request.source_module,
+                PostingRule.source_event == request.source_event,
+                PostingRule.is_active.in_(["true", "1", "yes", "active"]),
+            )
+            .first()
+        )
+        if rule:
+            posting_rule = _posting_rule_response(rule)
+            posting_rule_status = "matched"
+        else:
+            mapped = DEFAULT_POSTING_MAP.get((request.source_module, request.source_event))
+            if mapped:
+                posting_rule = {
+                    "source_module": request.source_module,
+                    "source_event": request.source_event,
+                    "debit_account_code": mapped[0],
+                    "credit_account_code": mapped[1],
+                }
+                posting_rule_status = "default_map"
+
+    return {
+        **result,
+        "lines": resolved_accounts,
+        "pipeline": {
+            **_posting_pipeline(
+                validation_status="passed",
+                validation_balanced=result["is_balanced"],
+                posting_rule_status=posting_rule_status,
+                posting_rule=posting_rule,
+            ),
+            "debit_entry": {"status": "pending"},
+            "credit_entry": {"status": "pending"},
+            "gl_update": {"status": "pending"},
+            "audit_log": {"status": "pending"},
+            "subledger": {"status": "pending"},
+        },
+    }
 
 
-@app.post("/posting-engine/post", response_model=JournalEntryResponse)
+@app.post("/posting-engine/post", response_model=PostingEnginePostResponse)
 async def post_engine_transaction(request: PostingEngineRequest, db: Session = Depends(get_db)):
     if request.idempotency_key:
         existing = (
@@ -1520,7 +1793,10 @@ async def post_engine_transaction(request: PostingEngineRequest, db: Session = D
             .first()
         )
         if existing:
-            return _journal_entry_response(existing)
+            return {
+                **_journal_entry_response(existing),
+                "pipeline": _posting_pipeline(subledger_entry_id=None),
+            }
 
     journal_entry = _post_journal(
         db=db,
@@ -1537,7 +1813,7 @@ async def post_engine_transaction(request: PostingEngineRequest, db: Session = D
         business_date=request.business_date,
         financial_year=request.financial_year,
     )
-    _create_subledger_entry(
+    subledger_entry = _create_subledger_entry(
         db=db,
         tenant_id=request.tenant_id,
         source_module=request.source_module,
@@ -1553,11 +1829,27 @@ async def post_engine_transaction(request: PostingEngineRequest, db: Session = D
         entity="posting_engine",
         entity_id=journal_entry.id,
         action="post",
-        payload={"source_module": request.source_module, "source_event": request.source_event},
+        payload={
+            "source_module": request.source_module,
+            "source_event": request.source_event,
+            "source_reference": request.source_reference,
+            "subledger_entry_id": subledger_entry.id,
+        },
     )
     db.commit()
     db.refresh(journal_entry)
-    return _journal_entry_response(journal_entry)
+    return {
+        **_journal_entry_response(journal_entry),
+        "pipeline": _posting_pipeline(
+            posting_rule_status="applied",
+            posting_rule={
+                "source_module": request.source_module,
+                "source_event": request.source_event,
+                "source_reference": request.source_reference,
+            },
+            subledger_entry_id=subledger_entry.id,
+        ),
+    }
 
 
 @app.post("/vouchers", response_model=VoucherResponse)
@@ -1706,6 +1998,33 @@ async def post_voucher(voucher_id: str, request: VoucherActionRequest, db: Sessi
     db.commit()
     db.refresh(journal_entry)
     return _journal_entry_response(journal_entry)
+
+
+@app.post("/vouchers/{voucher_id}/reverse", response_model=VoucherResponse)
+async def reverse_voucher(voucher_id: str, request: VoucherActionRequest, db: Session = Depends(get_db)):
+    voucher = db.query(Voucher).filter(Voucher.id == voucher_id, Voucher.tenant_id == request.tenant_id).first()
+    if not voucher:
+        raise HTTPException(status_code=404, detail="Voucher not found for tenant")
+    if voucher.status != "posted":
+        raise HTTPException(status_code=400, detail="Only posted vouchers can be reversed")
+    if not voucher.posted_journal_entry_id:
+        raise HTTPException(status_code=400, detail="Voucher has no posted journal entry to reverse")
+
+    reversal_entry = await reverse_gl_posting(voucher.posted_journal_entry_id, request.tenant_id, db)
+    voucher.status = "reversed"
+    voucher.updated_at = datetime.utcnow()
+    _log_audit(
+        db,
+        request.tenant_id,
+        "voucher",
+        voucher.id,
+        "reverse",
+        {"reversal_journal_entry_id": reversal_entry["id"]},
+        request.performed_by,
+    )
+    db.commit()
+    db.refresh(voucher)
+    return _voucher_response(voucher)
 
 
 @app.get("/gl-balances")
@@ -1874,7 +2193,14 @@ async def create_automated_gl_posting(posting: AutomatedGLPostingRequest, db: Se
         if existing:
             return _journal_entry_response(existing)
 
-    debit_code, credit_code, posting_rule = _resolve_posting_map(posting, db)
+    posting_lines, posting_rule = _resolve_posting_map(
+        posting,
+        db,
+        posting.amount,
+        branch_id=posting.branch_id,
+        currency=posting.currency,
+        description_prefix=f"{posting.source_module}.{posting.source_event}",
+    )
     journal_entry = _post_journal(
         db=db,
         tenant_id=posting.tenant_id,
@@ -1888,24 +2214,7 @@ async def create_automated_gl_posting(posting: AutomatedGLPostingRequest, db: Se
         branch_id=posting.branch_id,
         business_date=posting.business_date,
         financial_year=posting.financial_year,
-        lines=[
-            PostingEngineLine(
-                account_code=debit_code,
-                debit=posting.amount,
-                credit=0.0,
-                currency=posting.currency,
-                branch_id=posting.branch_id,
-                description=f"Debit for {posting.source_module}.{posting.source_event}",
-            ),
-            PostingEngineLine(
-                account_code=credit_code,
-                debit=0.0,
-                credit=posting.amount,
-                currency=posting.currency,
-                branch_id=posting.branch_id,
-                description=f"Credit for {posting.source_module}.{posting.source_event}",
-            ),
-        ],
+        lines=posting_lines,
     )
 
     _create_subledger_entry(
@@ -1928,10 +2237,9 @@ async def create_automated_gl_posting(posting: AutomatedGLPostingRequest, db: Se
         payload={
             "source_module": posting.source_module,
             "source_event": posting.source_event,
-            "debit_account_code": debit_code,
-            "credit_account_code": credit_code,
             "amount": posting.amount,
             "posting_rule_id": posting_rule.id if posting_rule else None,
+            "lines": [line.dict() for line in posting_lines],
         },
     )
 
