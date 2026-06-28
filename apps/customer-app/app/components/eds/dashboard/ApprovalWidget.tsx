@@ -15,13 +15,25 @@ export interface DashboardApproval {
   amount?: string;
 }
 
+export type DashboardApprovalLite = {
+  title: string;
+  requester: string;
+  amount: string;
+  sla: string;
+};
+
+
+
 export interface ApprovalWidgetProps {
   approvals: DashboardApproval[];
+  onApprove?: () => void;
   onAction?: (action: import('../workflow/types').WorkflowActionType) => void;
 }
 
-export function ApprovalWidget({ approvals, onAction }: ApprovalWidgetProps) {
+
+export function ApprovalWidget({ approvals, onApprove, onAction }: ApprovalWidgetProps) {
   return (
+
     <WidgetContainer title="Pending Approvals" category="approval" refreshPolicy="30s" size="lg">
       <div className="grid gap-3 lg:grid-cols-2">
         {approvals.map((approval) => (
@@ -29,8 +41,12 @@ export function ApprovalWidget({ approvals, onAction }: ApprovalWidgetProps) {
             key={`${approval.transactionId}-${approval.workflowId}`}
             model={approval}
             availability={{ approve: true, reject: true, return: true, requestChanges: true, delegate: true, escalate: true, hold: true }}
-            onAction={onAction}
+            onAction={(action) => {
+              onApprove?.();
+              onAction?.(action);
+            }}
           />
+
         ))}
       </div>
     </WidgetContainer>

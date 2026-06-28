@@ -68,7 +68,8 @@ export function EnterpriseWizard({
   approvalRequired = false,
   approvalApprover,
   autosaveIntervalMs = 30000,
-  initialDraftId,
+  initialDraftId: _initialDraftId,
+
   apiHandler,
   renderStep,
   onEvent,
@@ -79,6 +80,8 @@ export function EnterpriseWizard({
   const [autosaveStatus, setAutosaveStatus] = useState<WizardAutosaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  void apiHandler;
 
   const currentStep = steps[currentStepIndex] ?? steps[0];
   const isFirstStep = currentStepIndex === 0;

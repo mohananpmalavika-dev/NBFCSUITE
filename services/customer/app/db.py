@@ -3,7 +3,20 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://nbfc_user:nbfc_pass@localhost:5432/nbfcsuite")
-engine = create_engine(DATABASE_URL, echo=True)
+
+
+def _build_engine():
+    if DATABASE_URL.startswith("sqlite"):
+        return create_engine(DATABASE_URL, echo=True, connect_args={"check_same_thread": False})
+
+    try:
+        return create_engine(DATABASE_URL, echo=True)
+    except ModuleNotFoundError:
+        fallback_url = os.getenv("SQLITE_URL", "sqlite:///./customer_service.sqlite3")
+        return create_engine(fallback_url, echo=True, connect_args={"check_same_thread": False})
+
+
+engine = _build_engine()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

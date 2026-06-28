@@ -684,6 +684,59 @@ async def create_employee_hierarchy(payload: EmployeeHierarchyCreate, db: Sessio
     return eh
 
 
+@router.get("/dashboard")
+async def get_eom_dashboard(db: Session = Depends(get_db)):
+    summary = {
+        "enterprises": db.query(Enterprise).count(),
+        "brands": db.query(Brand).count(),
+        "legal_entities": db.query(LegalEntity).count(),
+        "business_units": db.query(BusinessUnit).count(),
+        "branches": db.query(EOMBranch).count(),
+        "departments": db.query(Department).count(),
+        "positions": db.query(Position).count(),
+        "employees": db.query(Employee).count(),
+    }
+
+    recent_enterprises = [
+        {
+            "id": enterprise.id,
+            "enterprise_code": enterprise.enterprise_code,
+            "enterprise_name": enterprise.enterprise_name,
+            "status": enterprise.status,
+            "created_at": enterprise.created_at.isoformat() if enterprise.created_at else None,
+        }
+        for enterprise in db.query(Enterprise).order_by(Enterprise.created_at.desc()).limit(5).all()
+    ]
+
+    return {
+        "title": "Enterprise Organization Management",
+        "workspace": {
+            "title": "Enterprise Organization Management",
+            "sections": [
+                "Dashboard",
+                "Enterprise List",
+                "Hierarchy Explorer",
+                "Organization Chart",
+                "Branch Network",
+                "Reports",
+            ],
+        },
+        "summary": summary,
+        "recent_enterprises": recent_enterprises,
+        "kpis": [
+            {"label": "Enterprises", "value": summary["enterprises"]},
+            {"label": "Branches", "value": summary["branches"]},
+            {"label": "Departments", "value": summary["departments"]},
+            {"label": "Employees", "value": summary["employees"]},
+        ],
+        "insights": [
+            "Shared organizational model across products",
+            "Branch and department hierarchy available to downstream modules",
+            "Enterprise master entity serves as root for the operating model",
+        ],
+    }
+
+
 @router.get("/summary", response_model=EOMSummaryResponse)
 async def get_eom_summary(db: Session = Depends(get_db)):
     return EOMSummaryResponse(

@@ -1,0 +1,9 @@
+{"ts": "2026-06-28T20:02:21.345080Z", "type": "ENTERPRISE_CREATED", "payload": {"id": "9f76a62e-6b5f-43de-a4c0-8731558627fc", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T20:02:21.386881Z", "type": "ENTERPRISE_UPDATED", "payload": {"id": "9f76a62e-6b5f-43de-a4c0-8731558627fc"}}
+{"ts": "2026-06-28T20:02:21.429134Z", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "9f76a62e-6b5f-43de-a4c0-8731558627fc", "status": "suspended"}}
+{"ts": "2026-06-28T20:02:21.483532Z", "type": "ENTERPRISE_DELETED", "payload": {"id": "9f76a62e-6b5f-43de-a4c0-8731558627fc"}}
+{"ts": "2026-06-28T20:03:55.177116Z", "type": "ENTERPRISE_CREATED", "payload": {"id": "abc153e8-1345-4a28-8714-fcfe62f5e4ab", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T20:03:55.256086Z", "type": "ENTERPRISE_CREATED", "payload": {"id": "98f9541e-8f2d-4c56-877f-139d3eb91d0b", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T20:03:55.316442Z", "type": "ENTERPRISE_UPDATED", "payload": {"id": "98f9541e-8f2d-4c56-877f-139d3eb91d0b"}}
+{"ts": "2026-06-28T20:03:55.364791Z", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "98f9541e-8f2d-4c56-877f-139d3eb91d0b", "status": "suspended"}}
+{"ts": "2026-06-28T20:03:55.449444Z", "type": "ENTERPRISE_DELETED", "payload": {"id": "98f9541e-8f2d-4c56-877f-139d3eb91d0b"}}

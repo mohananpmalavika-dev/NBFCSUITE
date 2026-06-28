@@ -90,6 +90,15 @@ The current UI should evolve toward a reusable component library in Next.js with
 - EOM-011: Designation Management System (DgMS)
 - EOM-012: Enterprise Position Management System (EPMS)
 - EOM-013: Financial Organization Management (FOM)
+- EP-014: Enterprise Identity & Access Management (IAM)
+- EP-015: Enterprise Document Management System (EDMS)
+- AFC-001: Enterprise Accounting & General Ledger Platform
+- AFC-001-COA: Enterprise Chart of Accounts (COA)
+- AFC-002: Financial Calendar & Accounting Period Management
+- AFC-003: Enterprise Accounting Event Engine
+- AFC-004: Enterprise Posting Rule Engine
+- AFC-005: Enterprise Journal Engine
+- AFC-006: Enterprise General Ledger
 - EP-002: Identity & Access Management (IAM)
 - EP-003: Workflow Engine
 - EP-004: Rules Engine
@@ -127,4 +136,13 @@ The current UI should evolve toward a reusable component library in Next.js with
 - ✅ EOM-011: Designation Management System (DgMS) — Complete
 - ✅ EOM-012: Enterprise Position Management System (EPMS) — Complete
 - ✅ EOM-013: Financial Organization Management (FOM) — Complete
-- ⏳ EP-002: Identity & Access Management (IAM) — Next
+- ✅ EP-014: Enterprise Identity & Access Management (IAM) — Complete
+- ✅ EP-015: Enterprise Document Management System (EDMS) — Complete
+- ✅ AFC-001: Enterprise Accounting & General Ledger Platform — Complete
+- ✅ AFC-001-COA: Enterprise Chart of Accounts (COA) — Complete
+- ✅ AFC-002: Financial Calendar & Accounting Period Management — Complete
+- ✅ AFC-003: Enterprise Accounting Event Engine — Complete
+- ✅ AFC-004: Enterprise Posting Rule Engine — Complete
+- ✅ AFC-005: Enterprise Journal Engine — Complete
+- ✅ AFC-006: Enterprise General Ledger — Complete
+- ⏳ AFC-007: Enterprise Trial Balance Engine — Next

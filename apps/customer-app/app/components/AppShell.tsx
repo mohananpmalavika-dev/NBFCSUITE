@@ -1,6 +1,8 @@
-'use client';
+
+"use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   Banknote,
   Bell,
@@ -111,6 +113,8 @@ const kpis = [
 ];
 
 const favorites = ['Employee Directory', 'Customer 360', 'General Ledger'];
+// Add EOM Dashboard favorite
+favorites.unshift('EOM Dashboard');
 const recent = ['Expense Approval', 'Branch 1204', 'Policy Exceptions'];
 
 const commandActions = [
@@ -163,9 +167,32 @@ const dashboardTasks = [
 ];
 
 const dashboardApprovals = [
-  { title: 'Journal Approval', requester: 'Finance Officer', amount: 'INR 12.8L', sla: '02:14' },
-  { title: 'Leave Approval', requester: 'HR Executive', amount: '8 employees', sla: '06:20' },
+  {
+    workflowId: 'wf-demo-1',
+    transactionTitle: 'Journal Approval',
+    transactionId: 'TX-9001',
+    submitter: 'Finance Officer',
+    currentStageLabel: 'Current',
+    stageStatus: 'pending' as const,
+    slaStatus: 'safe' as const,
+    slaLabel: '02:14',
+
+    amount: 'INR 12.8L',
+  },
+  {
+    workflowId: 'wf-demo-2',
+    transactionTitle: 'Leave Approval',
+    transactionId: 'TX-9002',
+    submitter: 'HR Executive',
+    currentStageLabel: 'Current',
+    stageStatus: 'pending' as const,
+    slaStatus: 'safe' as const,
+    slaLabel: '06:20',
+
+    amount: '8 employees',
+  },
 ];
+
 
 const dashboardActivities = [
   { title: 'Loan approved', description: 'Vehicle loan LN-7721 moved to disbursement.', time: '8 min ago' },
@@ -393,7 +420,7 @@ function renderEmployeeWizardStep(step: WizardStep) {
   );
 }
 
-export function AppShell() {
+export function AppShell({ children }: { children?: ReactNode }) {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [themeName, setThemeName] = useState<ThemeName>('default');
   const [commandOpen, setCommandOpen] = useState(false);
@@ -495,12 +522,15 @@ export function AppShell() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-inverseMuted">
               Favorites
             </p>
-            <div className="mt-3 space-y-2">
-              {favorites.map((item) => (
-                <a key={item} href="#" className="block truncate text-sm text-text-inverseMuted">
-                  {item}
-                </a>
-              ))}
+              <div className="mt-3 space-y-2">
+              {favorites.map((item) => {
+                const href = item === 'EOM Dashboard' ? '/eom' : '#';
+                return (
+                  <a key={item} href={href} className="block truncate text-sm text-text-inverseMuted">
+                    {item}
+                  </a>
+                );
+              })}
             </div>
           </div>
           <div>
@@ -659,6 +689,8 @@ export function AppShell() {
                 </button>
               </div>
             </div>
+
+            <div className="mt-6">{children}</div>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               {kpis.map((kpi) => (

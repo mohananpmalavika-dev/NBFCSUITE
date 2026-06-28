@@ -1,0 +1,869 @@
+Excellent.
+
+Now we build what is arguably the largest operational finance module in an NBFC.
+
+Unlike manufacturing ERPs, Accounts Receivable (AR) in an NBFC is not just customer invoicing.
+
+It manages every amount that customers owe, including:
+
+Loan EMIs
+Gold Loan Interest
+Deposit Charges
+Processing Fees
+Penal Interest
+Foreclosure Charges
+Auction Recoveries
+Insurance Recoveries
+Legal Recoveries
+Other Customer Receivables
+
+This becomes the Revenue Collection Engine of ARTH.OS.
+
+ARTH.OS Enterprise Financial Core
+AFC-010 — Enterprise Accounts Receivable (AR)
+
+Priority: ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐ (20/10)
+
+Estimated Development: 14–18 Weeks
+
+Estimated Screens: 260+
+
+Estimated APIs: 900+
+
+Estimated Database Tables: 250+
+
+Vision
+
+Every receivable should be automatically created, tracked, collected, reconciled, and posted.
+
+AR should integrate with:
+
+Loan Management
+Gold Loan
+Deposits
+Collections
+CRM
+Payment Gateway
+Accounting
+Treasury
+Enterprise Architecture
+Customer
+
+↓
+
+Loan
+
+Gold Loan
+
+Deposit
+
+Forex
+
+Locker
+
+Charges
+
+↓
+
+Receivable Engine
+
+↓
+
+Collection Engine
+
+↓
+
+Payment Allocation
+
+↓
+
+Accounting Event
+
+↓
+
+Journal Engine
+
+↓
+
+General Ledger
+AR Modules
+Customer Receivable
+
+Invoice Engine
+
+Installment Engine
+
+EMI Management
+
+Interest Receivable
+
+Penalty Receivable
+
+Charges
+
+Receipts
+
+Receipt Allocation
+
+Auto Allocation
+
+Refund
+
+Credit Note
+
+Debit Note
+
+Collection
+
+Dunning
+
+Promise To Pay
+
+Settlement
+
+Write Off
+
+Recovery
+
+Legal Recovery
+
+Customer Ledger
+
+Aging
+
+Analytics
+
+AI
+Dashboard
+
+KPIs
+
+Outstanding Receivable
+
+Today's Collection
+
+Overdue Amount
+
+EMIs Due Today
+
+Collection %
+
+NPA Recovery
+
+Promise To Pay
+
+Bad Debt
+
+Collection Efficiency
+
+DSO
+
+Recovery Rate
+
+Charts
+
+Collection Trend
+Aging
+NPA Trend
+Branch Recovery
+Product Recovery
+Payment Channel
+Collector Performance
+Workspace
+Dashboard
+
+↓
+
+Receivable Explorer
+
+↓
+
+Invoices
+
+↓
+
+EMIs
+
+↓
+
+Receipts
+
+↓
+
+Collections
+
+↓
+
+Recovery
+
+↓
+
+Customer Ledger
+
+↓
+
+Reports
+Customer Receivable 360
+
+Tabs
+
+Overview
+
+Loans
+
+Receivables
+
+Receipts
+
+EMIs
+
+Charges
+
+Collections
+
+Legal
+
+Settlement
+
+Documents
+
+Audit
+
+AI
+Receivable Types
+
+Supports
+
+Loan EMI
+
+Interest
+
+Penalty
+
+Processing Fee
+
+Documentation Fee
+
+Insurance
+
+Auction Shortfall
+
+Legal Charges
+
+Foreclosure Charges
+
+Cheque Bounce Charges
+
+GST
+
+Miscellaneous Charges
+Receivable Lifecycle
+Generated
+
+↓
+
+Due
+
+↓
+
+Reminder
+
+↓
+
+Collection
+
+↓
+
+Receipt
+
+↓
+
+Allocation
+
+↓
+
+Closed
+
+or
+
+Generated
+
+↓
+
+Overdue
+
+↓
+
+Recovery
+
+↓
+
+Legal
+
+↓
+
+Write Off
+Installment Engine
+
+Supports
+
+Monthly
+
+Weekly
+
+Fortnightly
+
+Quarterly
+
+Half Yearly
+
+Yearly
+
+Bullet
+
+Custom
+Receipt Management
+
+Supports
+
+Cash
+
+NEFT
+
+RTGS
+
+IMPS
+
+UPI
+
+Cheque
+
+Demand Draft
+
+Online Payment
+
+Auto Debit
+
+NACH
+
+Standing Instruction
+Auto Allocation Engine
+
+Example
+
+Customer Pays
+
+₹15,000
+
+Allocation Rule
+
+Penalty
+
+↓
+
+Charges
+
+↓
+
+Interest
+
+↓
+
+Principal
+
+Fully configurable.
+
+Partial Allocation
+
+Example
+
+EMI
+
+₹10,000
+
+Customer Pays
+
+₹6,500
+
+Allocation
+
+Interest
+
+↓
+
+Penalty
+
+↓
+
+Principal
+
+Remaining Outstanding
+
+Automatically calculated.
+
+Collection Workflow
+EMI Due
+
+↓
+
+SMS
+
+↓
+
+WhatsApp
+
+↓
+
+Email
+
+↓
+
+Call
+
+↓
+
+Field Visit
+
+↓
+
+Legal Notice
+
+↓
+
+Recovery
+
+↓
+
+Closure
+Dunning Engine
+
+Levels
+
+Reminder 1
+
+↓
+
+Reminder 2
+
+↓
+
+Warning
+
+↓
+
+Final Notice
+
+↓
+
+Recovery
+
+↓
+
+Legal
+
+Templates configurable.
+
+Promise To Pay
+
+Tracks
+
+Customer Promise
+
+↓
+
+Date
+
+↓
+
+Amount
+
+↓
+
+Status
+
+↓
+
+Follow Up
+Settlement
+
+Supports
+
+Full Settlement
+
+Partial Settlement
+
+One Time Settlement
+
+Waiver
+
+Interest Waiver
+
+Penalty Waiver
+
+Approval workflow.
+
+Write Off
+
+Workflow
+
+Collection
+
+↓
+
+Recovery
+
+↓
+
+Approval
+
+↓
+
+Write Off
+
+↓
+
+Accounting
+
+↓
+
+Recovery Monitoring
+Customer Ledger
+
+Displays
+
+Opening Balance
+
+Receivable
+
+Receipts
+
+Adjustments
+
+Refund
+
+Closing Balance
+Aging Analysis
+
+Buckets
+
+Current
+
+1-30
+
+31-60
+
+61-90
+
+91-180
+
+181-365
+
+365+
+Collection Score
+
+Calculated using
+
+Payment history
+Delays
+Defaults
+NPA history
+Recovery history
+Income trend
+Recovery Engine
+
+Supports
+
+Internal Collection
+
+Agency Collection
+
+Legal
+
+Lok Adalat
+
+OTS
+
+Auction
+
+SARFAESI
+
+Recovery Certificate
+AI Features
+
+Examples
+
+Predict default.
+
+↓
+
+Best collection time.
+
+↓
+
+Predict NPA.
+
+↓
+
+Recommend collector.
+
+↓
+
+Predict recovery.
+
+↓
+
+Suggest settlement.
+
+↓
+
+Identify fraud.
+
+↓
+
+Collection prioritization.
+Reports
+
+Standard
+
+Receivable Register
+Customer Ledger
+Aging
+Collection Report
+Recovery Report
+NPA Collection
+OTS Report
+Promise To Pay
+Write Off
+Collector Performance
+AR Health
+
+Calculated using
+
+Collection %
+Aging
+DSO
+NPA
+Recovery
+Disputes
+Write Off
+
+Example
+
+AR Health
+
+95%
+
+★★★★★
+Database Tables
+customer_receivable
+
+receivable_schedule
+
+receivable_charge
+
+receipt
+
+receipt_allocation
+
+collection_case
+
+collection_activity
+
+promise_to_pay
+
+settlement
+
+write_off
+
+customer_ledger
+
+aging
+
+recovery
+
+legal_case
+
+ar_ai
+
+ar_audit
+APIs
+GET    /api/v1/ar/customers
+
+GET    /api/v1/ar/receivables
+
+POST   /api/v1/ar/receivables
+
+POST   /api/v1/ar/receipts
+
+POST   /api/v1/ar/allocate
+
+GET    /api/v1/ar/ledger
+
+GET    /api/v1/ar/aging
+
+POST   /api/v1/ar/settlement
+
+POST   /api/v1/ar/writeoff
+
+GET    /api/v1/ar/dashboard
+Events
+RECEIVABLE_CREATED
+
+EMI_GENERATED
+
+RECEIPT_RECEIVED
+
+RECEIPT_ALLOCATED
+
+COLLECTION_STARTED
+
+PROMISE_TO_PAY_CREATED
+
+SETTLEMENT_APPROVED
+
+WRITE_OFF_COMPLETED
+
+RECOVERY_STARTED
+Backend Structure
+services/accounting/
+
+accounts-receivable/
+├── receivable/
+├── schedule/
+├── receipts/
+├── allocation/
+├── collection/
+├── recovery/
+├── settlement/
+├── ledger/
+├── analytics/
+├── ai/
+├── workflow/
+└── tests/
+Frontend Structure
+modules/accounting/
+
+accounts-receivable/
+├── dashboard/
+├── customers/
+├── receivables/
+├── receipts/
+├── collections/
+├── recovery/
+├── settlements/
+├── ledger/
+├── reports/
+├── settings/
+└── components/
+Integration Matrix
+Module	Integration
+Loan Management	EMI schedules, principal, interest
+Gold Loan	Interest, auction recoveries
+Deposit Management	Charges and penalties
+Collections	Collection cases & activities
+CRM	Customer interactions
+Payment Gateway	UPI, cards, net banking
+Cash & Bank	Receipt posting
+General Ledger	Accounting events & journals
+DMS	Notices, agreements, legal documents
+Notification Engine	SMS, WhatsApp, email reminders
+Accounts Receivable 360
+
+Every customer should have a complete receivable profile.
+
+Financial View
+Outstanding principal
+Interest due
+Charges
+Penalties
+Total receivable
+Collection View
+Active collection cases
+Collector assigned
+Promise-to-pay history
+Recovery actions
+Payment View
+Receipts
+Allocation history
+Refunds
+Payment methods
+Compliance View
+NPA status
+Legal actions
+OTS approvals
+Audit trail
+AI View
+Default probability
+Recommended collection strategy
+Best contact time
+Settlement recommendation
+Expected recovery amount
+Definition of Done
+
+The Accounts Receivable module is complete when it supports:
+
+Enterprise receivable management
+EMI generation and scheduling
+Configurable receipt allocation
+Collection workflows
+Dunning engine
+Promise-to-pay tracking
+Settlements and waivers
+Write-offs and recoveries
+Customer ledger
+Aging analysis
+AI-driven collection optimization
+Complete audit trail
+⭐ Major Architectural Recommendation (Key Differentiator)
+
+For ARTH.OS, don't build a conventional Accounts Receivable module. Build a Unified Collection Intelligence Platform.
+
+The architecture should be:
+
+Receivables
+      │
+Collection Intelligence
+      │
+────────────────────────
+│          │          │
+AI Risk   Omni-     Field
+Scoring   Channel   Collection
+│          │          │
+Payment   Promise   Legal
+Optimizer To Pay    Recovery
+      │
+Collection Strategy Engine
+      │
+Accounting Event Engine
+
+This allows the system to:
+
+Prioritize customers based on recovery probability.
+Recommend the best communication channel (SMS, WhatsApp, call, field visit).
+Suggest optimal settlement offers.
+Allocate collectors based on skill and geography.
+Predict cash collections for treasury planning.
+Continuously improve collection performance using machine learning.
+
+This goes far beyond standard ERP Accounts Receivable and aligns well with the needs of a modern NBFC.
+
+🚀 Next Module
+
+The next package should be AFC-011 — Enterprise Cash & Bank Management.
+
+This module will cover:
+
+Cash vault management
+Branch cash drawers and teller operations
+Bank account management
+Payment gateways
+NEFT, RTGS, IMPS, UPI integrations
+Bank reconciliation
+Cash forecasting
+Liquidity management
+Multi-bank operations
+Cash position dashboards
+Treasury integration
+AI-based cash optimization
+
+For an NBFC with multiple branches, Cash & Bank Management is the operational backbone that connects daily business transactions with treasury and the General Ledger
