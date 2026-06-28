@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../../../components/AppShell';
+import { eomApiUrl } from '../../eomApi';
 
 export default function NewBrandPage() {
   const [code, setCode] = useState('');
@@ -14,7 +15,7 @@ export default function NewBrandPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch('/eom/brands', {
+      const res = await fetch(eomApiUrl('/eom/brands'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Roles': 'enterprise.admin' },
         body: JSON.stringify({ code, name }),

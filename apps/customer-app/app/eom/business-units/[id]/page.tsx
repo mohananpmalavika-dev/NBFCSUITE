@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { AppShell } from '../../../../components/AppShell';
+import { AppShell } from '../../../components/AppShell';
+import { eomApiUrl } from '../../eomApi';
 
 export default function BusinessUnitDetailsPage() {
   const params: any = useParams();
@@ -14,7 +15,7 @@ export default function BusinessUnitDetailsPage() {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch(`/eom/business-units/${id}`);
+        const res = await fetch(eomApiUrl(`/eom/business-units/${id}`));
         if (!res.ok) return;
         const body = await res.json();
         if (mounted) setItem(body);

@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AppShell } from '../../../../components/AppShell';
+import { AppShell } from '../../../components/AppShell';
+import { eomApiUrl } from '../../eomApi';
 
 export default function NewBusinessUnitPage() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function NewBusinessUnitPage() {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch('/eom/legal-entities');
+        const res = await fetch(eomApiUrl('/eom/legal-entities'));
         if (!res.ok) return;
         const body = await res.json();
         const list = Array.isArray(body) ? body : (body.items || []);
@@ -37,7 +38,7 @@ export default function NewBusinessUnitPage() {
   async function submit() {
     setSaving(true);
     try {
-      const res = await fetch('/eom/business-units', {
+      const res = await fetch(eomApiUrl('/eom/business-units'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-User-Roles': 'enterprise.admin' },
         body: JSON.stringify(form),

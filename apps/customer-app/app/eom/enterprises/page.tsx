@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { AppShell } from '../../components/AppShell';
 import Link from 'next/link';
+import { eomApiUrl } from '../eomApi';
 
 export default function EnterprisesPage() {
   const [items, setItems] = useState<any[]>([]);
@@ -12,7 +13,7 @@ export default function EnterprisesPage() {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch('/eom/enterprises');
+        const res = await fetch(eomApiUrl('/eom/enterprises'));
         if (!res.ok) return;
         const body = await res.json();
         const items = Array.isArray(body) ? body : (body.items || []);

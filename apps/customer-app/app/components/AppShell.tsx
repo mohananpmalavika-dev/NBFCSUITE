@@ -35,7 +35,15 @@ import {
   X,
 } from 'lucide-react';
 import { buildCssVariables, themes, type ThemeName } from '../../lib/design-tokens';
-import type { WizardStep } from './eds';
+import type {
+  WizardStep,
+  WorkflowAnalyticsMetric,
+  WorkflowAuditEntry,
+  WorkflowComment,
+  WorkflowDesignerNode,
+  WorkflowTask,
+  WorkflowTimelineItem,
+} from './eds';
 import {
   AISummary,
   AISummaryWidget,
@@ -44,6 +52,7 @@ import {
   AlertWidget,
   ApprovalWidget,
   ApprovalCard,
+  ApprovalInbox,
   Button as EDSButton,
   ChartWidget,
   Checkbox,
@@ -62,11 +71,15 @@ import {
   Textarea,
   TextInput,
   Toggle,
+  WorkflowAnalytics,
+  WorkflowDesigner,
+  WorkflowViewer,
   WizardAttachments,
   WizardValidation,
   componentRegistry,
   dataGridRegistry,
   dashboardWidgetRegistry,
+  workflowRegistry,
   wizardRegistry,
 } from './eds';
 
@@ -320,6 +333,108 @@ const employeeWizardReviewGroups = [
   },
 ];
 
+const workflowTasks: WorkflowTask[] = [
+  {
+    workflowId: 'WF-HR-2048',
+    transactionTitle: 'Employee Creation',
+    transactionId: 'EMP-2048',
+    submitter: 'Asha Menon',
+    currentStageLabel: 'Payroll Approval',
+    stageStatus: 'current',
+    slaStatus: 'amber',
+    slaLabel: '2 hours remaining',
+    amount: 'INR 8.4L CTC',
+    approverPrimary: 'Payroll Lead',
+    module: 'HRMS',
+    branch: 'Kollam 1204',
+    priority: 'high',
+  },
+  {
+    workflowId: 'WF-LN-7721',
+    transactionTitle: 'Vehicle Loan Approval',
+    transactionId: 'LN-7721',
+    submitter: 'Branch Credit Officer',
+    currentStageLabel: 'Risk + Legal Parallel Review',
+    stageStatus: 'current',
+    slaStatus: 'safe',
+    slaLabel: '12 hours remaining',
+    amount: 'INR 7.4L',
+    approverPrimary: 'Risk Queue',
+    module: 'Lending',
+    branch: 'Kochi 1140',
+    priority: 'medium',
+    delegated: true,
+  },
+  {
+    workflowId: 'WF-JV-2042',
+    transactionTitle: 'Journal Voucher Approval',
+    transactionId: 'JV-2042',
+    submitter: 'Finance Officer',
+    currentStageLabel: 'Finance Manager',
+    stageStatus: 'current',
+    slaStatus: 'breached',
+    slaLabel: 'SLA breached',
+    amount: 'INR 12.8L',
+    approverPrimary: 'Finance Manager',
+    module: 'Accounting',
+    branch: 'Head Office',
+    priority: 'critical',
+    overdue: true,
+  },
+];
+
+const workflowTimelineItems: WorkflowTimelineItem[] = [
+  { title: 'Submitted', actor: 'Asha Menon', description: 'Employee onboarding submitted from EDS-009 wizard.', time: '09:10', state: 'completed' },
+  { title: 'Manager reviewed', actor: 'Nisha Rao', description: 'Manager confirmed branch assignment and grade.', time: '09:22', state: 'completed' },
+  { title: 'HR reviewed', actor: 'HR Operations', description: 'Document checklist reviewed with Aadhaar OCR pending.', time: '09:40', state: 'completed' },
+  { title: 'Payroll approval', actor: 'Payroll Lead', description: 'Salary band exception requires approval before creation.', time: 'Now', state: 'current' },
+  { title: 'Business action', actor: 'Workflow engine', description: 'Create employee after approval is granted.', state: 'pending' },
+];
+
+const workflowComments: WorkflowComment[] = [
+  {
+    id: 'comment-1',
+    author: 'Nisha Rao',
+    message: 'Branch assignment is correct. Please validate salary band before final creation.',
+    time: '09:26',
+    mentions: ['Payroll Lead'],
+  },
+  {
+    id: 'comment-2',
+    author: 'HR Operations',
+    message: 'Aadhaar OCR review is pending, but PAN and photo are already uploaded.',
+    time: '09:44',
+    attachments: ['PAN.pdf', 'Photo.jpg'],
+  },
+];
+
+const workflowAuditEntries: WorkflowAuditEntry[] = [
+  { id: 'audit-1', event: 'WORKFLOW_CREATED', actor: 'Asha Menon', time: '09:10', description: 'Workflow draft created from employee onboarding wizard.' },
+  { id: 'audit-2', event: 'WORKFLOW_STARTED', actor: 'Workflow engine', time: '09:11', description: 'Sequential HRMS workflow started.' },
+  { id: 'audit-3', event: 'TASK_ASSIGNED', actor: 'Workflow engine', time: '09:12', description: 'Manager approval assigned to Nisha Rao.' },
+  { id: 'audit-4', event: 'APPROVAL_GRANTED', actor: 'Nisha Rao', time: '09:22', description: 'Manager approval granted.' },
+  { id: 'audit-5', event: 'TASK_ASSIGNED', actor: 'Workflow engine', time: '09:40', description: 'Payroll approval assigned with amber SLA.' },
+];
+
+const workflowDesignerNodes: WorkflowDesignerNode[] = [
+  { id: 'start', label: 'Start', type: 'start', owner: 'Workflow engine' },
+  { id: 'validation', label: 'Validation', type: 'task', owner: 'Rules engine', condition: 'Client, business, and server checks pass' },
+  { id: 'manager', label: 'Manager Approval', type: 'approval', owner: 'Reporting manager' },
+  { id: 'salary-decision', label: 'Salary Band Decision', type: 'decision', owner: 'Rules engine', condition: 'If salary exceeds branch band, route to payroll' },
+  { id: 'payroll', label: 'Payroll Approval', type: 'approval', owner: 'Payroll Lead' },
+  { id: 'notify', label: 'Notify Submitter', type: 'notification', owner: 'Notification engine' },
+  { id: 'complete', label: 'Complete', type: 'end', owner: 'Audit engine' },
+];
+
+const workflowAnalyticsMetrics: WorkflowAnalyticsMetric[] = [
+  { label: 'Average Approval Time', value: '2.4h', helper: 'Across HRMS approvals', tone: 'success' },
+  { label: 'SLA Compliance', value: '94%', helper: 'Safe or amber workflows', tone: 'success' },
+  { label: 'Escalations', value: '7', helper: 'Current week', tone: 'warning' },
+  { label: 'Rejection Rate', value: '3.2%', helper: 'Below threshold', tone: 'neutral' },
+  { label: 'Bottleneck Stage', value: 'Payroll', helper: 'Longest queue today', tone: 'warning' },
+  { label: 'Workflow Volume', value: '1,284', helper: 'Month to date', tone: 'neutral' },
+];
+
 function renderEmployeeWizardStep(step: WizardStep) {
   if (step.id === 'personal') {
     return (
@@ -430,6 +545,8 @@ export function AppShell({ children }: { children?: ReactNode }) {
   const [dashboardPersona, setDashboardPersona] = useState<'executive' | 'branch'>('executive');
   const [lastGridEvent, setLastGridEvent] = useState('GRID_OPENED');
   const [lastWizardEvent, setLastWizardEvent] = useState('WIZARD_OPENED');
+  const [activeWorkflowId, setActiveWorkflowId] = useState(workflowTasks[0].workflowId);
+  const [lastWorkflowEvent, setLastWorkflowEvent] = useState('WORKFLOW_VIEWED');
   const [searchQuery, setSearchQuery] = useState('');
 
   const activeTheme = useMemo(() => themes[themeName], [themeName]);
@@ -439,6 +556,10 @@ export function AppShell({ children }: { children?: ReactNode }) {
   );
   const activeDashboardTitle =
     dashboardPersona === 'executive' ? 'Executive Control Center' : 'Branch Operations Dashboard';
+  const activeWorkflow = useMemo(
+    () => workflowTasks.find((task) => task.workflowId === activeWorkflowId) ?? workflowTasks[0],
+    [activeWorkflowId],
+  );
   const visibleCommands = useMemo(
     () =>
       commandActions.filter((action) =>
@@ -1078,6 +1199,65 @@ export function AppShell({ children }: { children?: ReactNode }) {
                 renderStep={renderEmployeeWizardStep}
                 onEvent={(event) => setLastWizardEvent(event.name)}
               />
+            </section>
+
+            <section className="mt-8 space-y-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-border-default bg-background-surface p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-primary">
+                    EDS-010
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold text-text-primary">
+                    Workflow & Approval UX Framework
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">
+                    Configure, execute, monitor, audit, and analyze approvals through one shared workflow UX contract.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-sm text-text-secondary">
+                  <span className="rounded-full bg-background-elevated px-3 py-2">
+                    Contracts: {workflowRegistry.length}
+                  </span>
+                  <span className="rounded-full bg-background-elevated px-3 py-2">
+                    Last event: {lastWorkflowEvent}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+                <ApprovalInbox
+                  tasks={workflowTasks}
+                  activeTaskId={activeWorkflowId}
+                  onSelectTask={(workflowId) => {
+                    setActiveWorkflowId(workflowId);
+                    setLastWorkflowEvent('WORKFLOW_VIEWED');
+                  }}
+                  onAction={(workflowId, action) => {
+                    setActiveWorkflowId(workflowId);
+                    setLastWorkflowEvent(`ACTION_SELECTED:${action}`);
+                  }}
+                />
+                <WorkflowViewer
+                  workflow={activeWorkflow}
+                  timeline={workflowTimelineItems}
+                  comments={workflowComments}
+                  auditEntries={workflowAuditEntries}
+                  attachments={['OfferLetter.pdf', 'Aadhaar-OCR.json', 'SalaryBandReview.xlsx']}
+                  availability={{
+                    approve: true,
+                    reject: true,
+                    return: true,
+                    requestChanges: true,
+                    delegate: true,
+                    escalate: true,
+                    hold: true,
+                  }}
+                  onEvent={(event) => setLastWorkflowEvent(event.name)}
+                />
+              </div>
+
+              <WorkflowDesigner nodes={workflowDesignerNodes} />
+              <WorkflowAnalytics metrics={workflowAnalyticsMetrics} />
             </section>
           </section>
         </main>

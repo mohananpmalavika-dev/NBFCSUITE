@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { AppShell } from '../../../../components/AppShell';
 import { useRouter } from 'next/navigation';
+import { eomApiUrl } from '../../../eomApi';
 
 export default function Wizard() {
   const [step, setStep] = useState(1);
@@ -12,7 +13,7 @@ export default function Wizard() {
   const router = useRouter();
 
   async function submit() {
-    const res = await fetch('/eom/enterprises', {
+    const res = await fetch(eomApiUrl('/eom/enterprises'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, name, currency_code: currency })
     });

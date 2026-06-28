@@ -87,3 +87,73 @@ class AuditEntryResponse(BaseModel):
 class AuditListResponse(BaseModel):
     total: int
     items: list[AuditEntryResponse]
+
+
+class GeographyNodeBase(BaseModel):
+    code: str
+    name: str
+    node_type: str
+    parent_id: Optional[str] = None
+    status: Optional[str] = 'active'
+    manager: Optional[str] = None
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+    population: Optional[float] = None
+    area_size: Optional[float] = None
+    description: Optional[str] = None
+    business_unit_id: Optional[str] = None
+    legal_entity_id: Optional[str] = None
+
+
+class GeographyNodeCreate(GeographyNodeBase):
+    pass
+
+
+class GeographyNodeUpdate(BaseModel):
+    name: Optional[str] = None
+    node_type: Optional[str] = None
+    parent_id: Optional[str] = None
+    status: Optional[str] = None
+    manager: Optional[str] = None
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+    population: Optional[float] = None
+    area_size: Optional[float] = None
+    description: Optional[str] = None
+    business_unit_id: Optional[str] = None
+    legal_entity_id: Optional[str] = None
+
+
+class GeographyNodeResponse(GeographyNodeBase):
+    id: str
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+
+    class Config:
+        orm_mode = True
+
+
+class GeographyNodeListResponse(BaseModel):
+    total: int
+    items: list[GeographyNodeResponse]
+
+
+class GeographyTreeNode(BaseModel):
+    id: str
+    code: str
+    name: str
+    node_type: str
+    status: str
+    manager: Optional[str] = None
+    parent_id: Optional[str] = None
+    children: list['GeographyTreeNode'] = Field(default_factory=list)
+
+    class Config:
+        orm_mode = True
+
+
+GeographyTreeNode.update_forward_refs()
+
+
+class GeographyTreeResponse(BaseModel):
+    items: list[GeographyTreeNode]

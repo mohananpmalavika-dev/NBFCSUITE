@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../../../components/AppShell';
+import { eomApiUrl } from '../../eomApi';
 
 export default function NewLegalEntityPage() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function NewLegalEntityPage() {
   async function submit() {
     setSaving(true);
     try {
-      const res = await fetch('/eom/legal-entities', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Roles': 'enterprise.admin' }, body: JSON.stringify(form) });
+      const res = await fetch(eomApiUrl('/eom/legal-entities'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-User-Roles': 'enterprise.admin' }, body: JSON.stringify(form) });
       if (res.ok) {
         const body = await res.json();
         router.push(`/eom/legal-entities/${body.id}`);

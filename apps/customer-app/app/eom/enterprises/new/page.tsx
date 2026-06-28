@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../../../components/AppShell';
+import { eomApiUrl } from '../../eomApi';
 
 export default function NewEnterprisePage() {
   const [code, setCode] = useState('');
@@ -14,7 +15,7 @@ export default function NewEnterprisePage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch('/eom/enterprises', {
+      const res = await fetch(eomApiUrl('/eom/enterprises'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, name }),

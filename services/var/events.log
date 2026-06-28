@@ -119,3 +119,52 @@
 {"ts": "2026-06-28T21:27:16.738529+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "7015318c-a03a-44e2-afa8-daec316df58b", "code": "LE-001", "name": "Legal One"}}
 {"ts": "2026-06-28T21:27:16.978633+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "7015318c-a03a-44e2-afa8-daec316df58b"}}
 {"ts": "2026-06-28T21:27:17.045527+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "7015318c-a03a-44e2-afa8-daec316df58b"}}
+{"ts": "2026-06-28T21:44:10.508938+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "3e6cd319-940a-4c25-af09-d6b7d87dfcef", "code": "LE-GEO-001", "name": "Geography Legal Entity"}}
+{"ts": "2026-06-28T21:44:10.672867+00:00", "type": "GEOGRAPHY_CREATED", "payload": {"id": "0565a6a7-3203-4227-a116-61c5c8a39e92", "code": "GEO-001", "name": "Geography Root"}}
+{"ts": "2026-06-28T21:44:10.777309+00:00", "type": "GEOGRAPHY_UPDATED", "payload": {"id": "0565a6a7-3203-4227-a116-61c5c8a39e92"}}
+{"ts": "2026-06-28T22:24:43.879906+00:00", "type": "BRAND_CREATED", "payload": {"id": "44edbb8b-df7c-40f4-bb0c-b4c6f135b5e1", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-28T22:24:43.968104+00:00", "type": "BRAND_UPDATED", "payload": {"id": "44edbb8b-df7c-40f4-bb0c-b4c6f135b5e1"}}
+{"ts": "2026-06-28T22:24:44.017508+00:00", "type": "BRAND_DELETED", "payload": {"id": "44edbb8b-df7c-40f4-bb0c-b4c6f135b5e1"}}
+{"ts": "2026-06-28T22:24:44.082363+00:00", "type": "BRAND_CREATED", "payload": {"id": "df842392-eee3-46df-a62f-526b26d6ff67", "code": "B-AUD", "name": "Audit Brand"}}
+{"ts": "2026-06-28T22:24:44.125082+00:00", "type": "BRAND_UPDATED", "payload": {"id": "df842392-eee3-46df-a62f-526b26d6ff67"}}
+{"ts": "2026-06-28T22:24:44.221143+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "62e19efb-e947-4958-a011-054b057ebe71", "code": "LE-100", "name": "Legal Entity for BU"}}
+{"ts": "2026-06-28T22:24:44.326102+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "a7cfc72a-b3f6-422a-8907-eaaa9146adb4", "code": "BU-001", "name": "Business Unit One"}}
+{"ts": "2026-06-28T22:24:44.399012+00:00", "type": "BUSINESS_UNIT_UPDATED", "payload": {"id": "a7cfc72a-b3f6-422a-8907-eaaa9146adb4"}}
+{"ts": "2026-06-28T22:24:44.446526+00:00", "type": "BUSINESS_UNIT_STATUS_CHANGED", "payload": {"id": "a7cfc72a-b3f6-422a-8907-eaaa9146adb4", "status": "inactive"}}
+{"ts": "2026-06-28T22:24:44.541593+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "54f0bdba-9578-408b-b824-909e119e6ddf", "code": "ENT-DASH", "name": "Dashboard Enterprise"}}
+{"ts": "2026-06-28T22:24:44.593744+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "34b2d2e0-8074-4e02-b952-1679543f185f", "code": "LE-DASH", "name": "Dashboard Legal Entity"}}
+{"ts": "2026-06-28T22:24:44.648720+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "5e4559c9-05a9-4dac-bd54-39f8943de8dd", "code": "BU-DASH", "name": "Dashboard Business Unit"}}
+{"ts": "2026-06-28T22:24:44.813493+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "ed665206-1396-4444-91ab-9121a33e8847", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T22:24:44.887080+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "91e56e27-eb0d-4310-8f0c-89fb0dd5d016", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T22:24:44.937667+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "91e56e27-eb0d-4310-8f0c-89fb0dd5d016"}}
+{"ts": "2026-06-28T22:24:44.985096+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "91e56e27-eb0d-4310-8f0c-89fb0dd5d016", "status": "suspended"}}
+{"ts": "2026-06-28T22:24:45.040673+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "91e56e27-eb0d-4310-8f0c-89fb0dd5d016"}}
+{"ts": "2026-06-28T22:24:45.105336+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "42ed46f9-41a9-4755-bc01-19fcaa421b18", "code": "LE-GEO-001", "name": "Geography Legal Entity"}}
+{"ts": "2026-06-28T22:24:45.178874+00:00", "type": "GEOGRAPHY_CREATED", "payload": {"id": "50c6dc4b-a785-42b8-9dd0-bd35708a04fa", "code": "GEO-001", "name": "Geography Root"}}
+{"ts": "2026-06-28T22:24:45.263029+00:00", "type": "GEOGRAPHY_UPDATED", "payload": {"id": "50c6dc4b-a785-42b8-9dd0-bd35708a04fa"}}
+{"ts": "2026-06-28T22:24:45.339695+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "12415e90-02a7-456e-95b5-a84b12067e1b", "code": "LE-001", "name": "Legal One"}}
+{"ts": "2026-06-28T22:24:45.578379+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "12415e90-02a7-456e-95b5-a84b12067e1b"}}
+{"ts": "2026-06-28T22:24:45.644216+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "12415e90-02a7-456e-95b5-a84b12067e1b"}}
+{"ts": "2026-06-28T22:33:33.380832+00:00", "type": "BRAND_CREATED", "payload": {"id": "0c4db8d5-9098-45ba-a989-3effb98f3ef1", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-28T22:33:33.459421+00:00", "type": "BRAND_UPDATED", "payload": {"id": "0c4db8d5-9098-45ba-a989-3effb98f3ef1"}}
+{"ts": "2026-06-28T22:33:33.509622+00:00", "type": "BRAND_DELETED", "payload": {"id": "0c4db8d5-9098-45ba-a989-3effb98f3ef1"}}
+{"ts": "2026-06-28T22:33:33.572369+00:00", "type": "BRAND_CREATED", "payload": {"id": "70f92ae7-65e4-4280-91f0-867d2d24edf6", "code": "B-AUD", "name": "Audit Brand"}}
+{"ts": "2026-06-28T22:33:33.614552+00:00", "type": "BRAND_UPDATED", "payload": {"id": "70f92ae7-65e4-4280-91f0-867d2d24edf6"}}
+{"ts": "2026-06-28T22:33:33.710945+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "913864f5-b06c-412e-a5be-9eaa00cce10f", "code": "LE-100", "name": "Legal Entity for BU"}}
+{"ts": "2026-06-28T22:33:33.813465+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "69164d16-75eb-4231-81c7-870c39261bb1", "code": "BU-001", "name": "Business Unit One"}}
+{"ts": "2026-06-28T22:33:33.882031+00:00", "type": "BUSINESS_UNIT_UPDATED", "payload": {"id": "69164d16-75eb-4231-81c7-870c39261bb1"}}
+{"ts": "2026-06-28T22:33:33.941718+00:00", "type": "BUSINESS_UNIT_STATUS_CHANGED", "payload": {"id": "69164d16-75eb-4231-81c7-870c39261bb1", "status": "inactive"}}
+{"ts": "2026-06-28T22:33:34.035041+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "59687d19-4514-473d-845a-c3bc6d2559cb", "code": "ENT-DASH", "name": "Dashboard Enterprise"}}
+{"ts": "2026-06-28T22:33:34.095881+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "274a3f3b-974f-49a0-bb8b-da76c239b761", "code": "LE-DASH", "name": "Dashboard Legal Entity"}}
+{"ts": "2026-06-28T22:33:34.159209+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "b44aeb12-9c3c-4417-a410-a4283cf45944", "code": "BU-DASH", "name": "Dashboard Business Unit"}}
+{"ts": "2026-06-28T22:33:34.282598+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "26889383-0bd6-4445-bc62-dff27e47de5a", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T22:33:34.361877+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "c93f65f0-e66a-487c-a0ac-807d10877e89", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T22:33:34.413906+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "c93f65f0-e66a-487c-a0ac-807d10877e89"}}
+{"ts": "2026-06-28T22:33:34.452318+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "c93f65f0-e66a-487c-a0ac-807d10877e89", "status": "suspended"}}
+{"ts": "2026-06-28T22:33:34.502191+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "c93f65f0-e66a-487c-a0ac-807d10877e89"}}
+{"ts": "2026-06-28T22:33:34.567408+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "5cafe3cd-37fe-4910-a136-3c19bbe2e752", "code": "LE-GEO-001", "name": "Geography Legal Entity"}}
+{"ts": "2026-06-28T22:33:34.631334+00:00", "type": "GEOGRAPHY_CREATED", "payload": {"id": "d2128c03-f447-46ce-b049-78b3e9150bc8", "code": "GEO-001", "name": "Geography Root"}}
+{"ts": "2026-06-28T22:33:34.716450+00:00", "type": "GEOGRAPHY_UPDATED", "payload": {"id": "d2128c03-f447-46ce-b049-78b3e9150bc8"}}
+{"ts": "2026-06-28T22:33:34.794674+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "ec87c6fe-0468-42ab-914d-e69cb53f1b65", "code": "LE-001", "name": "Legal One"}}
+{"ts": "2026-06-28T22:33:34.999792+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "ec87c6fe-0468-42ab-914d-e69cb53f1b65"}}
+{"ts": "2026-06-28T22:33:35.066512+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "ec87c6fe-0468-42ab-914d-e69cb53f1b65"}}

@@ -1,10 +1,9 @@
 "use client";
 
 import { AppShell } from './components/AppShell';
-import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
-
-const EOMDashboard = dynamic(() => import('./components/eds/dashboard/EOMDashboard'), { ssr: false });
+import { eomApiUrl } from './eom/eomApi';
+import EOMDashboard from './components/eds/dashboard/EOMDashboard';
 
 export default function Home() {
   const [eomData, setEomData] = useState<any>(null);
@@ -12,9 +11,14 @@ export default function Home() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/eom/dashboard');
-        if (res.ok) {
-          setEomData(await res.json());
+        const [dashboardRes, hierarchyRes] = await Promise.all([
+          fetch(eomApiUrl('/eom/dashboard')),
+          fetch(eomApiUrl('/eom/hierarchy')),
+        ]);
+        if (dashboardRes.ok) {
+          const dashboard = await dashboardRes.json();
+          const hierarchy = hierarchyRes.ok ? await hierarchyRes.json() : { items: [] };
+          setEomData({ ...dashboard, hierarchy });
         }
       } catch (e) {
         // ignore fetch errors in demo shell

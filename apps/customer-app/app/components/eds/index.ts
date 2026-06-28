@@ -25,6 +25,7 @@ export * from './forms/TextInput';
 export * from './forms/Toggle';
 export * from './workflow/ApprovalCard';
 export * from './workflow/Timeline';
+export * from './workflow';
 export * from './feedback/Alert';
 export * from './feedback/EmptyState';
 export * from './feedback/LoadingState';

@@ -1,10 +1,9 @@
 "use client";
 
-import dynamic from 'next/dynamic';
 import { useEffect, useState } from 'react';
 import { AppShell } from '../components/AppShell';
-
-const EOMDashboard = dynamic(() => import('../components/eds/dashboard/EOMDashboard'), { ssr: false });
+import { eomApiUrl } from './eomApi';
+import EOMDashboard from '../components/eds/dashboard/EOMDashboard';
 
 export default function EOMPage() {
   const [eomData, setEomData] = useState<any>(null);
@@ -12,42 +11,14 @@ export default function EOMPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [entRes, brandRes, legalRes] = await Promise.all([
-          fetch('/eom/enterprises'),
-          fetch('/eom/brands'),
-          fetch('/eom/legal-entities'),
+        const [dashboardRes, hierarchyRes] = await Promise.all([
+          fetch(eomApiUrl('/eom/dashboard')),
+          fetch(eomApiUrl('/eom/hierarchy')),
         ]);
-        if (!entRes.ok) return;
-        const entBody = await entRes.json();
-        const entList = Array.isArray(entBody) ? entBody : (entBody.items || []);
-        let brandList: any[] = [];
-        if (brandRes && brandRes.ok) {
-          const b = await brandRes.json();
-          brandList = Array.isArray(b) ? b : (b.items || []);
-        }
-        let legalList: any[] = [];
-        if (legalRes && legalRes.ok) {
-          const l = await legalRes.json();
-          legalList = Array.isArray(l) ? l : (l.items || []);
-        }
-        // Build a lightweight dashboard shape expected by EOMDashboard
-        const data = {
-          summary: {
-            enterprises: Array.isArray(entList) ? entList.length : 0,
-            branches: 0,
-            departments: 0,
-            employees: 0,
-            brands: Array.isArray(brandList) ? brandList.length : 0,
-            legal_entities: Array.isArray(legalList) ? legalList.length : 0,
-          },
-          recent_enterprises: (entList || []).map((e: any) => ({
-            id: e.id,
-            enterprise_name: e.name,
-            enterprise_code: e.code,
-            status: e.status,
-          })),
-        };
-        setEomData(data);
+        if (!dashboardRes.ok) return;
+        const dashboard = await dashboardRes.json();
+        const hierarchy = hierarchyRes.ok ? await hierarchyRes.json() : { items: [] };
+        setEomData({ ...dashboard, hierarchy });
       } catch (e) {
         // ignore
       }

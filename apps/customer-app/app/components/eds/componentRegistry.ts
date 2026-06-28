@@ -54,6 +54,15 @@ export const componentRegistry = [
   { layer: 'wizard', name: 'WizardReview', contract: 'grouped review summary before approval handoff' },
   { layer: 'wizard', name: 'WizardApproval', contract: 'workflow handoff and direct-complete modes' },
   { layer: 'wizard', name: 'WizardSuccess', contract: 'completion state with next actions' },
+  { layer: 'workflow', name: 'ApprovalInbox', contract: 'central queue for today, overdue, delegated, completed, and rejected work' },
+  { layer: 'workflow', name: 'WorkflowViewer', contract: 'status, current approver, SLA, timeline, comments, attachments, audit, and AI' },
+  { layer: 'workflow', name: 'WorkflowTimeline', contract: 'completed, current, pending, and rejected stage visualization' },
+  { layer: 'workflow', name: 'SLAIndicator', contract: 'safe, approaching, and breached SLA states' },
+  { layer: 'workflow', name: 'WorkflowDesigner', contract: 'low-code workflow nodes, owners, and conditions' },
+  { layer: 'workflow', name: 'WorkflowAnalytics', contract: 'approval time, SLA, rejection, escalation, bottleneck, and volume metrics' },
+  { layer: 'workflow', name: 'WorkflowComments', contract: 'mentions, attachments, and approval collaboration' },
+  { layer: 'workflow', name: 'AuditTimeline', contract: 'immutable workflow event log' },
+  { layer: 'workflow', name: 'ApprovalActions', contract: 'approve, reject, return, request changes, delegate, escalate, hold' },
 ] as const;
 
 export type ComponentRegistryItem = (typeof componentRegistry)[number];

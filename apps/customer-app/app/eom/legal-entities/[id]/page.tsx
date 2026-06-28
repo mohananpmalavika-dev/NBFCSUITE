@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { AppShell } from '../../../components/AppShell';
+import { eomApiUrl } from '../../eomApi';
 
 export default function LegalEntityDetailsPage() {
   const params: any = useParams();
@@ -14,7 +15,7 @@ export default function LegalEntityDetailsPage() {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch(`/eom/legal-entities/${id}`);
+        const res = await fetch(eomApiUrl(`/eom/legal-entities/${id}`));
         if (!res.ok) return;
         const body = await res.json();
         if (mounted) setItem(body);
