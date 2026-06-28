@@ -31,6 +31,21 @@ import {
   X,
 } from 'lucide-react';
 import { buildCssVariables, themes, type ThemeName } from '../../lib/design-tokens';
+import {
+  AISummary,
+  Alert,
+  ApprovalCard,
+  Button as EDSButton,
+  Checkbox,
+  Customer360Card,
+  EnterpriseTable,
+  LoanSummaryCard,
+  MetricCard,
+  RoleBadge,
+  TextInput,
+  Toggle,
+  componentRegistry,
+} from './eds';
 
 const topNavItems = [
   { label: 'AI Assistant', icon: Sparkles },
@@ -93,15 +108,33 @@ const approvals = [
   { employee: 'Neha Shah', amount: 'INR 24,600', status: 'Receipt pending' },
 ];
 
+const registryRows = [
+  { component: 'EnterpriseTable', layer: 'Data Display', status: 'Typed API' },
+  { component: 'ApprovalCard', layer: 'Workflow', status: 'Action Ready' },
+  { component: 'AISummary', layer: 'AI', status: 'FinDNA Ready' },
+  { component: 'PermissionGuard', layer: 'Security', status: 'RBAC Ready' },
+];
+
+const registryColumns = [
+  { key: 'component' as const, label: 'Component' },
+  { key: 'layer' as const, label: 'Layer' },
+  { key: 'status' as const, label: 'Contract' },
+];
+
 export function AppShell() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [themeName, setThemeName] = useState<ThemeName>('default');
   const [commandOpen, setCommandOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [autosaveEnabled, setAutosaveEnabled] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   const activeTheme = useMemo(() => themes[themeName], [themeName]);
+  const libraryLayerCount = useMemo(
+    () => new Set(componentRegistry.map((component) => component.layer)).size,
+    [],
+  );
   const visibleCommands = useMemo(
     () =>
       commandActions.filter((action) =>
@@ -470,6 +503,88 @@ export function AppShell() {
                 </aside>
               )}
             </div>
+
+            <section className="mt-8 space-y-6 rounded-xl border border-border-default bg-background-surface p-5 shadow-sm">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-primary">
+                    EDS-006
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold text-text-primary">
+                    Enterprise Component Library
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">
+                    Reusable, theme-aware, accessible components now cover foundation, layout,
+                    navigation, forms, data display, workflow, feedback, AI, banking, and security layers.
+                  </p>
+                </div>
+                <RoleBadge role="Design System Maintainer" elevated />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <MetricCard label="Component Contracts" value={`${componentRegistry.length}`} helper="Published from registry" />
+                <MetricCard label="EDS Layers" value={`${libraryLayerCount}`} helper="Foundation to security" tone="success" />
+                <MetricCard label="Theme Modes" value="3" helper="Light, dark, contrast" tone="warning" />
+              </div>
+
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="space-y-6">
+                  <EnterpriseTable columns={registryColumns} rows={registryRows} />
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-xl border border-border-default bg-background-elevated p-4">
+                      <h3 className="text-lg font-semibold text-text-primary">Form Controls</h3>
+                      <div className="mt-4 space-y-4">
+                        <TextInput label="Employee Search" placeholder="Search by name or employee ID" helperText="Supports validation and localized helper copy." />
+                        <Checkbox label="Require approval audit note" defaultChecked />
+                        <Toggle
+                          checked={autosaveEnabled}
+                          label="Autosave draft"
+                          onClick={() => setAutosaveEnabled((enabled) => !enabled)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <ApprovalCard
+                        title="Travel Expense"
+                        requester="Asha Menon | Branch 1204"
+                        amount="INR 18,420"
+                        onApprove={() => setDrawerOpen(true)}
+                      >
+                        Includes semantic status, requester metadata, and an auditable action surface.
+                      </ApprovalCard>
+                      <Alert title="Component contract ready" tone="success">
+                        EDS components expose typed props, theme tokens, focus states, and semantic variants.
+                      </Alert>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <AISummary
+                    summary="FinDNA recommends approving the expense after receipt attachment. No duplicate claims were detected."
+                    suggestions={['Request receipt', 'Approve after attachment', 'Add audit note']}
+                  />
+                  <Customer360Card
+                    name="Nisha Rao"
+                    customerId="CIF-104928"
+                    risk="medium"
+                    relationshipValue="INR 42.8L"
+                  />
+                  <LoanSummaryCard
+                    accountNumber="LN-7721-001"
+                    product="Vehicle Loan"
+                    outstanding="INR 7.4L"
+                    status="standard"
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <EDSButton size="sm">Primary</EDSButton>
+                    <EDSButton size="sm" variant="secondary">Secondary</EDSButton>
+                  </div>
+                </div>
+              </div>
+            </section>
           </section>
         </main>
       </div>

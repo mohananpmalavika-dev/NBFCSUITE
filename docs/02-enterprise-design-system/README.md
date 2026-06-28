@@ -77,6 +77,14 @@ The current UI should evolve toward a reusable component library in Next.js with
 - EDS-008: Enterprise Data Grid Framework
 - EDS-009: Enterprise Form & Wizard Framework
 - EDS-010: Workflow & Approval UX Framework
+- EP-001: Enterprise Organization Management (EOM)
+- EP-002: Identity & Access Management (IAM)
+- EP-003: Workflow Engine
+- EP-004: Rules Engine
+- EP-005: Notification Engine
+- EP-006: Document Management
+- EP-007: Audit Engine
+- EP-008: Scheduler & Job Engine
 - EDS-011: Analytics Components
 - EDS-012: Mobile Design
 - EDS-013: Accessibility
@@ -93,4 +101,6 @@ The current UI should evolve toward a reusable component library in Next.js with
 - ✅ EDS-007: Enterprise Dashboard Framework — Complete
 - ✅ EDS-008: Enterprise Data Grid Framework — Complete
 - ✅ EDS-009: Enterprise Form & Wizard Framework — Complete
-- ⏳ EDS-010: Workflow & Approval UX Framework — Next
+- ✅ EDS-010: Workflow & Approval UX Framework — Complete
+- ✅ EP-001: Enterprise Organization Management (EOM) — Complete
+- ⏳ EP-002: Identity & Access Management (IAM) — Next
