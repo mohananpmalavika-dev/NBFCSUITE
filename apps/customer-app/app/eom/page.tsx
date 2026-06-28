@@ -12,7 +12,11 @@ export default function EOMPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [entRes, brandRes] = await Promise.all([fetch('/eom/enterprises'), fetch('/eom/brands')]);
+        const [entRes, brandRes, legalRes] = await Promise.all([
+          fetch('/eom/enterprises'),
+          fetch('/eom/brands'),
+          fetch('/eom/legal-entities'),
+        ]);
         if (!entRes.ok) return;
         const entBody = await entRes.json();
         const entList = Array.isArray(entBody) ? entBody : (entBody.items || []);
@@ -20,6 +24,11 @@ export default function EOMPage() {
         if (brandRes && brandRes.ok) {
           const b = await brandRes.json();
           brandList = Array.isArray(b) ? b : (b.items || []);
+        }
+        let legalList: any[] = [];
+        if (legalRes && legalRes.ok) {
+          const l = await legalRes.json();
+          legalList = Array.isArray(l) ? l : (l.items || []);
         }
         // Build a lightweight dashboard shape expected by EOMDashboard
         const data = {
@@ -29,6 +38,7 @@ export default function EOMPage() {
             departments: 0,
             employees: 0,
             brands: Array.isArray(brandList) ? brandList.length : 0,
+            legal_entities: Array.isArray(legalList) ? legalList.length : 0,
           },
           recent_enterprises: (entList || []).map((e: any) => ({
             id: e.id,

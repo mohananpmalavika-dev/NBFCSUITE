@@ -61,3 +61,6 @@
 {"ts": "2026-06-28T20:26:17.413013+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "c1a6b34f-6af0-406e-8836-c98f7039fbd7", "code": "LE-001", "name": "Legal One"}}
 {"ts": "2026-06-28T20:26:17.507670+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "c1a6b34f-6af0-406e-8836-c98f7039fbd7"}}
 {"ts": "2026-06-28T20:26:17.552153+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "c1a6b34f-6af0-406e-8836-c98f7039fbd7"}}
+{"ts": "2026-06-28T21:00:42.434677+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "41378081-bf83-4621-aa66-0514e63b9d0b", "code": "LE-001", "name": "Legal One"}}
+{"ts": "2026-06-28T21:00:42.633477+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "41378081-bf83-4621-aa66-0514e63b9d0b"}}
+{"ts": "2026-06-28T21:00:42.679213+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "41378081-bf83-4621-aa66-0514e63b9d0b"}}
