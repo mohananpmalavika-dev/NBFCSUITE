@@ -8,7 +8,8 @@ const getServiceURL = (serviceName: string): string => {
   
   if (apiGateway) {
     // Use API Gateway with path-based routing
-    return `${apiGateway}/${serviceName}`;
+    // Client paths already include the service prefix, e.g. /auth/login
+    return apiGateway;
   }
   
   // Fall back to individual service URLs

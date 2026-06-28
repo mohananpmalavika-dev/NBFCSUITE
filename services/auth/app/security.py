@@ -5,7 +5,11 @@ import secrets
 import jwt
 from app.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt_sha256", "bcrypt"], deprecated="auto")
+pwd_context = CryptContext(
+    schemes=["sha256_crypt", "bcrypt_sha256", "bcrypt"],
+    default="sha256_crypt",
+    deprecated="auto",
+)
 
 
 def hash_password(password: str) -> str:
