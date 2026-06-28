@@ -1,22 +1,122 @@
 
 import axios from 'axios';
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://localhost:8000';
+// Service URL Configuration
+// Prioritizes: API Gateway (if available) → Individual service URLs → Fallback defaults
+const getServiceURL = (serviceName: string): string => {
+  const apiGateway = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
+  
+  if (apiGateway) {
+    // Use API Gateway with path-based routing
+    return `${apiGateway}/${serviceName}`;
+  }
+  
+  // Fall back to individual service URLs
+  const serviceUrls: Record<string, string> = {
+    auth: process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8001',
+    los: process.env.NEXT_PUBLIC_LOS_API_URL || 'http://localhost:8002',
+    lms: process.env.NEXT_PUBLIC_LMS_API_URL || 'http://localhost:8003',
+    collections: process.env.NEXT_PUBLIC_COLLECTIONS_API_URL || 'http://localhost:8004',
+    customer: process.env.NEXT_PUBLIC_CUSTOMER_API_URL || 'http://localhost:8005',
+    findna: process.env.NEXT_PUBLIC_FINDNA_API_URL || 'http://localhost:8006',
+    deposits: process.env.NEXT_PUBLIC_DEPOSITS_API_URL || 'http://localhost:8007',
+    accounting: process.env.NEXT_PUBLIC_ACCOUNTING_API_URL || 'http://localhost:8008',
+    crm: process.env.NEXT_PUBLIC_CRM_API_URL || 'http://localhost:8009',
+    document: process.env.NEXT_PUBLIC_DOCUMENT_API_URL || 'http://localhost:8010',
+    compliance: process.env.NEXT_PUBLIC_COMPLIANCE_API_URL || 'http://localhost:8011',
+    hrms: process.env.NEXT_PUBLIC_HRMS_API_URL || 'http://localhost:8012',
+    gold: process.env.NEXT_PUBLIC_GOLD_API_URL || 'http://localhost:8013',
+    treasury: process.env.NEXT_PUBLIC_TREASURY_API_URL || 'http://localhost:8014',
+    wealth: process.env.NEXT_PUBLIC_WEALTH_API_URL || 'http://localhost:8015',
+    insurance: process.env.NEXT_PUBLIC_INSURANCE_API_URL || 'http://localhost:8016',
+    procurement: process.env.NEXT_PUBLIC_PROCUREMENT_API_URL || 'http://localhost:8017',
+    platform: process.env.NEXT_PUBLIC_PLATFORM_API_URL || 'http://localhost:8018',
+    notifications: process.env.NEXT_PUBLIC_NOTIFICATIONS_API_URL || 'http://localhost:8019',
+  };
+  
+  return serviceUrls[serviceName] || (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000');
+};
 
-const HRMS_API_BASE_URL =
-  process.env.NEXT_PUBLIC_HRMS_API_URL ||
-  'http://localhost:8012';
+// Create axios instances for each service
+const authAxiosInstance = axios.create({
+  baseURL: getServiceURL('auth'),
+});
 
-const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+const lmsAxiosInstance = axios.create({
+  baseURL: getServiceURL('lms'),
+});
+
+const losAxiosInstance = axios.create({
+  baseURL: getServiceURL('los'),
+});
+
+const collectionsAxiosInstance = axios.create({
+  baseURL: getServiceURL('collections'),
+});
+
+const customerAxiosInstance = axios.create({
+  baseURL: getServiceURL('customer'),
+});
+
+const findnaAxiosInstance = axios.create({
+  baseURL: getServiceURL('findna'),
+});
+
+const depositsAxiosInstance = axios.create({
+  baseURL: getServiceURL('deposits'),
+});
+
+const accountingAxiosInstance = axios.create({
+  baseURL: getServiceURL('accounting'),
+});
+
+const crmAxiosInstance = axios.create({
+  baseURL: getServiceURL('crm'),
+});
+
+const documentAxiosInstance = axios.create({
+  baseURL: getServiceURL('document'),
+});
+
+const complianceAxiosInstance = axios.create({
+  baseURL: getServiceURL('compliance'),
 });
 
 const hrmsAxiosInstance = axios.create({
-  baseURL: HRMS_API_BASE_URL,
+  baseURL: getServiceURL('hrms'),
 });
+
+const goldAxiosInstance = axios.create({
+  baseURL: getServiceURL('gold'),
+});
+
+const treasuryAxiosInstance = axios.create({
+  baseURL: getServiceURL('treasury'),
+});
+
+const wealthAxiosInstance = axios.create({
+  baseURL: getServiceURL('wealth'),
+});
+
+const insuranceAxiosInstance = axios.create({
+  baseURL: getServiceURL('insurance'),
+});
+
+const procurementAxiosInstance = axios.create({
+  baseURL: getServiceURL('procurement'),
+});
+
+const platformAxiosInstance = axios.create({
+  baseURL: getServiceURL('platform'),
+});
+
+const notificationsAxiosInstance = axios.create({
+  baseURL: getServiceURL('notifications'),
+});
+
+// Legacy aliases for backward compatibility
+const axiosInstance = authAxiosInstance;
+const apiClient = authAxiosInstance;
 
 type JsonObject = Record<string, unknown>;
 

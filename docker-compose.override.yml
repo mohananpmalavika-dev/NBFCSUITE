@@ -1,0 +1,78 @@
+# Local Development Override - Adds Nginx API Gateway
+# This file is automatically merged with docker-compose.yml
+# Run: docker-compose up  (includes both files)
+
+version: '3.8'
+
+services:
+  # Nginx API Gateway
+  # Provides unified entry point for all microservices
+  # Access at: http://localhost:8080
+  # Routes:
+  #   /auth/*        → auth-service:8000
+  #   /los/*         → los-service:8000
+  #   /lms/*         → lms-service:8000
+  #   /collections/* → collections-service:8000
+  #   ... (all 19 services)
+  api-gateway:
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile
+    container_name: nbfcsuite-api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth-service
+      - los-service
+      - lms-service
+      - collections-service
+      - customer-service
+      - findna-service
+      - deposits-service
+      - accounting-service
+      - crm-service
+      - document-service
+      - compliance-service
+      - hrms-service
+      - gold-service
+      - treasury-service
+      - wealth-service
+      - insurance-service
+      - procurement-service
+      - platform-service
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 5s
+      retries: 3
+
+  # Optional: Web app with API Gateway URL
+  web-app:
+    environment:
+      # Use API Gateway if available (optional override)
+      # Uncomment to test via gateway:
+      # NEXT_PUBLIC_API_GATEWAY_URL: http://localhost:8080
+      
+      # Default: Direct service URLs
+      NEXT_PUBLIC_AUTH_API_URL: http://localhost:8001
+      NEXT_PUBLIC_LOS_API_URL: http://localhost:8002
+      NEXT_PUBLIC_LMS_API_URL: http://localhost:8003
+      NEXT_PUBLIC_COLLECTIONS_API_URL: http://localhost:8004
+      NEXT_PUBLIC_CUSTOMER_API_URL: http://localhost:8005
+      NEXT_PUBLIC_FINDNA_API_URL: http://localhost:8006
+      NEXT_PUBLIC_DEPOSITS_API_URL: http://localhost:8007
+      NEXT_PUBLIC_ACCOUNTING_API_URL: http://localhost:8008
+      NEXT_PUBLIC_CRM_API_URL: http://localhost:8009
+      NEXT_PUBLIC_DOCUMENT_API_URL: http://localhost:8010
+      NEXT_PUBLIC_COMPLIANCE_API_URL: http://localhost:8011
+      NEXT_PUBLIC_HRMS_API_URL: http://localhost:8012
+      NEXT_PUBLIC_GOLD_API_URL: http://localhost:8013
+      NEXT_PUBLIC_TREASURY_API_URL: http://localhost:8014
+      NEXT_PUBLIC_WEALTH_API_URL: http://localhost:8015
+      NEXT_PUBLIC_INSURANCE_API_URL: http://localhost:8016
+      NEXT_PUBLIC_PROCUREMENT_API_URL: http://localhost:8017
+      NEXT_PUBLIC_PLATFORM_API_URL: http://localhost:8018
+      NEXT_PUBLIC_NOTIFICATIONS_API_URL: http://localhost:8019
