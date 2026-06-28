@@ -116,7 +116,6 @@ const notificationsAxiosInstance = axios.create({
 
 // Legacy aliases for backward compatibility
 const axiosInstance = authAxiosInstance;
-const apiClient = authAxiosInstance;
 
 type JsonObject = Record<string, unknown>;
 
