@@ -14,6 +14,7 @@ const dashboardCards = [
   { title: 'Branch Portal', value: 'CIF, underwriting and disbursement queue', href: '/branch' },
   { title: 'EOM Master Data', value: 'Enterprise organization and branch mapping', href: '/eom' },
   { title: 'HRMS', value: 'Employee master, branch assignments and payroll', href: '/hrms' },
+  { title: 'Enterprise Setup', value: 'Organization hierarchy, units, positions and approvals', href: '/enterprise-setup/organization', featured: true },
   { title: 'Documents', value: 'KYC and expiry tracking', href: '/documents' },
   { title: 'Profile', value: 'Customer 360 and risk', href: '/profile' },
   { title: 'Customer 360', value: 'Complete customer view with all products', href: '/customer-360', featured: true },

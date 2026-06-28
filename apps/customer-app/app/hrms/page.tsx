@@ -100,6 +100,27 @@ interface PayrollSlip {
   status: string;
 }
 
+interface DepartmentBudget {
+  department_id: string;
+  department_name: string;
+  tenant_id: string;
+  annual_budget: number;
+  cost_center_code?: string | null;
+  profit_center_code?: string | null;
+  budget_owner_employee_id?: string | null;
+  department_head_employee_id?: string | null;
+  department_head_name?: string | null;
+  total_positions: number;
+  open_positions: number;
+  occupied_positions: number;
+  total_employees: number;
+}
+
+interface DepartmentAnalytics extends DepartmentBudget {
+  active_employees: number;
+  status: string;
+}
+
 type TabKey = 'organization' | 'employees' | 'payroll';
 
 const tabs: Array<{ key: TabKey; label: string }> = [
@@ -113,6 +134,10 @@ export default function HrmsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>('organization');
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentTree, setDepartmentTree] = useState<Department[]>([]);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
+  const [selectedDepartment, setSelectedDepartment] = useState<Department | null>(null);
+  const [departmentAnalytics, setDepartmentAnalytics] = useState<DepartmentAnalytics | null>(null);
   const [grades, setGrades] = useState<Grade[]>([]);
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [positions, setPositions] = useState<Position[]>([]);
@@ -211,8 +236,9 @@ export default function HrmsPage() {
     setMessage('');
     try {
       const tenantParams = { tenant_id: user.tenant_id || undefined };
-      const [departmentsRes, gradesRes, designationsRes, positionsRes, employeesRes, runsRes] = await Promise.all([
+      const [departmentsRes, departmentTreeRes, gradesRes, designationsRes, positionsRes, employeesRes, runsRes] = await Promise.all([
         apiClient.getHrmsDepartments(tenantParams),
+        apiClient.getHrmsDepartmentTree(tenantParams),
         apiClient.getHrmsGrades(tenantParams),
         apiClient.getHrmsDesignations(tenantParams),
         apiClient.getHrmsPositions(user.branch_id ? { ...tenantParams, branch_id: user.branch_id } : tenantParams),
@@ -223,6 +249,7 @@ export default function HrmsPage() {
       const loadedEmployees = Array.isArray(employeesRes.data.items) ? employeesRes.data.items : employeesRes.data || [];
       const loadedRuns = runsRes.data || [];
       setDepartments(departmentsRes.data || []);
+      setDepartmentTree(departmentTreeRes.data || []);
       setGrades(gradesRes.data || []);
       setDesignations(designationsRes.data || []);
       setPositions(positionsRes.data || []);
@@ -233,10 +260,13 @@ export default function HrmsPage() {
         ...current,
         employee_id: current.employee_id || loadedEmployees?.[0]?.id || '',
       }));
+      if (!selectedDepartmentId && departmentsRes.data?.[0]?.id) {
+        setSelectedDepartmentId(departmentsRes.data[0].id);
+      }
     } catch {
       setMessage('Unable to load HRMS data.');
     }
-  }, [token, user]);
+  }, [token, user, selectedDepartmentId]);
 
   const loadPayrollSlips = useCallback(async () => {
     if (!token || !user || !selectedRunId) {
@@ -252,6 +282,26 @@ export default function HrmsPage() {
     }
   }, [selectedRunId, token, user]);
 
+  const loadDepartmentAnalytics = useCallback(async (departmentId: string) => {
+    if (!token || !user || !departmentId) {
+      setDepartmentAnalytics(null);
+      setSelectedDepartment(null);
+      return;
+    }
+
+    try {
+      const [analyticsRes, departmentRes] = await Promise.all([
+        apiClient.getHrmsDepartmentAnalytics(departmentId),
+        apiClient.getHrmsDepartment(departmentId),
+      ]);
+      setDepartmentAnalytics(analyticsRes.data || null);
+      setSelectedDepartment(departmentRes.data || null);
+    } catch {
+      setDepartmentAnalytics(null);
+      setSelectedDepartment(null);
+    }
+  }, [token, user]);
+
   useEffect(() => {
     loadHrmsData();
   }, [loadHrmsData]);
@@ -259,6 +309,15 @@ export default function HrmsPage() {
   useEffect(() => {
     loadPayrollSlips();
   }, [loadPayrollSlips]);
+
+  useEffect(() => {
+    if (selectedDepartmentId) {
+      loadDepartmentAnalytics(selectedDepartmentId);
+    } else {
+      setDepartmentAnalytics(null);
+      setSelectedDepartment(null);
+    }
+  }, [selectedDepartmentId, loadDepartmentAnalytics]);
 
   const formatCurrency = (value: number) => `INR ${Number(value || 0).toLocaleString()}`;
 
@@ -644,7 +703,7 @@ export default function HrmsPage() {
                 <div className="space-y-4">
                   <DepartmentSeedButton isLoading={busyAction === 'seed-departments'} onSeed={seedDepartments} />
                   {departments.length > 0 && <DepartmentStats departments={departments} />}
-                  {departments.length > 0 && <DepartmentHierarchyTree departments={departments} />}
+                  {departments.length > 0 && <DepartmentHierarchyTree departments={departmentTree.length > 0 ? departmentTree : departments} />}
                   {departments.length === 0 && <div className="p-4 text-center text-slate-600">No departments configured. Click "Seed 16 Departments" to create Phase 1 organization structure.</div>}
                 </div>
               </DataPanel>
@@ -662,6 +721,59 @@ export default function HrmsPage() {
             </section>
 
             <section className="grid gap-6">
+              <DataPanel title="Department Insights">
+                <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                  <div className="space-y-4">
+                    <label className="block">
+                      <span className="text-sm font-medium text-slate-700">Select Department</span>
+                      <select
+                        value={selectedDepartmentId}
+                        onChange={(event) => setSelectedDepartmentId(event.target.value)}
+                        className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                      >
+                        <option value="">Choose a department</option>
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.department_code} - {dept.department_name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {selectedDepartment ? (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <h3 className="text-lg font-semibold text-slate-950">Department Details</h3>
+                        <p className="text-sm text-slate-600">Code: {selectedDepartment.department_code}</p>
+                        <p className="text-sm text-slate-600">Name: {selectedDepartment.department_name}</p>
+                        <p className="text-sm text-slate-600">Budget: INR {selectedDepartment.annual_budget.toLocaleString()}</p>
+                        <p className="text-sm text-slate-600">Status: {selectedDepartment.status}</p>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                        Select a department to view analytics.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-4">
+                    {departmentAnalytics ? (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <SummaryCard label="Total Employees" value={String(departmentAnalytics.total_employees)} />
+                        <SummaryCard label="Active Employees" value={String(departmentAnalytics.active_employees)} />
+                        <SummaryCard label="Total Positions" value={String(departmentAnalytics.total_positions)} />
+                        <SummaryCard label="Open Positions" value={String(departmentAnalytics.open_positions)} />
+                        <SummaryCard label="Occupied Positions" value={String(departmentAnalytics.occupied_positions)} />
+                        <SummaryCard label="Budget" value={`INR ${departmentAnalytics.annual_budget.toLocaleString()}`} />
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                        Department analytics will appear here once a department is selected.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </DataPanel>
+
               <DataPanel title="Department Head Assignment">
                 <DepartmentHeadPanel
                   departments={departments}

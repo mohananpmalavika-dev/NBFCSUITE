@@ -646,6 +646,49 @@ async def _run_accounting_test():
         assert dashboard["pending_vouchers"] == 0
         assert dashboard["trial_balance"]["is_balanced"] is True
 
+        accounting_360_response = await client.get("/accounting-360/dashboard", params={"tenant_id": tenant_id})
+        assert accounting_360_response.status_code == 200
+        accounting_360 = accounting_360_response.json()
+        assert accounting_360["trial_balance"]["is_balanced"] is True
+        assert any(metric["key"] == "assets" for metric in accounting_360["metrics"])
+        assert accounting_360["posting_health"]["journal_entries"] >= 1
+        assert accounting_360["gl_tree"]
+
+        accounting_360_search_response = await client.get(
+            "/accounting-360/search",
+            params={"tenant_id": tenant_id, "q": "cash"},
+        )
+        assert accounting_360_search_response.status_code == 200
+        assert any("Cash" in item["account_name"] for item in accounting_360_search_response.json()["items"])
+
+        accounting_360_gl_response = await client.get(
+            f"/accounting-360/gl/{cash_account['id']}",
+            params={"tenant_id": tenant_id},
+        )
+        assert accounting_360_gl_response.status_code == 200
+        accounting_360_gl = accounting_360_gl_response.json()
+        assert accounting_360_gl["account"]["account_code"] == "111000_BRANCH_CASH"
+        assert "ai_summary" in accounting_360_gl["summary"]
+
+        quick_action_response = await client.post(
+            "/accounting-360/quick-action",
+            json={
+                "tenant_id": tenant_id,
+                "action_type": "expense_paid",
+                "amount": 99.0,
+                "party_name": "Power utility",
+                "description": "Branch electricity",
+                "source_reference": "A360-UTIL-001",
+                "branch_id": "branch-001",
+                "performed_by": "tester",
+            },
+        )
+        assert quick_action_response.status_code == 200
+        quick_action = quick_action_response.json()
+        assert quick_action["journal_entry"]["posting_status"] == "posted"
+        assert quick_action["pipeline"]["posting_rule"]["status"] == "accounting_360_template"
+        assert quick_action["inferred_lines"][0]["direction"] == "debit"
+
         close_response = await client.post(
             "/day-end/close",
             json={

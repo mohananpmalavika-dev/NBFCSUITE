@@ -1,18 +1,15 @@
 from datetime import date, datetime
 from typing import List, Optional, Type
 from uuid import uuid4
-import os
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Date, DateTime, Float, Integer, JSON, String, create_engine
-from sqlalchemy.orm import Session, declarative_base, sessionmaker
+from sqlalchemy import Column, Date, DateTime, Float, Integer, JSON, String
+from sqlalchemy.orm import Session
 
-
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://nbfc_user:nbfc_pass@localhost:5432/nbfcsuite")
-engine = create_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+from app.database import Base, SessionLocal, engine
+from app.organization.models.organization_unit import OrganizationUnit
+from app.organization.routers.organization_unit import router as organization_router
 
 
 class HRDepartment(Base):
@@ -247,6 +244,40 @@ class DepartmentResponse(DepartmentCreate):
 
     class Config:
         from_attributes = True
+
+
+class DepartmentTreeResponse(DepartmentResponse):
+    children: List["DepartmentTreeResponse"] = Field(default_factory=list)
+
+    class Config:
+        from_attributes = True
+
+
+class DepartmentBudgetResponse(BaseModel):
+    department_id: str
+    department_name: str
+    tenant_id: str
+    annual_budget: float
+    cost_center_code: Optional[str] = None
+    profit_center_code: Optional[str] = None
+    budget_owner_employee_id: Optional[str] = None
+    department_head_employee_id: Optional[str] = None
+    department_head_name: Optional[str] = None
+    total_positions: int
+    open_positions: int
+    occupied_positions: int
+    total_employees: int
+
+
+class DepartmentAnalyticsResponse(DepartmentBudgetResponse):
+    active_employees: int
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
+DepartmentTreeResponse.update_forward_refs()
 
 
 class GradeCreate(BaseModel):
@@ -591,6 +622,7 @@ except ModuleNotFoundError:
     from .security import get_current_user_claims, scope_filter_columns
 
 app = FastAPI(title="hrms-service", version="0.1.0")
+app.include_router(organization_router)
 
 SCOPE_FIELDS = ("organization_id", "zone_id", "region_id", "area_id", "branch_id")
 
@@ -739,6 +771,50 @@ def _apply_update(entity, payload: BaseModel) -> None:
     entity.updated_at = datetime.utcnow()
 
 
+def _build_department_tree(departments: list[HRDepartment]) -> list[DepartmentTreeResponse]:
+    nodes: dict[str, DepartmentTreeResponse] = {
+        department.id: DepartmentTreeResponse.model_validate(department)
+        for department in departments
+    }
+    tree: list[DepartmentTreeResponse] = []
+    for node in nodes.values():
+        parent_id = node.parent_department_id
+        if parent_id and parent_id in nodes:
+            nodes[parent_id].children.append(node)
+        else:
+            tree.append(node)
+    return sorted(tree, key=lambda item: item.department_name.lower())
+
+
+def _department_summary(department: HRDepartment, db: Session, user_claims: dict) -> dict:
+    tenant_id = department.tenant_id
+    employee_query = db.query(Employee).filter(Employee.tenant_id == tenant_id, Employee.department_id == department.id)
+    employee_query = _apply_scope_filters(employee_query, Employee, None, user_claims)
+    total_employees = employee_query.count()
+    active_employees = employee_query.filter(Employee.status == "active").count()
+
+    position_query = db.query(HRPosition).filter(HRPosition.tenant_id == tenant_id, HRPosition.department_id == department.id)
+    position_query = _apply_scope_filters(position_query, HRPosition, None, user_claims)
+    total_positions = position_query.count()
+    open_positions = position_query.filter(HRPosition.status == "open").count()
+    occupied_positions = position_query.filter(HRPosition.status != "open").count()
+
+    head_name = None
+    if department.department_head_employee_id:
+        head = db.query(Employee).filter(Employee.id == department.department_head_employee_id, Employee.tenant_id == tenant_id).first()
+        if head:
+            head_name = _employee_display_name(head)
+
+    return {
+        "total_employees": total_employees,
+        "active_employees": active_employees,
+        "total_positions": total_positions,
+        "open_positions": open_positions,
+        "occupied_positions": occupied_positions,
+        "department_head_name": head_name,
+    }
+
+
 def _validate_grade_band(min_value: float | None, max_value: float | None) -> None:
     if min_value is not None and max_value is not None and max_value and min_value > max_value:
         raise HTTPException(status_code=400, detail="salary_band_min cannot exceed salary_band_max")
@@ -850,6 +926,125 @@ async def update_department(
     db.commit()
     db.refresh(department)
     return department
+
+
+@app.get("/departments/tree", response_model=List[DepartmentTreeResponse])
+async def get_department_tree(
+    tenant_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(HRDepartment).filter(HRDepartment.tenant_id == tenant_id)
+    if status:
+        query = query.filter(HRDepartment.status == status)
+    departments = query.order_by(HRDepartment.department_name.asc()).all()
+    return _build_department_tree(departments)
+
+
+@app.get("/departments/{department_id}", response_model=DepartmentResponse)
+async def get_department(
+    department_id: str,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    department = _get_tenant_record(db, HRDepartment, department_id, tenant_id, "Department")
+    _assert_record_in_scope(department, user_claims)
+    return department
+
+
+@app.get("/departments/{department_id}/employees", response_model=List[EmployeeResponse])
+async def get_department_employees(
+    department_id: str,
+    status: Optional[str] = Query(None),
+    skip: int = Query(0),
+    limit: int = Query(100),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    department = _get_tenant_record(db, HRDepartment, department_id, tenant_id, "Department")
+    _assert_record_in_scope(department, user_claims)
+    query = db.query(Employee).filter(Employee.tenant_id == tenant_id, Employee.department_id == department.id)
+    query = _apply_scope_filters(query, Employee, None, user_claims)
+    if status:
+        query = query.filter(Employee.status == status)
+    return query.order_by(Employee.last_name.asc(), Employee.first_name.asc()).offset(skip).limit(limit).all()
+
+
+@app.get("/departments/{department_id}/positions", response_model=List[PositionResponse])
+async def get_department_positions(
+    department_id: str,
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    department = _get_tenant_record(db, HRDepartment, department_id, tenant_id, "Department")
+    _assert_record_in_scope(department, user_claims)
+    query = db.query(HRPosition).filter(HRPosition.tenant_id == tenant_id, HRPosition.department_id == department.id)
+    query = _apply_scope_filters(query, HRPosition, None, user_claims)
+    if status:
+        query = query.filter(HRPosition.status == status)
+    return query.order_by(HRPosition.position_code.asc()).all()
+
+
+@app.get("/departments/{department_id}/budget", response_model=DepartmentBudgetResponse)
+async def get_department_budget(
+    department_id: str,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    department = _get_tenant_record(db, HRDepartment, department_id, tenant_id, "Department")
+    _assert_record_in_scope(department, user_claims)
+    summary = _department_summary(department, db, user_claims)
+    return DepartmentBudgetResponse(
+        department_id=department.id,
+        department_name=department.department_name,
+        tenant_id=department.tenant_id,
+        annual_budget=department.annual_budget,
+        cost_center_code=department.cost_center_code,
+        profit_center_code=department.profit_center_code,
+        budget_owner_employee_id=department.budget_owner_employee_id,
+        department_head_employee_id=department.department_head_employee_id,
+        department_head_name=summary["department_head_name"],
+        total_positions=summary["total_positions"],
+        open_positions=summary["open_positions"],
+        occupied_positions=summary["occupied_positions"],
+        total_employees=summary["total_employees"],
+    )
+
+
+@app.get("/departments/{department_id}/analytics", response_model=DepartmentAnalyticsResponse)
+async def get_department_analytics(
+    department_id: str,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    department = _get_tenant_record(db, HRDepartment, department_id, tenant_id, "Department")
+    _assert_record_in_scope(department, user_claims)
+    summary = _department_summary(department, db, user_claims)
+    return DepartmentAnalyticsResponse(
+        department_id=department.id,
+        department_name=department.department_name,
+        tenant_id=department.tenant_id,
+        annual_budget=department.annual_budget,
+        cost_center_code=department.cost_center_code,
+        profit_center_code=department.profit_center_code,
+        budget_owner_employee_id=department.budget_owner_employee_id,
+        department_head_employee_id=department.department_head_employee_id,
+        department_head_name=summary["department_head_name"],
+        total_positions=summary["total_positions"],
+        open_positions=summary["open_positions"],
+        occupied_positions=summary["occupied_positions"],
+        total_employees=summary["total_employees"],
+        active_employees=summary["active_employees"],
+        status=department.status,
+    )
 
 
 @app.post("/grades", response_model=GradeResponse)

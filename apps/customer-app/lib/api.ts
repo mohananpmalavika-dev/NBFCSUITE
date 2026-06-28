@@ -318,6 +318,43 @@ export interface HrmsDepartmentPayload {
   annual_budget?: number;
 }
 
+export interface OrganizationUnitPayload {
+  tenant_id?: string;
+  parent_id?: string;
+  unit_code: string;
+  unit_name: string;
+  unit_type: string;
+  display_order?: number;
+  status?: string;
+  effective_from?: string;
+  effective_to?: string;
+  manager_position_id?: string;
+  cost_center_id?: string;
+  profit_center_id?: string;
+  address_id?: string;
+}
+
+export interface HrmsDepartmentBudgetResponse {
+  department_id: string;
+  department_name: string;
+  tenant_id: string;
+  annual_budget: number;
+  cost_center_code?: string;
+  profit_center_code?: string;
+  budget_owner_employee_id?: string;
+  department_head_employee_id?: string;
+  department_head_name?: string;
+  total_positions: number;
+  open_positions: number;
+  occupied_positions: number;
+  total_employees: number;
+}
+
+export interface HrmsDepartmentAnalyticsResponse extends HrmsDepartmentBudgetResponse {
+  active_employees: number;
+  status: string;
+}
+
 export interface HrmsGradePayload {
   tenant_id: string;
   grade_code: string;
@@ -585,6 +622,20 @@ export interface DayEndClosePayload {
   closed_by?: string;
 }
 
+export interface AccountingQuickActionPayload {
+  tenant_id: string;
+  action_type: string;
+  amount: number;
+  description?: string;
+  party_name?: string;
+  source_reference?: string;
+  branch_id?: string;
+  business_date?: string;
+  currency?: string;
+  performed_by?: string;
+  metadata?: JsonObject;
+}
+
 export const apiClient = {
   setToken: (token: string) => {
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -809,10 +860,32 @@ export const apiClient = {
   // HRMS Service
   getHrmsDepartments: (params?: { tenant_id?: string; status?: string }) =>
     hrmsAxiosInstance.get(`/departments`, { params }),
+  getOrganizationUnits: (params?: { tenant_id?: string }) =>
+    hrmsAxiosInstance.get(`/organization/tree`, { params }),
+  createOrganizationUnit: (data: OrganizationUnitPayload) =>
+    hrmsAxiosInstance.post(`/organization/unit`, data),
+  updateOrganizationUnit: (unitId: string, data: Partial<OrganizationUnitPayload>) =>
+    hrmsAxiosInstance.put(`/organization/unit/${unitId}`, data),
+  deleteOrganizationUnit: (unitId: string) =>
+    hrmsAxiosInstance.delete(`/organization/unit/${unitId}`),
+  getOrganizationAnalytics: (params?: { tenant_id?: string }) =>
+    hrmsAxiosInstance.get(`/organization/analytics`, { params }),
   createHrmsDepartment: (data: HrmsDepartmentPayload) =>
     hrmsAxiosInstance.post(`/departments`, data),
   updateHrmsDepartment: (departmentId: string, data: Partial<Omit<HrmsDepartmentPayload, 'tenant_id' | 'department_code'>>) =>
     hrmsAxiosInstance.put(`/departments/${departmentId}`, data),
+  getHrmsDepartmentTree: (params?: { tenant_id?: string; status?: string }) =>
+    hrmsAxiosInstance.get(`/departments/tree`, { params }),
+  getHrmsDepartment: (departmentId: string) =>
+    hrmsAxiosInstance.get(`/departments/${departmentId}`),
+  getHrmsDepartmentEmployees: (departmentId: string, params?: { status?: string; skip?: number; limit?: number }) =>
+    hrmsAxiosInstance.get(`/departments/${departmentId}/employees`, { params }),
+  getHrmsDepartmentPositions: (departmentId: string, params?: { status?: string }) =>
+    hrmsAxiosInstance.get(`/departments/${departmentId}/positions`, { params }),
+  getHrmsDepartmentBudget: (departmentId: string) =>
+    hrmsAxiosInstance.get(`/departments/${departmentId}/budget`),
+  getHrmsDepartmentAnalytics: (departmentId: string) =>
+    hrmsAxiosInstance.get(`/departments/${departmentId}/analytics`),
   getHrmsGrades: (params?: { tenant_id?: string; status?: string }) =>
     hrmsAxiosInstance.get(`/grades`, { params }),
   createHrmsGrade: (data: HrmsGradePayload) =>
@@ -915,6 +988,14 @@ export const apiClient = {
   // Accounting Service
   getAccountingDashboard: (tenantId: string) =>
     axiosInstance.get(`/dashboard`, { params: { tenant_id: tenantId } }),
+  getAccounting360Dashboard: (tenantId: string) =>
+    axiosInstance.get(`/accounting-360/dashboard`, { params: { tenant_id: tenantId } }),
+  searchAccounting360: (tenantId: string, query: string) =>
+    axiosInstance.get(`/accounting-360/search`, { params: { tenant_id: tenantId, q: query } }),
+  getAccounting360Gl: (tenantId: string, accountId: string) =>
+    axiosInstance.get(`/accounting-360/gl/${accountId}`, { params: { tenant_id: tenantId } }),
+  postAccounting360QuickAction: (data: AccountingQuickActionPayload) =>
+    axiosInstance.post(`/accounting-360/quick-action`, data),
   getGlAccounts: (tenantId: string) =>
     axiosInstance.get(`/gl-accounts`, { params: { tenant_id: tenantId } }),
   getGlAccountSummary: (tenantId: string) =>
