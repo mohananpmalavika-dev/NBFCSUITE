@@ -146,6 +146,10 @@ class UserGroup(UserGroupBase):
         from_attributes = True
 
 
+# Resolve forward references for models using string annotations in Pydantic v2
+User.model_rebuild()
+
+
 class LoginHistoryBase(BaseModel):
     event_type: str
     ip_address: Optional[str] = None
