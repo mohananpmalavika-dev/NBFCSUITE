@@ -1,13 +1,19 @@
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 from uuid import uuid4
 import ast
 import operator as op
+import sys
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, Date, DateTime, Float, Integer, JSON, String
 from sqlalchemy.orm import Session
+
+SERVICE_ROOT = Path(__file__).resolve().parent.parent
+if str(SERVICE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SERVICE_ROOT))
 
 from app.database import Base, SessionLocal, engine
 from app.organization.models.organization_unit import OrganizationUnit
@@ -364,6 +370,23 @@ class StatutoryDeduction(Base):
     status = Column(String, default="active", index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StatutoryDeductionCreate(BaseModel):
+    tenant_id: str = "default"
+    deduction_code: str
+    deduction_name: str
+    description: Optional[str] = None
+    status: str = "active"
+
+
+class StatutoryDeductionResponse(StatutoryDeductionCreate):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class PayrollTransaction(Base):
@@ -1412,6 +1435,39 @@ def _sum_components(components: dict) -> float:
     return round(sum(float(value or 0.0) for value in components.values()), 2)
 
 
+def _evaluate_structure_components(structure_id: str, tenant_id: str, db: Session, basic_pay: float) -> tuple[dict, dict]:
+    components = {}
+    deductions = {}
+    structure_components = (
+        db.query(SalaryStructureComponent)
+        .filter(
+            SalaryStructureComponent.structure_id == structure_id,
+            SalaryStructureComponent.tenant_id == tenant_id,
+        )
+        .order_by(SalaryStructureComponent.sequence.asc())
+        .all()
+    )
+    for item in structure_components:
+        component = db.query(SalaryComponent).filter(
+            SalaryComponent.id == item.component_id,
+            SalaryComponent.tenant_id == tenant_id,
+        ).first()
+        if not component:
+            continue
+        value = 0.0
+        if item.formula:
+            value = _safe_eval(item.formula, {"basic": basic_pay})
+        elif item.fixed_amount:
+            value = item.fixed_amount
+        elif item.percentage:
+            value = round(basic_pay * (item.percentage / 100.0), 2)
+        if component.component_type == "deduction":
+            deductions[component.component_name] = round(value, 2)
+        else:
+            components[component.component_name] = round(value, 2)
+    return components, deductions
+
+
 def _recalculate_payroll_run(run: PayrollRun, db: Session) -> None:
     slips = db.query(PayrollSlip).filter(PayrollSlip.payroll_run_id == run.id, PayrollSlip.tenant_id == run.tenant_id).all()
     run.gross_pay = round(sum(slip.gross_pay or 0.0 for slip in slips), 2)
@@ -2373,6 +2429,27 @@ async def add_payroll_slip(
         raise HTTPException(status_code=404, detail="Employee not found for tenant")
     _assert_record_in_scope(employee, user_claims)
     _copy_scope_values(run, employee)
+    employee_salary = (
+        db.query(EmployeeSalary)
+        .filter(
+            EmployeeSalary.employee_id == employee.id,
+            EmployeeSalary.tenant_id == tenant_id,
+            EmployeeSalary.status == "active",
+        )
+        .order_by(EmployeeSalary.effective_from.desc().nullslast())
+        .first()
+    )
+    allowances = dict(payload.allowances or {})
+    deductions = dict(payload.deductions or {})
+    if employee_salary:
+        structure_allowances, structure_deductions = _evaluate_structure_components(
+            employee_salary.salary_structure_id,
+            tenant_id,
+            db,
+            payload.basic_pay,
+        )
+        allowances.update(structure_allowances)
+        deductions.update(structure_deductions)
     existing = (
         db.query(PayrollSlip)
         .filter(
@@ -2385,8 +2462,8 @@ async def add_payroll_slip(
     if existing:
         raise HTTPException(status_code=400, detail="Payroll slip already exists for employee in this run")
 
-    allowance_total = _sum_components(payload.allowances)
-    deduction_total = _sum_components(payload.deductions)
+    allowance_total = _sum_components(allowances)
+    deduction_total = _sum_components(deductions)
     gross_pay = round(payload.basic_pay + allowance_total, 2)
     total_deductions = round(deduction_total + payload.tax_amount, 2)
     slip = PayrollSlip(
@@ -2402,8 +2479,8 @@ async def add_payroll_slip(
         employee_number=employee.employee_number,
         employee_name=f"{employee.first_name} {employee.last_name}",
         basic_pay=payload.basic_pay,
-        allowances=payload.allowances,
-        deductions=payload.deductions,
+        allowances=allowances,
+        deductions=deductions,
         tax_amount=payload.tax_amount,
         gross_pay=gross_pay,
         total_deductions=total_deductions,
@@ -2580,6 +2657,42 @@ async def create_salary_structure(
     db.commit()
     db.refresh(structure)
     return structure
+
+
+@app.post("/payroll/statutory-deductions", response_model=StatutoryDeductionResponse)
+async def create_statutory_deduction(
+    payload: StatutoryDeductionCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    _ensure_unique_code(db, StatutoryDeduction, tenant_id, "deduction_code", payload.deduction_code, "Statutory Deduction")
+    deduction = StatutoryDeduction(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        deduction_code=payload.deduction_code,
+        deduction_name=payload.deduction_name,
+        description=payload.description,
+        status=payload.status,
+    )
+    db.add(deduction)
+    db.commit()
+    db.refresh(deduction)
+    return deduction
+
+
+@app.get("/payroll/statutory-deductions", response_model=List[StatutoryDeductionResponse])
+async def list_statutory_deductions(
+    tenant_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(StatutoryDeduction).filter(StatutoryDeduction.tenant_id == tenant_id)
+    if status:
+        query = query.filter(StatutoryDeduction.status == status)
+    return query.order_by(StatutoryDeduction.created_at.desc()).all()
 
 
 @app.get("/payroll/structures", response_model=List[SalaryStructureResponse])

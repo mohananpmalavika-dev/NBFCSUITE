@@ -1,0 +1,93 @@
+# ARTH.OS Enterprise Design System v1.0
+
+## Purpose
+
+The Enterprise Design System (EDS) provides the visual and interaction foundation for the entire suite.
+
+## Design Principles
+
+- Consistency over novelty
+- Clarity over density
+- Trust over visual noise
+- Accessibility by default
+- Scalable patterns for enterprise workflows
+
+## Foundations
+
+### Color System
+
+- Primary: deep slate and blue for trust and clarity
+- Accent: blue for primary actions and highlights
+- Success: emerald for positive states
+- Warning: amber for review states
+- Danger: rose for critical actions
+
+### Typography
+
+- Modern sans-serif for readability
+- Strong hierarchy for dashboards and forms
+- Clear labels and concise microcopy
+
+### Layout System
+
+- Sidebar navigation for core modules
+- Workspace header with search and actions
+- KPI row for high-level summaries
+- Action bar for module operations
+- Grid-based tables for operational records
+- Detail drawer for contextual review
+- Timeline for audit and workflow progression
+
+## Screen Standard
+
+Every module should follow this structure:
+
+1. Workspace header
+2. KPIs
+3. Action bar
+4. Search and filters
+5. Enterprise grid
+6. Right drawer
+7. Timeline
+8. Audit panel
+9. AI assistant
+
+## Component Standards
+
+- Cards for summaries and quick actions
+- Data tables for master and transactional data
+- Wizards for multi-step entry
+- Modals for focused tasks
+- Timeline for approvals and events
+- Charts for analytics and MIS reporting
+
+## Implementation Direction
+
+The current UI should evolve toward a reusable component library in Next.js with shared tokens, layout primitives, and enterprise widgets.
+
+## Deliverables
+
+- EDS-001: Design Principles
+- EDS-002: Information Architecture
+- EDS-003: Navigation System
+- EDS-004: Enterprise App Shell
+- EDS-005: Theme System
+- EDS-006: Design Tokens
+- EDS-007: Component Library
+- EDS-008: Dashboard Framework
+- EDS-009: Data Grid
+- EDS-010: Form Framework
+- EDS-011: Wizard Framework
+- EDS-012: Analytics Components
+- EDS-013: Mobile Design
+- EDS-014: Accessibility
+- EDS-015: Frontend Standards
+
+## Current Status
+
+- ✅ EDS-001: Design Principles — Complete
+- ✅ EDS-002: Information Architecture — Complete
+- ✅ EDS-003: Navigation System — Complete
+- ✅ EDS-004: Enterprise App Shell — Complete
+- ✅ EDS-005: Design Tokens & Theme System — Complete
+- ⏳ EDS-006: Component Library — Next

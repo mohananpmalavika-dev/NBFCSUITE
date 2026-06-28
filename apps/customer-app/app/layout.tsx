@@ -1,9 +1,8 @@
 import './globals.css';
-import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata = {
-  title: 'NBFCSUITE Customer Portal',
-  description: 'Loan management and financial services portal',
+  title: 'ARTH.OS Enterprise Shell',
+  description: 'ARTH.OS enterprise design system shell implementation',
 };
 
 export default function RootLayout({
@@ -13,9 +12,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <AuthProvider>{children}</AuthProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

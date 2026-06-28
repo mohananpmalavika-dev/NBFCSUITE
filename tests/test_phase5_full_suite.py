@@ -30,10 +30,20 @@ from services.hrms.app.main import (
     EmployeeCreate,
     PayrollRunCreate,
     PayrollSlipCreate,
+    SalaryComponentCreate,
+    SalaryStructureCreate,
+    SalaryStructureComponentCreate,
+    EmployeeSalaryCreate,
+    StatutoryDeductionCreate,
     SessionLocal as HrmsSessionLocal,
     add_payroll_slip,
     create_employee,
     create_payroll_run,
+    create_salary_component,
+    create_salary_structure,
+    add_salary_structure_component,
+    create_employee_salary,
+    create_statutory_deduction,
     engine as hrms_engine,
     finalize_payroll_run,
     payroll_summary,
@@ -319,6 +329,138 @@ def test_hrms_payroll_run_slip_finalize_and_summary():
         assert finalized.status == "finalized"
         summary = run(payroll_summary(tenant_id="tenant-a", period_start=None, period_end=None, db=db))
         assert summary["net_pay"] == 52000
+    finally:
+        db.close()
+
+
+def test_hrms_formulaic_salary_structure_and_statutory_deduction_flow():
+    HrmsBase.metadata.drop_all(bind=hrms_engine)
+    HrmsBase.metadata.create_all(bind=hrms_engine)
+    db = HrmsSessionLocal()
+    try:
+        employee = run(
+            create_employee(
+                EmployeeCreate(
+                    tenant_id="tenant-a",
+                    employee_number="EMP-2",
+                    first_name="Ravi",
+                    last_name="Sharma",
+                    email="ravi@example.com",
+                    phone="8888888888",
+                    designation="Analyst",
+                    department="Finance",
+                ),
+                db,
+            )
+        )
+        statutory = run(
+            create_statutory_deduction(
+                StatutoryDeductionCreate(
+                    tenant_id="tenant-a",
+                    deduction_code="PF",
+                    deduction_name="Provident Fund",
+                ),
+                db,
+            )
+        )
+        assert statutory.deduction_code == "PF"
+
+        hra_component = run(
+            create_salary_component(
+                SalaryComponentCreate(
+                    tenant_id="tenant-a",
+                    component_code="HRA",
+                    component_name="House Rent Allowance",
+                    component_type="earning",
+                    calculation_type="formula",
+                ),
+                db,
+            )
+        )
+        pf_component = run(
+            create_salary_component(
+                SalaryComponentCreate(
+                    tenant_id="tenant-a",
+                    component_code="PF",
+                    component_name="Provident Fund",
+                    component_type="deduction",
+                    calculation_type="formula",
+                ),
+                db,
+            )
+        )
+        structure = run(
+            create_salary_structure(
+                SalaryStructureCreate(
+                    tenant_id="tenant-a",
+                    structure_code="STRUCT-1",
+                    structure_name="Standard Structure",
+                ),
+                db,
+            )
+        )
+        run(
+            add_salary_structure_component(
+                structure.id,
+                SalaryStructureComponentCreate(
+                    tenant_id="tenant-a",
+                    structure_id=structure.id,
+                    component_id=hra_component.id,
+                    formula="basic*0.1",
+                ),
+                db,
+            )
+        )
+        run(
+            add_salary_structure_component(
+                structure.id,
+                SalaryStructureComponentCreate(
+                    tenant_id="tenant-a",
+                    structure_id=structure.id,
+                    component_id=pf_component.id,
+                    formula="basic*0.08",
+                ),
+                db,
+            )
+        )
+        salary = run(
+            create_employee_salary(
+                EmployeeSalaryCreate(
+                    tenant_id="tenant-a",
+                    employee_id=employee.id,
+                    salary_structure_id=structure.id,
+                    gross_salary=50000,
+                    ctc=60000,
+                ),
+                db,
+            )
+        )
+        assert salary.gross_salary == 50000
+
+        payroll_run = run(
+            create_payroll_run(
+                PayrollRunCreate(
+                    tenant_id="tenant-a",
+                    period_start=datetime(2026, 7, 1),
+                    period_end=datetime(2026, 7, 31),
+                ),
+                db,
+            )
+        )
+        slip = run(
+            add_payroll_slip(
+                payroll_run.id,
+                PayrollSlipCreate(
+                    tenant_id="tenant-a",
+                    employee_id=employee.id,
+                    basic_pay=50000,
+                ),
+                db,
+            )
+        )
+        assert slip.allowances["HRA"] == 5000
+        assert slip.deductions["PF"] == 4000
+        assert slip.net_pay == 46000
     finally:
         db.close()
 
