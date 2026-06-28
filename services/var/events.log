@@ -58,3 +58,6 @@
 {"ts": "2026-06-28T20:20:03.701119+00:00", "type": "BRAND_DELETED", "payload": {"id": "fc9a5a62-0546-414f-953c-f64c6505dd0d"}}
 {"ts": "2026-06-28T20:20:03.759989+00:00", "type": "BRAND_CREATED", "payload": {"id": "9df8a2cb-9b19-40d8-a8dd-a9dd278aae35", "code": "B-AUD", "name": "Audit Brand"}}
 {"ts": "2026-06-28T20:20:03.809603+00:00", "type": "BRAND_UPDATED", "payload": {"id": "9df8a2cb-9b19-40d8-a8dd-a9dd278aae35"}}
+{"ts": "2026-06-28T20:26:17.413013+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "c1a6b34f-6af0-406e-8836-c98f7039fbd7", "code": "LE-001", "name": "Legal One"}}
+{"ts": "2026-06-28T20:26:17.507670+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "c1a6b34f-6af0-406e-8836-c98f7039fbd7"}}
+{"ts": "2026-06-28T20:26:17.552153+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "c1a6b34f-6af0-406e-8836-c98f7039fbd7"}}

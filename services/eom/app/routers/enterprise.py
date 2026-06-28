@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..db import SessionLocal, engine
 from .. import models, schemas
+from .. import models_legal
 from ..events import publish_event
 from ..auth import require_role
 from ..audit import record_audit
