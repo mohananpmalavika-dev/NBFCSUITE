@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, Header, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -72,6 +73,14 @@ from app.security import (
 )
 
 app = FastAPI(title="auth-service", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://nbfcsuite.vercel.app"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
 
 
 def _extract_bearer_token(authorization: str | None) -> str:
