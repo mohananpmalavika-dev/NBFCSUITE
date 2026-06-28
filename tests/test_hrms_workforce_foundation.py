@@ -37,3 +37,19 @@ def test_attendance_models_and_routes_present():
 
     for token in attendance_things:
         assert token in src, f"Expected {token} present in HRMS source"
+
+
+def test_ai_and_event_scaffold_present():
+    p = pathlib.Path("services/hrms/app/main.py")
+    src = p.read_text(encoding="utf-8")
+    tokens = [
+        "event_publisher",
+        "ai_service",
+        "/attendance/regularize",
+        "/shifts",
+        "/attendance/analyze",
+        "get_publisher",
+        "get_ai_service",
+    ]
+    for t in tokens:
+        assert t in src, f"Expected {t} present in HRMS source"

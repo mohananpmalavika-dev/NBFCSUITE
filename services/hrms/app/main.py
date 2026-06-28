@@ -1,6 +1,8 @@
-from datetime import date, datetime
-from typing import List, Optional, Type
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional, Type
 from uuid import uuid4
+import ast
+import operator as op
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -12,6 +14,38 @@ from app.organization.models.organization_unit import OrganizationUnit
 from app.organization.models.organization_unit_audit import OrganizationUnitAudit
 from app.organization.models.organization_unit_closure import OrganizationUnitClosure
 from app.organization.routers.organization_unit import router as organization_router
+from .event_publisher import get_publisher, set_publisher, RabbitMQEventPublisher
+from .ai_service import get_ai_service, set_ai_service, OpenAIAdapter
+import os
+
+
+@app.on_event("startup")
+async def startup_event():
+    # Configure event publisher: prefer RabbitMQ if RABBITMQ_URL is set
+    rabbit_url = os.environ.get("RABBITMQ_URL")
+    if rabbit_url:
+        try:
+            set_publisher(RabbitMQEventPublisher(rabbit_url))
+        except Exception:
+            pass
+    # Configure AI service if OPENAI_API_KEY set
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if openai_key:
+        try:
+            set_ai_service(OpenAIAdapter(openai_key))
+        except Exception:
+            pass
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Close RabbitMQ connection if used
+    try:
+        pub = get_publisher()
+        if hasattr(pub, "close"):
+            pub.close()
+    except Exception:
+        pass
 
 
 class HRDepartment(Base):
@@ -240,6 +274,114 @@ class PayrollSlip(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class SalaryComponent(Base):
+    __tablename__ = "salary_components"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    component_code = Column(String, index=True, nullable=False)
+    component_name = Column(String, nullable=False)
+    component_type = Column(String, nullable=False)
+    calculation_type = Column(String, nullable=False)
+    taxable = Column(String, default="no", index=True)
+    pf_applicable = Column(String, default="no")
+    esi_applicable = Column(String, default="no")
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SalaryStructure(Base):
+    __tablename__ = "salary_structures"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    structure_code = Column(String, index=True, nullable=False)
+    structure_name = Column(String, nullable=False)
+    grade_id = Column(String, index=True, nullable=True)
+    effective_from = Column(Date, nullable=True)
+    effective_to = Column(Date, nullable=True)
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SalaryStructureComponent(Base):
+    __tablename__ = "salary_structure_components"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    structure_id = Column(String, index=True, nullable=False)
+    component_id = Column(String, index=True, nullable=False)
+    formula = Column(String, nullable=True)
+    fixed_amount = Column(Float, default=0.0)
+    percentage = Column(Float, default=0.0)
+    sequence = Column(Integer, default=1)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EmployeeSalary(Base):
+    __tablename__ = "employee_salaries"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    employee_id = Column(String, index=True, nullable=False)
+    salary_structure_id = Column(String, index=True, nullable=False)
+    gross_salary = Column(Float, default=0.0)
+    ctc = Column(Float, default=0.0)
+    effective_from = Column(Date, nullable=True)
+    effective_to = Column(Date, nullable=True)
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class StatutoryDeduction(Base):
+    __tablename__ = "statutory_deductions"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    deduction_code = Column(String, index=True, nullable=False)
+    deduction_name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PayrollTransaction(Base):
+    __tablename__ = "payroll_transactions"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    payroll_run_id = Column(String, index=True, nullable=False)
+    employee_id = Column(String, index=True, nullable=False)
+    gross_salary = Column(Float, default=0.0)
+    deduction = Column(Float, default=0.0)
+    net_salary = Column(Float, default=0.0)
+    bank_account = Column(String, nullable=True)
+    payment_status = Column(String, default="pending", index=True)
+    transaction_type = Column(String, default="salary")
+    reference = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    processed_at = Column(DateTime, nullable=True)
+
+
+class Payslip(Base):
+    __tablename__ = "payslips"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    payroll_run_id = Column(String, index=True, nullable=False)
+    employee_id = Column(String, index=True, nullable=False)
+    pdf_url = Column(String, nullable=True)
+    generated_at = Column(DateTime, default=datetime.utcnow)
+    status = Column(String, default="draft", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class AttendanceRecord(Base):
     __tablename__ = "attendance_records"
 
@@ -361,6 +503,45 @@ class LeaveApplication(Base):
     status = Column(String, default="pending", index=True)
     approved_by = Column(String, nullable=True)
     approved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class LeaveApproval(Base):
+    __tablename__ = "hr_leave_approvals"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    leave_application_id = Column(String, index=True, nullable=False)
+    stage = Column(String, nullable=False)
+    approver_employee_id = Column(String, nullable=True)
+    decision = Column(String, nullable=False)
+    notes = Column(String, nullable=True)
+    decided_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AttendanceRule(Base):
+    __tablename__ = "hr_attendance_rules"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    conditions = Column(JSON, nullable=True)
+    actions = Column(JSON, nullable=True)
+    active = Column(String, default="yes")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class EmployeeShiftHistory(Base):
+    __tablename__ = "hr_employee_shift_history"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    employee_id = Column(String, index=True, nullable=False)
+    shift_id = Column(String, index=True, nullable=False)
+    effective_from = Column(DateTime, nullable=True)
+    effective_to = Column(DateTime, nullable=True)
+    approved_by = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -832,6 +1013,158 @@ class PayrollSlipResponse(BaseModel):
         from_attributes = True
 
 
+class SalaryComponentCreate(BaseModel):
+    tenant_id: str = "default"
+    component_code: str
+    component_name: str
+    component_type: str
+    calculation_type: str
+    taxable: bool = False
+    pf_applicable: bool = False
+    esi_applicable: bool = False
+    status: str = "active"
+
+
+class SalaryComponentResponse(SalaryComponentCreate):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SalaryStructureCreate(BaseModel):
+    tenant_id: str = "default"
+    structure_code: str
+    structure_name: str
+    grade_id: Optional[str] = None
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    status: str = "active"
+
+
+class SalaryStructureResponse(SalaryStructureCreate):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SalaryStructureComponentCreate(BaseModel):
+    tenant_id: str = "default"
+    structure_id: str
+    component_id: str
+    formula: Optional[str] = None
+    fixed_amount: float = 0.0
+    percentage: float = 0.0
+    sequence: int = 1
+
+
+class SalaryStructureComponentResponse(SalaryStructureComponentCreate):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EmployeeSalaryCreate(BaseModel):
+    tenant_id: str = "default"
+    employee_id: str
+    salary_structure_id: str
+    gross_salary: float
+    ctc: float
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    status: str = "active"
+
+
+class EmployeeSalaryResponse(EmployeeSalaryCreate):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PayrollProcessRequest(BaseModel):
+    tenant_id: str
+    run_id: str
+
+
+class PayrollApprovalRequest(BaseModel):
+    tenant_id: str
+    run_id: str
+
+
+class PayrollReleaseRequest(BaseModel):
+    tenant_id: str
+    run_id: str
+    bank_account: Optional[str] = None
+    payment_reference: Optional[str] = None
+
+
+class SalaryRevisionRequest(BaseModel):
+    tenant_id: str
+    employee_id: str
+    salary_structure_id: str
+    gross_salary: float
+    ctc: float
+    effective_from: date
+    effective_to: Optional[date] = None
+
+
+class PayrollAdjustmentRequest(BaseModel):
+    tenant_id: str
+    payroll_run_id: str
+    employee_id: str
+    amount: float
+    description: Optional[str] = None
+    bank_account: Optional[str] = None
+
+
+class PayrollTransactionResponse(BaseModel):
+    id: str
+    tenant_id: str
+    payroll_run_id: str
+    employee_id: str
+    gross_salary: float
+    deduction: float
+    net_salary: float
+    bank_account: Optional[str]
+    payment_status: str
+    transaction_type: str
+    reference: Optional[str]
+    created_at: datetime
+    processed_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class PayslipDownloadRequest(BaseModel):
+    tenant_id: str
+    payslip_id: str
+
+
+class PayslipResponse(BaseModel):
+    id: str
+    tenant_id: str
+    payroll_run_id: str
+    employee_id: str
+    pdf_url: Optional[str]
+    generated_at: datetime
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
 class AttendanceRecordCreate(BaseModel):
     tenant_id: str = "default"
     employee_id: str
@@ -873,6 +1206,66 @@ class AttendanceRecordResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AttendanceCheckInPayload(BaseModel):
+    tenant_id: Optional[str] = None
+    employee_id: str
+    device_id: Optional[str] = None
+    device_ip: Optional[str] = None
+    latitude: Optional[str] = None
+    longitude: Optional[str] = None
+    photo_url: Optional[str] = None
+
+
+class AttendanceCheckOutPayload(BaseModel):
+    tenant_id: Optional[str] = None
+    employee_id: str
+
+
+class AttendanceRegularizePayload(BaseModel):
+    tenant_id: Optional[str] = None
+    employee_id: str
+    attendance_date: date
+    check_in: Optional[datetime] = None
+    check_out: Optional[datetime] = None
+    reason: Optional[str] = None
+
+
+@app.post("/attendance/rules", response_model=AttendanceRule)
+async def create_attendance_rule(
+    payload: dict,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.get("tenant_id"), user_claims)
+    rule = AttendanceRule(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        name=payload.get("name"),
+        description=payload.get("description"),
+        conditions=payload.get("conditions"),
+        actions=payload.get("actions"),
+    )
+    db.add(rule)
+    db.commit()
+    db.refresh(rule)
+    try:
+        get_publisher().publish("hr.attendance.rule.created", {"rule_id": rule.id, "tenant_id": tenant_id})
+    except Exception:
+        pass
+    return rule
+
+
+@app.get("/attendance/rules")
+async def list_attendance_rules(
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    return db.query(AttendanceRule).filter(AttendanceRule.tenant_id == tenant_id).all()
+
 
 
 class LeaveRequestCreate(BaseModel):
@@ -1509,6 +1902,10 @@ async def create_position(
     db.add(position)
     db.commit()
     db.refresh(position)
+    try:
+        get_publisher().publish('hr.position.created', {"position_id": position.id, "tenant_id": position.tenant_id, "position_code": position.position_code})
+    except Exception:
+        pass
     return position
 
 
@@ -1612,6 +2009,10 @@ async def vacate_position(
     _sync_position_status(position)
     db.commit()
     db.refresh(position)
+    try:
+        get_publisher().publish('hr.position.vacated', {"position_id": position.id, "tenant_id": position.tenant_id})
+    except Exception:
+        pass
     return position
 
 
@@ -1680,6 +2081,10 @@ async def create_employee(
     _assign_position_to_employee(db, db_employee, employee.position_id, tenant_id)
     db.commit()
     db.refresh(db_employee)
+    try:
+        get_publisher().publish("hr.employee.created", {"id": db_employee.id, "tenant_id": db_employee.tenant_id, "employee_number": db_employee.employee_number})
+    except Exception:
+        pass
     return db_employee
 
 
@@ -2211,6 +2616,17 @@ async def update_employee(
     employee.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(employee)
+    # publish domain events for notable changes
+    try:
+        pub = get_publisher()
+        if 'position_id' in update_data:
+            pub.publish('hr.employee.transferred', {"employee_id": employee.id, "new_position_id": employee.position_id})
+        if 'designation_id' in update_data:
+            pub.publish('hr.employee.promoted', {"employee_id": employee.id, "new_designation_id": employee.designation_id})
+        if 'status' in update_data and update_data['status'] == 'resigned':
+            pub.publish('hr.employee.resigned', {"employee_id": employee.id, "status": 'resigned'})
+    except Exception:
+        pass
     return employee
 
 
@@ -2232,6 +2648,12 @@ async def create_job_family(
     db.add(family)
     db.commit()
     db.refresh(family)
+    # publish domain event
+    try:
+        publisher = get_publisher()
+        publisher.publish("hr.job_family.created", {"id": family.id, "tenant_id": family.tenant_id, "family_code": family.family_code})
+    except Exception:
+        pass
     return family
 
 
@@ -2284,6 +2706,11 @@ async def create_job_role(
     db.add(role)
     db.commit()
     db.refresh(role)
+    try:
+        publisher = get_publisher()
+        publisher.publish("hr.job_role.created", {"id": role.id, "tenant_id": role.tenant_id, "role_code": role.role_code})
+    except Exception:
+        pass
     return role
 
 
@@ -2527,3 +2954,389 @@ async def assign_employee_branch(
 @app.get("/")
 async def root():
     return {"service": "hrms", "version": "0.1.0"}
+
+
+@app.post("/attendance/check-in", response_model=AttendanceRecordResponse)
+async def attendance_check_in(
+    payload: AttendanceCheckInPayload,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    employee = db.query(Employee).filter(Employee.id == payload.employee_id, Employee.tenant_id == tenant_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    attendance = (
+        db.query(Attendance)
+        .filter(Attendance.employee_id == employee.id, Attendance.attendance_date == date.today(), Attendance.tenant_id == tenant_id)
+        .first()
+    )
+    if not attendance:
+        attendance = Attendance(
+            id=str(uuid4()),
+            tenant_id=tenant_id,
+            employee_id=employee.id,
+            attendance_date=date.today(),
+            check_in=datetime.utcnow(),
+            attendance_status="present",
+            created_at=datetime.utcnow(),
+        )
+        db.add(attendance)
+    else:
+        attendance.check_in = datetime.utcnow()
+        attendance.attendance_status = "present"
+    log = AttendanceLog(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        attendance_id=attendance.id,
+        device_ip=payload.device_ip,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        photo_url=payload.photo_url,
+        device_id=payload.device_id,
+        captured_at=datetime.utcnow(),
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(attendance)
+    # publish attendance check-in event
+    try:
+        get_publisher().publish("hr.attendance.checked_in", {"attendance_id": attendance.id, "tenant_id": attendance.tenant_id, "employee_id": attendance.employee_id, "check_in": attendance.check_in.isoformat() if attendance.check_in else None})
+    except Exception:
+        pass
+    return attendance
+
+
+@app.post("/attendance/check-out", response_model=AttendanceRecordResponse)
+async def attendance_check_out(
+    payload: AttendanceCheckOutPayload,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    employee = db.query(Employee).filter(Employee.id == payload.employee_id, Employee.tenant_id == tenant_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    attendance = (
+        db.query(Attendance)
+        .filter(Attendance.employee_id == employee.id, Attendance.attendance_date == date.today(), Attendance.tenant_id == tenant_id)
+        .first()
+    )
+    if not attendance:
+        raise HTTPException(status_code=404, detail="No check-in record for today")
+    attendance.check_out = datetime.utcnow()
+    # simple working hours calc
+    if attendance.check_in:
+        attendance.working_hours = round((attendance.check_out - attendance.check_in).total_seconds() / 3600.0, 2)
+    # simple lateness detection: if check_in after 09:15 -> late
+    try:
+        if attendance.check_in and (attendance.check_in.hour > 9 or (attendance.check_in.hour == 9 and attendance.check_in.minute > 15)):
+            get_publisher().publish("hr.employee.late", {"employee_id": attendance.employee_id, "attendance_id": attendance.id, "check_in": attendance.check_in.isoformat()})
+    except Exception:
+        pass
+    db.commit()
+    db.refresh(attendance)
+    try:
+        get_publisher().publish("hr.attendance.checked_out", {"attendance_id": attendance.id, "tenant_id": attendance.tenant_id, "employee_id": attendance.employee_id, "check_out": attendance.check_out.isoformat() if attendance.check_out else None, "working_hours": attendance.working_hours})
+    except Exception:
+        pass
+    return attendance
+
+
+@app.post("/leave/apply", response_model=LeaveRequestResponse)
+async def apply_leave(
+    payload: LeaveRequestCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    employee = db.query(Employee).filter(Employee.id == payload.employee_id, Employee.tenant_id == tenant_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    leave = LeaveApplication(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        employee_id=employee.id,
+        leave_type_id=payload.leave_type,
+        from_date=payload.start_date,
+        to_date=payload.end_date,
+        reason=payload.reason,
+        status="pending",
+        created_at=datetime.utcnow(),
+    )
+    db.add(leave)
+    db.commit()
+    db.refresh(leave)
+    # return a mapped LeaveRequestResponse-like object using fields present
+    response = LeaveRequestResponse(
+        id=leave.id,
+        tenant_id=leave.tenant_id,
+        employee_id=leave.employee_id,
+        employee_number=employee.employee_number,
+        employee_name=f"{employee.first_name} {employee.last_name}",
+        organization_id=employee.organization_id,
+        zone_id=employee.zone_id,
+        region_id=employee.region_id,
+        area_id=employee.area_id,
+        branch_id=employee.branch_id,
+        leave_type=leave.leave_type_id,
+        start_date=leave.from_date,
+        end_date=leave.to_date,
+        total_days=(leave.to_date - leave.from_date).days + 1,
+        reason=leave.reason,
+        status=leave.status,
+        approver_employee_id=None,
+        decision_notes=None,
+        requested_at=leave.created_at,
+        decided_at=None,
+    )
+    try:
+        get_publisher().publish("hr.leave.requested", {"id": leave.id, "tenant_id": leave.tenant_id, "employee_id": leave.employee_id, "from": str(leave.from_date), "to": str(leave.to_date)})
+    except Exception:
+        pass
+    return response
+
+
+@app.post("/shifts", response_model=HRShift)
+async def create_shift(
+    payload: HrmsShiftPayload,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    _ensure_unique_code(db, HRShift, tenant_id, "shift_code", payload.shift_code, "Shift")
+    shift = HRShift(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        shift_code=payload.shift_code,
+        shift_name=payload.shift_name,
+        start_time=payload.start_time,
+        end_time=payload.end_time,
+        break_minutes=payload.break_minutes or 0,
+        grace_in=payload.grace_in or 0,
+        grace_out=payload.grace_out or 0,
+        weekly_off=payload.weekly_off,
+    )
+    db.add(shift)
+    db.commit()
+    db.refresh(shift)
+    try:
+        get_publisher().publish("hr.shift.created", {"id": shift.id, "tenant_id": shift.tenant_id, "shift_code": shift.shift_code})
+    except Exception:
+        pass
+    return shift
+
+
+@app.get("/shifts", response_model=List[HRShift])
+async def list_shifts(
+    tenant_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(HRShift).filter(HRShift.tenant_id == tenant_id)
+    if status:
+        query = query.filter(HRShift.status == status)
+    return query.order_by(HRShift.shift_name.asc()).all()
+
+
+@app.post("/employees/{employee_id}/shifts", response_model=EmployeeShift)
+async def assign_employee_shift(
+    employee_id: str,
+    payload: dict,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.get("tenant_id"), user_claims)
+    employee = db.query(Employee).filter(Employee.id == employee_id, Employee.tenant_id == tenant_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    shift = db.query(HRShift).filter(HRShift.id == payload.get("shift_id"), HRShift.tenant_id == tenant_id).first()
+    if not shift:
+        raise HTTPException(status_code=404, detail="Shift not found")
+    # create history record instead of overwriting
+    hist = EmployeeShiftHistory(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        employee_id=employee.id,
+        shift_id=shift.id,
+        effective_from=payload.get("effective_from"),
+        effective_to=payload.get("effective_to"),
+        approved_by=payload.get("approved_by"),
+    )
+    db.add(hist)
+    # also create current assignment pointer for compatibility
+    es = EmployeeShift(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        employee_id=employee.id,
+        shift_id=shift.id,
+        effective_from=payload.get("effective_from"),
+        effective_to=payload.get("effective_to"),
+    )
+    db.add(es)
+    db.commit()
+    db.refresh(hist)
+    db.refresh(es)
+    try:
+        get_publisher().publish("hr.employee_shift.assigned", {"history_id": hist.id, "tenant_id": hist.tenant_id, "employee_id": hist.employee_id, "shift_id": hist.shift_id})
+    except Exception:
+        pass
+    return es
+
+
+@app.get("/attendance/today")
+async def attendance_today(
+    tenant_id: Optional[str] = Query(None),
+    employee_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    q = db.query(Attendance).filter(Attendance.tenant_id == tenant_id, Attendance.attendance_date == date.today())
+    if employee_id:
+        q = q.filter(Attendance.employee_id == employee_id)
+        rec = q.first()
+        if not rec:
+            raise HTTPException(status_code=404, detail="Attendance not found for employee today")
+        return rec
+    return q.all()
+
+
+@app.get("/attendance/month")
+async def attendance_month(
+    tenant_id: Optional[str] = Query(None),
+    employee_id: Optional[str] = Query(None),
+    year: Optional[int] = Query(None),
+    month: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    if not year or not month:
+        today = date.today()
+        year = year or today.year
+        month = month or today.month
+    start = date(year, month, 1)
+    if month == 12:
+        end = date(year + 1, 1, 1)
+    else:
+        end = date(year, month + 1, 1)
+    q = db.query(Attendance).filter(Attendance.tenant_id == tenant_id, Attendance.attendance_date >= start, Attendance.attendance_date < end)
+    if employee_id:
+        q = q.filter(Attendance.employee_id == employee_id)
+    return q.order_by(Attendance.attendance_date.asc()).all()
+
+
+@app.post("/attendance/regularize", response_model=AttendanceRecordResponse)
+async def attendance_regularize(
+    payload: AttendanceRegularizePayload,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    employee = db.query(Employee).filter(Employee.id == payload.employee_id, Employee.tenant_id == tenant_id).first()
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    attendance = db.query(Attendance).filter(Attendance.employee_id == employee.id, Attendance.attendance_date == payload.attendance_date, Attendance.tenant_id == tenant_id).first()
+    if not attendance:
+        attendance = Attendance(
+            id=str(uuid4()),
+            tenant_id=tenant_id,
+            employee_id=employee.id,
+            attendance_date=payload.attendance_date,
+            created_at=datetime.utcnow(),
+        )
+        db.add(attendance)
+    if payload.check_in:
+        attendance.check_in = payload.check_in
+    if payload.check_out:
+        attendance.check_out = payload.check_out
+    if attendance.check_in and attendance.check_out:
+        attendance.working_hours = round((attendance.check_out - attendance.check_in).total_seconds() / 3600.0, 2)
+    attendance.attendance_status = getattr(attendance, 'attendance_status', 'present')
+    log = AttendanceLog(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        attendance_id=attendance.id,
+        device_ip=None,
+        latitude=None,
+        longitude=None,
+        photo_url=None,
+        device_id=None,
+        captured_at=datetime.utcnow(),
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(attendance)
+    return attendance
+
+
+@app.get("/attendance/dashboard")
+async def attendance_dashboard(
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    today = date.today()
+    total_checkins = db.query(Attendance).filter(Attendance.tenant_id == tenant_id, Attendance.attendance_date == today).count()
+    on_leave = db.query(LeaveApplication).filter(LeaveApplication.tenant_id == tenant_id, LeaveApplication.from_date <= today, LeaveApplication.to_date >= today, LeaveApplication.status == 'approved').count()
+    late_count = db.query(Attendance).filter(Attendance.tenant_id == tenant_id, Attendance.attendance_date == today, Attendance.late_minutes > 0).count()
+    return {"date": today, "total_checkins": total_checkins, "on_leave": on_leave, "late_count": late_count}
+
+
+@app.post("/attendance/analyze")
+async def attendance_analyze(
+    tenant_id: Optional[str] = Query(None),
+    days: int = Query(7, ge=1, le=90),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    """Trigger AI analysis on recent attendance events and return anomalies."""
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    events = (
+        db.query(AttendanceLog)
+        .join(Attendance, Attendance.id == AttendanceLog.attendance_id)
+        .filter(AttendanceLog.tenant_id == tenant_id, AttendanceLog.captured_at >= cutoff)
+        .order_by(AttendanceLog.captured_at.desc())
+        .limit(1000)
+        .all()
+    )
+    # convert to simple dicts
+    evts = [
+        {
+            "id": e.id,
+            "attendance_id": e.attendance_id,
+            "employee_id": getattr(e, 'employee_id', None),
+            "device_ip": e.device_ip,
+            "latitude": e.latitude,
+            "longitude": e.longitude,
+            "captured_at": e.captured_at.isoformat() if e.captured_at else None,
+        }
+        for e in events
+    ]
+    ai = get_ai_service()
+    anomalies = ai.detect_anomalies(evts)
+    try:
+        get_publisher().publish("hr.attendance.analysis.run", {"tenant_id": tenant_id, "anomaly_count": len(anomalies)})
+    except Exception:
+        pass
+    return {"anomalies": anomalies}
+
+
+@app.get("/leave/{employee_id}/balance")
+async def get_leave_balance(
+    employee_id: str,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    balances = db.query(LeaveBalance).filter(LeaveBalance.tenant_id == tenant_id, LeaveBalance.employee_id == employee_id).all()
+    return balances

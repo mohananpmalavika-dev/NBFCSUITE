@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
-from sqlalchemy import create_engine, Column, String, Float, DateTime, ForeignKey, JSON, UniqueConstraint
+from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import sessionmaker, declarative_base, Session, relationship
 from pydantic import BaseModel
 from datetime import datetime
@@ -49,16 +49,52 @@ class GLAccount(Base):
     parent = relationship("GLAccount", remote_side=[id])
 
 
+class JournalBatch(Base):
+    __tablename__ = "journal_batches"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "batch_no", name="uq_journal_batches_tenant_number"),
+    )
+
+    id = Column(String, primary_key=True)
+    batch_no = Column(String, nullable=False, index=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    posting_date = Column(DateTime, nullable=False)
+    financial_year = Column(String, nullable=False, index=True)
+    period = Column(String, nullable=False, index=True)
+    status = Column(String, default="draft", index=True)
+    created_by = Column(String, nullable=True)
+    approved_by = Column(String, nullable=True)
+    total_amount = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class JournalNumberCounter(Base):
+    __tablename__ = "journal_number_counters"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "financial_year", "sequence_type", name="uq_journal_number_counter_scope"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    financial_year = Column(String, nullable=False)
+    sequence_type = Column(String, nullable=False)
+    current_value = Column(Integer, default=0)
+
+
 
 class JournalEntry(Base):
     __tablename__ = "journal_entries"
     __table_args__ = (
         UniqueConstraint("tenant_id", "idempotency_key", name="uq_journal_entries_tenant_idempotency"),
+        UniqueConstraint("tenant_id", "journal_no", name="uq_journal_entries_tenant_number"),
     )
 
     id = Column(String, primary_key=True)
     tenant_id = Column(String, index=True, nullable=False)
+    batch_id = Column(String, ForeignKey("journal_batches.id"), nullable=True, index=True)
+    journal_no = Column(String, nullable=True, index=True)
     entry_date = Column(DateTime, default=datetime.utcnow)
+    voucher_type = Column(String, default="journal", index=True)
     description = Column(String)
     reference = Column(String, nullable=True)
     metadata_json = Column("metadata", JSON, nullable=True)
@@ -69,10 +105,21 @@ class JournalEntry(Base):
     source_reference = Column(String, nullable=True, index=True)
     business_date = Column(DateTime, nullable=True)
     financial_year = Column(String, nullable=True)
+    period = Column(String, nullable=True, index=True)
     branch_id = Column(String, nullable=True, index=True)
     voucher_id = Column(String, nullable=True, index=True)
+    currency = Column(String, default="INR")
+    exchange_rate = Column(Float, default=1.0)
+    reversal_of = Column(String, ForeignKey("journal_entries.id"), nullable=True, index=True)
+    created_by = Column(String, nullable=True)
+    approved_by = Column(String, nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    validation_result = Column(JSON, nullable=True)
+    template_id = Column(String, nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     lines = relationship("JournalLine", back_populates="journal_entry")
+    attachments = relationship("JournalAttachment", back_populates="journal_entry")
+    approvals = relationship("JournalApproval", back_populates="journal_entry")
 
 
 class JournalLine(Base):
@@ -80,6 +127,7 @@ class JournalLine(Base):
 
     id = Column(String, primary_key=True)
     journal_entry_id = Column(String, ForeignKey("journal_entries.id"))
+    sequence = Column(Integer, default=1)
     gl_account_id = Column(String, ForeignKey("gl_accounts.id"))
     debit = Column(Float, default=0.0)
     credit = Column(Float, default=0.0)
@@ -97,6 +145,86 @@ class JournalLine(Base):
     business_unit_id = Column(String, nullable=True, index=True)
     description = Column(String, nullable=True)
     journal_entry = relationship("JournalEntry", back_populates="lines")
+    gl_account = relationship("GLAccount")
+
+
+class JournalAttachment(Base):
+    __tablename__ = "journal_attachments"
+
+    id = Column(String, primary_key=True)
+    journal_id = Column(String, ForeignKey("journal_entries.id"), nullable=False, index=True)
+    document_id = Column(String, nullable=True)
+    file_name = Column(String, nullable=False)
+    uploaded_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    journal_entry = relationship("JournalEntry", back_populates="attachments")
+
+
+class JournalApproval(Base):
+    __tablename__ = "journal_approvals"
+
+    id = Column(String, primary_key=True)
+    journal_id = Column(String, ForeignKey("journal_entries.id"), nullable=False, index=True)
+    level = Column(String, nullable=False)
+    approver = Column(String, nullable=False)
+    decision = Column(String, nullable=False)
+    remarks = Column(String, nullable=True)
+    approved_time = Column(DateTime, default=datetime.utcnow)
+    journal_entry = relationship("JournalEntry", back_populates="approvals")
+
+
+class JournalTemplate(Base):
+    __tablename__ = "journal_templates"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "template_name", name="uq_journal_templates_tenant_name"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    template_name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    voucher_type = Column(String, default="journal")
+    currency = Column(String, default="INR")
+    lines = Column(JSON, nullable=False)
+    status = Column(String, default="active", index=True)
+    created_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AccountingDimension(Base):
+    __tablename__ = "accounting_dimensions"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "dimension_type", "code", name="uq_accounting_dimensions_scope"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    dimension_type = Column(String, nullable=False, index=True)
+    code = Column(String, nullable=False, index=True)
+    name = Column(String, nullable=False)
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AccountingBudget(Base):
+    __tablename__ = "accounting_budgets"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "financial_year", "period", "gl_account_id", "cost_center",
+            name="uq_accounting_budgets_scope",
+        ),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    financial_year = Column(String, nullable=False, index=True)
+    period = Column(String, nullable=False, index=True)
+    gl_account_id = Column(String, ForeignKey("gl_accounts.id"), nullable=False, index=True)
+    cost_center = Column(String, nullable=True, index=True)
+    amount = Column(Float, nullable=False)
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class BankStatementTransaction(Base):
@@ -427,7 +555,9 @@ class COASeedRequest(BaseModel):
 
 
 class JournalLineCreate(BaseModel):
-    gl_account_id: str
+    gl_account_id: Optional[str] = None
+    account_code: Optional[str] = None
+    sequence: Optional[int] = None
     debit: float = 0.0
     credit: float = 0.0
     branch_id: Optional[str] = None
@@ -473,6 +603,17 @@ class JournalEntryResponse(BaseModel):
     business_date: Optional[datetime] = None
     financial_year: Optional[str] = None
     voucher_id: Optional[str] = None
+    batch_id: Optional[str] = None
+    journal_no: Optional[str] = None
+    voucher_type: Optional[str] = None
+    period: Optional[str] = None
+    currency: Optional[str] = None
+    exchange_rate: Optional[float] = None
+    reversal_of: Optional[str] = None
+    created_by: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    template_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -595,6 +736,100 @@ class PostingRuleResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class JournalAttachmentCreate(BaseModel):
+    document_id: Optional[str] = None
+    file_name: str
+    uploaded_by: Optional[str] = None
+
+
+class JournalDocumentCreate(BaseModel):
+    tenant_id: str
+    batch_id: Optional[str] = None
+    posting_date: Optional[datetime] = None
+    voucher_type: Optional[str] = "journal"
+    source_module: Optional[str] = "manual"
+    source_event: Optional[str] = "manual_journal"
+    source_reference: Optional[str] = None
+    description: str
+    reference: Optional[str] = None
+    currency: Optional[str] = "INR"
+    exchange_rate: Optional[float] = 1.0
+    branch_id: Optional[str] = None
+    financial_year: Optional[str] = None
+    template_id: Optional[str] = None
+    created_by: Optional[str] = None
+    metadata: Optional[dict] = None
+    lines: List[JournalLineCreate]
+    attachments: Optional[List[JournalAttachmentCreate]] = None
+
+
+class JournalActionRequest(BaseModel):
+    tenant_id: str
+    journal_id: Optional[str] = None
+    performed_by: Optional[str] = None
+    remarks: Optional[str] = None
+
+
+class JournalApprovalActionRequest(JournalActionRequest):
+    level: Optional[str] = "checker"
+    decision: Optional[str] = "approved"
+
+
+class JournalValidationRequest(BaseModel):
+    tenant_id: str
+    journal_id: Optional[str] = None
+    posting_date: Optional[datetime] = None
+    source_module: Optional[str] = "manual"
+    source_event: Optional[str] = "manual_journal"
+    source_reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    financial_year: Optional[str] = None
+    currency: Optional[str] = "INR"
+    exchange_rate: Optional[float] = 1.0
+    metadata: Optional[dict] = None
+    lines: Optional[List[JournalLineCreate]] = None
+
+
+class JournalSimulationRequest(JournalValidationRequest):
+    template_id: Optional[str] = None
+    amount: Optional[float] = None
+    description: Optional[str] = None
+
+
+class JournalTemplateCreate(BaseModel):
+    tenant_id: str
+    template_name: str
+    description: Optional[str] = None
+    voucher_type: Optional[str] = "journal"
+    currency: Optional[str] = "INR"
+    lines: List[dict]
+    created_by: Optional[str] = None
+
+
+class JournalBatchCreate(BaseModel):
+    tenant_id: str
+    posting_date: Optional[datetime] = None
+    financial_year: Optional[str] = None
+    created_by: Optional[str] = None
+
+
+class AccountingDimensionCreate(BaseModel):
+    tenant_id: str
+    dimension_type: str
+    code: str
+    name: str
+    status: Optional[str] = "active"
+
+
+class AccountingBudgetCreate(BaseModel):
+    tenant_id: str
+    financial_year: str
+    period: str
+    gl_account_id: str
+    cost_center: Optional[str] = None
+    amount: float
 
 
 class PostingRuleSimulationRequest(BaseModel):
@@ -2164,6 +2399,111 @@ def _journal_entry_response(entry: JournalEntry) -> dict:
     }
 
 
+def _journal_document_response(entry: JournalEntry) -> dict:
+    total_debit = round(sum(line.debit or 0.0 for line in entry.lines), 2)
+    total_credit = round(sum(line.credit or 0.0 for line in entry.lines), 2)
+    return {
+        **_journal_entry_response(entry),
+        "batch_id": entry.batch_id,
+        "journal_no": entry.journal_no,
+        "posting_date": entry.entry_date,
+        "voucher_type": entry.voucher_type,
+        "period": entry.period,
+        "currency": entry.currency,
+        "exchange_rate": entry.exchange_rate,
+        "reversal_of": entry.reversal_of,
+        "created_by": entry.created_by,
+        "approved_by": entry.approved_by,
+        "approved_at": entry.approved_at,
+        "validation_result": entry.validation_result,
+        "template_id": entry.template_id,
+        "status": entry.posting_status,
+        "total_debit": total_debit,
+        "total_credit": total_credit,
+        "total_amount": total_debit,
+        "lines": [
+            {
+                "id": line.id,
+                "sequence": line.sequence,
+                "gl_account_id": line.gl_account_id,
+                "account_code": line.gl_account.account_code if line.gl_account else None,
+                "account_name": line.gl_account.account_name if line.gl_account else None,
+                "debit": line.debit,
+                "credit": line.credit,
+                "currency": line.currency,
+                "transaction_currency": line.transaction_currency,
+                "transaction_amount": line.transaction_amount,
+                "exchange_rate": line.exchange_rate,
+                "branch_id": line.branch_id,
+                "department_id": line.department_id,
+                "cost_center": line.cost_center,
+                "profit_center": line.profit_center,
+                "project_id": line.project_id,
+                "employee_id": line.employee_id,
+                "product_id": line.product_id,
+                "business_unit_id": line.business_unit_id,
+                "description": line.description,
+                "remarks": line.description,
+            }
+            for line in sorted(entry.lines, key=lambda item: item.sequence or 0)
+        ],
+        "attachments": [
+            {
+                "id": attachment.id,
+                "document_id": attachment.document_id,
+                "file_name": attachment.file_name,
+                "uploaded_by": attachment.uploaded_by,
+                "created_at": attachment.created_at,
+            }
+            for attachment in entry.attachments
+        ],
+        "approvals": [
+            {
+                "id": approval.id,
+                "level": approval.level,
+                "approver": approval.approver,
+                "decision": approval.decision,
+                "remarks": approval.remarks,
+                "approved_time": approval.approved_time,
+            }
+            for approval in sorted(entry.approvals, key=lambda item: item.approved_time or datetime.min)
+        ],
+    }
+
+
+def _journal_batch_response(batch: JournalBatch, journal_count: int = 0) -> dict:
+    return {
+        "id": batch.id,
+        "batch_no": batch.batch_no,
+        "tenant_id": batch.tenant_id,
+        "posting_date": batch.posting_date,
+        "financial_year": batch.financial_year,
+        "period": batch.period,
+        "status": batch.status,
+        "created_by": batch.created_by,
+        "approved_by": batch.approved_by,
+        "total_amount": round(batch.total_amount or 0.0, 2),
+        "journal_count": journal_count,
+        "created_at": batch.created_at,
+    }
+
+
+def _journal_template_response(template: JournalTemplate) -> dict:
+    return {
+        "id": template.id,
+        "tenant_id": template.tenant_id,
+        "template_name": template.template_name,
+        "description": template.description,
+        "voucher_type": template.voucher_type,
+        "currency": template.currency,
+        "lines": template.lines or [],
+        "status": template.status,
+        "created_by": template.created_by,
+        "created_at": template.created_at,
+        "updated_at": template.updated_at,
+    }
+
+
 def _posting_pipeline(
     *,
     validation_status: str = "passed",
@@ -2252,6 +2592,459 @@ def _next_voucher_number(tenant_id: str, voucher_type: str, db: Session) -> str:
     prefix = voucher_type.upper().replace("-", "_")[:8]
     count = db.query(Voucher).filter(Voucher.tenant_id == tenant_id, Voucher.voucher_type == voucher_type).count() + 1
     return f"{prefix}-{datetime.utcnow().strftime('%Y%m%d')}-{count:05d}"
+
+
+DEFAULT_JOURNAL_TEMPLATES = [
+    {
+        "template_name": "Salary Payment",
+        "description": "Monthly salary expense paid through bank",
+        "voucher_type": "payment",
+        "lines": [
+            {"account_code": "5210_SALARY_EXPENSE", "direction": "debit", "description": "Salary expense"},
+            {"account_code": "1120_BANK", "direction": "credit", "description": "Bank payment"},
+        ],
+    },
+    {
+        "template_name": "Loan Disbursement",
+        "description": "Loan principal disbursed to a customer",
+        "voucher_type": "payment",
+        "lines": [
+            {"account_code": "1200_LOAN_RECEIVABLE", "direction": "debit", "description": "Loan receivable"},
+            {"account_code": "1120_BANK", "direction": "credit", "description": "Bank disbursement"},
+        ],
+    },
+    {
+        "template_name": "Interest Accrual",
+        "description": "Accrue interest receivable and income",
+        "voucher_type": "journal",
+        "lines": [
+            {"account_code": "1200_LOAN_RECEIVABLE", "direction": "debit", "description": "Interest receivable"},
+            {"account_code": "4100_INTEREST_INCOME", "direction": "credit", "description": "Interest income"},
+        ],
+    },
+]
+
+
+def _next_journal_sequence(tenant_id: str, financial_year: str, sequence_type: str, db: Session) -> int:
+    counter = (
+        db.query(JournalNumberCounter)
+        .filter(
+            JournalNumberCounter.tenant_id == tenant_id,
+            JournalNumberCounter.financial_year == financial_year,
+            JournalNumberCounter.sequence_type == sequence_type,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not counter:
+        counter = JournalNumberCounter(
+            id=str(uuid4()),
+            tenant_id=tenant_id,
+            financial_year=financial_year,
+            sequence_type=sequence_type,
+            current_value=0,
+        )
+        db.add(counter)
+        db.flush()
+    counter.current_value = (counter.current_value or 0) + 1
+    db.flush()
+    return counter.current_value
+
+
+def _next_journal_number(tenant_id: str, posting_date: datetime, financial_year: str, db: Session) -> str:
+    numbering_year = str(posting_date.year)
+    sequence = _next_journal_sequence(tenant_id, numbering_year, "journal", db)
+    return f"JRN-{posting_date.year}-{sequence:08d}"
+
+
+def _next_batch_number(tenant_id: str, posting_date: datetime, financial_year: str, db: Session) -> str:
+    numbering_year = str(posting_date.year)
+    sequence = _next_journal_sequence(tenant_id, numbering_year, "batch", db)
+    return f"JBT-{posting_date.year}-{sequence:06d}"
+
+
+def _journal_period_name(posting_date: datetime) -> str:
+    return posting_date.strftime("%B %Y")
+
+
+def _resolve_journal_account(
+    db: Session,
+    tenant_id: str,
+    gl_account_id: Optional[str] = None,
+    account_code: Optional[str] = None,
+) -> Optional[GLAccount]:
+    query = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id)
+    if gl_account_id:
+        return query.filter(GLAccount.id == gl_account_id).first()
+    if account_code:
+        return query.filter(GLAccount.account_code == account_code).first()
+    return None
+
+
+def _engine_lines_from_document(entry: JournalEntry) -> List[PostingEngineLine]:
+    return [
+        PostingEngineLine(
+            gl_account_id=line.gl_account_id,
+            debit=line.debit or 0.0,
+            credit=line.credit or 0.0,
+            description=line.description,
+            branch_id=line.branch_id,
+            currency=line.currency,
+            transaction_currency=line.transaction_currency,
+            transaction_amount=line.transaction_amount,
+            exchange_rate=line.exchange_rate,
+            department_id=line.department_id,
+            cost_center=line.cost_center,
+            profit_center=line.profit_center,
+            project_id=line.project_id,
+            employee_id=line.employee_id,
+            product_id=line.product_id,
+            business_unit_id=line.business_unit_id,
+        )
+        for line in sorted(entry.lines, key=lambda item: item.sequence or 0)
+    ]
+
+
+def _check_dimension(
+    db: Session,
+    tenant_id: str,
+    dimension_type: str,
+    code: Optional[str],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    if not code:
+        return
+    configured = db.query(AccountingDimension).filter(
+        AccountingDimension.tenant_id == tenant_id,
+        AccountingDimension.dimension_type == dimension_type,
+    ).count()
+    if not configured:
+        warning = f"{dimension_type.replace('_', ' ').title()} master is not configured; {code} was accepted"
+        if warning not in warnings:
+            warnings.append(warning)
+        return
+    dimension = db.query(AccountingDimension).filter(
+        AccountingDimension.tenant_id == tenant_id,
+        AccountingDimension.dimension_type == dimension_type,
+        AccountingDimension.code == code,
+        AccountingDimension.status == "active",
+    ).first()
+    if not dimension:
+        errors.append(f"{dimension_type.replace('_', ' ').title()} does not exist or is inactive: {code}")
+
+
+def _journal_validation(
+    db: Session,
+    tenant_id: str,
+    lines: List[PostingEngineLine],
+    posting_date: datetime,
+    source_module: Optional[str] = "manual",
+    source_event: Optional[str] = "manual_journal",
+    branch_id: Optional[str] = None,
+    financial_year: Optional[str] = None,
+    currency: Optional[str] = "INR",
+    exchange_rate: Optional[float] = 1.0,
+    metadata: Optional[dict] = None,
+) -> dict:
+    errors: list[str] = []
+    warnings: list[str] = []
+    checks: list[dict] = []
+    impacts: list[dict] = []
+    totals = {"total_debit": 0.0, "total_credit": 0.0, "is_balanced": False}
+
+    try:
+        totals = _validate_double_entry(lines)
+        checks.append({"key": "double_entry", "label": "Debit equals credit", "status": "passed"})
+    except HTTPException as exc:
+        errors.append(str(exc.detail))
+        checks.append({"key": "double_entry", "label": "Debit equals credit", "status": "failed", "detail": exc.detail})
+
+    try:
+        _assert_period_open(db, tenant_id, posting_date, branch_id=branch_id)
+        checks.append({"key": "period", "label": "Accounting period is open", "status": "passed"})
+    except HTTPException as exc:
+        errors.append(str(exc.detail))
+        checks.append({"key": "period", "label": "Accounting period is open", "status": "failed", "detail": exc.detail})
+
+    normalized_currency = str(currency or "INR").upper()
+    currency_valid = len(normalized_currency) == 3 and normalized_currency.isalpha() and float(exchange_rate or 0.0) > 0
+    if not currency_valid:
+        errors.append("Currency must be a three-letter code and exchange rate must be positive")
+    checks.append({
+        "key": "currency",
+        "label": "Currency and exchange rate are valid",
+        "status": "passed" if currency_valid else "failed",
+    })
+
+    rule = None
+    if source_module and str(source_module).lower() not in {"manual", "accounting"}:
+        rule = _find_posting_rule(db, tenant_id, source_module, source_event or "", metadata or {})
+        if not rule:
+            errors.append(f"No published posting rule exists for {source_module}.{source_event}")
+    checks.append({
+        "key": "posting_rule",
+        "label": "Posting rule exists",
+        "status": "passed" if rule or str(source_module or "manual").lower() in {"manual", "accounting"} else "failed",
+        "detail": rule.rule_name if rule else "Manual journal" if str(source_module or "manual").lower() in {"manual", "accounting"} else None,
+    })
+
+    account_failures = 0
+    budget_failures = 0
+    effective_fy = financial_year or _current_financial_year(posting_date)
+    period_name = _journal_period_name(posting_date)
+    for index, line in enumerate(lines, start=1):
+        account = _resolve_journal_account(db, tenant_id, line.gl_account_id, line.account_code)
+        if not account:
+            errors.append(f"Line {index}: GL account does not exist")
+            account_failures += 1
+            continue
+        try:
+            if not _is_truthy(account.posting_allowed) or str(account.status or "").lower() != "active":
+                raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is not active for posting")
+            _validate_account_for_line(account, line.debit or 0.0, line.credit or 0.0, posting_mode="manual")
+        except HTTPException as exc:
+            errors.append(f"Line {index}: {exc.detail}")
+            account_failures += 1
+
+        line_currency = str(line.currency or normalized_currency).upper()
+        if len(line_currency) != 3 or not line_currency.isalpha():
+            errors.append(f"Line {index}: invalid currency {line_currency}")
+        if line.transaction_currency and line.transaction_currency != line_currency and float(line.exchange_rate or exchange_rate or 0.0) <= 0:
+            errors.append(f"Line {index}: exchange rate is required for transaction currency {line.transaction_currency}")
+
+        dimensions = {
+            "branch": line.branch_id or branch_id,
+            "department": line.department_id,
+            "cost_center": line.cost_center,
+            "profit_center": line.profit_center,
+            "project": line.project_id,
+            "employee": line.employee_id,
+            "product": line.product_id,
+            "business_unit": line.business_unit_id,
+        }
+        for dimension_type, code in dimensions.items():
+            _check_dimension(db, tenant_id, dimension_type, code, errors, warnings)
+
+        budget = db.query(AccountingBudget).filter(
+            AccountingBudget.tenant_id == tenant_id,
+            AccountingBudget.financial_year == effective_fy,
+            AccountingBudget.period == period_name,
+            AccountingBudget.gl_account_id == account.id,
+            AccountingBudget.cost_center == line.cost_center,
+            AccountingBudget.status == "active",
+        ).first()
+        if budget and (line.debit or 0.0) > 0:
+            consumed = db.query(JournalLine).join(JournalEntry).filter(
+                JournalEntry.tenant_id == tenant_id,
+                JournalEntry.posting_status == "posted",
+                JournalEntry.financial_year == effective_fy,
+                JournalEntry.period == period_name,
+                JournalLine.gl_account_id == account.id,
+                JournalLine.cost_center == line.cost_center,
+            ).all()
+            used_amount = round(sum(item.debit or 0.0 for item in consumed), 2)
+            if used_amount + (line.debit or 0.0) > budget.amount:
+                budget_failures += 1
+                errors.append(
+                    f"Line {index}: budget exceeded for {account.account_code}; "
+                    f"available {round(budget.amount - used_amount, 2):.2f}"
+                )
+
+        impacts.append({
+            "account_id": account.id,
+            "account_code": account.account_code,
+            "account_name": account.account_name,
+            "debit": round(line.debit or 0.0, 2),
+            "credit": round(line.credit or 0.0, 2),
+            "current_balance": round(account.balance or 0.0, 2),
+            "projected_balance": round((account.balance or 0.0) + (line.debit or 0.0) - (line.credit or 0.0), 2),
+        })
+
+    checks.append({
+        "key": "accounts",
+        "label": "All accounts are active and postable",
+        "status": "passed" if account_failures == 0 else "failed",
+    })
+    checks.append({
+        "key": "dimensions",
+        "label": "Branch and accounting dimensions exist",
+        "status": "passed" if not any("does not exist or is inactive" in error for error in errors) else "failed",
+    })
+
+    tax_code = (metadata or {}).get("tax_code")
+    tax_valid = True
+    if tax_code:
+        tax_valid = db.query(TaxRule).filter(
+            TaxRule.tenant_id == tenant_id,
+            TaxRule.tax_code == tax_code,
+            TaxRule.is_active.in_(["true", "1", "yes", "active"]),
+        ).first() is not None
+        if not tax_valid:
+            errors.append(f"Tax rule does not exist or is inactive: {tax_code}")
+    checks.append({"key": "tax", "label": "Tax configuration is valid", "status": "passed" if tax_valid else "failed"})
+    checks.append({"key": "budget", "label": "Budget is available", "status": "passed" if budget_failures == 0 else "failed"})
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "checks": checks,
+        **totals,
+        "impact": {
+            "gl_accounts": impacts,
+            "trial_balance": {
+                "debit_change": totals.get("total_debit", 0.0),
+                "credit_change": totals.get("total_credit", 0.0),
+                "remains_balanced": totals.get("total_debit") == totals.get("total_credit"),
+            },
+        },
+    }
+
+
+def _journal_template_lines(template: JournalTemplate, amount: float, tenant_id: str, db: Session) -> List[PostingEngineLine]:
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Template amount must be positive")
+    result = []
+    for item in template.lines or []:
+        account = _resolve_journal_account(db, tenant_id, account_code=item.get("account_code"))
+        result.append(
+            PostingEngineLine(
+                gl_account_id=account.id if account else None,
+                account_code=item.get("account_code"),
+                debit=amount if item.get("direction") == "debit" else 0.0,
+                credit=amount if item.get("direction") == "credit" else 0.0,
+                currency=template.currency or "INR",
+                description=item.get("description"),
+            )
+        )
+    return result
+
+
+def _create_voucher_from_journal(entry: JournalEntry, db: Session, reversal: bool = False) -> Voucher:
+    voucher_type = "reversal" if reversal else (entry.voucher_type or "journal")
+    voucher = Voucher(
+        id=str(uuid4()),
+        tenant_id=entry.tenant_id,
+        voucher_number=_next_voucher_number(entry.tenant_id, voucher_type, db),
+        voucher_type=voucher_type,
+        voucher_date=entry.entry_date,
+        description=entry.description,
+        reference=entry.journal_no,
+        branch_id=entry.branch_id,
+        currency=entry.currency or "INR",
+        status="posted",
+        created_by=entry.created_by,
+        verified_by=entry.approved_by,
+        approved_by=entry.approved_by,
+        posted_journal_entry_id=entry.id,
+        metadata_json={"journal_engine": True, "journal_no": entry.journal_no, "reversal": reversal},
+    )
+    db.add(voucher)
+    db.flush()
+    for line in entry.lines:
+        db.add(
+            VoucherLine(
+                id=str(uuid4()),
+                voucher_id=voucher.id,
+                gl_account_id=line.gl_account_id,
+                debit=line.debit or 0.0,
+                credit=line.credit or 0.0,
+                description=line.description,
+                department_id=line.department_id,
+                cost_center=line.cost_center,
+                profit_center=line.profit_center,
+                project_id=line.project_id,
+                employee_id=line.employee_id,
+                product_id=line.product_id,
+                business_unit_id=line.business_unit_id,
+            )
+        )
+    entry.voucher_id = voucher.id
+    return voucher
+
+
+def _apply_journal_document_to_gl(entry: JournalEntry, db: Session) -> None:
+    posting_mode = "auto" if entry.source_module and entry.source_module not in {"manual", "accounting"} else "manual"
+    for line in entry.lines:
+        account = _get_postable_account_by_id(line.gl_account_id, entry.tenant_id, db)
+        _validate_account_for_line(account, line.debit or 0.0, line.credit or 0.0, posting_mode=posting_mode)
+        account.balance += (line.debit or 0.0) - (line.credit or 0.0)
+        _update_gl_balance(
+            db=db,
+            tenant_id=entry.tenant_id,
+            account=account,
+            debit=line.debit or 0.0,
+            credit=line.credit or 0.0,
+            branch_id=line.branch_id or entry.branch_id,
+            currency=line.currency or entry.currency or account.base_currency or "INR",
+            financial_year=entry.financial_year,
+        )
+
+
+def _journal_request_lines(lines: List[JournalLineCreate], tenant_id: str, db: Session) -> List[PostingEngineLine]:
+    result = []
+    for index, line in enumerate(lines, start=1):
+        account = _resolve_journal_account(db, tenant_id, line.gl_account_id, line.account_code)
+        if not account:
+            raise HTTPException(status_code=400, detail=f"Line {index}: GL account does not exist for tenant")
+        if (line.debit or 0.0) < 0 or (line.credit or 0.0) < 0:
+            raise HTTPException(status_code=400, detail=f"Line {index}: debit and credit cannot be negative")
+        if (line.debit or 0.0) > 0 and (line.credit or 0.0) > 0:
+            raise HTTPException(status_code=400, detail=f"Line {index}: use either debit or credit, not both")
+        result.append(
+            PostingEngineLine(
+                gl_account_id=account.id,
+                account_code=account.account_code,
+                debit=line.debit or 0.0,
+                credit=line.credit or 0.0,
+                branch_id=line.branch_id,
+                currency=line.currency,
+                transaction_currency=line.transaction_currency,
+                transaction_amount=line.transaction_amount,
+                exchange_rate=line.exchange_rate,
+                department_id=line.department_id,
+                cost_center=line.cost_center,
+                profit_center=line.profit_center,
+                project_id=line.project_id,
+                employee_id=line.employee_id,
+                product_id=line.product_id,
+                business_unit_id=line.business_unit_id,
+                description=line.description,
+            )
+        )
+    return result
+
+
+def _get_journal_document(journal_id: str, tenant_id: str, db: Session) -> JournalEntry:
+    entry = db.query(JournalEntry).filter(
+        JournalEntry.id == journal_id,
+        JournalEntry.tenant_id == tenant_id,
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Journal not found for tenant")
+    return entry
+
+
+def _refresh_journal_batch(batch_id: Optional[str], db: Session) -> None:
+    if not batch_id:
+        return
+    batch = db.query(JournalBatch).filter(JournalBatch.id == batch_id).first()
+    if not batch:
+        return
+    entries = db.query(JournalEntry).filter(JournalEntry.batch_id == batch_id).all()
+    batch.total_amount = round(sum(sum(line.debit or 0.0 for line in entry.lines) for entry in entries), 2)
+    statuses = {entry.posting_status for entry in entries}
+    if entries and statuses == {"posted"}:
+        batch.status = "posted"
+    elif "pending" in statuses:
+        batch.status = "pending"
+    elif statuses and statuses.issubset({"approved", "posted"}):
+        batch.status = "approved"
+    elif entries and statuses.issubset({"cancelled", "reversed"}):
+        batch.status = "closed"
+    else:
+        batch.status = "draft"
 
 
 def _normalize_payment_category(category: str) -> str:
@@ -3151,6 +3944,558 @@ async def list_journal_entries(
         "limit": limit,
         "total": query.count(),
     }
+
+
+@app.post("/journal-batches")
+async def create_journal_batch(request: JournalBatchCreate, db: Session = Depends(get_db)):
+    posting_date = request.posting_date or datetime.utcnow()
+    financial_year = request.financial_year or _current_financial_year(posting_date)
+    batch = JournalBatch(
+        id=str(uuid4()),
+        batch_no=_next_batch_number(request.tenant_id, posting_date, financial_year, db),
+        tenant_id=request.tenant_id,
+        posting_date=posting_date,
+        financial_year=financial_year,
+        period=_journal_period_name(posting_date),
+        status="draft",
+        created_by=request.created_by,
+        total_amount=0.0,
+    )
+    db.add(batch)
+    _log_audit(db, request.tenant_id, "journal_batch", batch.id, "create", _journal_batch_response(batch), request.created_by)
+    db.commit()
+    db.refresh(batch)
+    return _journal_batch_response(batch)
+
+
+@app.get("/journal-batches")
+async def list_journal_batches(
+    tenant_id: str = Query(...),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(JournalBatch).filter(JournalBatch.tenant_id == tenant_id)
+    if status:
+        query = query.filter(JournalBatch.status == status.lower())
+    batches = query.order_by(JournalBatch.created_at.desc()).all()
+    counts = {
+        batch.id: db.query(JournalEntry).filter(JournalEntry.batch_id == batch.id).count()
+        for batch in batches
+    }
+    return {"items": [_journal_batch_response(batch, counts[batch.id]) for batch in batches], "total": len(batches)}
+
+
+@app.post("/journal-templates")
+async def create_journal_template(request: JournalTemplateCreate, db: Session = Depends(get_db)):
+    if len(request.lines or []) < 2:
+        raise HTTPException(status_code=400, detail="Journal template must contain at least two lines")
+    existing = db.query(JournalTemplate).filter(
+        JournalTemplate.tenant_id == request.tenant_id,
+        JournalTemplate.template_name == request.template_name,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Journal template name already exists for tenant")
+    template = JournalTemplate(
+        id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        template_name=request.template_name,
+        description=request.description,
+        voucher_type=request.voucher_type or "journal",
+        currency=str(request.currency or "INR").upper(),
+        lines=request.lines,
+        status="active",
+        created_by=request.created_by,
+    )
+    db.add(template)
+    _log_audit(db, request.tenant_id, "journal_template", template.id, "create", _journal_template_response(template), request.created_by)
+    db.commit()
+    db.refresh(template)
+    return _journal_template_response(template)
+
+
+@app.get("/journal-templates")
+async def list_journal_templates(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    templates = db.query(JournalTemplate).filter(
+        JournalTemplate.tenant_id == tenant_id,
+        JournalTemplate.status == "active",
+    ).order_by(JournalTemplate.template_name).all()
+    if not templates:
+        for item in DEFAULT_JOURNAL_TEMPLATES:
+            db.add(JournalTemplate(
+                id=str(uuid4()),
+                tenant_id=tenant_id,
+                template_name=item["template_name"],
+                description=item["description"],
+                voucher_type=item["voucher_type"],
+                currency="INR",
+                lines=item["lines"],
+                status="active",
+                created_by="system",
+            ))
+        db.commit()
+        templates = db.query(JournalTemplate).filter(
+            JournalTemplate.tenant_id == tenant_id,
+            JournalTemplate.status == "active",
+        ).order_by(JournalTemplate.template_name).all()
+    return {"items": [_journal_template_response(template) for template in templates], "total": len(templates)}
+
+
+@app.post("/accounting-dimensions")
+async def create_accounting_dimension(request: AccountingDimensionCreate, db: Session = Depends(get_db)):
+    dimension = AccountingDimension(
+        id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        dimension_type=request.dimension_type.lower(),
+        code=request.code,
+        name=request.name,
+        status=request.status or "active",
+    )
+    db.add(dimension)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Accounting dimension already exists for tenant")
+    db.refresh(dimension)
+    return {
+        "id": dimension.id, "tenant_id": dimension.tenant_id, "dimension_type": dimension.dimension_type,
+        "code": dimension.code, "name": dimension.name, "status": dimension.status,
+    }
+
+
+@app.get("/accounting-dimensions")
+async def list_accounting_dimensions(
+    tenant_id: str = Query(...),
+    dimension_type: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AccountingDimension).filter(AccountingDimension.tenant_id == tenant_id)
+    if dimension_type:
+        query = query.filter(AccountingDimension.dimension_type == dimension_type.lower())
+    items = query.order_by(AccountingDimension.dimension_type, AccountingDimension.code).all()
+    return {"items": [
+        {"id": item.id, "dimension_type": item.dimension_type, "code": item.code, "name": item.name, "status": item.status}
+        for item in items
+    ], "total": len(items)}
+
+
+@app.post("/accounting-budgets")
+async def create_accounting_budget(request: AccountingBudgetCreate, db: Session = Depends(get_db)):
+    _get_postable_account_by_id(request.gl_account_id, request.tenant_id, db)
+    budget = AccountingBudget(
+        id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        financial_year=request.financial_year,
+        period=request.period,
+        gl_account_id=request.gl_account_id,
+        cost_center=request.cost_center,
+        amount=request.amount,
+        status="active",
+    )
+    db.add(budget)
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Accounting budget already exists for this scope")
+    db.refresh(budget)
+    return {
+        "id": budget.id, "tenant_id": budget.tenant_id, "financial_year": budget.financial_year,
+        "period": budget.period, "gl_account_id": budget.gl_account_id,
+        "cost_center": budget.cost_center, "amount": budget.amount, "status": budget.status,
+    }
+
+
+@app.get("/accounting-budgets")
+async def list_accounting_budgets(
+    tenant_id: str = Query(...),
+    financial_year: Optional[str] = Query(None),
+    period: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AccountingBudget).filter(AccountingBudget.tenant_id == tenant_id)
+    if financial_year:
+        query = query.filter(AccountingBudget.financial_year == financial_year)
+    if period:
+        query = query.filter(AccountingBudget.period == period)
+    items = query.order_by(AccountingBudget.created_at.desc()).all()
+    return {"items": [
+        {"id": item.id, "financial_year": item.financial_year, "period": item.period,
+         "gl_account_id": item.gl_account_id, "cost_center": item.cost_center,
+         "amount": item.amount, "status": item.status}
+        for item in items
+    ], "total": len(items)}
+
+
+@app.post("/journals")
+async def create_journal_document(request: JournalDocumentCreate, db: Session = Depends(get_db)):
+    if len(request.lines or []) < 2:
+        raise HTTPException(status_code=400, detail="Journal must contain at least two lines")
+    posting_date = request.posting_date or datetime.utcnow()
+    financial_year = request.financial_year or _current_financial_year(posting_date)
+    batch = None
+    if request.batch_id:
+        batch = db.query(JournalBatch).filter(
+            JournalBatch.id == request.batch_id,
+            JournalBatch.tenant_id == request.tenant_id,
+        ).first()
+        if not batch:
+            raise HTTPException(status_code=404, detail="Journal batch not found for tenant")
+        if batch.status in {"posted", "closed", "cancelled"}:
+            raise HTTPException(status_code=400, detail="Journal batch no longer accepts entries")
+    engine_lines = _journal_request_lines(request.lines, request.tenant_id, db)
+    journal = JournalEntry(
+        id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        batch_id=request.batch_id,
+        journal_no=_next_journal_number(request.tenant_id, posting_date, financial_year, db),
+        entry_date=posting_date,
+        voucher_type=request.voucher_type or "journal",
+        description=request.description,
+        reference=request.reference,
+        metadata_json=request.metadata,
+        posting_status="draft",
+        source_module=request.source_module or "manual",
+        source_event=request.source_event or "manual_journal",
+        source_reference=request.source_reference,
+        business_date=posting_date,
+        financial_year=financial_year,
+        period=_journal_period_name(posting_date),
+        branch_id=request.branch_id,
+        currency=str(request.currency or "INR").upper(),
+        exchange_rate=request.exchange_rate or 1.0,
+        created_by=request.created_by,
+        template_id=request.template_id,
+    )
+    db.add(journal)
+    db.flush()
+    for index, line in enumerate(engine_lines, start=1):
+        source = request.lines[index - 1]
+        db.add(JournalLine(
+            id=str(uuid4()), journal_entry_id=journal.id, sequence=source.sequence or index,
+            gl_account_id=line.gl_account_id, debit=line.debit, credit=line.credit,
+            currency=line.currency or journal.currency,
+            transaction_currency=line.transaction_currency, transaction_amount=line.transaction_amount,
+            exchange_rate=line.exchange_rate, branch_id=line.branch_id or request.branch_id,
+            department_id=line.department_id, cost_center=line.cost_center, profit_center=line.profit_center,
+            project_id=line.project_id, employee_id=line.employee_id, product_id=line.product_id,
+            business_unit_id=line.business_unit_id, description=line.description,
+        ))
+    for attachment in request.attachments or []:
+        db.add(JournalAttachment(
+            id=str(uuid4()), journal_id=journal.id, document_id=attachment.document_id,
+            file_name=attachment.file_name, uploaded_by=attachment.uploaded_by or request.created_by,
+        ))
+    db.flush()
+    journal.validation_result = _journal_validation(
+        db, request.tenant_id, engine_lines, posting_date,
+        source_module=journal.source_module, source_event=journal.source_event,
+        branch_id=journal.branch_id, financial_year=journal.financial_year,
+        currency=journal.currency, exchange_rate=journal.exchange_rate, metadata=journal.metadata_json,
+    )
+    _refresh_journal_batch(journal.batch_id, db)
+    _log_audit(db, request.tenant_id, "journal", journal.id, "create", {"journal_no": journal.journal_no, "status": "draft"}, request.created_by)
+    db.commit()
+    db.refresh(journal)
+    return _journal_document_response(journal)
+
+
+@app.get("/journals")
+async def list_journal_documents(
+    tenant_id: str = Query(...),
+    status: Optional[str] = Query(None),
+    source_module: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=250),
+    db: Session = Depends(get_db),
+):
+    query = db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id)
+    if status:
+        statuses = [item.strip().lower() for item in status.split(",") if item.strip()]
+        query = query.filter(JournalEntry.posting_status.in_(statuses))
+    if source_module:
+        query = query.filter(JournalEntry.source_module == source_module)
+    total = query.count()
+    items = query.order_by(JournalEntry.entry_date.desc(), JournalEntry.created_at.desc()).offset(skip).limit(limit).all()
+    status_rows = db.query(JournalEntry.posting_status, JournalEntry.id).filter(JournalEntry.tenant_id == tenant_id).all()
+    status_counts = {}
+    for item_status, _ in status_rows:
+        status_counts[item_status or "draft"] = status_counts.get(item_status or "draft", 0) + 1
+    return {"items": [_journal_document_response(item) for item in items], "total": total, "status_counts": status_counts}
+
+
+@app.post("/journals/validate")
+async def validate_journal_document(request: JournalValidationRequest, db: Session = Depends(get_db)):
+    if request.journal_id:
+        journal = _get_journal_document(request.journal_id, request.tenant_id, db)
+        lines = _engine_lines_from_document(journal)
+        posting_date = journal.entry_date
+        result = _journal_validation(
+            db, request.tenant_id, lines, posting_date,
+            source_module=journal.source_module, source_event=journal.source_event,
+            branch_id=journal.branch_id, financial_year=journal.financial_year,
+            currency=journal.currency, exchange_rate=journal.exchange_rate, metadata=journal.metadata_json,
+        )
+        journal.validation_result = result
+        _log_audit(db, request.tenant_id, "journal", journal.id, "validate", {"valid": result["valid"], "errors": result["errors"]}, request.tenant_id)
+        db.commit()
+        return {**result, "journal_id": journal.id, "journal_no": journal.journal_no}
+    if not request.lines:
+        raise HTTPException(status_code=400, detail="Provide journal_id or journal lines")
+    lines = _journal_request_lines(request.lines, request.tenant_id, db)
+    return _journal_validation(
+        db, request.tenant_id, lines, request.posting_date or datetime.utcnow(),
+        source_module=request.source_module, source_event=request.source_event,
+        branch_id=request.branch_id, financial_year=request.financial_year,
+        currency=request.currency, exchange_rate=request.exchange_rate, metadata=request.metadata,
+    )
+
+
+@app.post("/journals/simulate")
+async def simulate_journal_document(request: JournalSimulationRequest, db: Session = Depends(get_db)):
+    template = None
+    if request.template_id:
+        template = db.query(JournalTemplate).filter(
+            JournalTemplate.id == request.template_id,
+            JournalTemplate.tenant_id == request.tenant_id,
+            JournalTemplate.status == "active",
+        ).first()
+        if not template:
+            raise HTTPException(status_code=404, detail="Journal template not found for tenant")
+        lines = _journal_template_lines(template, request.amount or 0.0, request.tenant_id, db)
+    elif request.lines:
+        lines = _journal_request_lines(request.lines, request.tenant_id, db)
+    else:
+        raise HTTPException(status_code=400, detail="Provide template_id and amount or journal lines")
+    posting_date = request.posting_date or datetime.utcnow()
+    validation = _journal_validation(
+        db, request.tenant_id, lines, posting_date,
+        source_module=request.source_module, source_event=request.source_event,
+        branch_id=request.branch_id, financial_year=request.financial_year,
+        currency=template.currency if template else request.currency,
+        exchange_rate=request.exchange_rate, metadata=request.metadata,
+    )
+    return {
+        **validation,
+        "template": _journal_template_response(template) if template else None,
+        "description": request.description or (template.description if template else "Journal simulation"),
+        "lines": [
+            {"sequence": index, "gl_account_id": line.gl_account_id, "account_code": line.account_code,
+             "debit": line.debit, "credit": line.credit, "currency": line.currency,
+             "description": line.description}
+            for index, line in enumerate(lines, start=1)
+        ],
+    }
+
+
+@app.get("/journals/history")
+async def journal_history(
+    tenant_id: str = Query(...),
+    journal_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AuditLog).filter(AuditLog.tenant_id == tenant_id, AuditLog.entity == "journal")
+    if journal_id:
+        query = query.filter(AuditLog.entity_id == journal_id)
+    items = query.order_by(AuditLog.created_at.desc()).limit(500).all()
+    return {"items": [_audit_log_response(item) for item in items], "total": len(items)}
+
+
+@app.post("/journals/{journal_id}/submit")
+async def submit_journal_document(journal_id: str, request: JournalActionRequest, db: Session = Depends(get_db)):
+    journal = _get_journal_document(journal_id, request.tenant_id, db)
+    if journal.posting_status != "draft":
+        raise HTTPException(status_code=400, detail="Only draft journals can be submitted")
+    validation = _journal_validation(
+        db, request.tenant_id, _engine_lines_from_document(journal), journal.entry_date,
+        source_module=journal.source_module, source_event=journal.source_event, branch_id=journal.branch_id,
+        financial_year=journal.financial_year, currency=journal.currency,
+        exchange_rate=journal.exchange_rate, metadata=journal.metadata_json,
+    )
+    journal.validation_result = validation
+    if not validation["valid"]:
+        raise HTTPException(status_code=400, detail={"message": "Journal validation failed", "errors": validation["errors"]})
+    journal.posting_status = "pending"
+    db.add(JournalApproval(
+        id=str(uuid4()), journal_id=journal.id, level="maker",
+        approver=request.performed_by or journal.created_by or "maker", decision="submitted", remarks=request.remarks,
+    ))
+    _refresh_journal_batch(journal.batch_id, db)
+    _log_audit(db, request.tenant_id, "journal", journal.id, "submit", {"status": "pending"}, request.performed_by)
+    db.commit()
+    db.refresh(journal)
+    return _journal_document_response(journal)
+
+
+@app.post("/journals/{journal_id}/approve")
+async def approve_journal_document(journal_id: str, request: JournalApprovalActionRequest, db: Session = Depends(get_db)):
+    journal = _get_journal_document(journal_id, request.tenant_id, db)
+    if journal.posting_status != "pending":
+        raise HTTPException(status_code=400, detail="Only pending journals can be approved")
+    approver = request.performed_by or "checker"
+    if journal.created_by and journal.created_by == approver:
+        raise HTTPException(status_code=400, detail="Maker cannot approve their own journal")
+    decision = str(request.decision or "approved").lower()
+    if decision not in {"approved", "rejected"}:
+        raise HTTPException(status_code=400, detail="decision must be approved or rejected")
+    db.add(JournalApproval(
+        id=str(uuid4()), journal_id=journal.id, level=request.level or "checker",
+        approver=approver, decision=decision, remarks=request.remarks,
+    ))
+    if decision == "approved":
+        journal.posting_status = "approved"
+        journal.approved_by = approver
+        journal.approved_at = datetime.utcnow()
+    else:
+        journal.posting_status = "draft"
+    _refresh_journal_batch(journal.batch_id, db)
+    _log_audit(db, request.tenant_id, "journal", journal.id, decision, {"level": request.level or "checker"}, approver)
+    db.commit()
+    db.refresh(journal)
+    return _journal_document_response(journal)
+
+
+@app.post("/journals/{journal_id}/post")
+async def post_journal_document(journal_id: str, request: JournalActionRequest, db: Session = Depends(get_db)):
+    journal = _get_journal_document(journal_id, request.tenant_id, db)
+    if journal.posting_status != "approved":
+        raise HTTPException(status_code=400, detail="Only approved journals can be posted")
+    validation = _journal_validation(
+        db, request.tenant_id, _engine_lines_from_document(journal), journal.entry_date,
+        source_module=journal.source_module, source_event=journal.source_event, branch_id=journal.branch_id,
+        financial_year=journal.financial_year, currency=journal.currency,
+        exchange_rate=journal.exchange_rate, metadata=journal.metadata_json,
+    )
+    journal.validation_result = validation
+    if not validation["valid"]:
+        raise HTTPException(status_code=400, detail={"message": "Journal validation failed", "errors": validation["errors"]})
+    try:
+        _apply_journal_document_to_gl(journal, db)
+        voucher = _create_voucher_from_journal(journal, db)
+        journal.posting_status = "posted"
+        if journal.source_module and journal.source_module not in {"manual", "accounting"}:
+            _create_subledger_entry(
+                db, request.tenant_id, journal.source_module, journal.source_event or "journal_posted",
+                journal.source_reference or journal.journal_no, validation["total_debit"], journal.id,
+                {"journal_no": journal.journal_no, "voucher_id": voucher.id},
+            )
+        _refresh_journal_batch(journal.batch_id, db)
+        _log_audit(db, request.tenant_id, "journal", journal.id, "post", {"voucher_id": voucher.id, "status": "posted"}, request.performed_by)
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Journal posting rolled back: {exc}")
+    db.refresh(journal)
+    return _journal_document_response(journal)
+
+
+@app.post("/journals/{journal_id}/reverse")
+async def reverse_journal_document(journal_id: str, request: JournalActionRequest, db: Session = Depends(get_db)):
+    journal = _get_journal_document(journal_id, request.tenant_id, db)
+    if journal.posting_status != "posted":
+        raise HTTPException(status_code=400, detail="Only posted journals can be reversed")
+    posting_date = datetime.utcnow()
+    lines = [
+        PostingEngineLine(
+            gl_account_id=line.gl_account_id, debit=line.credit or 0.0, credit=line.debit or 0.0,
+            branch_id=line.branch_id, currency=line.currency, transaction_currency=line.transaction_currency,
+            transaction_amount=line.transaction_amount, exchange_rate=line.exchange_rate,
+            department_id=line.department_id, cost_center=line.cost_center, profit_center=line.profit_center,
+            project_id=line.project_id, employee_id=line.employee_id, product_id=line.product_id,
+            business_unit_id=line.business_unit_id, description=f"Reversal: {line.description or journal.description}",
+        )
+        for line in journal.lines
+    ]
+    validation = _journal_validation(
+        db, request.tenant_id, lines, posting_date, source_module="accounting", source_event="journal_reversal",
+        branch_id=journal.branch_id, financial_year=_current_financial_year(posting_date),
+        currency=journal.currency, exchange_rate=journal.exchange_rate,
+    )
+    if not validation["valid"]:
+        raise HTTPException(status_code=400, detail={"message": "Reversal validation failed", "errors": validation["errors"]})
+    try:
+        financial_year = _current_financial_year(posting_date)
+        reversal = JournalEntry(
+            id=str(uuid4()), tenant_id=request.tenant_id,
+            journal_no=_next_journal_number(request.tenant_id, posting_date, financial_year, db),
+            entry_date=posting_date, voucher_type="reversal", description=f"Reversal of {journal.journal_no}",
+            reference=journal.journal_no, metadata_json={"reversal_reason": request.remarks}, posting_status="posted",
+            source_module="accounting", source_event="journal_reversal", source_reference=journal.journal_no,
+            business_date=posting_date, financial_year=financial_year, period=_journal_period_name(posting_date),
+            branch_id=journal.branch_id, currency=journal.currency, exchange_rate=journal.exchange_rate,
+            reversal_of=journal.id, created_by=request.performed_by, approved_by=request.performed_by,
+            approved_at=datetime.utcnow(), validation_result=validation,
+        )
+        db.add(reversal)
+        db.flush()
+        for index, line in enumerate(lines, start=1):
+            db.add(JournalLine(
+                id=str(uuid4()), journal_entry_id=reversal.id, sequence=index,
+                gl_account_id=line.gl_account_id, debit=line.debit, credit=line.credit,
+                currency=line.currency, transaction_currency=line.transaction_currency,
+                transaction_amount=line.transaction_amount, exchange_rate=line.exchange_rate,
+                branch_id=line.branch_id, department_id=line.department_id, cost_center=line.cost_center,
+                profit_center=line.profit_center, project_id=line.project_id, employee_id=line.employee_id,
+                product_id=line.product_id, business_unit_id=line.business_unit_id, description=line.description,
+            ))
+        db.flush()
+        _apply_journal_document_to_gl(reversal, db)
+        _create_voucher_from_journal(reversal, db, reversal=True)
+        journal.posting_status = "reversed"
+        _refresh_journal_batch(journal.batch_id, db)
+        _log_audit(db, request.tenant_id, "journal", journal.id, "reverse", {"reversal_journal_id": reversal.id}, request.performed_by)
+        _log_audit(db, request.tenant_id, "journal", reversal.id, "create_reversal", {"reversal_of": journal.id}, request.performed_by)
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Journal reversal rolled back: {exc}")
+    db.refresh(reversal)
+    return {"journal": _journal_document_response(journal), "reversal": _journal_document_response(reversal)}
+
+
+@app.post("/journals/{journal_id}/cancel")
+async def cancel_journal_document(journal_id: str, request: JournalActionRequest, db: Session = Depends(get_db)):
+    journal = _get_journal_document(journal_id, request.tenant_id, db)
+    if journal.posting_status not in {"draft", "pending", "approved"}:
+        raise HTTPException(status_code=400, detail="Only unposted journals can be cancelled")
+    journal.posting_status = "cancelled"
+    _refresh_journal_batch(journal.batch_id, db)
+    _log_audit(db, request.tenant_id, "journal", journal.id, "cancel", {"remarks": request.remarks}, request.performed_by)
+    db.commit()
+    db.refresh(journal)
+    return _journal_document_response(journal)
+
+
+@app.post("/journals/post")
+async def post_journal(request: JournalActionRequest, db: Session = Depends(get_db)):
+    if not request.journal_id:
+        raise HTTPException(status_code=400, detail="journal_id is required")
+    return await post_journal_document(request.journal_id, request, db)
+
+
+@app.post("/journals/reverse")
+async def reverse_journal(request: JournalActionRequest, db: Session = Depends(get_db)):
+    if not request.journal_id:
+        raise HTTPException(status_code=400, detail="journal_id is required")
+    return await reverse_journal_document(request.journal_id, request, db)
+
+
+@app.post("/journals/cancel")
+async def cancel_journal(request: JournalActionRequest, db: Session = Depends(get_db)):
+    if not request.journal_id:
+        raise HTTPException(status_code=400, detail="journal_id is required")
+    return await cancel_journal_document(request.journal_id, request, db)
+
+
+@app.get("/journals/{journal_id}")
+async def get_journal_document(journal_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return _journal_document_response(_get_journal_document(journal_id, tenant_id, db))
 
 
 @app.post("/posting-rules", response_model=PostingRuleResponse)

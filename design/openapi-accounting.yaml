@@ -345,6 +345,190 @@ paths:
       responses:
         '200':
           description: Posting execution rolled back
+  /journals:
+    post:
+      summary: Create a permanent draft journal document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalDocumentCreate'
+      responses:
+        '200':
+          description: Draft journal created with a tenant journal number
+    get:
+      summary: List and filter tenant journals
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: source_module
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Journal dashboard list and status counts
+  /journals/{journal_id}:
+    get:
+      summary: Get journal lines, attachments, approvals, and validation
+      parameters:
+        - in: path
+          name: journal_id
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Journal detail
+  /journals/validate:
+    post:
+      summary: Validate balancing, accounts, period, currency, rules, dimensions, tax, and budget
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalValidationRequest'
+      responses:
+        '200':
+          description: Validation checks and accounting impact
+  /journals/simulate:
+    post:
+      summary: Preview journal, GL, and trial-balance impact without persistence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalSimulationRequest'
+      responses:
+        '200':
+          description: Journal simulation
+  /journals/{journal_id}/submit:
+    post:
+      summary: Submit a valid draft journal for checker approval
+      parameters:
+        - $ref: '#/components/parameters/JournalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalActionRequest'
+      responses:
+        '200':
+          description: Journal moved to pending
+  /journals/{journal_id}/approve:
+    post:
+      summary: Record checker approval or rejection
+      parameters:
+        - $ref: '#/components/parameters/JournalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalApprovalRequest'
+      responses:
+        '200':
+          description: Approval decision recorded
+  /journals/{journal_id}/post:
+    post:
+      summary: Atomically create voucher and update GL for an approved journal
+      parameters:
+        - $ref: '#/components/parameters/JournalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalActionRequest'
+      responses:
+        '200':
+          description: Journal posted
+  /journals/{journal_id}/reverse:
+    post:
+      summary: Create and post a linked reversal journal
+      parameters:
+        - $ref: '#/components/parameters/JournalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalActionRequest'
+      responses:
+        '200':
+          description: Original and reversal journals
+  /journals/{journal_id}/cancel:
+    post:
+      summary: Cancel an unposted journal without deleting it
+      parameters:
+        - $ref: '#/components/parameters/JournalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalActionRequest'
+      responses:
+        '200':
+          description: Journal cancelled
+  /journals/history:
+    get:
+      summary: List tenant journal audit history
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - in: query
+          name: journal_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Journal audit trail
+  /journal-batches:
+    get:
+      summary: List journal batches
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Journal batches
+    post:
+      summary: Open a tenant journal batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalBatchCreate'
+      responses:
+        '200':
+          description: Journal batch created
+  /journal-templates:
+    get:
+      summary: List reusable journal templates
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Journal templates
+    post:
+      summary: Create a reusable journal template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalTemplateCreate'
+      responses:
+        '200':
+          description: Journal template created
   /health:
     get:
       summary: Accounting health check
@@ -377,6 +561,12 @@ components:
       schema:
         type: string
         format: date-time
+    JournalId:
+      in: path
+      name: journal_id
+      required: true
+      schema:
+        type: string
     RuleId:
       in: path
       name: rule_id
@@ -423,10 +613,13 @@ components:
           type: string
     JournalLineCreate:
       type: object
-      required: [gl_account_id]
       properties:
         gl_account_id:
           type: string
+        account_code:
+          type: string
+        sequence:
+          type: integer
         debit:
           type: number
           default: 0
@@ -485,6 +678,172 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/JournalLineCreate'
+    JournalAttachmentCreate:
+      type: object
+      required: [file_name]
+      properties:
+        document_id:
+          type: string
+        file_name:
+          type: string
+        uploaded_by:
+          type: string
+    JournalDocumentCreate:
+      type: object
+      required: [tenant_id, description, lines]
+      properties:
+        tenant_id:
+          type: string
+        batch_id:
+          type: string
+        posting_date:
+          type: string
+          format: date-time
+        voucher_type:
+          type: string
+        source_module:
+          type: string
+          default: manual
+        source_event:
+          type: string
+          default: manual_journal
+        source_reference:
+          type: string
+        description:
+          type: string
+        reference:
+          type: string
+        currency:
+          type: string
+          default: INR
+        exchange_rate:
+          type: number
+          default: 1
+        branch_id:
+          type: string
+        financial_year:
+          type: string
+        template_id:
+          type: string
+        created_by:
+          type: string
+        metadata:
+          type: object
+        lines:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/JournalLineCreate'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/JournalAttachmentCreate'
+    JournalValidationRequest:
+      type: object
+      required: [tenant_id]
+      properties:
+        tenant_id:
+          type: string
+        journal_id:
+          type: string
+        posting_date:
+          type: string
+          format: date-time
+        source_module:
+          type: string
+        source_event:
+          type: string
+        branch_id:
+          type: string
+        financial_year:
+          type: string
+        currency:
+          type: string
+        exchange_rate:
+          type: number
+        metadata:
+          type: object
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/JournalLineCreate'
+    JournalSimulationRequest:
+      allOf:
+        - $ref: '#/components/schemas/JournalValidationRequest'
+        - type: object
+          properties:
+            template_id:
+              type: string
+            amount:
+              type: number
+            description:
+              type: string
+    JournalActionRequest:
+      type: object
+      required: [tenant_id]
+      properties:
+        tenant_id:
+          type: string
+        journal_id:
+          type: string
+        performed_by:
+          type: string
+        remarks:
+          type: string
+    JournalApprovalRequest:
+      allOf:
+        - $ref: '#/components/schemas/JournalActionRequest'
+        - type: object
+          properties:
+            level:
+              type: string
+              default: checker
+            decision:
+              type: string
+              enum: [approved, rejected]
+    JournalBatchCreate:
+      type: object
+      required: [tenant_id]
+      properties:
+        tenant_id:
+          type: string
+        posting_date:
+          type: string
+          format: date-time
+        financial_year:
+          type: string
+        created_by:
+          type: string
+    JournalTemplateCreate:
+      type: object
+      required: [tenant_id, template_name, lines]
+      properties:
+        tenant_id:
+          type: string
+        template_name:
+          type: string
+        description:
+          type: string
+        voucher_type:
+          type: string
+        currency:
+          type: string
+        created_by:
+          type: string
+        lines:
+          type: array
+          minItems: 2
+          items:
+            type: object
+            required: [account_code, direction]
+            properties:
+              account_code:
+                type: string
+              direction:
+                type: string
+                enum: [debit, credit]
+              description:
+                type: string
     AutomatedGLPostingRequest:
       type: object
       required: [tenant_id, source_module, source_event, source_reference, amount]

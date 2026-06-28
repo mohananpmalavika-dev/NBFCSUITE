@@ -532,6 +532,7 @@ export type PaymentMode = 'cash' | 'cheque' | 'upi' | 'rtgs' | 'neft' | 'imps';
 export interface AccountingPostingLine {
   gl_account_id?: string;
   account_code?: string;
+  sequence?: number;
   debit: number;
   credit: number;
   description?: string;
@@ -547,6 +548,66 @@ export interface AccountingPostingLine {
   employee_id?: string;
   product_id?: string;
   business_unit_id?: string;
+}
+
+export type JournalStatus = 'draft' | 'pending' | 'approved' | 'posted' | 'reversed' | 'cancelled';
+
+export interface JournalAttachmentPayload {
+  document_id?: string;
+  file_name: string;
+  uploaded_by?: string;
+}
+
+export interface JournalDocumentPayload {
+  tenant_id: string;
+  batch_id?: string;
+  posting_date?: string;
+  voucher_type?: string;
+  source_module?: string;
+  source_event?: string;
+  source_reference?: string;
+  description: string;
+  reference?: string;
+  currency?: string;
+  exchange_rate?: number;
+  branch_id?: string;
+  financial_year?: string;
+  template_id?: string;
+  created_by?: string;
+  metadata?: JsonObject;
+  lines: AccountingPostingLine[];
+  attachments?: JournalAttachmentPayload[];
+}
+
+export interface JournalValidationPayload {
+  tenant_id: string;
+  journal_id?: string;
+  posting_date?: string;
+  source_module?: string;
+  source_event?: string;
+  source_reference?: string;
+  branch_id?: string;
+  financial_year?: string;
+  currency?: string;
+  exchange_rate?: number;
+  metadata?: JsonObject;
+  lines?: AccountingPostingLine[];
+}
+
+export interface JournalSimulationPayload extends JournalValidationPayload {
+  template_id?: string;
+  amount?: number;
+  description?: string;
+}
+
+export interface JournalTemplatePayload {
+  tenant_id: string;
+  template_name: string;
+  description?: string;
+  voucher_type?: string;
+  currency?: string;
+  lines: Array<{ account_code: string; direction: 'debit' | 'credit'; description?: string }>;
+  created_by?: string;
 }
 
 export interface AccountingPeriodPayload {
@@ -1012,6 +1073,22 @@ export const apiClient = {
     hrmsAxiosInstance.post(`/shifts`, data),
   assignHrmsShift: (employeeId: string, data: { tenant_id?: string; shift_id: string; effective_from?: string; effective_to?: string }) =>
     hrmsAxiosInstance.post(`/employees/${employeeId}/shifts`, data),
+  listHrmsShifts: (params?: { tenant_id?: string; status?: string }) =>
+    hrmsAxiosInstance.get(`/shifts`, { params }),
+  getAttendanceToday: (params?: { tenant_id?: string; employee_id?: string }) =>
+    hrmsAxiosInstance.get(`/attendance/today`, { params }),
+  getAttendanceMonth: (params?: { tenant_id?: string; employee_id?: string; year?: number; month?: number }) =>
+    hrmsAxiosInstance.get(`/attendance/month`, { params }),
+  regularizeAttendance: (data: { tenant_id?: string; employee_id: string; attendance_date: string; check_in?: string; check_out?: string; reason?: string }) =>
+    hrmsAxiosInstance.post(`/attendance/regularize`, data),
+  createAttendanceRule: (data: { tenant_id?: string; name: string; description?: string; conditions?: Record<string, unknown>; actions?: Record<string, unknown> }) =>
+    hrmsAxiosInstance.post(`/attendance/rules`, data),
+  listAttendanceRules: (params?: { tenant_id?: string }) =>
+    hrmsAxiosInstance.get(`/attendance/rules`, { params }),
+  attendanceDashboard: (params?: { tenant_id?: string }) =>
+    hrmsAxiosInstance.get(`/attendance/dashboard`, { params }),
+  getLeaveBalances: (employeeId: string, params?: { tenant_id?: string }) =>
+    hrmsAxiosInstance.get(`/leave/${employeeId}/balance`, { params }),
   checkInAttendance: (data: HrmsAttendanceCheckInPayload) =>
     hrmsAxiosInstance.post(`/attendance/check-in`, data),
   checkOutAttendance: (data: { tenant_id: string; employee_id: string }) =>
@@ -1176,6 +1253,36 @@ export const apiClient = {
     axiosInstance.post(`/posting-executions/${executionId}/rollback`, { tenant_id: tenantId, performed_by: performedBy, reason }),
   getJournalEntries: (tenantId: string) =>
     axiosInstance.get(`/journal-entries`, { params: { tenant_id: tenantId } }),
+  getJournals: (tenantId: string, params?: { status?: string; source_module?: string; skip?: number; limit?: number }) =>
+    axiosInstance.get(`/journals`, { params: { tenant_id: tenantId, ...params } }),
+  getJournal: (journalId: string, tenantId: string) =>
+    axiosInstance.get(`/journals/${journalId}`, { params: { tenant_id: tenantId } }),
+  createJournal: (data: JournalDocumentPayload) =>
+    axiosInstance.post(`/journals`, data),
+  validateJournal: (data: JournalValidationPayload) =>
+    axiosInstance.post(`/journals/validate`, data),
+  simulateJournal: (data: JournalSimulationPayload) =>
+    axiosInstance.post(`/journals/simulate`, data),
+  submitJournal: (journalId: string, tenantId: string, performedBy?: string, remarks?: string) =>
+    axiosInstance.post(`/journals/${journalId}/submit`, { tenant_id: tenantId, performed_by: performedBy, remarks }),
+  approveJournal: (journalId: string, tenantId: string, performedBy?: string, decision: 'approved' | 'rejected' = 'approved', remarks?: string) =>
+    axiosInstance.post(`/journals/${journalId}/approve`, { tenant_id: tenantId, performed_by: performedBy, decision, remarks, level: 'checker' }),
+  postJournal: (journalId: string, tenantId: string, performedBy?: string, remarks?: string) =>
+    axiosInstance.post(`/journals/${journalId}/post`, { tenant_id: tenantId, performed_by: performedBy, remarks }),
+  reverseJournal: (journalId: string, tenantId: string, performedBy?: string, remarks?: string) =>
+    axiosInstance.post(`/journals/${journalId}/reverse`, { tenant_id: tenantId, performed_by: performedBy, remarks }),
+  cancelJournal: (journalId: string, tenantId: string, performedBy?: string, remarks?: string) =>
+    axiosInstance.post(`/journals/${journalId}/cancel`, { tenant_id: tenantId, performed_by: performedBy, remarks }),
+  getJournalHistory: (tenantId: string, journalId?: string) =>
+    axiosInstance.get(`/journals/history`, { params: { tenant_id: tenantId, journal_id: journalId } }),
+  getJournalBatches: (tenantId: string, status?: string) =>
+    axiosInstance.get(`/journal-batches`, { params: { tenant_id: tenantId, status } }),
+  createJournalBatch: (data: { tenant_id: string; posting_date?: string; financial_year?: string; created_by?: string }) =>
+    axiosInstance.post(`/journal-batches`, data),
+  getJournalTemplates: (tenantId: string) =>
+    axiosInstance.get(`/journal-templates`, { params: { tenant_id: tenantId } }),
+  createJournalTemplate: (data: JournalTemplatePayload) =>
+    axiosInstance.post(`/journal-templates`, data),
   validateAccountingPosting: (
     tenantId: string,
     lines: AccountingPostingLine[],

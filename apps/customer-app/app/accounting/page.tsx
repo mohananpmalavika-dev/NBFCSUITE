@@ -8,6 +8,7 @@ import {
   type PostingRulePayload,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type ActionType = 'loan_disbursed' | 'customer_paid_emi' | 'deposit_received' | 'expense_paid' | 'salary_paid' | 'interest_accrued';
@@ -504,6 +505,7 @@ export default function AccountingPage() {
                     Trial Balance {dashboard?.trial_balance.is_balanced ? 'Balanced' : 'Variance'}
                   </span>
                   <span className="rounded bg-slate-100 px-2 py-1">Automation {dashboard?.posting_health.automation_rate || 0}%</span>
+                  <Link href="/accounting/journals" className="rounded bg-slate-950 px-2 py-1 text-white hover:bg-slate-800">Journal Engine</Link>
                 </div>
               </div>
 

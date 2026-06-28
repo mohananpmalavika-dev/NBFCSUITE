@@ -994,3 +994,268 @@ async def _run_accounting_test():
 
 def test_posting_rule_auto_posting_subledger_and_audit():
     asyncio.run(_run_accounting_test())
+
+
+async def _run_journal_engine_test():
+    async with AsyncClient(
+        transport=ASGITransport(app=accounting_main.app),
+        base_url="http://testserver",
+    ) as client:
+        tenant_id = f"tenant-journal-{uuid4().hex[:8]}"
+
+        expense_response = await client.post(
+            "/gl-accounts",
+            json={
+                "tenant_id": tenant_id,
+                "account_code": "5100_SALARY_EXPENSE",
+                "account_name": "Salary Expense",
+                "account_type": "expense",
+                "category": "Expenses",
+            },
+        )
+        bank_response = await client.post(
+            "/gl-accounts",
+            json={
+                "tenant_id": tenant_id,
+                "account_code": "1120_BANK",
+                "account_name": "Operating Bank",
+                "account_type": "asset",
+                "category": "Assets",
+            },
+        )
+        assert expense_response.status_code == 200
+        assert bank_response.status_code == 200
+        expense_account = expense_response.json()
+        bank_account = bank_response.json()
+
+        for dimension_type, code, name in [
+            ("branch", "BR-001", "Main Branch"),
+            ("cost_center", "CC-HR", "Human Resources"),
+        ]:
+            dimension_response = await client.post(
+                "/accounting-dimensions",
+                json={
+                    "tenant_id": tenant_id,
+                    "dimension_type": dimension_type,
+                    "code": code,
+                    "name": name,
+                },
+            )
+            assert dimension_response.status_code == 200
+
+        batch_response = await client.post(
+            "/journal-batches",
+            json={
+                "tenant_id": tenant_id,
+                "posting_date": "2026-06-28T00:00:00",
+                "financial_year": "2026-27",
+                "created_by": "journal-maker",
+            },
+        )
+        assert batch_response.status_code == 200
+        batch = batch_response.json()
+        assert batch["batch_no"] == "JBT-2026-000001"
+
+        template_response = await client.post(
+            "/journal-templates",
+            json={
+                "tenant_id": tenant_id,
+                "template_name": "Monthly Salary",
+                "description": "Salary expense paid from bank",
+                "created_by": "journal-maker",
+                "lines": [
+                    {"account_code": "5100_SALARY_EXPENSE", "direction": "debit", "description": "Salary expense"},
+                    {"account_code": "1120_BANK", "direction": "credit", "description": "Bank payment"},
+                ],
+            },
+        )
+        assert template_response.status_code == 200
+        template = template_response.json()
+
+        simulation_response = await client.post(
+            "/journals/simulate",
+            json={
+                "tenant_id": tenant_id,
+                "template_id": template["id"],
+                "amount": 125000,
+                "posting_date": "2026-06-28T00:00:00",
+                "branch_id": "BR-001",
+            },
+        )
+        assert simulation_response.status_code == 200
+        simulation = simulation_response.json()
+        assert simulation["valid"] is True
+        assert simulation["total_debit"] == 125000
+        assert simulation["impact"]["trial_balance"]["remains_balanced"] is True
+
+        invalid_validation_response = await client.post(
+            "/journals/validate",
+            json={
+                "tenant_id": tenant_id,
+                "posting_date": "2026-06-28T00:00:00",
+                "lines": [
+                    {"gl_account_id": expense_account["id"], "debit": 100, "credit": 0},
+                    {"gl_account_id": bank_account["id"], "debit": 0, "credit": 90},
+                ],
+            },
+        )
+        assert invalid_validation_response.status_code == 200
+        assert invalid_validation_response.json()["valid"] is False
+
+        journal_response = await client.post(
+            "/journals",
+            json={
+                "tenant_id": tenant_id,
+                "batch_id": batch["id"],
+                "posting_date": "2026-06-28T00:00:00",
+                "financial_year": "2026-27",
+                "description": "June salary posting",
+                "reference": "PAYROLL-2026-06",
+                "branch_id": "BR-001",
+                "created_by": "journal-maker",
+                "template_id": template["id"],
+                "attachments": [
+                    {"document_id": "doc-payroll-001", "file_name": "payroll-june.pdf", "uploaded_by": "journal-maker"}
+                ],
+                "lines": [
+                    {
+                        "gl_account_id": expense_account["id"],
+                        "debit": 125000,
+                        "credit": 0,
+                        "branch_id": "BR-001",
+                        "cost_center": "CC-HR",
+                        "description": "Salary expense",
+                    },
+                    {
+                        "gl_account_id": bank_account["id"],
+                        "debit": 0,
+                        "credit": 125000,
+                        "branch_id": "BR-001",
+                        "cost_center": "CC-HR",
+                        "description": "Bank payment",
+                    },
+                ],
+            },
+        )
+        assert journal_response.status_code == 200
+        journal = journal_response.json()
+        assert journal["journal_no"] == "JRN-2026-00000001"
+        assert journal["status"] == "draft"
+        assert journal["validation_result"]["valid"] is True
+        assert journal["attachments"][0]["file_name"] == "payroll-june.pdf"
+
+        submit_response = await client.post(
+            f"/journals/{journal['id']}/submit",
+            json={"tenant_id": tenant_id, "performed_by": "journal-maker", "remarks": "Ready for review"},
+        )
+        assert submit_response.status_code == 200
+        assert submit_response.json()["status"] == "pending"
+
+        self_approval_response = await client.post(
+            f"/journals/{journal['id']}/approve",
+            json={"tenant_id": tenant_id, "performed_by": "journal-maker", "decision": "approved"},
+        )
+        assert self_approval_response.status_code == 400
+
+        approval_response = await client.post(
+            f"/journals/{journal['id']}/approve",
+            json={
+                "tenant_id": tenant_id,
+                "performed_by": "journal-checker",
+                "decision": "approved",
+                "remarks": "Payroll control totals checked",
+            },
+        )
+        assert approval_response.status_code == 200
+        assert approval_response.json()["status"] == "approved"
+        assert approval_response.json()["approved_by"] == "journal-checker"
+
+        post_response = await client.post(
+            f"/journals/{journal['id']}/post",
+            json={"tenant_id": tenant_id, "performed_by": "finance-head"},
+        )
+        assert post_response.status_code == 200
+        posted = post_response.json()
+        assert posted["status"] == "posted"
+        assert posted["voucher_id"]
+
+        db = accounting_main.SessionLocal()
+        try:
+            voucher = db.query(accounting_main.Voucher).filter(
+                accounting_main.Voucher.id == posted["voucher_id"]
+            ).first()
+            assert voucher is not None
+            assert voucher.posted_journal_entry_id == journal["id"]
+            assert voucher.status == "posted"
+        finally:
+            db.close()
+
+        history_response = await client.get(
+            "/journals/history",
+            params={"tenant_id": tenant_id, "journal_id": journal["id"]},
+        )
+        assert history_response.status_code == 200
+        history_actions = {item["action"] for item in history_response.json()["items"]}
+        assert {"create", "submit", "approved", "post"}.issubset(history_actions)
+
+        reverse_response = await client.post(
+            f"/journals/{journal['id']}/reverse",
+            json={"tenant_id": tenant_id, "performed_by": "finance-head", "remarks": "Controlled reversal test"},
+        )
+        assert reverse_response.status_code == 200
+        reversal_result = reverse_response.json()
+        assert reversal_result["journal"]["status"] == "reversed"
+        assert reversal_result["reversal"]["status"] == "posted"
+        assert reversal_result["reversal"]["reversal_of"] == journal["id"]
+        assert reversal_result["reversal"]["journal_no"] == "JRN-2026-00000002"
+
+        db = accounting_main.SessionLocal()
+        try:
+            refreshed_expense = db.query(accounting_main.GLAccount).filter(
+                accounting_main.GLAccount.id == expense_account["id"]
+            ).first()
+            refreshed_bank = db.query(accounting_main.GLAccount).filter(
+                accounting_main.GLAccount.id == bank_account["id"]
+            ).first()
+            assert refreshed_expense.balance == 0
+            assert refreshed_bank.balance == 0
+        finally:
+            db.close()
+
+        cancellable_response = await client.post(
+            "/journals",
+            json={
+                "tenant_id": tenant_id,
+                "posting_date": "2026-06-28T00:00:00",
+                "description": "Journal to cancel",
+                "created_by": "journal-maker",
+                "lines": [
+                    {"gl_account_id": expense_account["id"], "debit": 1, "credit": 0},
+                    {"gl_account_id": bank_account["id"], "debit": 0, "credit": 1},
+                ],
+            },
+        )
+        assert cancellable_response.status_code == 200
+        cancellable = cancellable_response.json()
+        cancel_response = await client.post(
+            f"/journals/{cancellable['id']}/cancel",
+            json={"tenant_id": tenant_id, "performed_by": "journal-maker", "remarks": "Duplicate draft"},
+        )
+        assert cancel_response.status_code == 200
+        assert cancel_response.json()["status"] == "cancelled"
+
+        journal_list_response = await client.get("/journals", params={"tenant_id": tenant_id})
+        assert journal_list_response.status_code == 200
+        journal_list = journal_list_response.json()
+        assert journal_list["total"] == 3
+        assert journal_list["status_counts"]["reversed"] == 1
+        assert journal_list["status_counts"]["posted"] == 1
+        assert journal_list["status_counts"]["cancelled"] == 1
+
+        batches_response = await client.get("/journal-batches", params={"tenant_id": tenant_id})
+        assert batches_response.status_code == 200
+        assert batches_response.json()["items"][0]["total_amount"] == 125000
+
+
+def test_enterprise_journal_engine_lifecycle():
+    asyncio.run(_run_journal_engine_test())
