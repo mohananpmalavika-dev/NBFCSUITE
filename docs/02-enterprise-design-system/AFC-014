@@ -1,0 +1,883 @@
+Excellent.
+
+Now we build one of the biggest differentiators of an enterprise ERP.
+
+Most ERPs stop at "Expense Tracking."
+
+Enterprise ERPs answer:
+
+Which branch is profitable?
+Which loan product earns the highest margin?
+Which collection team costs the most?
+Which customer segment destroys profitability?
+Which employee groups generate the best ROI?
+
+This is the Enterprise Cost & Profitability Engine.
+
+ARTH.OS Enterprise Financial Core
+AFC-014 — Enterprise Cost Accounting & Allocation Engine (CAE)
+
+Priority: ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐ (21/10)
+
+Estimated Development: 18–24 Weeks
+
+Estimated UI Screens: 360+
+
+Estimated APIs: 1,500+
+
+Estimated Database Tables: 420+
+
+Vision
+
+The Cost Accounting Engine transforms accounting data into management intelligence.
+
+Instead of simply recording expenses, it determines:
+
+Who incurred the cost?
+Why was it incurred?
+Who should absorb it?
+What profit did it generate?
+Enterprise Architecture
+General Ledger
+        │
+Accounts Payable
+        │
+Payroll
+        │
+Assets
+        │
+Treasury
+        │
+═══════════════════════
+Cost Accounting Engine
+═══════════════════════
+        │
+Cost Centers
+Profit Centers
+Projects
+Activities
+Products
+Customers
+Branches
+        │
+Profitability Engine
+Major Modules
+Cost Centers
+
+Profit Centers
+
+Activity Based Costing
+
+Internal Orders
+
+Cost Pools
+
+Allocation Rules
+
+Allocation Cycles
+
+Shared Services
+
+Product Costing
+
+Branch Costing
+
+Department Costing
+
+Employee Costing
+
+Customer Profitability
+
+Product Profitability
+
+Branch Profitability
+
+Region Profitability
+
+Transfer Pricing
+
+Cost Analytics
+
+Profitability Analytics
+
+AI
+Cost Hierarchy
+Enterprise
+
+↓
+
+Legal Entity
+
+↓
+
+Business Unit
+
+↓
+
+Region
+
+↓
+
+Branch
+
+↓
+
+Department
+
+↓
+
+Team
+
+↓
+
+Activity
+
+↓
+
+Cost Center
+Profit Hierarchy
+Enterprise
+
+↓
+
+Business Unit
+
+↓
+
+Product
+
+↓
+
+Branch
+
+↓
+
+Customer
+
+↓
+
+Relationship Manager
+Dashboard
+
+KPIs
+
+Operating Cost
+
+Direct Cost
+
+Indirect Cost
+
+Allocated Cost
+
+Cost Recovery
+
+Contribution Margin
+
+Gross Profit
+
+Net Profit
+
+Branch Profitability
+
+Product Profitability
+
+Customer Profitability
+
+Cost Health
+
+Charts
+
+Cost by Department
+Branch Profitability
+Product Margin
+Customer Margin
+Cost Allocation
+Cost Trend
+Shared Service Cost
+Workspace
+Dashboard
+
+↓
+
+Cost Centers
+
+↓
+
+Profit Centers
+
+↓
+
+Allocations
+
+↓
+
+Cost Pools
+
+↓
+
+ABC Costing
+
+↓
+
+Profitability
+
+↓
+
+Analytics
+
+↓
+
+Reports
+Cost Center Master
+
+Each Cost Center contains
+
+General
+
+Organization
+
+Manager
+
+Budget
+
+Actual
+
+Allocation Rules
+
+KPIs
+
+Documents
+
+Audit
+
+AI
+Cost Center Types
+
+Supports
+
+Operations
+
+Branch
+
+IT
+
+HR
+
+Finance
+
+Marketing
+
+Collections
+
+Legal
+
+Audit
+
+Risk
+
+Treasury
+
+Administration
+Profit Center Types
+
+Supports
+
+Gold Loan
+
+Personal Loan
+
+Vehicle Loan
+
+MSME Loan
+
+Mortgage
+
+Deposits
+
+Forex
+
+Insurance
+
+Investment
+
+Collections
+Activity-Based Costing (ABC)
+
+Activities
+
+Loan Processing
+
+Customer Verification
+
+Gold Valuation
+
+Field Collection
+
+Call Center
+
+Document Verification
+
+Risk Assessment
+
+Compliance Review
+
+Legal Recovery
+
+Costs are assigned based on activity drivers.
+
+Cost Pools
+
+Examples
+
+Corporate IT
+
+Corporate HR
+
+Corporate Finance
+
+Corporate Marketing
+
+Corporate Legal
+
+Shared across business units.
+
+Allocation Rules
+
+Supports
+
+Percentage
+
+Headcount
+
+Revenue
+
+Transactions
+
+Loan Accounts
+
+Square Feet
+
+Employees
+
+Manual
+
+Custom Formula
+Allocation Cycle
+Corporate HR
+
+↓
+
+Branches
+
+↓
+
+Departments
+
+↓
+
+Products
+
+↓
+
+Customers
+Shared Service Allocation
+
+Example
+
+Corporate IT Cost
+
+₹2 Crores
+
+Allocated by
+
+Active Users
+
+or
+
+Branches
+
+or
+
+Transactions
+Internal Orders
+
+Supports
+
+Branch Renovation
+
+Marketing Campaign
+
+Software Project
+
+Audit Assignment
+
+Legal Case
+
+Training Program
+
+Temporary cost collectors.
+
+Product Costing
+
+Calculates
+
+Loan Processing Cost
+
+Collection Cost
+
+Interest Cost
+
+Branch Cost
+
+Risk Cost
+
+Technology Cost
+
+Support Cost
+
+Total Product Cost
+Branch Profitability
+
+Revenue
+
+↓
+
+Operating Cost
+
+↓
+
+Allocated Cost
+
+↓
+
+Depreciation
+
+↓
+
+Funding Cost
+
+↓
+
+Net Profit
+
+Customer Profitability
+
+Calculates
+
+Interest Income
+
++
+
+Fees
+
++
+
+Cross Sell
+
+-
+
+Collection Cost
+
+-
+
+Risk Cost
+
+-
+
+Support Cost
+
+-
+
+Funding Cost
+
+=
+
+Customer Profit
+Relationship Manager Profitability
+
+Measures
+
+Revenue
+
+↓
+
+Portfolio Quality
+
+↓
+
+Recovery
+
+↓
+
+Operating Cost
+
+↓
+
+Profit Contribution
+Transfer Pricing
+
+Supports
+
+Treasury Funding
+
+↓
+
+Branch Lending
+
+↓
+
+Interest Allocation
+
+↓
+
+Profit Attribution
+
+Critical for banking/NBFC.
+
+Allocation Engine
+Source Cost
+
+↓
+
+Cost Pool
+
+↓
+
+Rule Engine
+
+↓
+
+Receiver
+
+↓
+
+Validation
+
+↓
+
+Posting
+
+↓
+
+Profitability Cube
+Profitability Cube
+
+Dimensions
+
+Branch
+
+Product
+
+Customer
+
+Region
+
+Department
+
+Employee
+
+Channel
+
+Time
+
+Currency
+
+OLAP-ready.
+
+Scenario Simulation
+
+Supports
+
+Increase Salary 10%
+
+↓
+
+Branch Profit
+
+↓
+
+Product Profit
+
+↓
+
+Customer Profit
+
+↓
+
+Enterprise Profit
+
+"What-if" analysis.
+
+AI Features
+
+Examples
+
+Detect expensive branches.
+
+↓
+
+Recommend cost reductions.
+
+↓
+
+Optimize allocations.
+
+↓
+
+Predict profitability.
+
+↓
+
+Identify loss-making products.
+
+↓
+
+Suggest branch consolidation.
+
+↓
+
+Recommend pricing changes.
+
+↓
+
+Find hidden costs.
+Reports
+
+Standard
+
+Cost Center Report
+Profit Center Report
+Activity Cost Report
+Allocation Report
+Product Profitability
+Customer Profitability
+Branch Profitability
+Shared Service Allocation
+Transfer Pricing
+Cost Variance
+Cost Trend
+Profitability Dashboard
+Cost Health Score
+
+Calculated using
+
+Allocation accuracy
+Unallocated costs
+Cost variance
+Shared service efficiency
+Budget adherence
+Profitability consistency
+
+Example
+
+Cost Health
+
+97%
+
+★★★★★
+Database Tables
+cost_center
+
+profit_center
+
+cost_pool
+
+activity
+
+activity_driver
+
+allocation_rule
+
+allocation_cycle
+
+allocation_result
+
+internal_order
+
+product_cost
+
+customer_profitability
+
+branch_profitability
+
+transfer_pricing
+
+profitability_cube
+
+cost_variance
+
+cost_snapshot
+
+cost_ai
+
+cost_audit
+APIs
+GET    /api/v1/cost-centers
+
+POST   /api/v1/cost-centers
+
+GET    /api/v1/profit-centers
+
+POST   /api/v1/allocations/run
+
+GET    /api/v1/profitability/products
+
+GET    /api/v1/profitability/customers
+
+GET    /api/v1/profitability/branches
+
+GET    /api/v1/cost/dashboard
+
+POST   /api/v1/cost/simulate
+
+GET    /api/v1/cost/reports
+Events
+COST_CENTER_CREATED
+
+ALLOCATION_RUN_STARTED
+
+ALLOCATION_COMPLETED
+
+PROFITABILITY_UPDATED
+
+TRANSFER_PRICING_COMPLETED
+
+COST_VARIANCE_DETECTED
+
+SCENARIO_SIMULATED
+
+COST_MODEL_PUBLISHED
+Backend Structure
+services/accounting/
+
+cost-accounting/
+├── cost-center/
+├── profit-center/
+├── allocation-engine/
+├── activity-costing/
+├── transfer-pricing/
+├── profitability/
+├── simulation/
+├── analytics/
+├── ai/
+└── tests/
+Frontend Structure
+modules/accounting/
+
+cost-accounting/
+├── dashboard/
+├── cost-centers/
+├── profit-centers/
+├── allocations/
+├── abc/
+├── profitability/
+├── simulations/
+├── reports/
+├── settings/
+└── components/
+Integration Matrix
+Module	Integration
+General Ledger	Expense & revenue postings
+Accounts Payable	Vendor expenses
+Accounts Receivable	Revenue streams
+HRMS	Payroll cost allocation
+Fixed Assets	Depreciation allocation
+Budgeting	Budget vs actual cost
+Treasury	Funding cost allocation
+Lending	Product profitability
+CRM	Customer profitability
+Cost & Profitability 360
+
+Every cost center, profit center, product, branch, and customer should provide:
+
+Financial View
+Direct cost
+Indirect cost
+Allocated cost
+Revenue
+Net contribution
+Operational View
+Activities performed
+Resource utilization
+Transaction volume
+Capacity usage
+Strategic View
+Profitability trends
+Benchmark comparisons
+Growth contribution
+ROI
+Compliance View
+Allocation methods
+Approval history
+Audit trail
+Policy compliance
+AI View
+Cost optimization opportunities
+Profitability forecast
+Driver analysis
+Recommendations for restructuring
+Definition of Done
+
+The Enterprise Cost Accounting & Allocation Engine is complete when it supports:
+
+Cost center accounting
+Profit center accounting
+Activity-Based Costing
+Shared service allocations
+Internal orders
+Product, customer, and branch profitability
+Transfer pricing
+Scenario simulation
+Multi-dimensional profitability analytics
+AI-powered optimization
+Complete audit trail
+⭐ Strategic Recommendation (Unique Differentiator)
+
+Go beyond traditional cost accounting by creating an Enterprise Value Analytics Engine.
+
+Transactions
+      │
+Cost Engine
+      │
+Profitability Engine
+      │
+Value Analytics Engine
+      │
+──────────────────────────────
+│        │        │        │
+Branch  Product Customer Employee
+Value    Value    Value    Value
+      │
+Executive AI Decision Engine
+
+Instead of only showing cost, ARTH.OS should calculate value creation across every dimension:
+
+Which branch creates the highest shareholder value?
+Which loan products deliver the best risk-adjusted returns?
+Which customer segments are profitable after servicing costs?
+Which marketing campaigns produce the highest lifetime value?
+Which operational activities consume resources without creating value?
+
+This transforms ARTH.OS from an ERP into an Enterprise Performance & Value Management Platform, giving executives actionable insights rather than just financial reports.
+
+🚀 Next Module
+
+The next module should be AFC-015 — Enterprise Tax Engine.
+
+This will become one of the most sophisticated components of ARTH.OS, covering:
+
+GST (CGST, SGST, IGST, CESS)
+TDS/TCS
+Income Tax
+Reverse Charge Mechanism (RCM)
+Tax deduction certificates
+Input Tax Credit (ITC)
+Tax settlements
+E-invoicing
+E-way bills
+Tax reconciliations
+Regulatory return generation
+Multi-country tax configuration (for future expansion)
+AI-assisted tax compliance and anomaly detection
+
+This module is essential for ensuring statutory compliance while integrating seamlessly with AP, AR, GL, Procurement, HRMS, and Treasury.

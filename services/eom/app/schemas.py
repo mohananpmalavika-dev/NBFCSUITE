@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+from datetime import datetime
 
 class EnterpriseCreate(BaseModel):
     code: str = Field(..., min_length=2)
@@ -72,3 +73,17 @@ class BrandUpdate(BaseModel):
 class BrandListResponse(BaseModel):
     total: int
     items: list[BrandResponse]
+
+
+class AuditEntryResponse(BaseModel):
+    id: str
+    entity_type: str
+    entity_id: Optional[str]
+    action: str
+    payload: Optional[str]
+    created_at: Optional[datetime]
+
+
+class AuditListResponse(BaseModel):
+    total: int
+    items: list[AuditEntryResponse]

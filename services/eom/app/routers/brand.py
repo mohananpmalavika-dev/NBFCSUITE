@@ -85,3 +85,12 @@ def delete_brand(id: str, db: Session = Depends(get_db), _=Depends(require_role(
         pass
     publish_event('BRAND_DELETED', {'id': id})
     return None
+
+
+@router.get('/brands/{id}/audit', response_model=schemas.AuditListResponse)
+def brand_audit(id: str, limit: int = 50, offset: int = 0, db: Session = Depends(get_db)):
+    query = db.query(models.AuditEntry).filter(models.AuditEntry.entity_type == 'brand', models.AuditEntry.entity_id == id)
+    total = query.count()
+    items = query.order_by(models.AuditEntry.created_at.desc()).limit(limit).offset(offset).all()
+    # Convert payloads to strings (they are stored as JSON strings)
+    return {'total': total, 'items': items}

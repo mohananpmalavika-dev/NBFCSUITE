@@ -30,3 +30,31 @@
 {"ts": "2026-06-28T20:13:03.839933+00:00", "type": "BRAND_CREATED", "payload": {"id": "55937170-4c6f-443e-ac3f-4a6a5486f6b7", "code": "BR-001", "name": "Brand One"}}
 {"ts": "2026-06-28T20:13:03.914663+00:00", "type": "BRAND_UPDATED", "payload": {"id": "55937170-4c6f-443e-ac3f-4a6a5486f6b7"}}
 {"ts": "2026-06-28T20:13:03.973330+00:00", "type": "BRAND_DELETED", "payload": {"id": "55937170-4c6f-443e-ac3f-4a6a5486f6b7"}}
+{"ts": "2026-06-28T20:17:30.668943+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "9d770a21-0772-47fa-8e28-61298afdee17", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T20:17:30.767697+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "df161bdf-a7dd-4fe2-8da3-f441f1aec90d", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T20:17:30.827239+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "df161bdf-a7dd-4fe2-8da3-f441f1aec90d"}}
+{"ts": "2026-06-28T20:17:30.869603+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "df161bdf-a7dd-4fe2-8da3-f441f1aec90d", "status": "suspended"}}
+{"ts": "2026-06-28T20:17:30.925297+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "df161bdf-a7dd-4fe2-8da3-f441f1aec90d"}}
+{"ts": "2026-06-28T20:17:31.012350+00:00", "type": "BRAND_CREATED", "payload": {"id": "e009d4a5-d9bf-4c9c-90b6-7b02dc5a538d", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-28T20:17:31.088373+00:00", "type": "BRAND_UPDATED", "payload": {"id": "e009d4a5-d9bf-4c9c-90b6-7b02dc5a538d"}}
+{"ts": "2026-06-28T20:17:31.132668+00:00", "type": "BRAND_DELETED", "payload": {"id": "e009d4a5-d9bf-4c9c-90b6-7b02dc5a538d"}}
+{"ts": "2026-06-28T20:19:19.063838+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "454df452-520f-446a-a5cc-7f85354bd951", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T20:19:19.144231+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "31b585b8-f841-4c3b-886a-fcdddc6d81b7", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T20:19:19.200258+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "31b585b8-f841-4c3b-886a-fcdddc6d81b7"}}
+{"ts": "2026-06-28T20:19:19.257337+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "31b585b8-f841-4c3b-886a-fcdddc6d81b7", "status": "suspended"}}
+{"ts": "2026-06-28T20:19:19.317603+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "31b585b8-f841-4c3b-886a-fcdddc6d81b7"}}
+{"ts": "2026-06-28T20:19:19.396991+00:00", "type": "BRAND_CREATED", "payload": {"id": "e92f9cba-be3d-40b8-90e1-9d1a91d907bb", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-28T20:19:19.476825+00:00", "type": "BRAND_UPDATED", "payload": {"id": "e92f9cba-be3d-40b8-90e1-9d1a91d907bb"}}
+{"ts": "2026-06-28T20:19:19.529706+00:00", "type": "BRAND_DELETED", "payload": {"id": "e92f9cba-be3d-40b8-90e1-9d1a91d907bb"}}
+{"ts": "2026-06-28T20:19:19.589112+00:00", "type": "BRAND_CREATED", "payload": {"id": "dab681a7-dec3-4ac8-93ff-31cf791236b3", "code": "B-AUD", "name": "Audit Brand"}}
+{"ts": "2026-06-28T20:19:19.631022+00:00", "type": "BRAND_UPDATED", "payload": {"id": "dab681a7-dec3-4ac8-93ff-31cf791236b3"}}
+{"ts": "2026-06-28T20:20:03.259655+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "b8a23060-5262-4b67-92f1-59c163815ff3", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T20:20:03.330936+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "cce81387-ba4b-4f38-a8ea-5f05064716b6", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T20:20:03.384637+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "cce81387-ba4b-4f38-a8ea-5f05064716b6"}}
+{"ts": "2026-06-28T20:20:03.436515+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "cce81387-ba4b-4f38-a8ea-5f05064716b6", "status": "suspended"}}
+{"ts": "2026-06-28T20:20:03.492526+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "cce81387-ba4b-4f38-a8ea-5f05064716b6"}}
+{"ts": "2026-06-28T20:20:03.577038+00:00", "type": "BRAND_CREATED", "payload": {"id": "fc9a5a62-0546-414f-953c-f64c6505dd0d", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-28T20:20:03.658363+00:00", "type": "BRAND_UPDATED", "payload": {"id": "fc9a5a62-0546-414f-953c-f64c6505dd0d"}}
+{"ts": "2026-06-28T20:20:03.701119+00:00", "type": "BRAND_DELETED", "payload": {"id": "fc9a5a62-0546-414f-953c-f64c6505dd0d"}}
+{"ts": "2026-06-28T20:20:03.759989+00:00", "type": "BRAND_CREATED", "payload": {"id": "9df8a2cb-9b19-40d8-a8dd-a9dd278aae35", "code": "B-AUD", "name": "Audit Brand"}}
+{"ts": "2026-06-28T20:20:03.809603+00:00", "type": "BRAND_UPDATED", "payload": {"id": "9df8a2cb-9b19-40d8-a8dd-a9dd278aae35"}}
