@@ -48,6 +48,7 @@ import {
   DashboardGrid,
   DashboardLayout,
   EnterpriseTable,
+  EnterpriseGrid,
   KPIWidget,
   LoanSummaryCard,
   MetricCard,
@@ -57,6 +58,7 @@ import {
   TextInput,
   Toggle,
   componentRegistry,
+  dataGridRegistry,
   dashboardWidgetRegistry,
 } from './eds';
 
@@ -165,6 +167,60 @@ const dashboardActivities = [
   { title: 'Alert acknowledged', description: 'Cash threshold alert assigned to Treasury.', time: '31 min ago' },
 ];
 
+interface EmployeeGridRow {
+  id: string;
+  employee: string;
+  branch: string;
+  department: string;
+  grade: string;
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'closed';
+  manager: string;
+  modifiedOn: string;
+  version: string;
+}
+
+const employeeGridRows: EmployeeGridRow[] = [
+  { id: 'EMP-1001', employee: 'Asha Menon', branch: 'Kollam', department: 'HR', grade: 'M2', status: 'approved', manager: 'Nisha Rao', modifiedOn: '28-Jun-2026', version: 'v4' },
+  { id: 'EMP-1002', employee: 'Rohan Iyer', branch: 'Kochi', department: 'Finance', grade: 'M1', status: 'pending', manager: 'Arun Nair', modifiedOn: '28-Jun-2026', version: 'v2' },
+  { id: 'EMP-1003', employee: 'Neha Shah', branch: 'Trivandrum', department: 'Operations', grade: 'S3', status: 'draft', manager: 'Meera Das', modifiedOn: '27-Jun-2026', version: 'v1' },
+  { id: 'EMP-1004', employee: 'Vikram Rao', branch: 'Kollam', department: 'Collections', grade: 'S2', status: 'approved', manager: 'Nisha Rao', modifiedOn: '27-Jun-2026', version: 'v7' },
+  { id: 'EMP-1005', employee: 'Farah Khan', branch: 'Kozhikode', department: 'Risk', grade: 'M3', status: 'rejected', manager: 'Deepak Varma', modifiedOn: '26-Jun-2026', version: 'v3' },
+  { id: 'EMP-1006', employee: 'Joel Mathew', branch: 'Kochi', department: 'Audit', grade: 'M2', status: 'closed', manager: 'Anita Joseph', modifiedOn: '26-Jun-2026', version: 'v5' },
+  { id: 'EMP-1007', employee: 'Priya Nambiar', branch: 'Trivandrum', department: 'Payroll', grade: 'S4', status: 'pending', manager: 'Meera Das', modifiedOn: '25-Jun-2026', version: 'v2' },
+];
+
+const employeeGridColumns = [
+  { key: 'employee' as const, label: 'Employee', sortable: true, filterable: true },
+  { key: 'branch' as const, label: 'Branch', sortable: true, filterable: true },
+  { key: 'department' as const, label: 'Department', sortable: true, filterable: true },
+  { key: 'grade' as const, label: 'Grade', sortable: true },
+  { key: 'status' as const, label: 'Status', sortable: true, filterable: true },
+  { key: 'manager' as const, label: 'Manager', sortable: true },
+  { key: 'modifiedOn' as const, label: 'Modified On', sortable: true },
+  { key: 'version' as const, label: 'Version', sortable: true },
+];
+
+const employeeSavedViews = [
+  {
+    id: 'default-hr',
+    label: 'Default HR View',
+    shared: true,
+    visibleColumns: ['employee', 'branch', 'department', 'grade', 'status', 'manager', 'modifiedOn'],
+  },
+  {
+    id: 'pending-payroll',
+    label: 'Pending Payroll',
+    search: 'pending',
+    visibleColumns: ['employee', 'branch', 'department', 'status', 'manager'],
+  },
+  {
+    id: 'audit-view',
+    label: 'Audit View',
+    shared: true,
+    visibleColumns: ['employee', 'status', 'manager', 'modifiedOn', 'version'],
+  },
+];
+
 export function AppShell() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [themeName, setThemeName] = useState<ThemeName>('default');
@@ -173,6 +229,7 @@ export function AppShell() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [autosaveEnabled, setAutosaveEnabled] = useState(true);
   const [dashboardPersona, setDashboardPersona] = useState<'executive' | 'branch'>('executive');
+  const [lastGridEvent, setLastGridEvent] = useState('GRID_OPENED');
   const [searchQuery, setSearchQuery] = useState('');
 
   const activeTheme = useMemo(() => themes[themeName], [themeName]);
@@ -729,6 +786,51 @@ export function AppShell() {
                 />
               </DashboardGrid>
             </DashboardLayout>
+
+            <section className="mt-8 space-y-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-border-default bg-background-surface p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-primary">
+                    EDS-008
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold text-text-primary">
+                    Enterprise Data Grid Framework
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">
+                    Search, filter, review, bulk update, export, approve, audit, and analyze from one reusable grid contract.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-sm text-text-secondary">
+                  <span className="rounded-full bg-background-elevated px-3 py-2">
+                    Contracts: {dataGridRegistry.length}
+                  </span>
+                  <span className="rounded-full bg-background-elevated px-3 py-2">
+                    Last event: {lastGridEvent}
+                  </span>
+                </div>
+              </div>
+
+              <EnterpriseGrid
+                title="Employee Operations Grid"
+                description="Reference implementation for saved views, column personalization, row selection, bulk actions, audit context, AI prompts, and responsive table/card modes."
+                columns={employeeGridColumns}
+                rows={employeeGridRows}
+                savedViews={employeeSavedViews}
+                pageSize={4}
+                auditMode
+                bulkActions={[
+                  { label: 'Approve', permission: 'employees.approve' },
+                  { label: 'Assign', permission: 'employees.assign' },
+                  { label: 'Export', permission: 'employees.export' },
+                ]}
+                rowActions={[
+                  { label: 'View' },
+                  { label: 'Audit' },
+                  { label: 'Documents' },
+                ]}
+                onEvent={(event) => setLastGridEvent(event.name)}
+              />
+            </section>
           </section>
         </main>
       </div>

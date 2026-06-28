@@ -37,6 +37,13 @@ export const componentRegistry = [
   { layer: 'dashboard', name: 'ApprovalWidget', contract: 'pending decisions with SLA context' },
   { layer: 'dashboard', name: 'ActivityWidget', contract: 'recent activity and audit event stream' },
   { layer: 'dashboard', name: 'AISummaryWidget', contract: 'explain-why AI insight surface' },
+  { layer: 'data-grid', name: 'EnterpriseGrid', contract: 'search, filter, review, select, export, audit, AI' },
+  { layer: 'data-grid', name: 'GridToolbar', contract: 'search, refresh, import, export, and AI entry point' },
+  { layer: 'data-grid', name: 'SavedViews', contract: 'personal and organization-published grid views' },
+  { layer: 'data-grid', name: 'ColumnManager', contract: 'show, hide, and personalize grid columns' },
+  { layer: 'data-grid', name: 'BulkActions', contract: 'permission-aware action bar for selected rows' },
+  { layer: 'data-grid', name: 'GridPagination', contract: 'server-ready paging controls' },
+  { layer: 'data-grid', name: 'AIGridAssistant', contract: 'selected-record scoped FinDNA prompts' },
 ] as const;
 
 export type ComponentRegistryItem = (typeof componentRegistry)[number];

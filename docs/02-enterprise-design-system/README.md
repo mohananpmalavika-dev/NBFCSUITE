@@ -80,6 +80,8 @@ The current UI should evolve toward a reusable component library in Next.js with
 - EP-001: Enterprise Organization Management (EOM)
 - EOM-001: Enterprise Master
 - EOM-002: Brand Management
+- EOM-003: Legal Entity Management
+- EOM-004: Business Unit Management (BUM)
 - EP-002: Identity & Access Management (IAM)
 - EP-003: Workflow Engine
 - EP-004: Rules Engine
@@ -107,4 +109,6 @@ The current UI should evolve toward a reusable component library in Next.js with
 - ✅ EP-001: Enterprise Organization Management (EOM) — Complete
 - ✅ EOM-001: Enterprise Master — Complete
 - ✅ EOM-002: Brand Management — Complete
+- ✅ EOM-003: Legal Entity Management — Complete
+- ✅ EOM-004: Business Unit Management (BUM) — Complete
 - ⏳ EP-002: Identity & Access Management (IAM) — Next
