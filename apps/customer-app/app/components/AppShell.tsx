@@ -33,6 +33,7 @@ import {
   X,
 } from 'lucide-react';
 import { buildCssVariables, themes, type ThemeName } from '../../lib/design-tokens';
+import type { WizardStep } from './eds';
 import {
   AISummary,
   AISummaryWidget,
@@ -49,17 +50,22 @@ import {
   DashboardLayout,
   EnterpriseTable,
   EnterpriseGrid,
+  EnterpriseWizard,
   KPIWidget,
   LoanSummaryCard,
   MetricCard,
   QuickActionsWidget,
   RoleBadge,
   TaskWidget,
+  Textarea,
   TextInput,
   Toggle,
+  WizardAttachments,
+  WizardValidation,
   componentRegistry,
   dataGridRegistry,
   dashboardWidgetRegistry,
+  wizardRegistry,
 } from './eds';
 
 const topNavItems = [
@@ -221,6 +227,172 @@ const employeeSavedViews = [
   },
 ];
 
+const employeeWizardSteps = [
+  { id: 'personal', label: 'Personal', description: 'Identity, contact, and nationality' },
+  { id: 'employment', label: 'Employment', description: 'Role, joining date, and worker type' },
+  { id: 'organization', label: 'Organization', description: 'Branch, department, manager, and grade' },
+  { id: 'salary', label: 'Salary', description: 'Compensation, payroll, and approvals' },
+  { id: 'documents', label: 'Documents', description: 'Required files and OCR checks' },
+  { id: 'review', label: 'Review', description: 'Validate, approve, and submit' },
+];
+
+const employeeWizardChecklist = [
+  { id: 'personal', label: 'Personal information captured', complete: true, required: true },
+  { id: 'employment', label: 'Employment details confirmed', complete: true, required: true },
+  { id: 'organization', label: 'Reporting manager assigned', complete: true, required: true },
+  { id: 'salary', label: 'Salary reviewed by payroll', complete: false, required: true },
+  { id: 'documents', label: 'Mandatory documents uploaded', complete: false, required: true },
+];
+
+const employeeWizardAttachments = [
+  { id: 'photo', label: 'Photo', status: 'uploaded' as const, required: true, source: 'camera' as const },
+  { id: 'aadhaar', label: 'Aadhaar', status: 'review' as const, required: true, source: 'ocr' as const },
+  { id: 'pan', label: 'PAN', status: 'uploaded' as const, required: true, source: 'upload' as const },
+  { id: 'offer-letter', label: 'Offer Letter', status: 'missing' as const, required: true, source: 'scanner' as const },
+  { id: 'degree', label: 'Degree Certificate', status: 'missing' as const, source: 'upload' as const },
+];
+
+const employeeWizardValidationItems = [
+  { id: 'client-email', level: 'client' as const, status: 'success' as const, message: 'Email, phone, and required fields are formatted correctly.' },
+  { id: 'business-manager', level: 'business' as const, status: 'warning' as const, message: 'Payroll approval is recommended because salary exceeds the branch default.' },
+  { id: 'server-employee-code', level: 'server' as const, status: 'success' as const, message: 'Employee code EMP-2048 is available and unique.' },
+];
+
+const employeeWizardReviewGroups = [
+  {
+    title: 'Personal',
+    items: [
+      { label: 'Employee', value: 'Anika Thomas', status: 'success' as const },
+      { label: 'Nationality', value: 'Indian' },
+      { label: 'Contact', value: '+91 98765 43210' },
+    ],
+  },
+  {
+    title: 'Employment',
+    items: [
+      { label: 'Designation', value: 'Branch Operations Officer' },
+      { label: 'Branch', value: 'Kollam - 1204' },
+      { label: 'Manager', value: 'Nisha Rao' },
+    ],
+  },
+  {
+    title: 'Salary',
+    items: [
+      { label: 'CTC', value: 'INR 8.4L' },
+      { label: 'Payroll status', value: 'Needs payroll approval', status: 'warning' as const },
+      { label: 'Effective date', value: '01-Jul-2026' },
+    ],
+  },
+  {
+    title: 'Documents',
+    items: [
+      { label: 'Uploaded', value: '3 of 5' },
+      { label: 'OCR status', value: 'Aadhaar in review', status: 'warning' as const },
+      { label: 'Missing', value: 'Offer letter' },
+    ],
+  },
+];
+
+function renderEmployeeWizardStep(step: WizardStep) {
+  if (step.id === 'personal') {
+    return (
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-text-primary">Personal Information</h3>
+          <p className="mt-1 text-sm leading-6 text-text-secondary">
+            Concise sections keep creation flows focused while preserving validation and audit context.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextInput label="Employee Code" defaultValue="EMP-2048" required helperText="Server validation confirms uniqueness." />
+          <TextInput label="Full Name" defaultValue="Anika Thomas" required />
+          <TextInput label="Email" defaultValue="anika.thomas@fincorp.example" type="email" required />
+          <TextInput label="Phone" defaultValue="+91 98765 43210" required />
+          <TextInput label="Nationality" defaultValue="Indian" helperText="PAN and Aadhaar fields remain visible for Indian employees." />
+          <TextInput label="Date of Birth" defaultValue="1994-08-14" type="date" />
+        </div>
+      </section>
+    );
+  }
+
+  if (step.id === 'employment') {
+    return (
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-text-primary">Employment Details</h3>
+          <p className="mt-1 text-sm leading-6 text-text-secondary">
+            Smart defaults can prefill worker type, probation policy, and joining branch.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextInput label="Designation" defaultValue="Branch Operations Officer" required />
+          <TextInput label="Worker Type" defaultValue="Full-time" />
+          <TextInput label="Joining Date" defaultValue="2026-07-01" type="date" />
+          <TextInput label="Probation" defaultValue="6 months" />
+        </div>
+        <Textarea label="Role Notes" defaultValue="Primary responsibility includes teller exception handling and daily operations controls." />
+      </section>
+    );
+  }
+
+  if (step.id === 'organization') {
+    return (
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-text-primary">Organization Mapping</h3>
+          <p className="mt-1 text-sm leading-6 text-text-secondary">
+            Branch selection can default department, reporting manager, cost center, and grade rules.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextInput label="Branch" defaultValue="Kollam - 1204" required />
+          <TextInput label="Department" defaultValue="Operations" required />
+          <TextInput label="Reporting Manager" defaultValue="Nisha Rao" required />
+          <TextInput label="Grade" defaultValue="S3" />
+        </div>
+        <WizardValidation items={employeeWizardValidationItems} />
+      </section>
+    );
+  }
+
+  if (step.id === 'salary') {
+    return (
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-text-primary">Salary and Payroll</h3>
+          <p className="mt-1 text-sm leading-6 text-text-secondary">
+            Salary fields support business validation and can branch into payroll approval when required.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <TextInput label="Annual CTC" defaultValue="840000" inputMode="numeric" required />
+          <TextInput label="Payroll Group" defaultValue="Kerala Branch Payroll" />
+          <TextInput label="Effective Date" defaultValue="2026-07-01" type="date" />
+        </div>
+        <div className="rounded-xl border border-border-default bg-background-elevated p-4 text-sm leading-6 text-text-secondary">
+          Business rule: payroll approval is recommended because the salary is above the branch default band.
+        </div>
+      </section>
+    );
+  }
+
+  if (step.id === 'documents') {
+    return <WizardAttachments attachments={employeeWizardAttachments} />;
+  }
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h3 className="text-lg font-semibold text-text-primary">Review and Submit</h3>
+        <p className="mt-1 text-sm leading-6 text-text-secondary">
+          Review groups, validation warnings, document status, and approval handoff are visible before submit.
+        </p>
+      </div>
+      <WizardValidation items={employeeWizardValidationItems} />
+    </section>
+  );
+}
+
 export function AppShell() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [themeName, setThemeName] = useState<ThemeName>('default');
@@ -230,6 +402,7 @@ export function AppShell() {
   const [autosaveEnabled, setAutosaveEnabled] = useState(true);
   const [dashboardPersona, setDashboardPersona] = useState<'executive' | 'branch'>('executive');
   const [lastGridEvent, setLastGridEvent] = useState('GRID_OPENED');
+  const [lastWizardEvent, setLastWizardEvent] = useState('WIZARD_OPENED');
   const [searchQuery, setSearchQuery] = useState('');
 
   const activeTheme = useMemo(() => themes[themeName], [themeName]);
@@ -829,6 +1002,49 @@ export function AppShell() {
                   { label: 'Documents' },
                 ]}
                 onEvent={(event) => setLastGridEvent(event.name)}
+              />
+            </section>
+
+            <section className="mt-8 space-y-4">
+              <div className="flex flex-col gap-3 rounded-xl border border-border-default bg-background-surface p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent-primary">
+                    EDS-009
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold text-text-primary">
+                    Enterprise Form & Wizard Framework
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">
+                    Create, edit, validate, autosave, attach, review, approve, and submit through one reusable guided process contract.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 text-sm text-text-secondary">
+                  <span className="rounded-full bg-background-elevated px-3 py-2">
+                    Contracts: {wizardRegistry.length}
+                  </span>
+                  <span className="rounded-full bg-background-elevated px-3 py-2">
+                    Last event: {lastWizardEvent}
+                  </span>
+                </div>
+              </div>
+
+              <EnterpriseWizard
+                title="Employee Onboarding Wizard"
+                description="Reference implementation for structured creation flows with drafts, validation, document checklist, AI guidance, review, and workflow handoff."
+                steps={employeeWizardSteps}
+                checklist={employeeWizardChecklist}
+                attachments={employeeWizardAttachments}
+                validationItems={employeeWizardValidationItems}
+                reviewGroups={employeeWizardReviewGroups}
+                approvalRequired
+                approvalApprover="HR Operations Queue"
+                aiTips={[
+                  'Suggest designation from department and branch workload.',
+                  'Summarize missing documents before approval handoff.',
+                  'Validate salary band against branch policy.',
+                ]}
+                renderStep={renderEmployeeWizardStep}
+                onEvent={(event) => setLastWizardEvent(event.name)}
               />
             </section>
           </section>

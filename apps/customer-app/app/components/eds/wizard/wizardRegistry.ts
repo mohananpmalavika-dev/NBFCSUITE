@@ -1,0 +1,55 @@
+import type { WizardContract } from './types';
+
+export const wizardRegistry: WizardContract[] = [
+  {
+    id: 'employee-onboarding-wizard',
+    module: 'HRMS',
+    type: 'review',
+    supportsDrafts: true,
+    supportsAutosave: true,
+    supportsValidationLevels: ['client', 'business', 'server'],
+    supportsAttachments: true,
+    supportsApproval: true,
+    supportsAiGuidance: true,
+    performanceTarget: {
+      nextStepMs: 200,
+      validationMs: 100,
+      draftResumeMs: 1000,
+      submitMs: 2000,
+    },
+  },
+  {
+    id: 'customer-kyc-wizard',
+    module: 'Customer Onboarding',
+    type: 'nested',
+    supportsDrafts: true,
+    supportsAutosave: true,
+    supportsValidationLevels: ['client', 'business', 'server'],
+    supportsAttachments: true,
+    supportsApproval: true,
+    supportsAiGuidance: true,
+    performanceTarget: {
+      nextStepMs: 200,
+      validationMs: 100,
+      draftResumeMs: 1000,
+      submitMs: 2000,
+    },
+  },
+  {
+    id: 'loan-origination-wizard',
+    module: 'Lending',
+    type: 'branching',
+    supportsDrafts: true,
+    supportsAutosave: true,
+    supportsValidationLevels: ['client', 'business', 'server'],
+    supportsAttachments: true,
+    supportsApproval: true,
+    supportsAiGuidance: true,
+    performanceTarget: {
+      nextStepMs: 200,
+      validationMs: 100,
+      draftResumeMs: 1000,
+      submitMs: 2000,
+    },
+  },
+];

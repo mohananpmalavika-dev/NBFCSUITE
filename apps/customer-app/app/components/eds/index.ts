@@ -35,4 +35,5 @@ export * from './security/PermissionGuard';
 export * from './security/RoleBadge';
 export * from './dashboard';
 export * from './data-grid';
+export * from './wizard';
 export * from './componentRegistry';

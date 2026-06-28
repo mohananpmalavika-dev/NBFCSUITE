@@ -44,6 +44,16 @@ export const componentRegistry = [
   { layer: 'data-grid', name: 'BulkActions', contract: 'permission-aware action bar for selected rows' },
   { layer: 'data-grid', name: 'GridPagination', contract: 'server-ready paging controls' },
   { layer: 'data-grid', name: 'AIGridAssistant', contract: 'selected-record scoped FinDNA prompts' },
+  { layer: 'wizard', name: 'EnterpriseWizard', contract: 'draft, validate, review, approve, submit, and audit flow' },
+  { layer: 'wizard', name: 'WizardHeader', contract: 'title, progress, autosave status, and draft action' },
+  { layer: 'wizard', name: 'WizardSteps', contract: 'linear, branching-ready step navigation with status' },
+  { layer: 'wizard', name: 'WizardSidebar', contract: 'checklist, warnings, documents, and AI guidance' },
+  { layer: 'wizard', name: 'WizardFooter', contract: 'cancel, draft, previous, next, submit action model' },
+  { layer: 'wizard', name: 'WizardValidation', contract: 'client, business, and server validation summary' },
+  { layer: 'wizard', name: 'WizardAttachments', contract: 'upload, camera, scanner, and OCR checklist model' },
+  { layer: 'wizard', name: 'WizardReview', contract: 'grouped review summary before approval handoff' },
+  { layer: 'wizard', name: 'WizardApproval', contract: 'workflow handoff and direct-complete modes' },
+  { layer: 'wizard', name: 'WizardSuccess', contract: 'completion state with next actions' },
 ] as const;
 
 export type ComponentRegistryItem = (typeof componentRegistry)[number];
