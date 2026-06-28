@@ -1,6 +1,12 @@
 'use client';
 
-import { apiClient, type AccountingQuickActionPayload } from '@/lib/api';
+import {
+  apiClient,
+  type AccountingQuickActionPayload,
+  type PostingRuleConditionPayload,
+  type PostingRuleLinePayload,
+  type PostingRulePayload,
+} from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -109,6 +115,32 @@ interface GlDetail {
   }>;
 }
 
+interface PostingRule {
+  id: string;
+  source_module: string;
+  source_event: string;
+  rule_name?: string | null;
+  priority: number;
+  status?: string | null;
+  description?: string | null;
+  lines: Array<PostingRuleLinePayload & { direction: 'debit' | 'credit' }>;
+  conditions: PostingRuleConditionPayload[];
+}
+
+interface RuleSimulation {
+  is_balanced: boolean;
+  total_debit: number;
+  total_credit: number;
+  lines: Array<{
+    account_code: string;
+    account_name: string;
+    direction: string;
+    debit: number;
+    credit: number;
+    description?: string | null;
+  }>;
+}
+
 const actions: Array<{ key: ActionType; label: string; source: string }> = [
   { key: 'loan_disbursed', label: 'Loan disbursed', source: 'Loans' },
   { key: 'customer_paid_emi', label: 'Customer paid EMI', source: 'Loans' },
@@ -116,6 +148,11 @@ const actions: Array<{ key: ActionType; label: string; source: string }> = [
   { key: 'expense_paid', label: 'Expense paid', source: 'Expenses' },
   { key: 'salary_paid', label: 'Salary paid', source: 'HRMS' },
   { key: 'interest_accrued', label: 'Interest accrued', source: 'Loans' },
+];
+
+const defaultRuleLines: Array<PostingRuleLinePayload & { direction: 'debit' | 'credit' }> = [
+  { account_code: '1200_LOAN_RECEIVABLE', direction: 'debit', amount_source: 'amount', description: 'Generated debit' },
+  { account_code: '1120_BANK', direction: 'credit', amount_source: 'amount', description: 'Generated credit' },
 ];
 
 function money(value: number | undefined | null) {
@@ -213,6 +250,22 @@ export default function AccountingPage() {
     source_reference: '',
     branch_id: '',
   });
+  const [postingRules, setPostingRules] = useState<PostingRule[]>([]);
+  const [ruleSimulation, setRuleSimulation] = useState<RuleSimulation | null>(null);
+  const [ruleForm, setRuleForm] = useState({
+    rule_name: 'Loan disbursement rule',
+    source_module: 'loans',
+    source_event: 'disbursement',
+    priority: '10',
+    status: 'draft',
+    description: 'Debit customer receivable and credit bank on disbursement',
+    condition_field: 'amount',
+    condition_operator: 'gt',
+    condition_value: '0',
+    simulation_amount: '500000',
+    simulation_json: '{ "amount": 500000, "product": "gold_loan", "branch_id": "Kollam" }',
+    lines: defaultRuleLines,
+  });
 
   const allAccounts = useMemo(() => flattenTree(dashboard?.gl_tree || []), [dashboard]);
   const visibleAccounts = search ? searchResults : allAccounts.slice(0, 20);
@@ -230,9 +283,13 @@ export default function AccountingPage() {
   const refresh = useCallback(async () => {
     if (!token || !tenantId) return;
     try {
-      const response = await apiClient.getAccounting360Dashboard(tenantId);
+      const [response, rulesResponse] = await Promise.all([
+        apiClient.getAccounting360Dashboard(tenantId),
+        apiClient.getPostingRules(tenantId),
+      ]);
       const data = response.data as Dashboard360;
       setDashboard(data);
+      setPostingRules(rulesResponse.data || []);
       setMessage('');
       const firstAccountId = selectedAccountId || data.top_accounts[0]?.id || flattenTree(data.gl_tree)[0]?.id || '';
       if (firstAccountId) {
@@ -281,6 +338,68 @@ export default function AccountingPage() {
   function selectAccount(accountId: string) {
     setSelectedAccountId(accountId);
     loadGlDetail(accountId);
+  }
+
+  function parseSimulationData() {
+    try {
+      const parsed = JSON.parse(ruleForm.simulation_json || '{}');
+      return typeof parsed === 'object' && parsed ? parsed as Record<string, unknown> : {};
+    } catch {
+      throw new Error('Simulation JSON is invalid.');
+    }
+  }
+
+  function updateRuleLine(index: number, patch: Partial<PostingRuleLinePayload & { direction: 'debit' | 'credit' }>) {
+    setRuleForm({
+      ...ruleForm,
+      lines: ruleForm.lines.map((line, lineIndex) => lineIndex === index ? { ...line, ...patch } : line),
+    });
+  }
+
+  function rulePayload(status = ruleForm.status): PostingRulePayload {
+    const conditionValue = Number.isNaN(Number(ruleForm.condition_value)) ? ruleForm.condition_value : Number(ruleForm.condition_value);
+    return {
+      tenant_id: tenantId,
+      rule_name: ruleForm.rule_name,
+      source_module: ruleForm.source_module,
+      source_event: ruleForm.source_event,
+      priority: Number(ruleForm.priority || 100),
+      status,
+      description: ruleForm.description,
+      created_by: user?.username,
+      conditions: ruleForm.condition_field ? [{
+        field: ruleForm.condition_field,
+        operator: ruleForm.condition_operator,
+        value: conditionValue,
+      }] : [],
+      lines: ruleForm.lines.map((line, index) => ({
+        ...line,
+        sequence: index + 1,
+        percentage: line.percentage ? Number(line.percentage) : undefined,
+      })),
+    };
+  }
+
+  async function simulateRule() {
+    setBusyAction('simulate-rule');
+    setMessage('');
+    try {
+      await apiClient.validatePostingRule(rulePayload());
+      const eventData = parseSimulationData();
+      const response = await apiClient.simulatePostingRule({
+        tenant_id: tenantId,
+        source_module: ruleForm.source_module,
+        source_event: ruleForm.source_event,
+        amount: Number(ruleForm.simulation_amount || eventData.amount || 0),
+        event_data: eventData,
+      });
+      setRuleSimulation(response.data);
+      setMessage('Posting rule simulated successfully.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : errorText(error, 'Unable to simulate rule.'));
+    } finally {
+      setBusyAction('');
+    }
   }
 
   const canPostQuickAction = Number(quickForm.amount || 0) > 0;
@@ -405,6 +524,156 @@ export default function AccountingPage() {
                 </div>
               </div>
             )}
+
+            <section className="rounded-md border border-slate-200 bg-white p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-wide text-slate-800">Posting Rule Builder</h2>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">Configure module events once; journals and GL entries are generated from rules.</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-slate-600 sm:w-[360px]">
+                  <div className="rounded border border-slate-200 px-2 py-2">
+                    <p className="text-lg font-black text-slate-950">{postingRules.length}</p>
+                    <p>Rules</p>
+                  </div>
+                  <div className="rounded border border-slate-200 px-2 py-2">
+                    <p className="text-lg font-black text-emerald-700">{postingRules.filter((rule) => rule.status === 'active').length}</p>
+                    <p>Active</p>
+                  </div>
+                  <div className="rounded border border-slate-200 px-2 py-2">
+                    <p className="text-lg font-black text-amber-700">{postingRules.filter((rule) => rule.status === 'draft').length}</p>
+                    <p>Draft</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
+                <form
+                  className="grid gap-3"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    runAction('create-rule', () => apiClient.createPostingRule(rulePayload()), 'Posting rule created.');
+                  }}
+                >
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <input className="h-10 rounded border border-slate-300 px-3 text-sm md:col-span-2" placeholder="Rule name" value={ruleForm.rule_name} onChange={(event) => setRuleForm({ ...ruleForm, rule_name: event.target.value })} />
+                    <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="Module" value={ruleForm.source_module} onChange={(event) => setRuleForm({ ...ruleForm, source_module: event.target.value })} />
+                    <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="Event" value={ruleForm.source_event} onChange={(event) => setRuleForm({ ...ruleForm, source_event: event.target.value })} />
+                    <select className="h-10 rounded border border-slate-300 bg-white px-3 text-sm" value={ruleForm.status} onChange={(event) => setRuleForm({ ...ruleForm, status: event.target.value })}>
+                      <option value="draft">Draft</option>
+                      <option value="active">Active</option>
+                      <option value="frozen">Frozen</option>
+                    </select>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-[1fr_150px_1fr]">
+                    <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="Condition field" value={ruleForm.condition_field} onChange={(event) => setRuleForm({ ...ruleForm, condition_field: event.target.value })} />
+                    <select className="h-10 rounded border border-slate-300 bg-white px-3 text-sm" value={ruleForm.condition_operator} onChange={(event) => setRuleForm({ ...ruleForm, condition_operator: event.target.value })}>
+                      <option value="gt">Greater than</option>
+                      <option value="gte">Greater or equal</option>
+                      <option value="eq">Equals</option>
+                      <option value="contains">Contains</option>
+                    </select>
+                    <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="Condition value" value={ruleForm.condition_value} onChange={(event) => setRuleForm({ ...ruleForm, condition_value: event.target.value })} />
+                  </div>
+
+                  <div className="rounded border border-slate-200">
+                    <div className="grid grid-cols-[1fr_110px_1fr_1fr_auto] gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-500">
+                      <span>Account</span>
+                      <span>Side</span>
+                      <span>Amount Source</span>
+                      <span>Formula</span>
+                      <span>Action</span>
+                    </div>
+                    <div className="grid gap-2 p-3">
+                      {ruleForm.lines.map((line, index) => (
+                        <div key={index} className="grid gap-2 md:grid-cols-[1fr_110px_1fr_1fr_auto]">
+                          <select className="h-10 rounded border border-slate-300 bg-white px-3 text-sm" value={line.account_code} onChange={(event) => updateRuleLine(index, { account_code: event.target.value })}>
+                            {allAccounts.filter((account) => String(account.posting_allowed || 'true').toLowerCase() !== 'false').map((account) => (
+                              <option key={account.id} value={account.account_code}>{account.account_code} - {account.account_name}</option>
+                            ))}
+                          </select>
+                          <select className="h-10 rounded border border-slate-300 bg-white px-3 text-sm" value={line.direction} onChange={(event) => updateRuleLine(index, { direction: event.target.value as 'debit' | 'credit' })}>
+                            <option value="debit">Debit</option>
+                            <option value="credit">Credit</option>
+                          </select>
+                          <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="amount / principal" value={line.amount_source || ''} onChange={(event) => updateRuleLine(index, { amount_source: event.target.value, formula: event.target.value ? undefined : line.formula })} />
+                          <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="interest + penalty" value={line.formula || ''} onChange={(event) => updateRuleLine(index, { formula: event.target.value, amount_source: event.target.value ? undefined : line.amount_source })} />
+                          <button
+                            type="button"
+                            disabled={ruleForm.lines.length <= 2}
+                            className="h-10 rounded border border-slate-300 px-3 text-sm font-bold text-slate-700 disabled:opacity-40"
+                            onClick={() => setRuleForm({ ...ruleForm, lines: ruleForm.lines.filter((_, lineIndex) => lineIndex !== index) })}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <textarea className="min-h-20 rounded border border-slate-300 px-3 py-2 text-sm" placeholder="Simulation JSON" value={ruleForm.simulation_json} onChange={(event) => setRuleForm({ ...ruleForm, simulation_json: event.target.value })} />
+
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" className="h-10 rounded border border-slate-300 px-4 text-sm font-bold text-slate-700" onClick={() => setRuleForm({ ...ruleForm, lines: [...ruleForm.lines, { account_code: allAccounts[0]?.account_code || '1000_CASH', direction: 'credit', amount_source: 'amount', description: 'Generated line' }] })}>
+                      Add Line
+                    </button>
+                    <button type="button" disabled={!!busyAction} className="h-10 rounded bg-blue-700 px-4 text-sm font-bold text-white disabled:opacity-50" onClick={simulateRule}>
+                      {busyAction === 'simulate-rule' ? 'Simulating' : 'Simulate'}
+                    </button>
+                    <button disabled={!!busyAction || ruleForm.lines.length < 2} className="h-10 rounded bg-slate-950 px-4 text-sm font-bold text-white disabled:opacity-50">
+                      {busyAction === 'create-rule' ? 'Saving' : 'Create Rule'}
+                    </button>
+                  </div>
+                </form>
+
+                <div className="grid content-start gap-4">
+                  <div className="rounded border border-slate-200 p-3">
+                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-500">Simulation</h3>
+                    {ruleSimulation ? (
+                      <div className="mt-3 space-y-2 text-sm">
+                        <div className={`rounded px-3 py-2 text-center font-black ${ruleSimulation.is_balanced ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                          {ruleSimulation.is_balanced ? 'Balanced' : 'Not balanced'} / Debit {money(ruleSimulation.total_debit)} / Credit {money(ruleSimulation.total_credit)}
+                        </div>
+                        {ruleSimulation.lines.map((line, index) => (
+                          <div key={`${line.account_code}-${index}`} className="grid grid-cols-[1fr_auto] gap-3 border-b border-slate-100 pb-2">
+                            <span>
+                              <span className="block font-bold text-slate-900">{line.account_name}</span>
+                              <span className="text-xs text-slate-500">{line.account_code} / {line.direction}</span>
+                            </span>
+                            <span className="font-black">{money(line.debit || line.credit)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-sm font-semibold text-slate-500">Run a simulation to preview generated accounting entries before publishing.</p>
+                    )}
+                  </div>
+
+                  <div className="rounded border border-slate-200 p-3">
+                    <h3 className="text-xs font-black uppercase tracking-wide text-slate-500">Rule Register</h3>
+                    <div className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                      {postingRules.slice(0, 8).map((rule) => (
+                        <div key={rule.id} className="rounded border border-slate-200 px-3 py-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-black text-slate-900">{rule.rule_name || `${rule.source_module}.${rule.source_event}`}</p>
+                              <p className="text-xs font-semibold text-slate-500">{rule.source_module} / {rule.source_event} / priority {rule.priority}</p>
+                            </div>
+                            <span className={`rounded px-2 py-1 text-[11px] font-black ${rule.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>{rule.status || 'draft'}</span>
+                          </div>
+                          {rule.status !== 'active' && (
+                            <button className="mt-2 rounded bg-emerald-700 px-3 py-1 text-xs font-bold text-white" onClick={() => runAction(`publish-${rule.id}`, () => apiClient.publishPostingRule(rule.id, tenantId, user.username), 'Posting rule published.')}>
+                              Publish
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
 
             <div className="grid gap-4 xl:grid-cols-[340px_minmax(0,1fr)_360px]">
               <section className="rounded-md border border-slate-200 bg-white">

@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.database import Base, SessionLocal, engine
 from app.organization.models.organization_unit import OrganizationUnit
+from app.organization.models.organization_unit_audit import OrganizationUnitAudit
+from app.organization.models.organization_unit_closure import OrganizationUnitClosure
 from app.organization.routers.organization_unit import router as organization_router
 
 

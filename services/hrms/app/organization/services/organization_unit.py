@@ -18,9 +18,12 @@ class OrganizationUnitService:
         self.repo = OrganizationUnitRepository(db)
         self.db = db
 
-    def create(self, payload: OrganizationUnitCreate) -> OrganizationUnit:
+    def create(self, payload: OrganizationUnitCreate, changed_by: Optional[str] = None) -> OrganizationUnit:
         self._validate_unique_code(payload.tenant_id, payload.unit_code, payload.parent_id)
-        return self.repo.create(payload.model_dump())
+        item = self.repo.create(payload.model_dump())
+        self.repo.create_closure_entries(item)
+        self.repo.record_audit("create", item, changed_by=changed_by)
+        return item
 
     def list(self, tenant_id: str, status: Optional[str] = None) -> List[OrganizationUnit]:
         return self.repo.list(tenant_id=tenant_id, status=status)
@@ -31,15 +34,23 @@ class OrganizationUnitService:
             raise HTTPException(status_code=404, detail="Organization unit not found")
         return item
 
-    def update(self, unit_id: str, tenant_id: str, payload: OrganizationUnitUpdate) -> OrganizationUnit:
+    def update(self, unit_id: str, tenant_id: str, payload: OrganizationUnitUpdate, changed_by: Optional[str] = None) -> OrganizationUnit:
         item = self.get(unit_id, tenant_id)
         update_payload = payload.model_dump(exclude_unset=True)
         if update_payload.get("unit_code"):
             self._validate_unique_code(tenant_id, update_payload["unit_code"], update_payload.get("parent_id"), current_id=unit_id)
-        return self.repo.update(item, update_payload)
+        updated = self.repo.update(item, update_payload)
+        if "parent_id" in update_payload:
+            self.repo.rebuild_closure_entries(updated)
+        self.repo.record_audit("update", updated, changed_by=changed_by, data=update_payload)
+        return updated
 
-    def delete(self, unit_id: str, tenant_id: str) -> None:
+    def delete(self, unit_id: str, tenant_id: str, changed_by: Optional[str] = None) -> None:
         item = self.get(unit_id, tenant_id)
+        if self.repo.has_children(item):
+            raise HTTPException(status_code=400, detail="Cannot delete organization unit with child units")
+        self.repo.delete_closure_entries(item)
+        self.repo.record_audit("delete", item, changed_by=changed_by)
         self.repo.delete(item)
 
     def tree(self, tenant_id: str) -> List[OrganizationUnitTreeResponse]:

@@ -1452,8 +1452,6 @@ def _event_value(event_data: dict, field: Optional[str], default: Any = None) ->
 def _safe_formula_value(node: ast.AST, values: dict) -> float:
     if isinstance(node, ast.Expression):
         return _safe_formula_value(node.body, values)
-    if isinstance(node, ast.Num):
-        return float(node.n)
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
         return float(node.value)
     if isinstance(node, ast.Name):
@@ -2768,7 +2766,7 @@ async def create_posting_rule(rule: PostingRuleCreate, db: Session = Depends(get
             "conditions": [condition.dict() for condition in rule.conditions] if rule.conditions else [],
             "status": posting_rule.status,
         },
-        rule.created_by,
+        performed_by=rule.created_by,
     )
     db.commit()
     db.refresh(posting_rule)

@@ -547,6 +547,80 @@ async def _run_accounting_test():
         assert multi_line_rule_data["lines"][0]["account_code"] == "1200_LOAN_RECEIVABLE"
         assert multi_line_rule_data["lines"][0]["direction"] == "debit"
 
+        formula_rule_payload = {
+            "tenant_id": tenant_id,
+            "source_module": "collections",
+            "source_event": "emi_split",
+            "rule_name": "Gold loan EMI split",
+            "priority": 10,
+            "status": "draft",
+            "description": "Split EMI into principal, interest, and penalty",
+            "conditions": [
+                {"field": "product", "operator": "eq", "value": "gold_loan"},
+                {"field": "emi_amount", "operator": "gt", "value": 0},
+            ],
+            "lines": [
+                {"account_code": "1120_BANK", "direction": "debit", "amount_source": "emi_amount", "description": "EMI cash received"},
+                {"account_code": "1200_LOAN_RECEIVABLE", "direction": "credit", "formula": "principal", "description": "Principal recovery"},
+                {"account_code": "410000", "direction": "credit", "formula": "interest + penalty", "description": "Income recovery"},
+            ],
+            "created_by": "tester",
+        }
+        formula_rule_response = await client.post("/posting-rules", json=formula_rule_payload)
+        assert formula_rule_response.status_code == 200
+        formula_rule = formula_rule_response.json()
+        assert formula_rule["status"] == "draft"
+        assert formula_rule["conditions"][0]["field"] == "product"
+        assert formula_rule["lines"][2]["formula"] == "interest + penalty"
+
+        formula_validation_response = await client.post("/posting-rules/validate", json=formula_rule_payload)
+        assert formula_validation_response.status_code == 200
+        assert formula_validation_response.json()["formula_count"] == 2
+
+        formula_simulation_response = await client.post(
+            "/posting-rules/simulate",
+            json={
+                "tenant_id": tenant_id,
+                "source_module": "collections",
+                "source_event": "emi_split",
+                "source_reference": "SIM-EMI-001",
+                "amount": 1000.0,
+                "event_data": {
+                    "product": "gold_loan",
+                    "emi_amount": 1000.0,
+                    "principal": 700.0,
+                    "interest": 250.0,
+                    "penalty": 50.0,
+                },
+            },
+        )
+        assert formula_simulation_response.status_code == 200
+        formula_simulation = formula_simulation_response.json()
+        assert formula_simulation["is_balanced"] is True
+        assert formula_simulation["total_debit"] == 1000.0
+        assert formula_simulation["total_credit"] == 1000.0
+
+        formula_publish_response = await client.post(
+            f"/posting-rules/{formula_rule['id']}/publish",
+            json={"tenant_id": tenant_id, "performed_by": "tester"},
+        )
+        assert formula_publish_response.status_code == 200
+        assert formula_publish_response.json()["status"] == "active"
+
+        formula_history_response = await client.get(
+            f"/posting-rules/{formula_rule['id']}/history",
+            params={"tenant_id": tenant_id},
+        )
+        assert formula_history_response.status_code == 200
+        assert any(item["action"] == "publish" for item in formula_history_response.json())
+
+        formula_executions_response = await client.get(
+            f"/posting-rules/{formula_rule['id']}/executions",
+            params={"tenant_id": tenant_id},
+        )
+        assert formula_executions_response.status_code == 200
+        assert formula_executions_response.json()["total"] >= 1
+
         posting_payload = {
             "tenant_id": tenant_id,
             "idempotency_key": "local-test-001",

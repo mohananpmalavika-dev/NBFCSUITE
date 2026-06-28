@@ -25,7 +25,10 @@ def create_organization_unit(
 ):
     tenant_id = payload.tenant_id or claims.get("tenant_id") or "default"
     service = OrganizationUnitService(db)
-    return service.create(OrganizationUnitCreate(**{**payload.model_dump(), "tenant_id": tenant_id}))
+    return service.create(
+        OrganizationUnitCreate(**{**payload.model_dump(), "tenant_id": tenant_id}),
+        changed_by=claims.get("user_id"),
+    )
 
 
 @router.get("/tree", response_model=List[OrganizationUnitTreeResponse])
@@ -45,7 +48,7 @@ def update_organization_unit(
     claims: dict = Depends(get_current_user_claims),
 ):
     tenant_id = claims.get("tenant_id") or "default"
-    return OrganizationUnitService(db).update(unit_id, tenant_id, payload)
+    return OrganizationUnitService(db).update(unit_id, tenant_id, payload, changed_by=claims.get("user_id"))
 
 
 @router.delete("/unit/{unit_id}")
@@ -55,7 +58,7 @@ def delete_organization_unit(
     claims: dict = Depends(get_current_user_claims),
 ):
     tenant_id = claims.get("tenant_id") or "default"
-    OrganizationUnitService(db).delete(unit_id, tenant_id)
+    OrganizationUnitService(db).delete(unit_id, tenant_id, changed_by=claims.get("user_id"))
     return {"message": "Organization unit deleted"}
 
 

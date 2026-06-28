@@ -432,16 +432,48 @@ export interface PostingRuleLinePayload {
   account_code: string;
   direction: 'debit' | 'credit';
   description?: string;
+  sequence?: number;
+  amount_source?: string;
+  percentage?: number;
+  formula?: string;
+  currency?: string;
+  dimension_source?: Record<string, string>;
+}
+
+export interface PostingRuleConditionPayload {
+  field: string;
+  operator: string;
+  value?: string | number | boolean | string[] | number[];
 }
 
 export interface PostingRulePayload {
   tenant_id: string;
   source_module: string;
   source_event: string;
+  rule_name?: string;
+  priority?: number;
+  status?: string;
+  effective_from?: string;
+  effective_to?: string;
+  requires_approval?: string;
   debit_account_code?: string;
   credit_account_code?: string;
   description?: string;
   lines?: PostingRuleLinePayload[];
+  conditions?: PostingRuleConditionPayload[];
+  created_by?: string;
+  metadata?: JsonObject;
+}
+
+export interface PostingRuleSimulationPayload {
+  tenant_id: string;
+  source_module: string;
+  source_event: string;
+  source_reference?: string;
+  amount?: number;
+  currency?: string;
+  branch_id?: string;
+  event_data?: JsonObject;
 }
 
 export type PaymentMode = 'cash' | 'cheque' | 'upi' | 'rtgs' | 'neft' | 'imps';
@@ -1018,6 +1050,20 @@ export const apiClient = {
     axiosInstance.get(`/posting-rules`, { params: { tenant_id: tenantId } }),
   createPostingRule: (data: PostingRulePayload) =>
     axiosInstance.post(`/posting-rules`, data),
+  updatePostingRule: (ruleId: string, tenantId: string, data: Partial<PostingRulePayload> & { performed_by?: string }) =>
+    axiosInstance.put(`/posting-rules/${ruleId}`, data, { params: { tenant_id: tenantId } }),
+  archivePostingRule: (ruleId: string, tenantId: string, performedBy?: string) =>
+    axiosInstance.delete(`/posting-rules/${ruleId}`, { params: { tenant_id: tenantId, performed_by: performedBy } }),
+  validatePostingRule: (data: PostingRulePayload) =>
+    axiosInstance.post(`/posting-rules/validate`, data),
+  simulatePostingRule: (data: PostingRuleSimulationPayload) =>
+    axiosInstance.post(`/posting-rules/simulate`, data),
+  publishPostingRule: (ruleId: string, tenantId: string, performedBy?: string) =>
+    axiosInstance.post(`/posting-rules/${ruleId}/publish`, { tenant_id: tenantId, performed_by: performedBy }),
+  getPostingRuleHistory: (ruleId: string, tenantId: string) =>
+    axiosInstance.get(`/posting-rules/${ruleId}/history`, { params: { tenant_id: tenantId } }),
+  getPostingRuleExecutions: (ruleId: string, tenantId: string) =>
+    axiosInstance.get(`/posting-rules/${ruleId}/executions`, { params: { tenant_id: tenantId } }),
   getJournalEntries: (tenantId: string) =>
     axiosInstance.get(`/journal-entries`, { params: { tenant_id: tenantId } }),
   validateAccountingPosting: (
