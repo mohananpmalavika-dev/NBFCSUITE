@@ -27,6 +27,16 @@ export const componentRegistry = [
   { layer: 'banking', name: 'LoanSummaryCard', contract: 'loan exposure and status summary' },
   { layer: 'security', name: 'PermissionGuard', contract: 'role/permission gated rendering' },
   { layer: 'security', name: 'RoleBadge', contract: 'visible role and elevated access indicator' },
+  { layer: 'dashboard', name: 'DashboardLayout', contract: 'role-based dashboard composition shell' },
+  { layer: 'dashboard', name: 'DashboardGrid', contract: 'responsive 12-column widget grid' },
+  { layer: 'dashboard', name: 'WidgetContainer', contract: 'shared widget chrome, metadata, refresh policy' },
+  { layer: 'dashboard', name: 'KPIWidget', contract: 'status-first KPI with trend and drill-down target' },
+  { layer: 'dashboard', name: 'ChartWidget', contract: 'summary chart with drill-down support' },
+  { layer: 'dashboard', name: 'AlertWidget', contract: 'actionable alerts only' },
+  { layer: 'dashboard', name: 'TaskWidget', contract: 'task center grouped by urgency and owner' },
+  { layer: 'dashboard', name: 'ApprovalWidget', contract: 'pending decisions with SLA context' },
+  { layer: 'dashboard', name: 'ActivityWidget', contract: 'recent activity and audit event stream' },
+  { layer: 'dashboard', name: 'AISummaryWidget', contract: 'explain-why AI insight surface' },
 ] as const;
 
 export type ComponentRegistryItem = (typeof componentRegistry)[number];

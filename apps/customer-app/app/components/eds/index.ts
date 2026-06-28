@@ -33,4 +33,5 @@ export * from './banking/Customer360Card';
 export * from './banking/LoanSummaryCard';
 export * from './security/PermissionGuard';
 export * from './security/RoleBadge';
+export * from './dashboard';
 export * from './componentRegistry';

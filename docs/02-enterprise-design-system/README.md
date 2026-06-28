@@ -78,6 +78,8 @@ The current UI should evolve toward a reusable component library in Next.js with
 - EDS-009: Enterprise Form & Wizard Framework
 - EDS-010: Workflow & Approval UX Framework
 - EP-001: Enterprise Organization Management (EOM)
+- EOM-001: Enterprise Master
+- EOM-002: Brand Management
 - EP-002: Identity & Access Management (IAM)
 - EP-003: Workflow Engine
 - EP-004: Rules Engine
@@ -103,4 +105,6 @@ The current UI should evolve toward a reusable component library in Next.js with
 - ✅ EDS-009: Enterprise Form & Wizard Framework — Complete
 - ✅ EDS-010: Workflow & Approval UX Framework — Complete
 - ✅ EP-001: Enterprise Organization Management (EOM) — Complete
+- ✅ EOM-001: Enterprise Master — Complete
+- ✅ EOM-002: Brand Management — Complete
 - ⏳ EP-002: Identity & Access Management (IAM) — Next

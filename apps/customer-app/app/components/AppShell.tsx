@@ -21,6 +21,8 @@ import {
   Menu,
   Palette,
   PanelRightOpen,
+  PlusCircle,
+  RefreshCw,
   Search,
   Settings2,
   ShieldAlert,
@@ -33,18 +35,29 @@ import {
 import { buildCssVariables, themes, type ThemeName } from '../../lib/design-tokens';
 import {
   AISummary,
+  AISummaryWidget,
+  ActivityWidget,
   Alert,
+  AlertWidget,
+  ApprovalWidget,
   ApprovalCard,
   Button as EDSButton,
+  ChartWidget,
   Checkbox,
   Customer360Card,
+  DashboardGrid,
+  DashboardLayout,
   EnterpriseTable,
+  KPIWidget,
   LoanSummaryCard,
   MetricCard,
+  QuickActionsWidget,
   RoleBadge,
+  TaskWidget,
   TextInput,
   Toggle,
   componentRegistry,
+  dashboardWidgetRegistry,
 } from './eds';
 
 const topNavItems = [
@@ -121,6 +134,37 @@ const registryColumns = [
   { key: 'status' as const, label: 'Contract' },
 ];
 
+const dashboardChartData = [
+  { label: 'Jan', value: 58 },
+  { label: 'Feb', value: 64 },
+  { label: 'Mar', value: 71 },
+  { label: 'Apr', value: 68 },
+  { label: 'May', value: 79 },
+  { label: 'Jun', value: 86 },
+];
+
+const dashboardAlerts = [
+  { title: 'KYC renewals due for 24 high-value customers', severity: 'warning' as const, owner: 'Customer Ops' },
+  { title: 'Branch 1204 cash limit exceeded', severity: 'danger' as const, owner: 'Treasury' },
+];
+
+const dashboardTasks = [
+  { title: 'Review overdue collections queue', due: 'Today', owner: 'Anita', priority: 'high' as const },
+  { title: 'Publish month-end dashboard layout', due: 'This week', owner: 'Finance PMO', priority: 'medium' as const },
+  { title: 'Validate HR attendance exceptions', due: 'Tomorrow', owner: 'HR Ops', priority: 'low' as const },
+];
+
+const dashboardApprovals = [
+  { title: 'Journal Approval', requester: 'Finance Officer', amount: 'INR 12.8L', sla: '02:14' },
+  { title: 'Leave Approval', requester: 'HR Executive', amount: '8 employees', sla: '06:20' },
+];
+
+const dashboardActivities = [
+  { title: 'Loan approved', description: 'Vehicle loan LN-7721 moved to disbursement.', time: '8 min ago' },
+  { title: 'Voucher posted', description: 'JV-2042 posted by accounting operations.', time: '19 min ago' },
+  { title: 'Alert acknowledged', description: 'Cash threshold alert assigned to Treasury.', time: '31 min ago' },
+];
+
 export function AppShell() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [themeName, setThemeName] = useState<ThemeName>('default');
@@ -128,6 +172,7 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [autosaveEnabled, setAutosaveEnabled] = useState(true);
+  const [dashboardPersona, setDashboardPersona] = useState<'executive' | 'branch'>('executive');
   const [searchQuery, setSearchQuery] = useState('');
 
   const activeTheme = useMemo(() => themes[themeName], [themeName]);
@@ -135,6 +180,8 @@ export function AppShell() {
     () => new Set(componentRegistry.map((component) => component.layer)).size,
     [],
   );
+  const activeDashboardTitle =
+    dashboardPersona === 'executive' ? 'Executive Control Center' : 'Branch Operations Dashboard';
   const visibleCommands = useMemo(
     () =>
       commandActions.filter((action) =>
@@ -585,6 +632,103 @@ export function AppShell() {
                 </div>
               </div>
             </section>
+
+            <DashboardLayout
+              title={activeDashboardTitle}
+              description="Monitor, understand, decide, and act from one reusable dashboard framework with standard widget contracts."
+              persona={dashboardPersona}
+              actions={[
+                { label: 'Refresh', icon: <RefreshCw className="h-4 w-4" /> },
+                { label: 'Save Layout', icon: <PlusCircle className="h-4 w-4" /> },
+              ]}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-default bg-background-elevated p-3">
+                <div className="flex flex-wrap gap-2">
+                  {(['executive', 'branch'] as const).map((persona) => (
+                    <button
+                      key={persona}
+                      type="button"
+                      onClick={() => setDashboardPersona(persona)}
+                      className={`rounded-full px-4 py-2 text-sm font-semibold transition duration-normal ease-standard ${
+                        dashboardPersona === persona
+                          ? 'bg-accent-primary'
+                          : 'border border-border-default bg-background-surface text-text-secondary'
+                      }`}
+                      style={dashboardPersona === persona ? { color: 'var(--accent-on-primary)' } : undefined}
+                    >
+                      {persona === 'executive' ? 'Executive' : 'Branch Manager'}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2 text-sm text-text-secondary">
+                  <span className="rounded-full bg-background-surface px-3 py-2">
+                    Widgets: {dashboardWidgetRegistry.length}
+                  </span>
+                  <span className="rounded-full bg-background-surface px-3 py-2">
+                    Grid: 12 / 8 / 4
+                  </span>
+                  <span className="rounded-full bg-background-surface px-3 py-2">
+                    Refresh SLA: under 1s cached
+                  </span>
+                </div>
+              </div>
+
+              <DashboardGrid>
+                <KPIWidget
+                  title={dashboardPersona === 'executive' ? 'Revenue' : 'Customers Today'}
+                  value={dashboardPersona === 'executive' ? 'INR 18.4Cr' : '146'}
+                  trend="up"
+                  change={dashboardPersona === 'executive' ? '+8.2% vs last month' : '+18 since opening'}
+                  drilldownTarget="/dashboards/revenue"
+                />
+                <KPIWidget
+                  title={dashboardPersona === 'executive' ? 'Loan Book' : 'Collections'}
+                  value={dashboardPersona === 'executive' ? 'INR 812Cr' : 'INR 42.6L'}
+                  trend="up"
+                  change={dashboardPersona === 'executive' ? '+4.7% portfolio growth' : '94% target achieved'}
+                  drilldownTarget="/dashboards/loan-book"
+                />
+                <KPIWidget
+                  title={dashboardPersona === 'executive' ? 'NPA' : 'Pending Approvals'}
+                  value={dashboardPersona === 'executive' ? '2.1%' : '18'}
+                  trend={dashboardPersona === 'executive' ? 'down' : 'up'}
+                  change={dashboardPersona === 'executive' ? '-0.3% improvement' : '+5 urgent today'}
+                  drilldownTarget="/dashboards/exceptions"
+                />
+                <KPIWidget
+                  title={dashboardPersona === 'executive' ? 'Cash Position' : 'Cash Balance'}
+                  value={dashboardPersona === 'executive' ? 'INR 96Cr' : 'INR 84.2L'}
+                  trend="up"
+                  change="Healthy buffer"
+                  drilldownTarget="/dashboards/treasury"
+                />
+                <AlertWidget alerts={dashboardAlerts} />
+                <QuickActionsWidget
+                  actions={[
+                    { label: dashboardPersona === 'executive' ? 'Open Risk Review' : 'Open Account' },
+                    { label: dashboardPersona === 'executive' ? 'Branch Ranking' : 'Receive Payment' },
+                    { label: dashboardPersona === 'executive' ? 'Portfolio Mix' : 'Create Loan' },
+                  ]}
+                />
+                <ChartWidget
+                  title={dashboardPersona === 'executive' ? 'Revenue Trend' : 'Daily Activity'}
+                  description="Summary chart with a consistent drill-down path."
+                  data={dashboardChartData}
+                  drilldownTarget="/dashboards/charts/revenue-trend"
+                />
+                <TaskWidget tasks={dashboardTasks} />
+                <ApprovalWidget approvals={dashboardApprovals} onApprove={() => setDrawerOpen(true)} />
+                <ActivityWidget activities={dashboardActivities} />
+                <AISummaryWidget
+                  summary={
+                    dashboardPersona === 'executive'
+                      ? 'Branch revenue is above plan, but NPA movement is concentrated in two regions. Collections follow-up should be prioritized before month end.'
+                      : 'Today is collection-heavy. Cash balance is healthy, but KYC renewals and pending approvals need attention before close of business.'
+                  }
+                  suggestions={['Open drill-down', 'Assign follow-up', 'Save this layout']}
+                />
+              </DashboardGrid>
+            </DashboardLayout>
           </section>
         </main>
       </div>
