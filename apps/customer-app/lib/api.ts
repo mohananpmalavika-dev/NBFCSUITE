@@ -42,10 +42,6 @@ const authAxiosInstance = axios.create({
   baseURL: getServiceURL('auth'),
 });
 
-const losAxiosInstance = axios.create({
-  baseURL: getServiceURL('los'),
-});
-
 const collectionsAxiosInstance = axios.create({
   baseURL: getServiceURL('collections'),
 });
