@@ -5,8 +5,9 @@ import axios from 'axios';
 // Prioritizes: API Gateway (if available) → Individual service URLs → Fallback defaults
 const getServiceURL = (serviceName: string): string => {
   const apiGateway = process.env.NEXT_PUBLIC_API_GATEWAY_URL;
-  
-  if (apiGateway) {
+  const isDummyApiGateway = apiGateway === 'https://api-gateway-yourapp.onrender.com' || apiGateway === 'http://api-gateway-yourapp.onrender.com';
+
+  if (apiGateway && !isDummyApiGateway) {
     // Use API Gateway with path-based routing
     // Client paths already include the service prefix, e.g. /auth/login
     return apiGateway;
