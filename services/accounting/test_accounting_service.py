@@ -604,8 +604,55 @@ async def _run_accounting_test():
             f"/posting-rules/{formula_rule['id']}/publish",
             json={"tenant_id": tenant_id, "performed_by": "tester"},
         )
+        assert formula_publish_response.status_code == 400
+
+        submit_rule_response = await client.post(
+            f"/posting-rules/{formula_rule['id']}/submit",
+            json={"tenant_id": tenant_id, "performed_by": "maker"},
+        )
+        assert submit_rule_response.status_code == 200
+        assert submit_rule_response.json()["approval_status"] == "maker_submitted"
+        checker_rule_response = await client.post(
+            f"/posting-rules/{formula_rule['id']}/approve",
+            json={"tenant_id": tenant_id, "performed_by": "checker", "stage": "checker"},
+        )
+        assert checker_rule_response.status_code == 200
+        assert checker_rule_response.json()["approval_status"] == "checker_approved"
+        finance_rule_response = await client.post(
+            f"/posting-rules/{formula_rule['id']}/approve",
+            json={"tenant_id": tenant_id, "performed_by": "finance-head", "stage": "finance_head"},
+        )
+        assert finance_rule_response.status_code == 200
+        assert finance_rule_response.json()["approval_status"] == "finance_head_approved"
+
+        formula_publish_response = await client.post(
+            f"/posting-rules/{formula_rule['id']}/publish",
+            json={"tenant_id": tenant_id, "performed_by": "tester"},
+        )
         assert formula_publish_response.status_code == 200
         assert formula_publish_response.json()["status"] == "active"
+        assert formula_publish_response.json()["approval_status"] == "published"
+
+        immutable_update_response = await client.put(
+            f"/posting-rules/{formula_rule['id']}",
+            params={"tenant_id": tenant_id},
+            json={"description": "Attempt to overwrite published rule", "performed_by": "tester"},
+        )
+        assert immutable_update_response.status_code == 400
+
+        new_version_response = await client.post(
+            f"/posting-rules/{formula_rule['id']}/new-version",
+            json={
+                "tenant_id": tenant_id,
+                "description": "Next FY EMI split",
+                "effective_from": "2026-07-01T00:00:00",
+                "performed_by": "tester",
+            },
+        )
+        assert new_version_response.status_code == 200
+        assert new_version_response.json()["version"] == 2.0
+        assert new_version_response.json()["supersedes_rule_id"] == formula_rule["id"]
+        assert new_version_response.json()["status"] == "draft"
 
         formula_history_response = await client.get(
             f"/posting-rules/{formula_rule['id']}/history",
@@ -613,6 +660,7 @@ async def _run_accounting_test():
         )
         assert formula_history_response.status_code == 200
         assert any(item["action"] == "publish" for item in formula_history_response.json())
+        assert any(item["action"] == "approve_finance_head" for item in formula_history_response.json())
 
         formula_executions_response = await client.get(
             f"/posting-rules/{formula_rule['id']}/executions",
@@ -762,6 +810,174 @@ async def _run_accounting_test():
         assert quick_action["journal_entry"]["posting_status"] == "posted"
         assert quick_action["pipeline"]["posting_rule"]["status"] == "accounting_360_template"
         assert quick_action["inferred_lines"][0]["direction"] == "debit"
+
+        multi_currency_journal_response = await client.post(
+            "/journal-entries",
+            json={
+                "tenant_id": tenant_id,
+                "description": "FX dimension smoke journal",
+                "reference": "FX-DIM-001",
+                "branch_id": "branch-001",
+                "business_date": "2026-06-28T00:00:00",
+                "lines": [
+                    {
+                        "gl_account_id": expense_account["id"],
+                        "debit": 10.0,
+                        "credit": 0.0,
+                        "currency": "INR",
+                        "transaction_currency": "USD",
+                        "transaction_amount": 0.12,
+                        "exchange_rate": 83.33,
+                        "department_id": "ops",
+                        "cost_center": "cc-ops",
+                        "profit_center": "pc-branch",
+                        "project_id": "proj-001",
+                        "employee_id": "emp-001",
+                        "product_id": "gold-loan",
+                        "business_unit_id": "bu-lending",
+                    },
+                    {
+                        "gl_account_id": cash_account["id"],
+                        "debit": 0.0,
+                        "credit": 10.0,
+                        "currency": "INR",
+                        "department_id": "ops",
+                        "cost_center": "cc-ops",
+                        "profit_center": "pc-branch",
+                    },
+                ],
+            },
+        )
+        assert multi_currency_journal_response.status_code == 200
+        db = accounting_main.SessionLocal()
+        try:
+            fx_line = (
+                db.query(accounting_main.JournalLine)
+                .join(accounting_main.JournalEntry)
+                .filter(
+                    accounting_main.JournalEntry.tenant_id == tenant_id,
+                    accounting_main.JournalEntry.reference == "FX-DIM-001",
+                    accounting_main.JournalLine.debit == 10.0,
+                )
+                .first()
+            )
+            assert fx_line is not None
+            assert fx_line.transaction_currency == "USD"
+            assert fx_line.department_id == "ops"
+            assert fx_line.business_unit_id == "bu-lending"
+        finally:
+            db.close()
+
+        freeze_response = await client.put(
+            f"/gl-accounts/{expense_account['id']}",
+            params={"tenant_id": tenant_id},
+            json={"freeze_status": "freeze_debit"},
+        )
+        assert freeze_response.status_code == 200
+        freeze_block_response = await client.post(
+            "/posting-engine/validate",
+            json={
+                "tenant_id": tenant_id,
+                "lines": [
+                    {"gl_account_id": expense_account["id"], "debit": 5.0, "credit": 0.0},
+                    {"gl_account_id": cash_account["id"], "debit": 0.0, "credit": 5.0},
+                ],
+            },
+        )
+        assert freeze_block_response.status_code == 400
+        unfreeze_response = await client.put(
+            f"/gl-accounts/{expense_account['id']}",
+            params={"tenant_id": tenant_id},
+            json={"freeze_status": "open"},
+        )
+        assert unfreeze_response.status_code == 200
+
+        rollback_post_response = await client.post(
+            "/gl-postings/auto",
+            json={
+                "tenant_id": tenant_id,
+                "source_module": "deposits",
+                "source_event": "deposit",
+                "source_reference": "rollback-test-ref",
+                "amount": 77.0,
+                "metadata": {"note": "rollback smoke"},
+            },
+        )
+        assert rollback_post_response.status_code == 200
+        db = accounting_main.SessionLocal()
+        try:
+            execution = (
+                db.query(accounting_main.PostingExecutionLog)
+                .filter(
+                    accounting_main.PostingExecutionLog.tenant_id == tenant_id,
+                    accounting_main.PostingExecutionLog.source_reference == "rollback-test-ref",
+                    accounting_main.PostingExecutionLog.status == "posted",
+                )
+                .first()
+            )
+            assert execution is not None
+            rollback_execution_id = execution.id
+        finally:
+            db.close()
+        rollback_response = await client.post(
+            f"/posting-executions/{rollback_execution_id}/rollback",
+            json={"tenant_id": tenant_id, "performed_by": "tester", "reason": "test rollback"},
+        )
+        assert rollback_response.status_code == 200
+        assert rollback_response.json()["status"] == "rolled_back"
+        assert len(rollback_response.json()["reversed_subledger_ids"]) == 1
+        rollback_subledger_response = await client.get(
+            "/sub-ledger-entries",
+            params={"tenant_id": tenant_id, "source_reference": "rollback-test-ref"},
+        )
+        assert rollback_subledger_response.status_code == 200
+        rollback_subledger_rows = rollback_subledger_response.json()
+        assert {row["status"] for row in rollback_subledger_rows} == {"reversed", "reversal"}
+        assert round(sum(row["amount"] for row in rollback_subledger_rows), 2) == 0.0
+
+        period_response = await client.post(
+            "/accounting-periods",
+            json={
+                "tenant_id": tenant_id,
+                "financial_year": "2026-27",
+                "period_name": "July 2026",
+                "period_start": "2026-07-01T00:00:00",
+                "period_end": "2026-07-31T23:59:59",
+                "performed_by": "tester",
+            },
+        )
+        assert period_response.status_code == 200
+        period = period_response.json()
+        lock_period_response = await client.post(
+            f"/accounting-periods/{period['id']}/lock",
+            json={"tenant_id": tenant_id, "performed_by": "finance", "reason": "month close"},
+        )
+        assert lock_period_response.status_code == 200
+        locked_post_response = await client.post(
+            "/journal-entries",
+            json={
+                "tenant_id": tenant_id,
+                "description": "Blocked locked-period journal",
+                "business_date": "2026-07-15T00:00:00",
+                "lines": [
+                    {"gl_account_id": expense_account["id"], "debit": 1.0, "credit": 0.0},
+                    {"gl_account_id": cash_account["id"], "debit": 0.0, "credit": 1.0},
+                ],
+            },
+        )
+        assert locked_post_response.status_code == 400
+        request_unlock_response = await client.post(
+            f"/accounting-periods/{period['id']}/request-unlock",
+            json={"tenant_id": tenant_id, "performed_by": "maker", "reason": "correction"},
+        )
+        assert request_unlock_response.status_code == 200
+        assert request_unlock_response.json()["status"] == "pending_unlock"
+        approve_unlock_response = await client.post(
+            f"/accounting-periods/{period['id']}/approve-unlock",
+            json={"tenant_id": tenant_id, "performed_by": "finance-head"},
+        )
+        assert approve_unlock_response.status_code == 200
+        assert approve_unlock_response.json()["status"] == "open"
 
         close_response = await client.post(
             "/day-end/close",

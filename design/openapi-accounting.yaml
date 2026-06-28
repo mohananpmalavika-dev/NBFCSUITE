@@ -179,6 +179,172 @@ paths:
       responses:
         '200':
           description: Bank transaction reconciled
+  /accounting-periods:
+    get:
+      summary: List tenant accounting periods
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Accounting periods
+    post:
+      summary: Create an accounting period
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountingPeriodCreate'
+      responses:
+        '200':
+          description: Accounting period created
+  /accounting-periods/{period_id}/lock:
+    post:
+      summary: Lock an accounting period
+      parameters:
+        - in: path
+          name: period_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountingActionRequest'
+      responses:
+        '200':
+          description: Accounting period locked
+  /accounting-periods/{period_id}/request-unlock:
+    post:
+      summary: Request approval to unlock an accounting period
+      parameters:
+        - in: path
+          name: period_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountingActionRequest'
+      responses:
+        '200':
+          description: Unlock request submitted
+  /accounting-periods/{period_id}/approve-unlock:
+    post:
+      summary: Approve an accounting period unlock
+      parameters:
+        - in: path
+          name: period_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountingActionRequest'
+      responses:
+        '200':
+          description: Accounting period reopened
+  /posting-rules:
+    get:
+      summary: List versioned tenant posting rules
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Posting rules
+    post:
+      summary: Create a draft posting rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostingRuleCreate'
+      responses:
+        '200':
+          description: Draft posting rule created
+  /posting-rules/{rule_id}/submit:
+    post:
+      summary: Submit a draft rule for maker-checker approval
+      parameters:
+        - $ref: '#/components/parameters/RuleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostingRuleActionRequest'
+      responses:
+        '200':
+          description: Rule submitted
+  /posting-rules/{rule_id}/approve:
+    post:
+      summary: Record checker or finance-head approval
+      parameters:
+        - $ref: '#/components/parameters/RuleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostingRuleActionRequest'
+      responses:
+        '200':
+          description: Rule approval recorded
+  /posting-rules/{rule_id}/publish:
+    post:
+      summary: Publish a fully approved posting rule
+      parameters:
+        - $ref: '#/components/parameters/RuleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountingActionRequest'
+      responses:
+        '200':
+          description: Posting rule published
+  /posting-rules/{rule_id}/new-version:
+    post:
+      summary: Create an immutable successor version of a posting rule
+      parameters:
+        - $ref: '#/components/parameters/RuleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostingRuleVersionRequest'
+      responses:
+        '200':
+          description: New draft version created
+  /posting-executions/{execution_id}/rollback:
+    post:
+      summary: Reverse journal, GL, and subledger effects for an execution
+      parameters:
+        - in: path
+          name: execution_id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountingActionRequest'
+      responses:
+        '200':
+          description: Posting execution rolled back
   /health:
     get:
       summary: Accounting health check
@@ -211,6 +377,12 @@ components:
       schema:
         type: string
         format: date-time
+    RuleId:
+      in: path
+      name: rule_id
+      required: true
+      schema:
+        type: string
   schemas:
     GLAccountCreate:
       type: object
@@ -225,6 +397,30 @@ components:
         account_type:
           type: string
           enum: [asset, liability, equity, revenue, expense]
+        currency:
+          type: string
+          default: INR
+        base_currency:
+          type: string
+          default: INR
+        normal_balance:
+          type: string
+          enum: [debit, credit]
+        posting_allowed:
+          type: string
+        allow_manual_posting:
+          type: string
+        allow_auto_posting:
+          type: string
+        requires_approval:
+          type: string
+        freeze_status:
+          type: string
+          enum: [open, freeze_debit, freeze_credit, freeze_both, closed]
+        exchange_gain_loss_account_code:
+          type: string
+        revaluation_account_code:
+          type: string
     JournalLineCreate:
       type: object
       required: [gl_account_id]
@@ -237,6 +433,30 @@ components:
         credit:
           type: number
           default: 0
+        currency:
+          type: string
+        transaction_currency:
+          type: string
+        transaction_amount:
+          type: number
+        exchange_rate:
+          type: number
+        branch_id:
+          type: string
+        department_id:
+          type: string
+        cost_center:
+          type: string
+        profit_center:
+          type: string
+        project_id:
+          type: string
+        employee_id:
+          type: string
+        product_id:
+          type: string
+        business_unit_id:
+          type: string
         description:
           type: string
     JournalEntryCreate:
@@ -254,6 +474,13 @@ components:
           type: string
         metadata:
           type: object
+        branch_id:
+          type: string
+        business_date:
+          type: string
+          format: date-time
+        financial_year:
+          type: string
         lines:
           type: array
           items:
@@ -280,6 +507,137 @@ components:
           type: string
         metadata:
           type: object
+    AccountingPeriodCreate:
+      type: object
+      required: [tenant_id, financial_year, period_name, period_start, period_end]
+      properties:
+        tenant_id:
+          type: string
+        financial_year:
+          type: string
+        period_name:
+          type: string
+        period_start:
+          type: string
+          format: date-time
+        period_end:
+          type: string
+          format: date-time
+        branch_id:
+          type: string
+        performed_by:
+          type: string
+    AccountingActionRequest:
+      type: object
+      required: [tenant_id]
+      properties:
+        tenant_id:
+          type: string
+        performed_by:
+          type: string
+        reason:
+          type: string
+    PostingRuleLine:
+      type: object
+      required: [account_code, direction]
+      properties:
+        account_code:
+          type: string
+        direction:
+          type: string
+          enum: [debit, credit]
+        amount_source:
+          type: string
+        percentage:
+          type: number
+        formula:
+          type: string
+        currency:
+          type: string
+        dimension_source:
+          type: object
+          additionalProperties:
+            type: string
+        transaction_currency_source:
+          type: string
+        exchange_rate_source:
+          type: string
+    PostingRuleCreate:
+      type: object
+      required: [tenant_id, source_module, source_event, lines]
+      properties:
+        tenant_id:
+          type: string
+        source_module:
+          type: string
+        source_event:
+          type: string
+        rule_name:
+          type: string
+        priority:
+          type: number
+        status:
+          type: string
+          default: draft
+        version:
+          type: number
+          default: 1
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+        requires_approval:
+          type: string
+          default: 'true'
+        dependency_rule_ids:
+          type: array
+          items:
+            type: string
+        rollback_strategy:
+          type: string
+          default: reverse_journal
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostingRuleLine'
+    PostingRuleActionRequest:
+      allOf:
+        - $ref: '#/components/schemas/AccountingActionRequest'
+        - type: object
+          properties:
+            stage:
+              type: string
+              enum: [checker, finance_head]
+            comment:
+              type: string
+    PostingRuleVersionRequest:
+      type: object
+      required: [tenant_id]
+      properties:
+        tenant_id:
+          type: string
+        rule_name:
+          type: string
+        priority:
+          type: number
+        effective_from:
+          type: string
+          format: date-time
+        effective_to:
+          type: string
+          format: date-time
+        dependency_rule_ids:
+          type: array
+          items:
+            type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostingRuleLine'
+        performed_by:
+          type: string
     TaxRuleCreate:
       type: object
       required: [tenant_id, tax_code, tax_type, rate_percent]

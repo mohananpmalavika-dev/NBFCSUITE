@@ -73,9 +73,18 @@ interface Dashboard360 {
   };
   posting_health: {
     posting_rules: number;
+    active_rules?: number;
+    pending_rule_approvals?: number;
     journal_entries: number;
     subledger_entries: number;
     automation_rate: number;
+  };
+  period_controls?: {
+    periods: number;
+    open: number;
+    locked: number;
+    pending_unlock: number;
+    latest?: AccountingPeriod | null;
   };
   voucher_workflow: Record<string, number>;
   gl_tree: CoaTreeNode[];
@@ -89,6 +98,12 @@ interface Dashboard360 {
 interface GlDetail {
   account: AccountSearchItem & {
     currency?: string | null;
+    base_currency?: string | null;
+    freeze_status?: string | null;
+    allow_manual_posting?: string | null;
+    allow_auto_posting?: string | null;
+    exchange_gain_loss_account_code?: string | null;
+    revaluation_account_code?: string | null;
     status?: string | null;
   };
   summary: {
@@ -122,9 +137,27 @@ interface PostingRule {
   rule_name?: string | null;
   priority: number;
   status?: string | null;
+  version?: number | null;
+  supersedes_rule_id?: string | null;
+  approval_status?: string | null;
+  maker_by?: string | null;
+  checker_by?: string | null;
+  finance_head_by?: string | null;
+  dependency_rule_ids?: string[];
   description?: string | null;
   lines: Array<PostingRuleLinePayload & { direction: 'debit' | 'credit' }>;
   conditions: PostingRuleConditionPayload[];
+}
+
+interface AccountingPeriod {
+  id: string;
+  financial_year: string;
+  period_name: string;
+  period_start: string;
+  period_end: string;
+  status: string;
+  locked_by?: string | null;
+  unlock_requested_by?: string | null;
 }
 
 interface RuleSimulation {
@@ -251,13 +284,22 @@ export default function AccountingPage() {
     branch_id: '',
   });
   const [postingRules, setPostingRules] = useState<PostingRule[]>([]);
+  const [accountingPeriods, setAccountingPeriods] = useState<AccountingPeriod[]>([]);
   const [ruleSimulation, setRuleSimulation] = useState<RuleSimulation | null>(null);
+  const [periodForm, setPeriodForm] = useState({
+    financial_year: '2026-27',
+    period_name: 'July 2026',
+    period_start: '2026-07-01',
+    period_end: '2026-07-31',
+    reason: 'Month close',
+  });
   const [ruleForm, setRuleForm] = useState({
     rule_name: 'Loan disbursement rule',
     source_module: 'loans',
     source_event: 'disbursement',
     priority: '10',
     status: 'draft',
+    dependency_rule_ids: '',
     description: 'Debit customer receivable and credit bank on disbursement',
     condition_field: 'amount',
     condition_operator: 'gt',
@@ -283,13 +325,15 @@ export default function AccountingPage() {
   const refresh = useCallback(async () => {
     if (!token || !tenantId) return;
     try {
-      const [response, rulesResponse] = await Promise.all([
+      const [response, rulesResponse, periodsResponse] = await Promise.all([
         apiClient.getAccounting360Dashboard(tenantId),
         apiClient.getPostingRules(tenantId),
+        apiClient.getAccountingPeriods(tenantId),
       ]);
       const data = response.data as Dashboard360;
       setDashboard(data);
       setPostingRules(rulesResponse.data || []);
+      setAccountingPeriods(periodsResponse.data || []);
       setMessage('');
       const firstAccountId = selectedAccountId || data.top_accounts[0]?.id || flattenTree(data.gl_tree)[0]?.id || '';
       if (firstAccountId) {
@@ -365,6 +409,9 @@ export default function AccountingPage() {
       source_event: ruleForm.source_event,
       priority: Number(ruleForm.priority || 100),
       status,
+      requires_approval: 'true',
+      dependency_rule_ids: ruleForm.dependency_rule_ids.split(',').map((item) => item.trim()).filter(Boolean),
+      rollback_strategy: 'reverse_journal',
       description: ruleForm.description,
       created_by: user?.username,
       conditions: ruleForm.condition_field ? [{
@@ -402,6 +449,26 @@ export default function AccountingPage() {
     }
   }
 
+  function createPeriod() {
+    return apiClient.createAccountingPeriod({
+      tenant_id: tenantId,
+      financial_year: periodForm.financial_year,
+      period_name: periodForm.period_name,
+      period_start: `${periodForm.period_start}T00:00:00`,
+      period_end: `${periodForm.period_end}T23:59:59`,
+      performed_by: user?.username,
+    });
+  }
+
+  function ruleStageLabel(rule: PostingRule) {
+    if (rule.status === 'active') return 'Published';
+    if (rule.approval_status === 'finance_head_approved') return 'Ready to publish';
+    if (rule.approval_status === 'checker_approved') return 'Finance approval';
+    if (rule.approval_status === 'maker_submitted') return 'Checker approval';
+    return 'Draft';
+  }
+
+  const latestPeriod = accountingPeriods[0] || dashboard?.period_controls?.latest || null;
   const canPostQuickAction = Number(quickForm.amount || 0) > 0;
 
   if (isLoading) {
@@ -526,12 +593,61 @@ export default function AccountingPage() {
             )}
 
             <section className="rounded-md border border-slate-200 bg-white p-4">
+              <div className="grid gap-4 xl:grid-cols-[1fr_1.2fr]">
+                <div>
+                  <h2 className="text-sm font-black uppercase tracking-wide text-slate-800">Period Controls</h2>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">Lock closed months and route unlocks through approval.</p>
+                  <div className="mt-3 grid grid-cols-4 gap-2 text-center text-xs font-bold text-slate-600">
+                    <div className="rounded border border-slate-200 px-2 py-2">
+                      <p className="text-lg font-black text-slate-950">{dashboard?.period_controls?.periods || accountingPeriods.length}</p>
+                      <p>Periods</p>
+                    </div>
+                    <div className="rounded border border-slate-200 px-2 py-2">
+                      <p className="text-lg font-black text-emerald-700">{dashboard?.period_controls?.open || accountingPeriods.filter((period) => period.status === 'open').length}</p>
+                      <p>Open</p>
+                    </div>
+                    <div className="rounded border border-slate-200 px-2 py-2">
+                      <p className="text-lg font-black text-rose-700">{dashboard?.period_controls?.locked || accountingPeriods.filter((period) => period.status === 'locked').length}</p>
+                      <p>Locked</p>
+                    </div>
+                    <div className="rounded border border-slate-200 px-2 py-2">
+                      <p className="text-lg font-black text-amber-700">{dashboard?.period_controls?.pending_unlock || accountingPeriods.filter((period) => period.status === 'pending_unlock').length}</p>
+                      <p>Pending</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid gap-3">
+                  <div className="grid gap-2 md:grid-cols-5">
+                    <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="FY" value={periodForm.financial_year} onChange={(event) => setPeriodForm({ ...periodForm, financial_year: event.target.value })} />
+                    <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="Period" value={periodForm.period_name} onChange={(event) => setPeriodForm({ ...periodForm, period_name: event.target.value })} />
+                    <input className="h-10 rounded border border-slate-300 px-3 text-sm" type="date" value={periodForm.period_start} onChange={(event) => setPeriodForm({ ...periodForm, period_start: event.target.value })} />
+                    <input className="h-10 rounded border border-slate-300 px-3 text-sm" type="date" value={periodForm.period_end} onChange={(event) => setPeriodForm({ ...periodForm, period_end: event.target.value })} />
+                    <button className="h-10 rounded bg-slate-950 px-3 text-sm font-bold text-white disabled:opacity-50" disabled={!!busyAction} onClick={() => runAction('create-period', createPeriod, 'Accounting period created.')}>Create</button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 rounded border border-slate-200 px-3 py-2 text-sm">
+                    <span className="font-bold text-slate-900">{latestPeriod ? `${latestPeriod.period_name} / ${latestPeriod.status}` : 'No period configured'}</span>
+                    <input className="h-9 min-w-44 rounded border border-slate-300 px-3 text-sm" placeholder="Reason" value={periodForm.reason} onChange={(event) => setPeriodForm({ ...periodForm, reason: event.target.value })} />
+                    {latestPeriod && latestPeriod.status === 'open' && (
+                      <button className="h-9 rounded bg-rose-700 px-3 text-xs font-bold text-white" onClick={() => runAction(`lock-period-${latestPeriod.id}`, () => apiClient.lockAccountingPeriod(latestPeriod.id, tenantId, user.username, periodForm.reason), 'Accounting period locked.')}>Lock</button>
+                    )}
+                    {latestPeriod && latestPeriod.status === 'locked' && (
+                      <button className="h-9 rounded bg-amber-600 px-3 text-xs font-bold text-white" onClick={() => runAction(`unlock-request-${latestPeriod.id}`, () => apiClient.requestUnlockAccountingPeriod(latestPeriod.id, tenantId, user.username, periodForm.reason), 'Unlock request submitted.')}>Request Unlock</button>
+                    )}
+                    {latestPeriod && latestPeriod.status === 'pending_unlock' && (
+                      <button className="h-9 rounded bg-emerald-700 px-3 text-xs font-bold text-white" onClick={() => runAction(`unlock-approve-${latestPeriod.id}`, () => apiClient.approveUnlockAccountingPeriod(latestPeriod.id, tenantId, user.username), 'Unlock approved.')}>Approve Unlock</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-md border border-slate-200 bg-white p-4">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <h2 className="text-sm font-black uppercase tracking-wide text-slate-800">Posting Rule Builder</h2>
                   <p className="mt-1 text-sm font-semibold text-slate-500">Configure module events once; journals and GL entries are generated from rules.</p>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold text-slate-600 sm:w-[360px]">
+                <div className="grid grid-cols-4 gap-2 text-center text-xs font-bold text-slate-600 sm:w-[460px]">
                   <div className="rounded border border-slate-200 px-2 py-2">
                     <p className="text-lg font-black text-slate-950">{postingRules.length}</p>
                     <p>Rules</p>
@@ -543,6 +659,10 @@ export default function AccountingPage() {
                   <div className="rounded border border-slate-200 px-2 py-2">
                     <p className="text-lg font-black text-amber-700">{postingRules.filter((rule) => rule.status === 'draft').length}</p>
                     <p>Draft</p>
+                  </div>
+                  <div className="rounded border border-slate-200 px-2 py-2">
+                    <p className="text-lg font-black text-blue-700">{postingRules.filter((rule) => rule.status === 'pending_approval').length}</p>
+                    <p>Pending</p>
                   </div>
                 </div>
               </div>
@@ -565,6 +685,8 @@ export default function AccountingPage() {
                       <option value="frozen">Frozen</option>
                     </select>
                   </div>
+
+                  <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="Dependency rule IDs, comma separated" value={ruleForm.dependency_rule_ids} onChange={(event) => setRuleForm({ ...ruleForm, dependency_rule_ids: event.target.value })} />
 
                   <div className="grid gap-3 md:grid-cols-[1fr_150px_1fr]">
                     <input className="h-10 rounded border border-slate-300 px-3 text-sm" placeholder="Condition field" value={ruleForm.condition_field} onChange={(event) => setRuleForm({ ...ruleForm, condition_field: event.target.value })} />
@@ -658,15 +780,27 @@ export default function AccountingPage() {
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="truncate text-sm font-black text-slate-900">{rule.rule_name || `${rule.source_module}.${rule.source_event}`}</p>
-                              <p className="text-xs font-semibold text-slate-500">{rule.source_module} / {rule.source_event} / priority {rule.priority}</p>
+                              <p className="text-xs font-semibold text-slate-500">{rule.source_module} / {rule.source_event} / v{rule.version || 1} / {ruleStageLabel(rule)}</p>
                             </div>
                             <span className={`rounded px-2 py-1 text-[11px] font-black ${rule.status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>{rule.status || 'draft'}</span>
                           </div>
-                          {rule.status !== 'active' && (
-                            <button className="mt-2 rounded bg-emerald-700 px-3 py-1 text-xs font-bold text-white" onClick={() => runAction(`publish-${rule.id}`, () => apiClient.publishPostingRule(rule.id, tenantId, user.username), 'Posting rule published.')}>
-                              Publish
-                            </button>
-                          )}
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {rule.status !== 'active' && (!rule.approval_status || rule.approval_status === 'draft') && (
+                              <button className="rounded bg-blue-700 px-3 py-1 text-xs font-bold text-white" onClick={() => runAction(`submit-${rule.id}`, () => apiClient.submitPostingRule(rule.id, tenantId, user.username), 'Posting rule submitted.')}>Submit</button>
+                            )}
+                            {rule.approval_status === 'maker_submitted' && (
+                              <button className="rounded bg-indigo-700 px-3 py-1 text-xs font-bold text-white" onClick={() => runAction(`checker-${rule.id}`, () => apiClient.approvePostingRule(rule.id, tenantId, 'checker', user.username), 'Checker approval recorded.')}>Checker</button>
+                            )}
+                            {rule.approval_status === 'checker_approved' && (
+                              <button className="rounded bg-violet-700 px-3 py-1 text-xs font-bold text-white" onClick={() => runAction(`finance-${rule.id}`, () => apiClient.approvePostingRule(rule.id, tenantId, 'finance_head', user.username), 'Finance head approval recorded.')}>Finance Head</button>
+                            )}
+                            {rule.approval_status === 'finance_head_approved' && (
+                              <button className="rounded bg-emerald-700 px-3 py-1 text-xs font-bold text-white" onClick={() => runAction(`publish-${rule.id}`, () => apiClient.publishPostingRule(rule.id, tenantId, user.username), 'Posting rule published.')}>Publish</button>
+                            )}
+                            {rule.status === 'active' && (
+                              <button className="rounded border border-slate-300 px-3 py-1 text-xs font-bold text-slate-700" onClick={() => runAction(`version-${rule.id}`, () => apiClient.createPostingRuleVersion(rule.id, { tenant_id: tenantId, performed_by: user.username }), 'New rule version drafted.')}>New Version</button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -743,6 +877,25 @@ export default function AccountingPage() {
                     <div className="rounded border border-slate-200 px-3 py-3">
                       <p className="text-xs font-bold text-slate-500">Entries</p>
                       <p className="mt-1 text-lg font-black">{glDetail?.summary.transaction_count || 0}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 rounded border border-slate-200 bg-slate-50 p-3 text-xs font-bold text-slate-600 md:grid-cols-3">
+                    <div>
+                      <p className="uppercase tracking-wide text-slate-400">Currency</p>
+                      <p className="mt-1 text-sm text-slate-950">{glDetail?.account.currency || 'INR'} / Base {glDetail?.account.base_currency || glDetail?.account.currency || 'INR'}</p>
+                    </div>
+                    <div>
+                      <p className="uppercase tracking-wide text-slate-400">Freeze</p>
+                      <p className={`mt-1 text-sm ${glDetail?.account.freeze_status && glDetail.account.freeze_status !== 'open' ? 'text-rose-700' : 'text-emerald-700'}`}>{glDetail?.account.freeze_status || 'open'}</p>
+                    </div>
+                    <div>
+                      <p className="uppercase tracking-wide text-slate-400">Posting Modes</p>
+                      <p className="mt-1 text-sm text-slate-950">Manual {glDetail?.account.allow_manual_posting || 'true'} / Auto {glDetail?.account.allow_auto_posting || 'true'}</p>
+                    </div>
+                    <div className="md:col-span-3">
+                      <p className="uppercase tracking-wide text-slate-400">Revaluation</p>
+                      <p className="mt-1 text-sm text-slate-950">Gain/Loss {glDetail?.account.exchange_gain_loss_account_code || '-'} / Revaluation {glDetail?.account.revaluation_account_code || '-'}</p>
                     </div>
                   </div>
 

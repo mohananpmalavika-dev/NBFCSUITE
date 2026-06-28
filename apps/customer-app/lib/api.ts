@@ -385,9 +385,45 @@ export interface HrmsPositionPayload {
   department_id?: string;
   designation_id?: string;
   grade_id?: string;
+  job_role_id?: string;
+  organization_unit_id?: string;
   branch_id?: string;
   reports_to_position_id?: string;
   approval_limit?: number;
+  budgeted_salary?: number;
+  effective_from?: string;
+  effective_to?: string;
+}
+
+export interface HrmsShiftPayload {
+  tenant_id: string;
+  shift_code: string;
+  shift_name: string;
+  start_time: string;
+  end_time: string;
+  break_minutes?: number;
+  grace_in?: number;
+  grace_out?: number;
+  weekly_off?: string;
+}
+
+export interface HrmsAttendanceCheckInPayload {
+  tenant_id: string;
+  employee_id: string;
+  device_id?: string;
+  device_ip?: string;
+  latitude?: string;
+  longitude?: string;
+  photo_url?: string;
+}
+
+export interface HrmsLeaveApplicationPayload {
+  tenant_id: string;
+  employee_id: string;
+  leave_type_id: string;
+  from_date: string;
+  to_date: string;
+  reason?: string;
 }
 
 export interface PayrollRunPayload {
@@ -414,12 +450,21 @@ export interface GlAccountPayload {
   parent_account_id?: string;
   category?: string;
   currency?: string;
+  base_currency?: string;
+  normal_balance?: string;
   branch_id?: string;
   branch_specific?: string;
   posting_allowed?: string;
+  allow_manual_posting?: string;
+  allow_auto_posting?: string;
+  requires_approval?: string;
+  freeze_status?: string;
   status?: string;
+  exchange_gain_loss_account_code?: string;
+  revaluation_account_code?: string;
   opening_balance?: number;
   financial_year?: string;
+  metadata?: JsonObject;
 }
 
 export interface CoaSeedPayload {
@@ -438,6 +483,8 @@ export interface PostingRuleLinePayload {
   formula?: string;
   currency?: string;
   dimension_source?: Record<string, string>;
+  transaction_currency_source?: string;
+  exchange_rate_source?: string;
 }
 
 export interface PostingRuleConditionPayload {
@@ -453,9 +500,13 @@ export interface PostingRulePayload {
   rule_name?: string;
   priority?: number;
   status?: string;
+  version?: number;
+  supersedes_rule_id?: string;
   effective_from?: string;
   effective_to?: string;
   requires_approval?: string;
+  dependency_rule_ids?: string[];
+  rollback_strategy?: string;
   debit_account_code?: string;
   credit_account_code?: string;
   description?: string;
@@ -486,8 +537,27 @@ export interface AccountingPostingLine {
   description?: string;
   branch_id?: string;
   currency?: string;
+  transaction_currency?: string;
+  transaction_amount?: number;
+  exchange_rate?: number;
+  department_id?: string;
   cost_center?: string;
   profit_center?: string;
+  project_id?: string;
+  employee_id?: string;
+  product_id?: string;
+  business_unit_id?: string;
+}
+
+export interface AccountingPeriodPayload {
+  tenant_id: string;
+  financial_year: string;
+  period_name: string;
+  period_start: string;
+  period_end: string;
+  branch_id?: string;
+  status?: string;
+  performed_by?: string;
 }
 
 export interface PostingEnginePayload {
@@ -938,6 +1008,22 @@ export const apiClient = {
     hrmsAxiosInstance.put(`/positions/${positionId}`, data),
   vacateHrmsPosition: (positionId: string) =>
     hrmsAxiosInstance.post(`/positions/${positionId}/vacate`),
+  createHrmsShift: (data: HrmsShiftPayload) =>
+    hrmsAxiosInstance.post(`/shifts`, data),
+  assignHrmsShift: (employeeId: string, data: { tenant_id?: string; shift_id: string; effective_from?: string; effective_to?: string }) =>
+    hrmsAxiosInstance.post(`/employees/${employeeId}/shifts`, data),
+  checkInAttendance: (data: HrmsAttendanceCheckInPayload) =>
+    hrmsAxiosInstance.post(`/attendance/check-in`, data),
+  checkOutAttendance: (data: { tenant_id: string; employee_id: string }) =>
+    hrmsAxiosInstance.post(`/attendance/check-out`, data),
+  applyLeave: (data: HrmsLeaveApplicationPayload) =>
+    hrmsAxiosInstance.post(`/leave/apply`, data),
+  getLeaveBalance: (employeeId: string, params?: { tenant_id?: string }) =>
+    hrmsAxiosInstance.get(`/leave/${employeeId}/balance`, { params }),
+  getHrmsVacantPositions: (params?: { tenant_id?: string; organization_id?: string; zone_id?: string; region_id?: string; area_id?: string; branch_id?: string }) =>
+    hrmsAxiosInstance.get(`/positions/vacant`, { params }),
+  getHrmsOccupiedPositions: (params?: { tenant_id?: string; organization_id?: string; zone_id?: string; region_id?: string; area_id?: string; branch_id?: string }) =>
+    hrmsAxiosInstance.get(`/positions/occupied`, { params }),
   getEmployees: (params?: { tenant_id?: string; branch_id?: string; department?: string; status?: string; skip?: number; limit?: number }) =>
     hrmsAxiosInstance.get(`/employees`, { params }),
   createEmployee: (data: HrmsEmployeePayload) =>
@@ -946,6 +1032,12 @@ export const apiClient = {
     hrmsAxiosInstance.put(`/employees/${employeeId}`, data),
   assignEmployeeBranch: (employeeId: string, branchId: string) =>
     hrmsAxiosInstance.post(`/employees/${employeeId}/assign-branch`, null, { params: { branch_id: branchId } }),
+  getHrmsOrganizationPositions: (organizationUnitId: string, params?: { tenant_id?: string }) =>
+    hrmsAxiosInstance.get(`/organization/${organizationUnitId}/positions`, { params }),
+  getHrmsEmployeeTimeline: (employeeId: string, params?: { tenant_id?: string; limit?: number }) =>
+    hrmsAxiosInstance.get(`/employees/${employeeId}/timeline`, { params }),
+  addHrmsEmployeeTimelineEvent: (employeeId: string, data: { tenant_id?: string; event_type: string; event_title?: string; event_details?: Record<string, unknown>; notes?: string; event_timestamp?: string }) =>
+    hrmsAxiosInstance.post(`/employees/${employeeId}/timeline`, data),
   getPayrollRuns: (params?: { tenant_id?: string; status?: string; skip?: number; limit?: number }) =>
     hrmsAxiosInstance.get(`/payroll/runs`, { params }),
   createPayrollRun: (data: PayrollRunPayload) =>
@@ -1040,6 +1132,16 @@ export const apiClient = {
     axiosInstance.post(`/gl-accounts`, data),
   updateGlAccount: (accountId: string, tenantId: string, data: Partial<Omit<GlAccountPayload, 'tenant_id' | 'account_code'>>) =>
     axiosInstance.put(`/gl-accounts/${accountId}`, data, { params: { tenant_id: tenantId } }),
+  getAccountingPeriods: (tenantId: string, params?: { financial_year?: string; status?: string }) =>
+    axiosInstance.get(`/accounting-periods`, { params: { tenant_id: tenantId, ...params } }),
+  createAccountingPeriod: (data: AccountingPeriodPayload) =>
+    axiosInstance.post(`/accounting-periods`, data),
+  lockAccountingPeriod: (periodId: string, tenantId: string, performedBy?: string, reason?: string) =>
+    axiosInstance.post(`/accounting-periods/${periodId}/lock`, { tenant_id: tenantId, performed_by: performedBy, reason }),
+  requestUnlockAccountingPeriod: (periodId: string, tenantId: string, performedBy?: string, reason?: string) =>
+    axiosInstance.post(`/accounting-periods/${periodId}/request-unlock`, { tenant_id: tenantId, performed_by: performedBy, reason }),
+  approveUnlockAccountingPeriod: (periodId: string, tenantId: string, performedBy?: string) =>
+    axiosInstance.post(`/accounting-periods/${periodId}/approve-unlock`, { tenant_id: tenantId, performed_by: performedBy }),
   getGlBalances: (tenantId: string) =>
     axiosInstance.get(`/gl-balances`, { params: { tenant_id: tenantId } }),
   getGlLedger: (tenantId: string, params?: { financial_year?: string; branch_id?: string }) =>
@@ -1058,12 +1160,20 @@ export const apiClient = {
     axiosInstance.post(`/posting-rules/validate`, data),
   simulatePostingRule: (data: PostingRuleSimulationPayload) =>
     axiosInstance.post(`/posting-rules/simulate`, data),
+  submitPostingRule: (ruleId: string, tenantId: string, performedBy?: string) =>
+    axiosInstance.post(`/posting-rules/${ruleId}/submit`, { tenant_id: tenantId, performed_by: performedBy }),
+  approvePostingRule: (ruleId: string, tenantId: string, stage: 'checker' | 'finance_head', performedBy?: string) =>
+    axiosInstance.post(`/posting-rules/${ruleId}/approve`, { tenant_id: tenantId, performed_by: performedBy, stage }),
+  createPostingRuleVersion: (ruleId: string, data: Partial<PostingRulePayload> & { tenant_id: string; performed_by?: string }) =>
+    axiosInstance.post(`/posting-rules/${ruleId}/new-version`, data),
   publishPostingRule: (ruleId: string, tenantId: string, performedBy?: string) =>
     axiosInstance.post(`/posting-rules/${ruleId}/publish`, { tenant_id: tenantId, performed_by: performedBy }),
   getPostingRuleHistory: (ruleId: string, tenantId: string) =>
     axiosInstance.get(`/posting-rules/${ruleId}/history`, { params: { tenant_id: tenantId } }),
   getPostingRuleExecutions: (ruleId: string, tenantId: string) =>
     axiosInstance.get(`/posting-rules/${ruleId}/executions`, { params: { tenant_id: tenantId } }),
+  rollbackPostingExecution: (executionId: string, tenantId: string, performedBy?: string, reason?: string) =>
+    axiosInstance.post(`/posting-executions/${executionId}/rollback`, { tenant_id: tenantId, performed_by: performedBy, reason }),
   getJournalEntries: (tenantId: string) =>
     axiosInstance.get(`/journal-entries`, { params: { tenant_id: tenantId } }),
   validateAccountingPosting: (

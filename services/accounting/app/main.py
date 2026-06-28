@@ -29,13 +29,22 @@ class GLAccount(Base):
     parent_account_id = Column(String, ForeignKey("gl_accounts.id"), nullable=True)
     category = Column(String, nullable=True)
     currency = Column(String, default="INR")
+    base_currency = Column(String, default="INR")
+    normal_balance = Column(String, nullable=True)
     branch_id = Column(String, nullable=True, index=True)
     branch_specific = Column(String, default="false")
     posting_allowed = Column(String, default="true")
+    allow_manual_posting = Column(String, default="true")
+    allow_auto_posting = Column(String, default="true")
+    requires_approval = Column(String, default="false")
+    freeze_status = Column(String, default="open")
     status = Column(String, default="active")
+    exchange_gain_loss_account_code = Column(String, nullable=True)
+    revaluation_account_code = Column(String, nullable=True)
     opening_balance = Column(Float, default=0.0)
     financial_year = Column(String, nullable=True)
     balance = Column(Float, default=0.0)
+    metadata_json = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     parent = relationship("GLAccount", remote_side=[id])
 
@@ -75,9 +84,17 @@ class JournalLine(Base):
     debit = Column(Float, default=0.0)
     credit = Column(Float, default=0.0)
     currency = Column(String, default="INR")
+    transaction_currency = Column(String, nullable=True)
+    transaction_amount = Column(Float, nullable=True)
+    exchange_rate = Column(Float, nullable=True)
     branch_id = Column(String, nullable=True, index=True)
+    department_id = Column(String, nullable=True, index=True)
     cost_center = Column(String, nullable=True)
     profit_center = Column(String, nullable=True)
+    project_id = Column(String, nullable=True, index=True)
+    employee_id = Column(String, nullable=True, index=True)
+    product_id = Column(String, nullable=True, index=True)
+    business_unit_id = Column(String, nullable=True, index=True)
     description = Column(String, nullable=True)
     journal_entry = relationship("JournalEntry", back_populates="lines")
 
@@ -142,9 +159,19 @@ class PostingRule(Base):
     rule_name = Column(String, nullable=True)
     priority = Column(Float, default=100.0)
     status = Column(String, default="active", index=True)
+    version = Column(Float, default=1.0)
+    supersedes_rule_id = Column(String, nullable=True, index=True)
     effective_from = Column(DateTime, nullable=True)
     effective_to = Column(DateTime, nullable=True)
     requires_approval = Column(String, default="false")
+    approval_status = Column(String, default="draft", index=True)
+    maker_by = Column(String, nullable=True)
+    checker_by = Column(String, nullable=True)
+    finance_head_by = Column(String, nullable=True)
+    approved_by = Column(String, nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    dependency_rule_ids = Column(JSON, nullable=True)
+    rollback_strategy = Column(String, default="reverse_journal")
     debit_account_code = Column(String, nullable=True)
     credit_account_code = Column(String, nullable=True)
     posting_lines = Column(JSON, nullable=True)
@@ -172,6 +199,7 @@ class PostingExecutionLog(Base):
     error_message = Column(String, nullable=True)
     input_payload = Column(JSON, nullable=True)
     generated_lines = Column(JSON, nullable=True)
+    rollback_journal_id = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -188,6 +216,30 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class AccountingPeriod(Base):
+    __tablename__ = "accounting_periods"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "financial_year", "period_name", name="uq_accounting_periods_tenant_period"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    financial_year = Column(String, index=True, nullable=False)
+    period_name = Column(String, nullable=False)
+    period_start = Column(DateTime, nullable=False)
+    period_end = Column(DateTime, nullable=False)
+    branch_id = Column(String, nullable=True, index=True)
+    status = Column(String, default="open", index=True)
+    locked_by = Column(String, nullable=True)
+    unlocked_by = Column(String, nullable=True)
+    approved_by = Column(String, nullable=True)
+    unlock_requested_by = Column(String, nullable=True)
+    lock_reason = Column(String, nullable=True)
+    unlock_reason = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
 class SubLedgerEntry(Base):
     __tablename__ = "sub_ledger_entries"
 
@@ -198,6 +250,9 @@ class SubLedgerEntry(Base):
     source_reference = Column(String, nullable=False)
     journal_entry_id = Column(String, ForeignKey("journal_entries.id"), nullable=True)
     amount = Column(Float, nullable=False)
+    status = Column(String, default="active", index=True)
+    reversal_entry_id = Column(String, nullable=True, index=True)
+    reversed_at = Column(DateTime, nullable=True)
     metadata_json = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -259,8 +314,13 @@ class VoucherLine(Base):
     debit = Column(Float, default=0.0)
     credit = Column(Float, default=0.0)
     description = Column(String, nullable=True)
+    department_id = Column(String, nullable=True)
     cost_center = Column(String, nullable=True)
     profit_center = Column(String, nullable=True)
+    project_id = Column(String, nullable=True)
+    employee_id = Column(String, nullable=True)
+    product_id = Column(String, nullable=True)
+    business_unit_id = Column(String, nullable=True)
     voucher = relationship("Voucher", back_populates="lines")
 
 
@@ -292,10 +352,18 @@ class GLAccountResponse(BaseModel):
     parent_account_id: Optional[str] = None
     category: Optional[str] = None
     currency: Optional[str] = None
+    base_currency: Optional[str] = None
+    normal_balance: Optional[str] = None
     branch_id: Optional[str] = None
     branch_specific: Optional[str] = None
     posting_allowed: Optional[str] = None
+    allow_manual_posting: Optional[str] = None
+    allow_auto_posting: Optional[str] = None
+    requires_approval: Optional[str] = None
+    freeze_status: Optional[str] = None
     status: Optional[str] = None
+    exchange_gain_loss_account_code: Optional[str] = None
+    revaluation_account_code: Optional[str] = None
     opening_balance: Optional[float] = 0.0
     financial_year: Optional[str] = None
     balance: float
@@ -312,12 +380,21 @@ class GLAccountCreate(BaseModel):
     parent_account_id: Optional[str] = None
     category: Optional[str] = None
     currency: Optional[str] = "INR"
+    base_currency: Optional[str] = "INR"
+    normal_balance: Optional[str] = None
     branch_id: Optional[str] = None
     branch_specific: Optional[str] = "false"
     posting_allowed: Optional[str] = "true"
+    allow_manual_posting: Optional[str] = "true"
+    allow_auto_posting: Optional[str] = "true"
+    requires_approval: Optional[str] = "false"
+    freeze_status: Optional[str] = "open"
     status: Optional[str] = "active"
+    exchange_gain_loss_account_code: Optional[str] = None
+    revaluation_account_code: Optional[str] = None
     opening_balance: Optional[float] = 0.0
     financial_year: Optional[str] = None
+    metadata: Optional[dict] = None
 
 
 class GLAccountUpdate(BaseModel):
@@ -326,12 +403,21 @@ class GLAccountUpdate(BaseModel):
     parent_account_id: Optional[str] = None
     category: Optional[str] = None
     currency: Optional[str] = None
+    base_currency: Optional[str] = None
+    normal_balance: Optional[str] = None
     branch_id: Optional[str] = None
     branch_specific: Optional[str] = None
     posting_allowed: Optional[str] = None
+    allow_manual_posting: Optional[str] = None
+    allow_auto_posting: Optional[str] = None
+    requires_approval: Optional[str] = None
+    freeze_status: Optional[str] = None
     status: Optional[str] = None
+    exchange_gain_loss_account_code: Optional[str] = None
+    revaluation_account_code: Optional[str] = None
     opening_balance: Optional[float] = None
     financial_year: Optional[str] = None
+    metadata: Optional[dict] = None
 
 
 class COASeedRequest(BaseModel):
@@ -346,8 +432,16 @@ class JournalLineCreate(BaseModel):
     credit: float = 0.0
     branch_id: Optional[str] = None
     currency: Optional[str] = "INR"
+    transaction_currency: Optional[str] = None
+    transaction_amount: Optional[float] = None
+    exchange_rate: Optional[float] = None
+    department_id: Optional[str] = None
     cost_center: Optional[str] = None
     profit_center: Optional[str] = None
+    project_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    product_id: Optional[str] = None
+    business_unit_id: Optional[str] = None
     description: Optional[str] = None
 
 
@@ -394,6 +488,8 @@ class PostingRuleLineCreate(BaseModel):
     formula: Optional[str] = None
     currency: Optional[str] = None
     dimension_source: Optional[dict] = None
+    transaction_currency_source: Optional[str] = None
+    exchange_rate_source: Optional[str] = None
 
 
 class PostingRuleLineResponse(BaseModel):
@@ -406,6 +502,8 @@ class PostingRuleLineResponse(BaseModel):
     formula: Optional[str] = None
     currency: Optional[str] = None
     dimension_source: Optional[dict] = None
+    transaction_currency_source: Optional[str] = None
+    exchange_rate_source: Optional[str] = None
 
 
 class PostingRuleConditionCreate(BaseModel):
@@ -426,10 +524,14 @@ class PostingRuleCreate(BaseModel):
     source_event: str
     rule_name: Optional[str] = None
     priority: Optional[float] = 100.0
-    status: Optional[str] = "active"
+    status: Optional[str] = "draft"
+    version: Optional[float] = 1.0
+    supersedes_rule_id: Optional[str] = None
     effective_from: Optional[datetime] = None
     effective_to: Optional[datetime] = None
-    requires_approval: Optional[str] = "false"
+    requires_approval: Optional[str] = "true"
+    dependency_rule_ids: Optional[List[str]] = None
+    rollback_strategy: Optional[str] = "reverse_journal"
     debit_account_code: Optional[str] = None
     credit_account_code: Optional[str] = None
     description: Optional[str] = None
@@ -445,9 +547,13 @@ class PostingRuleUpdate(BaseModel):
     rule_name: Optional[str] = None
     priority: Optional[float] = None
     status: Optional[str] = None
+    version: Optional[float] = None
+    supersedes_rule_id: Optional[str] = None
     effective_from: Optional[datetime] = None
     effective_to: Optional[datetime] = None
     requires_approval: Optional[str] = None
+    dependency_rule_ids: Optional[List[str]] = None
+    rollback_strategy: Optional[str] = None
     debit_account_code: Optional[str] = None
     credit_account_code: Optional[str] = None
     description: Optional[str] = None
@@ -465,9 +571,19 @@ class PostingRuleResponse(BaseModel):
     rule_name: Optional[str] = None
     priority: float = 100.0
     status: Optional[str] = None
+    version: Optional[float] = None
+    supersedes_rule_id: Optional[str] = None
     effective_from: Optional[datetime] = None
     effective_to: Optional[datetime] = None
     requires_approval: Optional[str] = None
+    approval_status: Optional[str] = None
+    maker_by: Optional[str] = None
+    checker_by: Optional[str] = None
+    finance_head_by: Optional[str] = None
+    approved_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    dependency_rule_ids: Optional[List[str]] = None
+    rollback_strategy: Optional[str] = None
     debit_account_code: Optional[str] = None
     credit_account_code: Optional[str] = None
     description: Optional[str] = None
@@ -497,6 +613,62 @@ class PostingRulePublishRequest(BaseModel):
     performed_by: Optional[str] = None
 
 
+class PostingRuleApprovalRequest(BaseModel):
+    tenant_id: str
+    performed_by: Optional[str] = None
+    stage: Optional[str] = None
+    comment: Optional[str] = None
+
+
+class PostingRuleVersionRequest(PostingRuleUpdate):
+    tenant_id: str
+
+
+class ExecutionRollbackRequest(BaseModel):
+    tenant_id: str
+    performed_by: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class AccountingPeriodCreate(BaseModel):
+    tenant_id: str
+    financial_year: str
+    period_name: str
+    period_start: datetime
+    period_end: datetime
+    branch_id: Optional[str] = None
+    status: Optional[str] = "open"
+    performed_by: Optional[str] = None
+
+
+class AccountingPeriodActionRequest(BaseModel):
+    tenant_id: str
+    performed_by: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class AccountingPeriodResponse(BaseModel):
+    id: str
+    tenant_id: str
+    financial_year: str
+    period_name: str
+    period_start: datetime
+    period_end: datetime
+    branch_id: Optional[str] = None
+    status: str
+    locked_by: Optional[str] = None
+    unlocked_by: Optional[str] = None
+    approved_by: Optional[str] = None
+    unlock_requested_by: Optional[str] = None
+    lock_reason: Optional[str] = None
+    unlock_reason: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class AuditLogResponse(BaseModel):
     id: str
     tenant_id: str
@@ -519,6 +691,9 @@ class SubLedgerEntryResponse(BaseModel):
     source_reference: str
     journal_entry_id: Optional[str] = None
     amount: float
+    status: Optional[str] = None
+    reversal_entry_id: Optional[str] = None
+    reversed_at: Optional[datetime] = None
     metadata: Optional[dict] = None
     created_at: datetime
 
@@ -636,8 +811,16 @@ class PostingEngineLine(BaseModel):
     description: Optional[str] = None
     branch_id: Optional[str] = None
     currency: Optional[str] = "INR"
+    transaction_currency: Optional[str] = None
+    transaction_amount: Optional[float] = None
+    exchange_rate: Optional[float] = None
+    department_id: Optional[str] = None
     cost_center: Optional[str] = None
     profit_center: Optional[str] = None
+    project_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    product_id: Optional[str] = None
+    business_unit_id: Optional[str] = None
 
 
 class PostingValidationRequest(BaseModel):
@@ -672,8 +855,13 @@ class VoucherLineCreate(BaseModel):
     debit: float = 0.0
     credit: float = 0.0
     description: Optional[str] = None
+    department_id: Optional[str] = None
     cost_center: Optional[str] = None
     profit_center: Optional[str] = None
+    project_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    product_id: Optional[str] = None
+    business_unit_id: Optional[str] = None
 
 
 class VoucherLineResponse(BaseModel):
@@ -681,8 +869,13 @@ class VoucherLineResponse(BaseModel):
     debit: float
     credit: float
     description: Optional[str] = None
+    department_id: Optional[str] = None
     cost_center: Optional[str] = None
     profit_center: Optional[str] = None
+    project_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    product_id: Optional[str] = None
+    business_unit_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -1145,6 +1338,82 @@ def _is_truthy(value: Optional[str]) -> bool:
     return str(value or "").lower() in {"true", "1", "yes", "active", "allowed"}
 
 
+def _json_safe(value):
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    return value
+
+
+def _period_response(period: AccountingPeriod) -> dict:
+    return {
+        "id": period.id,
+        "tenant_id": period.tenant_id,
+        "financial_year": period.financial_year,
+        "period_name": period.period_name,
+        "period_start": period.period_start,
+        "period_end": period.period_end,
+        "branch_id": period.branch_id,
+        "status": period.status,
+        "locked_by": period.locked_by,
+        "unlocked_by": period.unlocked_by,
+        "approved_by": period.approved_by,
+        "unlock_requested_by": period.unlock_requested_by,
+        "lock_reason": period.lock_reason,
+        "unlock_reason": period.unlock_reason,
+        "created_at": period.created_at,
+        "updated_at": period.updated_at,
+    }
+
+
+def _assert_period_open(
+    db: Session,
+    tenant_id: str,
+    posting_date: Optional[datetime],
+    branch_id: Optional[str] = None,
+) -> None:
+    value = posting_date or datetime.utcnow()
+    query = db.query(AccountingPeriod).filter(
+        AccountingPeriod.tenant_id == tenant_id,
+        AccountingPeriod.period_start <= value,
+        AccountingPeriod.period_end >= value,
+    )
+    if branch_id:
+        branch_period = query.filter(AccountingPeriod.branch_id == branch_id).first()
+        period = branch_period or query.filter(AccountingPeriod.branch_id.is_(None)).first()
+    else:
+        period = query.filter(AccountingPeriod.branch_id.is_(None)).first()
+    if not period:
+        return
+    if str(period.status or "open").lower() in {"locked", "closed", "pending_unlock"}:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Accounting period {period.period_name} is {period.status}; posting is blocked",
+        )
+
+
+def _validate_account_for_line(
+    account: GLAccount,
+    debit: float,
+    credit: float,
+    posting_mode: str = "manual",
+) -> None:
+    freeze_status = str(account.freeze_status or "open").lower()
+    if freeze_status in {"closed", "freeze_both"}:
+        raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is frozen for posting")
+    if (debit or 0.0) > 0 and freeze_status == "freeze_debit":
+        raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is frozen for debit")
+    if (credit or 0.0) > 0 and freeze_status == "freeze_credit":
+        raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is frozen for credit")
+    if posting_mode == "auto" and not _is_truthy(account.allow_auto_posting):
+        raise HTTPException(status_code=400, detail=f"Auto posting is not allowed for GL account {account.account_code}")
+    if posting_mode == "manual" and not _is_truthy(account.allow_manual_posting):
+        raise HTTPException(status_code=400, detail=f"Manual posting is not allowed for GL account {account.account_code}")
+
+
 def _get_or_create_account(code: str, tenant_id: str, db: Session) -> GLAccount:
     account = (
         db.query(GLAccount)
@@ -1163,7 +1432,11 @@ def _get_or_create_account(code: str, tenant_id: str, db: Session) -> GLAccount:
         account_type=account_type,
         category=account_type,
         currency="INR",
+        base_currency="INR",
         posting_allowed="true",
+        allow_manual_posting="true",
+        allow_auto_posting="true",
+        freeze_status="open",
         status="active",
         balance=0.0,
     )
@@ -1180,6 +1453,8 @@ def _get_postable_account_by_id(account_id: str, tenant_id: str, db: Session) ->
         raise HTTPException(status_code=400, detail=f"Posting is not allowed for GL account {account.account_code}")
     if str(account.status or "").lower() not in {"active", ""}:
         raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is not active")
+    if str(account.freeze_status or "open").lower() == "closed":
+        raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is closed")
     return account
 
 
@@ -1189,6 +1464,8 @@ def _get_postable_account_by_code(account_code: str, tenant_id: str, db: Session
         raise HTTPException(status_code=400, detail=f"Posting is not allowed for GL account {account.account_code}")
     if str(account.status or "").lower() not in {"active", ""}:
         raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is not active")
+    if str(account.freeze_status or "open").lower() == "closed":
+        raise HTTPException(status_code=400, detail=f"GL account {account.account_code} is closed")
     return account
 
 
@@ -1225,8 +1502,10 @@ def _account_tree_node(account: GLAccount) -> dict:
         "account_type": account.account_type,
         "category": account.category,
         "currency": account.currency,
+        "base_currency": account.base_currency,
         "branch_specific": account.branch_specific,
         "posting_allowed": account.posting_allowed,
+        "freeze_status": account.freeze_status,
         "status": account.status,
         "balance": account.balance,
         "children": [],
@@ -1325,6 +1604,9 @@ def _post_journal(
     voucher_id: Optional[str] = None,
 ) -> JournalEntry:
     _validate_double_entry(lines)
+    effective_date = business_date or entry_date or datetime.utcnow()
+    posting_mode = "auto" if source_module and source_module not in {"manual", "accounting"} else "manual"
+    _assert_period_open(db, tenant_id, effective_date, branch_id=branch_id)
     journal_entry = JournalEntry(
         id=str(uuid4()),
         tenant_id=tenant_id,
@@ -1338,7 +1620,7 @@ def _post_journal(
         source_event=source_event,
         source_reference=source_reference,
         business_date=business_date,
-        financial_year=financial_year or _current_financial_year(business_date or entry_date),
+        financial_year=financial_year or _current_financial_year(effective_date),
         branch_id=branch_id,
         voucher_id=voucher_id,
     )
@@ -1353,6 +1635,9 @@ def _post_journal(
         )
         debit = line.debit or 0.0
         credit = line.credit or 0.0
+        if line.transaction_amount is not None and line.exchange_rate and not debit and not credit:
+            debit = round(line.transaction_amount * line.exchange_rate, 2)
+        _validate_account_for_line(account, debit, credit, posting_mode=posting_mode)
         db.add(
             JournalLine(
                 id=str(uuid4()),
@@ -1360,10 +1645,18 @@ def _post_journal(
                 gl_account_id=account.id,
                 debit=debit,
                 credit=credit,
-                currency=line.currency or account.currency or "INR",
+                currency=line.currency or account.base_currency or account.currency or "INR",
+                transaction_currency=line.transaction_currency or line.currency or account.currency,
+                transaction_amount=line.transaction_amount,
+                exchange_rate=line.exchange_rate,
                 branch_id=line.branch_id or branch_id,
+                department_id=line.department_id,
                 cost_center=line.cost_center,
                 profit_center=line.profit_center,
+                project_id=line.project_id,
+                employee_id=line.employee_id,
+                product_id=line.product_id,
+                business_unit_id=line.business_unit_id,
                 description=line.description,
             )
         )
@@ -1376,7 +1669,7 @@ def _post_journal(
             debit=debit,
             credit=credit,
             branch_id=line.branch_id or branch_id,
-            currency=line.currency or account.currency or "INR",
+            currency=line.currency or account.base_currency or account.currency or "INR",
             financial_year=journal_entry.financial_year,
         )
     return journal_entry
@@ -1398,7 +1691,7 @@ def _log_audit(
             entity=entity,
             entity_id=entity_id,
             action=action,
-            payload=payload,
+            payload=_json_safe(payload),
             performed_by=performed_by,
         )
     )
@@ -1413,6 +1706,8 @@ def _create_subledger_entry(
     amount: float,
     journal_entry_id: Optional[str] = None,
     metadata: Optional[dict] = None,
+    status: str = "active",
+    reversal_entry_id: Optional[str] = None,
 ) -> SubLedgerEntry:
     entry = SubLedgerEntry(
         id=str(uuid4()),
@@ -1422,6 +1717,8 @@ def _create_subledger_entry(
         source_reference=source_reference,
         journal_entry_id=journal_entry_id,
         amount=amount,
+        status=status,
+        reversal_entry_id=reversal_entry_id,
         metadata_json=metadata,
     )
     db.add(entry)
@@ -1612,6 +1909,8 @@ def _normalize_posting_rule_lines(rule: Optional[PostingRule]) -> List[dict]:
                 "formula": line.get("formula"),
                 "currency": line.get("currency"),
                 "dimension_source": line.get("dimension_source") if isinstance(line.get("dimension_source"), dict) else None,
+                "transaction_currency_source": line.get("transaction_currency_source"),
+                "exchange_rate_source": line.get("exchange_rate_source"),
             }
             for line in rule.posting_lines
             if line
@@ -1648,17 +1947,33 @@ def _build_posting_lines_from_rule(
         line_amount = _line_amount(line, amount, source_data)
         dimension_source = line.get("dimension_source") if isinstance(line.get("dimension_source"), dict) else {}
         line_branch_id = _event_value(source_data, dimension_source.get("branch_id"), branch_id) if dimension_source else branch_id
+        line_department_id = _event_value(source_data, dimension_source.get("department_id"), None) if dimension_source else None
         line_cost_center = _event_value(source_data, dimension_source.get("cost_center"), None) if dimension_source else None
         line_profit_center = _event_value(source_data, dimension_source.get("profit_center"), None) if dimension_source else None
+        line_project_id = _event_value(source_data, dimension_source.get("project_id"), None) if dimension_source else None
+        line_employee_id = _event_value(source_data, dimension_source.get("employee_id"), None) if dimension_source else None
+        line_product_id = _event_value(source_data, dimension_source.get("product_id"), None) if dimension_source else None
+        line_business_unit_id = _event_value(source_data, dimension_source.get("business_unit_id"), None) if dimension_source else None
+        transaction_currency = _event_value(source_data, line.get("transaction_currency_source"), None) or line.get("currency") or currency
+        exchange_rate_value = _event_value(source_data, line.get("exchange_rate_source"), None)
+        exchange_rate = float(exchange_rate_value) if exchange_rate_value not in {None, ""} else None
         posting_lines.append(
             PostingEngineLine(
                 account_code=account_code,
                 debit=line_amount if direction == "debit" else 0.0,
                 credit=line_amount if direction == "credit" else 0.0,
                 currency=line.get("currency") or currency or "INR",
+                transaction_currency=transaction_currency,
+                transaction_amount=line_amount if transaction_currency and transaction_currency != (line.get("currency") or currency or "INR") else None,
+                exchange_rate=exchange_rate,
                 branch_id=line_branch_id,
+                department_id=line_department_id,
                 cost_center=line_cost_center,
                 profit_center=line_profit_center,
+                project_id=line_project_id,
+                employee_id=line_employee_id,
+                product_id=line_product_id,
+                business_unit_id=line_business_unit_id,
                 description=line.get("description") or f"{description_prefix or 'Posting'} {direction}",
             )
         )
@@ -1733,6 +2048,8 @@ def _posting_rule_line_response(line: dict) -> dict:
         "formula": line.get("formula"),
         "currency": line.get("currency"),
         "dimension_source": line.get("dimension_source"),
+        "transaction_currency_source": line.get("transaction_currency_source"),
+        "exchange_rate_source": line.get("exchange_rate_source"),
     }
 
 
@@ -1745,9 +2062,19 @@ def _posting_rule_response(rule: PostingRule) -> dict:
         "rule_name": rule.rule_name,
         "priority": rule.priority or 100.0,
         "status": rule.status,
+        "version": rule.version,
+        "supersedes_rule_id": rule.supersedes_rule_id,
         "effective_from": rule.effective_from,
         "effective_to": rule.effective_to,
         "requires_approval": rule.requires_approval,
+        "approval_status": rule.approval_status,
+        "maker_by": rule.maker_by,
+        "checker_by": rule.checker_by,
+        "finance_head_by": rule.finance_head_by,
+        "approved_by": rule.approved_by,
+        "approved_at": rule.approved_at,
+        "dependency_rule_ids": rule.dependency_rule_ids if isinstance(rule.dependency_rule_ids, list) else [],
+        "rollback_strategy": rule.rollback_strategy,
         "debit_account_code": rule.debit_account_code,
         "credit_account_code": rule.credit_account_code,
         "description": rule.description,
@@ -1784,6 +2111,9 @@ def _subledger_response(entry: SubLedgerEntry) -> dict:
         "source_reference": entry.source_reference,
         "journal_entry_id": entry.journal_entry_id,
         "amount": entry.amount,
+        "status": entry.status,
+        "reversal_entry_id": entry.reversal_entry_id,
+        "reversed_at": entry.reversed_at,
         "metadata": entry.metadata_json,
         "created_at": entry.created_at,
     }
@@ -1886,8 +2216,13 @@ def _voucher_response(voucher: Voucher) -> dict:
                 "debit": line.debit,
                 "credit": line.credit,
                 "description": line.description,
+                "department_id": line.department_id,
                 "cost_center": line.cost_center,
                 "profit_center": line.profit_center,
+                "project_id": line.project_id,
+                "employee_id": line.employee_id,
+                "product_id": line.product_id,
+                "business_unit_id": line.business_unit_id,
             }
             for line in voucher.lines
         ],
@@ -2509,12 +2844,21 @@ async def create_gl_account(account: GLAccountCreate, db: Session = Depends(get_
         parent_account_id=account.parent_account_id,
         category=account.category or account.account_type,
         currency=account.currency or "INR",
+        base_currency=account.base_currency or account.currency or "INR",
+        normal_balance=account.normal_balance,
         branch_id=account.branch_id,
         branch_specific=account.branch_specific or "false",
         posting_allowed=account.posting_allowed or "true",
+        allow_manual_posting=account.allow_manual_posting or "true",
+        allow_auto_posting=account.allow_auto_posting or "true",
+        requires_approval=account.requires_approval or "false",
+        freeze_status=account.freeze_status or "open",
         status=account.status or "active",
+        exchange_gain_loss_account_code=account.exchange_gain_loss_account_code,
+        revaluation_account_code=account.revaluation_account_code,
         opening_balance=account.opening_balance or 0.0,
         financial_year=account.financial_year,
+        metadata_json=account.metadata,
         balance=0.0
     )
 
@@ -2596,8 +2940,12 @@ async def seed_default_gl_accounts(request: COASeedRequest, db: Session = Depend
             parent_account_id=parent.id if parent else None,
             category=item["category"],
             currency=request.currency or "INR",
+            base_currency=request.currency or "INR",
             branch_specific=item.get("branch_specific", "false"),
             posting_allowed=item.get("posting_allowed", "true"),
+            allow_manual_posting="true",
+            allow_auto_posting="true",
+            freeze_status="open",
             status="active",
             opening_balance=0.0,
             financial_year=request.financial_year,
@@ -2627,10 +2975,107 @@ async def update_gl_account(account_id: str, payload: GLAccountUpdate, tenant_id
     if payload.parent_account_id is not None:
         _validate_parent_account(db, tenant_id, payload.parent_account_id, account_id=account.id)
     for field, value in payload.dict(exclude_unset=True).items():
-        setattr(account, field, value)
+        setattr(account, "metadata_json" if field == "metadata" else field, value)
     db.commit()
     db.refresh(account)
     return account
+
+
+@app.post("/accounting-periods", response_model=AccountingPeriodResponse)
+async def create_accounting_period(period: AccountingPeriodCreate, db: Session = Depends(get_db)):
+    if period.period_end < period.period_start:
+        raise HTTPException(status_code=400, detail="period_end must be after period_start")
+    existing = (
+        db.query(AccountingPeriod)
+        .filter(
+            AccountingPeriod.tenant_id == period.tenant_id,
+            AccountingPeriod.financial_year == period.financial_year,
+            AccountingPeriod.period_name == period.period_name,
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="Accounting period already exists for tenant")
+    new_period = AccountingPeriod(
+        id=str(uuid4()),
+        tenant_id=period.tenant_id,
+        financial_year=period.financial_year,
+        period_name=period.period_name,
+        period_start=period.period_start,
+        period_end=period.period_end,
+        branch_id=period.branch_id,
+        status=period.status or "open",
+    )
+    db.add(new_period)
+    _log_audit(db, period.tenant_id, "accounting_period", new_period.id, "create", _period_response(new_period), period.performed_by)
+    db.commit()
+    db.refresh(new_period)
+    return _period_response(new_period)
+
+
+@app.get("/accounting-periods", response_model=List[AccountingPeriodResponse])
+async def list_accounting_periods(
+    tenant_id: str = Query(...),
+    financial_year: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AccountingPeriod).filter(AccountingPeriod.tenant_id == tenant_id)
+    if financial_year:
+        query = query.filter(AccountingPeriod.financial_year == financial_year)
+    if status:
+        query = query.filter(AccountingPeriod.status == status)
+    periods = query.order_by(AccountingPeriod.period_start.desc()).all()
+    return [_period_response(period) for period in periods]
+
+
+@app.post("/accounting-periods/{period_id}/lock", response_model=AccountingPeriodResponse)
+async def lock_accounting_period(period_id: str, request: AccountingPeriodActionRequest, db: Session = Depends(get_db)):
+    period = db.query(AccountingPeriod).filter(AccountingPeriod.id == period_id, AccountingPeriod.tenant_id == request.tenant_id).first()
+    if not period:
+        raise HTTPException(status_code=404, detail="Accounting period not found for tenant")
+    period.status = "locked"
+    period.locked_by = request.performed_by
+    period.lock_reason = request.reason
+    period.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "accounting_period", period.id, "lock", _period_response(period), request.performed_by)
+    db.commit()
+    db.refresh(period)
+    return _period_response(period)
+
+
+@app.post("/accounting-periods/{period_id}/request-unlock", response_model=AccountingPeriodResponse)
+async def request_unlock_accounting_period(period_id: str, request: AccountingPeriodActionRequest, db: Session = Depends(get_db)):
+    period = db.query(AccountingPeriod).filter(AccountingPeriod.id == period_id, AccountingPeriod.tenant_id == request.tenant_id).first()
+    if not period:
+        raise HTTPException(status_code=404, detail="Accounting period not found for tenant")
+    if period.status != "locked":
+        raise HTTPException(status_code=400, detail="Only locked periods can be submitted for unlock")
+    period.status = "pending_unlock"
+    period.unlock_requested_by = request.performed_by
+    period.unlock_reason = request.reason
+    period.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "accounting_period", period.id, "request_unlock", _period_response(period), request.performed_by)
+    db.commit()
+    db.refresh(period)
+    return _period_response(period)
+
+
+@app.post("/accounting-periods/{period_id}/approve-unlock", response_model=AccountingPeriodResponse)
+async def approve_unlock_accounting_period(period_id: str, request: AccountingPeriodActionRequest, db: Session = Depends(get_db)):
+    period = db.query(AccountingPeriod).filter(AccountingPeriod.id == period_id, AccountingPeriod.tenant_id == request.tenant_id).first()
+    if not period:
+        raise HTTPException(status_code=404, detail="Accounting period not found for tenant")
+    if period.status != "pending_unlock":
+        raise HTTPException(status_code=400, detail="Only pending unlock periods can be approved")
+    period.status = "open"
+    period.approved_by = request.performed_by
+    period.unlocked_by = request.performed_by
+    period.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "accounting_period", period.id, "approve_unlock", _period_response(period), request.performed_by)
+    db.commit()
+    db.refresh(period)
+    return _period_response(period)
 
 
 
@@ -2654,8 +3099,16 @@ async def create_journal_entry(entry: JournalEntryCreate, db: Session = Depends(
             credit=line.credit,
             branch_id=line.branch_id,
             currency=line.currency,
+            transaction_currency=line.transaction_currency,
+            transaction_amount=line.transaction_amount,
+            exchange_rate=line.exchange_rate,
+            department_id=line.department_id,
             cost_center=line.cost_center,
             profit_center=line.profit_center,
+            project_id=line.project_id,
+            employee_id=line.employee_id,
+            product_id=line.product_id,
+            business_unit_id=line.business_unit_id,
             description=line.description,
         )
         for line in entry.lines
@@ -2721,6 +3174,8 @@ async def create_posting_rule(rule: PostingRuleCreate, db: Session = Depends(get
                     "formula": line.formula,
                     "currency": line.currency,
                     "dimension_source": line.dimension_source,
+                    "transaction_currency_source": line.transaction_currency_source,
+                    "exchange_rate_source": line.exchange_rate_source,
                 }
             )
 
@@ -2737,16 +3192,21 @@ async def create_posting_rule(rule: PostingRuleCreate, db: Session = Depends(get
         source_event=rule.source_event,
         rule_name=rule.rule_name or f"{rule.source_module}.{rule.source_event}",
         priority=rule.priority or 100.0,
-        status=rule.status or "active",
+        status="draft" if (rule.status or "draft") in {"active", "published"} else (rule.status or "draft"),
+        version=rule.version or 1.0,
+        supersedes_rule_id=rule.supersedes_rule_id,
         effective_from=rule.effective_from,
         effective_to=rule.effective_to,
-        requires_approval=rule.requires_approval or "false",
+        requires_approval=rule.requires_approval or "true",
+        approval_status="draft",
+        dependency_rule_ids=rule.dependency_rule_ids or [],
+        rollback_strategy=rule.rollback_strategy or "reverse_journal",
         debit_account_code=debit_account_code,
         credit_account_code=credit_account_code,
         posting_lines=normalized_lines or None,
         conditions=[condition.dict() for condition in rule.conditions] if rule.conditions else None,
         description=rule.description,
-        is_active="true" if (rule.status or "active") in {"active", "published"} else "false",
+        is_active="false",
         created_by=rule.created_by,
         metadata_json=rule.metadata,
     )
@@ -2844,6 +3304,7 @@ async def simulate_posting_rule(request: PostingRuleSimulationRequest, db: Sessi
     resolved_lines = []
     for line in lines:
         account = _get_postable_account_by_code(line.account_code or "", request.tenant_id, db)
+        _validate_account_for_line(account, line.debit or 0.0, line.credit or 0.0, posting_mode="auto")
         resolved_lines.append(
             {
                 "account_id": account.id,
@@ -2854,8 +3315,16 @@ async def simulate_posting_rule(request: PostingRuleSimulationRequest, db: Sessi
                 "credit": line.credit,
                 "description": line.description,
                 "branch_id": line.branch_id,
+                "department_id": line.department_id,
                 "cost_center": line.cost_center,
                 "profit_center": line.profit_center,
+                "project_id": line.project_id,
+                "employee_id": line.employee_id,
+                "product_id": line.product_id,
+                "business_unit_id": line.business_unit_id,
+                "currency": line.currency,
+                "transaction_currency": line.transaction_currency,
+                "exchange_rate": line.exchange_rate,
             }
         )
     _log_posting_execution(
@@ -2887,6 +3356,9 @@ async def update_posting_rule(rule_id: str, update: PostingRuleUpdate, tenant_id
     if not rule:
         raise HTTPException(status_code=404, detail="Posting rule not found for tenant")
     before = _posting_rule_response(rule)
+    update_fields = set(update.dict(exclude_unset=True).keys()) - {"performed_by"}
+    if str(rule.status or "").lower() in {"active", "published"} and update_fields:
+        raise HTTPException(status_code=400, detail="Published posting rules are immutable; create a new version")
     if update.source_module is not None:
         rule.source_module = update.source_module
     if update.source_event is not None:
@@ -2896,14 +3368,24 @@ async def update_posting_rule(rule_id: str, update: PostingRuleUpdate, tenant_id
     if update.priority is not None:
         rule.priority = update.priority
     if update.status is not None:
+        if update.status in {"active", "published"} and rule.approval_status not in {"finance_head_approved", "published"}:
+            raise HTTPException(status_code=400, detail="Posting rule must be approved before activation")
         rule.status = update.status
         rule.is_active = "true" if update.status in {"active", "published"} else "false"
+    if update.version is not None:
+        rule.version = update.version
+    if update.supersedes_rule_id is not None:
+        rule.supersedes_rule_id = update.supersedes_rule_id
     if update.effective_from is not None:
         rule.effective_from = update.effective_from
     if update.effective_to is not None:
         rule.effective_to = update.effective_to
     if update.requires_approval is not None:
         rule.requires_approval = update.requires_approval
+    if update.dependency_rule_ids is not None:
+        rule.dependency_rule_ids = update.dependency_rule_ids
+    if update.rollback_strategy is not None:
+        rule.rollback_strategy = update.rollback_strategy
     if update.description is not None:
         rule.description = update.description
     if update.debit_account_code is not None:
@@ -2922,6 +3404,8 @@ async def update_posting_rule(rule_id: str, update: PostingRuleUpdate, tenant_id
                 "formula": line.formula,
                 "currency": line.currency,
                 "dimension_source": line.dimension_source,
+                "transaction_currency_source": line.transaction_currency_source,
+                "exchange_rate_source": line.exchange_rate_source,
             }
             for index, line in enumerate(update.lines)
         ]
@@ -2959,13 +3443,129 @@ async def delete_posting_rule(rule_id: str, tenant_id: str = Query(...), perform
     return {"id": rule.id, "status": rule.status}
 
 
+@app.post("/posting-rules/{rule_id}/submit", response_model=PostingRuleResponse)
+async def submit_posting_rule(rule_id: str, request: PostingRuleApprovalRequest, db: Session = Depends(get_db)):
+    rule = db.query(PostingRule).filter(PostingRule.id == rule_id, PostingRule.tenant_id == request.tenant_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Posting rule not found for tenant")
+    if rule.status in {"active", "published"}:
+        raise HTTPException(status_code=400, detail="Active posting rules cannot be resubmitted")
+    rule.status = "pending_approval"
+    rule.is_active = "false"
+    rule.approval_status = "maker_submitted"
+    rule.maker_by = request.performed_by
+    rule.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "posting_rule", rule.id, "submit", {"comment": request.comment}, request.performed_by)
+    db.commit()
+    db.refresh(rule)
+    return _posting_rule_response(rule)
+
+
+@app.post("/posting-rules/{rule_id}/approve", response_model=PostingRuleResponse)
+async def approve_posting_rule(rule_id: str, request: PostingRuleApprovalRequest, db: Session = Depends(get_db)):
+    rule = db.query(PostingRule).filter(PostingRule.id == rule_id, PostingRule.tenant_id == request.tenant_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Posting rule not found for tenant")
+    stage = str(request.stage or "checker").lower()
+    if stage not in {"checker", "finance_head"}:
+        raise HTTPException(status_code=400, detail="stage must be checker or finance_head")
+    if stage == "checker":
+        if rule.approval_status != "maker_submitted":
+            raise HTTPException(status_code=400, detail="Rule must be maker-submitted before checker approval")
+        rule.approval_status = "checker_approved"
+        rule.checker_by = request.performed_by
+    else:
+        if rule.approval_status != "checker_approved":
+            raise HTTPException(status_code=400, detail="Rule must be checker-approved before finance head approval")
+        rule.approval_status = "finance_head_approved"
+        rule.finance_head_by = request.performed_by
+        rule.approved_by = request.performed_by
+        rule.approved_at = datetime.utcnow()
+    rule.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "posting_rule", rule.id, f"approve_{stage}", {"comment": request.comment}, request.performed_by)
+    db.commit()
+    db.refresh(rule)
+    return _posting_rule_response(rule)
+
+
+@app.post("/posting-rules/{rule_id}/new-version", response_model=PostingRuleResponse)
+async def create_posting_rule_version(rule_id: str, request: PostingRuleVersionRequest, db: Session = Depends(get_db)):
+    rule = db.query(PostingRule).filter(PostingRule.id == rule_id, PostingRule.tenant_id == request.tenant_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Posting rule not found for tenant")
+    clone = PostingRule(
+        id=str(uuid4()),
+        tenant_id=rule.tenant_id,
+        source_module=request.source_module or rule.source_module,
+        source_event=request.source_event or rule.source_event,
+        rule_name=request.rule_name or rule.rule_name,
+        priority=request.priority if request.priority is not None else rule.priority,
+        status="draft",
+        version=(request.version if request.version is not None else (rule.version or 1.0) + 1.0),
+        supersedes_rule_id=rule.id,
+        effective_from=request.effective_from if request.effective_from is not None else rule.effective_from,
+        effective_to=request.effective_to if request.effective_to is not None else rule.effective_to,
+        requires_approval=request.requires_approval or rule.requires_approval or "true",
+        approval_status="draft",
+        dependency_rule_ids=request.dependency_rule_ids if request.dependency_rule_ids is not None else (rule.dependency_rule_ids or []),
+        rollback_strategy=request.rollback_strategy or rule.rollback_strategy or "reverse_journal",
+        debit_account_code=request.debit_account_code if request.debit_account_code is not None else rule.debit_account_code,
+        credit_account_code=request.credit_account_code if request.credit_account_code is not None else rule.credit_account_code,
+        posting_lines=[
+            {
+                "account_code": line.account_code,
+                "direction": str(line.direction or "debit").lower(),
+                "description": line.description,
+                "sequence": line.sequence if line.sequence is not None else index + 1,
+                "amount_source": line.amount_source,
+                "percentage": line.percentage,
+                "formula": line.formula,
+                "currency": line.currency,
+                "dimension_source": line.dimension_source,
+                "transaction_currency_source": line.transaction_currency_source,
+                "exchange_rate_source": line.exchange_rate_source,
+            }
+            for index, line in enumerate(request.lines)
+        ] if request.lines is not None else _normalize_posting_rule_lines(rule),
+        conditions=[condition.dict() for condition in request.conditions] if request.conditions is not None else rule.conditions,
+        description=request.description if request.description is not None else rule.description,
+        is_active="false",
+        created_by=request.performed_by or rule.created_by,
+        metadata_json=request.metadata if request.metadata is not None else rule.metadata_json,
+    )
+    if clone.posting_lines:
+        clone.debit_account_code = next((line["account_code"] for line in clone.posting_lines if line["direction"] == "debit"), clone.debit_account_code)
+        clone.credit_account_code = next((line["account_code"] for line in clone.posting_lines if line["direction"] == "credit"), clone.credit_account_code)
+    db.add(clone)
+    _log_audit(db, request.tenant_id, "posting_rule", clone.id, "new_version", {"supersedes_rule_id": rule.id}, request.performed_by)
+    db.commit()
+    db.refresh(clone)
+    return _posting_rule_response(clone)
+
+
 @app.post("/posting-rules/{rule_id}/publish", response_model=PostingRuleResponse)
 async def publish_posting_rule(rule_id: str, request: PostingRulePublishRequest, db: Session = Depends(get_db)):
     rule = db.query(PostingRule).filter(PostingRule.id == rule_id, PostingRule.tenant_id == request.tenant_id).first()
     if not rule:
         raise HTTPException(status_code=404, detail="Posting rule not found for tenant")
+    if rule.approval_status != "finance_head_approved":
+        raise HTTPException(status_code=400, detail="Posting rule requires maker, checker, and finance head approval before publish")
+    dependency_ids = rule.dependency_rule_ids if isinstance(rule.dependency_rule_ids, list) else []
+    if dependency_ids:
+        active_dependencies = (
+            db.query(PostingRule)
+            .filter(
+                PostingRule.tenant_id == request.tenant_id,
+                PostingRule.id.in_(dependency_ids),
+                PostingRule.is_active.in_(["true", "1", "yes", "active"]),
+            )
+            .count()
+        )
+        if active_dependencies != len(dependency_ids):
+            raise HTTPException(status_code=400, detail="All dependent posting rules must be active before publish")
     rule.status = "active"
     rule.is_active = "true"
+    rule.approval_status = "published"
     rule.updated_at = datetime.utcnow()
     _log_audit(db, request.tenant_id, "posting_rule", rule.id, "publish", _posting_rule_response(rule), request.performed_by)
     db.commit()
@@ -3002,6 +3602,7 @@ async def posting_rule_executions(rule_id: str, tenant_id: str = Query(...), db:
                 "status": item.status,
                 "execution_time_ms": item.execution_time_ms,
                 "journal_id": item.journal_id,
+                "rollback_journal_id": item.rollback_journal_id,
                 "error_message": item.error_message,
                 "generated_lines": item.generated_lines,
                 "created_at": item.created_at,
@@ -3009,6 +3610,78 @@ async def posting_rule_executions(rule_id: str, tenant_id: str = Query(...), db:
             for item in items
         ],
         "total": len(items),
+    }
+
+
+@app.post("/posting-executions/{execution_id}/rollback")
+async def rollback_posting_execution(execution_id: str, request: ExecutionRollbackRequest, db: Session = Depends(get_db)):
+    execution = (
+        db.query(PostingExecutionLog)
+        .filter(PostingExecutionLog.id == execution_id, PostingExecutionLog.tenant_id == request.tenant_id)
+        .first()
+    )
+    if not execution:
+        raise HTTPException(status_code=404, detail="Posting execution not found for tenant")
+    if execution.status == "rolled_back":
+        raise HTTPException(status_code=400, detail="Posting execution is already rolled back")
+    if not execution.journal_id:
+        raise HTTPException(status_code=400, detail="Posting execution has no journal to rollback")
+    reversal_entry = await reverse_gl_posting(execution.journal_id, request.tenant_id, db)
+    subledger_entries = (
+        db.query(SubLedgerEntry)
+        .filter(
+            SubLedgerEntry.tenant_id == request.tenant_id,
+            SubLedgerEntry.journal_entry_id == execution.journal_id,
+            SubLedgerEntry.status.in_(["active", None]),
+        )
+        .all()
+    )
+    reversed_subledger_ids = []
+    for subledger_entry in subledger_entries:
+        subledger_entry.status = "reversed"
+        subledger_entry.reversed_at = datetime.utcnow()
+        reversal_subledger = _create_subledger_entry(
+            db=db,
+            tenant_id=request.tenant_id,
+            source_module=subledger_entry.source_module,
+            source_event=f"{subledger_entry.source_event}.reversal",
+            source_reference=subledger_entry.source_reference,
+            amount=-(subledger_entry.amount or 0.0),
+            journal_entry_id=reversal_entry["id"],
+            metadata={
+                **(subledger_entry.metadata_json or {}),
+                "reverses_subledger_entry_id": subledger_entry.id,
+                "rollback_reason": request.reason,
+            },
+            status="reversal",
+            reversal_entry_id=subledger_entry.id,
+        )
+        db.flush()
+        reversed_subledger_ids.append(reversal_subledger.id)
+    execution.status = "rolled_back"
+    execution.rollback_journal_id = reversal_entry["id"]
+    execution.error_message = request.reason
+    _log_audit(
+        db,
+        request.tenant_id,
+        "posting_execution",
+        execution.id,
+        "rollback",
+        {
+            "journal_id": execution.journal_id,
+            "rollback_journal_id": execution.rollback_journal_id,
+            "reversed_subledger_ids": reversed_subledger_ids,
+            "reason": request.reason,
+        },
+        request.performed_by,
+    )
+    db.commit()
+    return {
+        "id": execution.id,
+        "status": execution.status,
+        "journal_id": execution.journal_id,
+        "rollback_journal_id": execution.rollback_journal_id,
+        "reversed_subledger_ids": reversed_subledger_ids,
     }
 
 
@@ -3090,6 +3763,8 @@ async def validate_posting(request: PostingValidationRequest, db: Session = Depe
             if line.gl_account_id
             else _get_postable_account_by_code(line.account_code or "", request.tenant_id, db)
         )
+        posting_mode = "auto" if request.source_module and request.source_module not in {"manual", "accounting"} else "manual"
+        _validate_account_for_line(account, line.debit or 0.0, line.credit or 0.0, posting_mode=posting_mode)
         resolved_accounts.append(
             {
                 "account_id": account.id,
@@ -3097,6 +3772,7 @@ async def validate_posting(request: PostingValidationRequest, db: Session = Depe
                 "account_name": account.account_name,
                 "debit": line.debit,
                 "credit": line.credit,
+                "freeze_status": account.freeze_status,
             }
         )
 
@@ -3249,8 +3925,13 @@ async def create_voucher(voucher: VoucherCreate, db: Session = Depends(get_db)):
             debit=line.debit,
             credit=line.credit,
             description=line.description,
+            department_id=line.department_id,
             cost_center=line.cost_center,
             profit_center=line.profit_center,
+            project_id=line.project_id,
+            employee_id=line.employee_id,
+            product_id=line.product_id,
+            business_unit_id=line.business_unit_id,
             branch_id=voucher.branch_id,
             currency=voucher.currency,
         )
@@ -3288,8 +3969,13 @@ async def create_voucher(voucher: VoucherCreate, db: Session = Depends(get_db)):
                 debit=line.debit,
                 credit=line.credit,
                 description=line.description,
+                department_id=line.department_id,
                 cost_center=line.cost_center,
                 profit_center=line.profit_center,
+                project_id=line.project_id,
+                employee_id=line.employee_id,
+                product_id=line.product_id,
+                business_unit_id=line.business_unit_id,
             )
         )
     _log_audit(db, voucher.tenant_id, "voucher", new_voucher.id, "create", {"voucher_type": voucher.voucher_type, "payment_mode": voucher.payment_mode}, voucher.created_by)
@@ -3457,8 +4143,13 @@ async def post_voucher(voucher_id: str, request: VoucherActionRequest, db: Sessi
             description=line.description,
             branch_id=voucher.branch_id,
             currency=voucher.currency,
+            department_id=line.department_id,
             cost_center=line.cost_center,
             profit_center=line.profit_center,
+            project_id=line.project_id,
+            employee_id=line.employee_id,
+            product_id=line.product_id,
+            business_unit_id=line.business_unit_id,
         )
         for line in voucher.lines
     ]
@@ -3688,6 +4379,7 @@ async def accounting_360_dashboard(tenant_id: str = Query(...), db: Session = De
     posting_rules = db.query(PostingRule).filter(PostingRule.tenant_id == tenant_id).all()
     journals = db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id).all()
     subledger_rows = db.query(SubLedgerEntry).filter(SubLedgerEntry.tenant_id == tenant_id).all()
+    periods = db.query(AccountingPeriod).filter(AccountingPeriod.tenant_id == tenant_id).all()
     vouchers = (
         db.query(Voucher)
         .filter(Voucher.tenant_id == tenant_id)
@@ -3743,9 +4435,18 @@ async def accounting_360_dashboard(tenant_id: str = Query(...), db: Session = De
         "trial_balance": trial,
         "posting_health": {
             "posting_rules": len(posting_rules),
+            "active_rules": sum(1 for rule in posting_rules if str(rule.status or "").lower() in {"active", "published"}),
+            "pending_rule_approvals": sum(1 for rule in posting_rules if str(rule.status or "").lower() == "pending_approval"),
             "journal_entries": len(journals),
             "subledger_entries": len(subledger_rows),
             "automation_rate": 0 if not journals else round((sum(1 for entry in journals if entry.source_module) / len(journals)) * 100, 1),
+        },
+        "period_controls": {
+            "periods": len(periods),
+            "open": sum(1 for period in periods if period.status == "open"),
+            "locked": sum(1 for period in periods if period.status == "locked"),
+            "pending_unlock": sum(1 for period in periods if period.status == "pending_unlock"),
+            "latest": _period_response(sorted(periods, key=lambda item: item.period_start, reverse=True)[0]) if periods else None,
         },
         "voucher_workflow": _voucher_workflow_counts(tenant_id, db),
         "gl_tree": _build_coa_tree(accounts),
@@ -3785,6 +4486,9 @@ async def accounting_360_search(
                 "account_type": account.account_type,
                 "category": account.category,
                 "posting_allowed": account.posting_allowed,
+                "freeze_status": account.freeze_status,
+                "currency": account.currency,
+                "base_currency": account.base_currency,
                 "balance": account.balance,
             }
             for account in accounts[:20]
@@ -3872,7 +4576,14 @@ async def accounting_360_gl_detail(
             "account_type": account.account_type,
             "category": account.category,
             "currency": account.currency,
+            "base_currency": account.base_currency,
+            "normal_balance": account.normal_balance,
             "posting_allowed": account.posting_allowed,
+            "allow_manual_posting": account.allow_manual_posting,
+            "allow_auto_posting": account.allow_auto_posting,
+            "freeze_status": account.freeze_status,
+            "exchange_gain_loss_account_code": account.exchange_gain_loss_account_code,
+            "revaluation_account_code": account.revaluation_account_code,
             "status": account.status,
             "balance": account.balance,
         },
@@ -4213,7 +4924,17 @@ async def reverse_gl_posting(
             debit=line.credit,
             credit=line.debit,
             currency=line.currency or account.currency or "INR",
+            transaction_currency=line.transaction_currency,
+            transaction_amount=line.transaction_amount,
+            exchange_rate=line.exchange_rate,
             branch_id=line.branch_id or original.branch_id,
+            department_id=line.department_id,
+            cost_center=line.cost_center,
+            profit_center=line.profit_center,
+            project_id=line.project_id,
+            employee_id=line.employee_id,
+            product_id=line.product_id,
+            business_unit_id=line.business_unit_id,
             description=f"Reversal of {line.id}",
         )
         db.add(journal_line)

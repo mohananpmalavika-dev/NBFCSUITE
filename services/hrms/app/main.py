@@ -77,6 +77,8 @@ class HRPosition(Base):
     department_id = Column(String, index=True, nullable=True)
     designation_id = Column(String, index=True, nullable=True)
     grade_id = Column(String, index=True, nullable=True)
+    job_role_id = Column(String, index=True, nullable=True)
+    organization_unit_id = Column(String, index=True, nullable=True)
     organization_id = Column(String, index=True, nullable=True)
     zone_id = Column(String, index=True, nullable=True)
     region_id = Column(String, index=True, nullable=True)
@@ -85,9 +87,80 @@ class HRPosition(Base):
     reports_to_position_id = Column(String, index=True, nullable=True)
     occupied_by_employee_id = Column(String, index=True, nullable=True)
     approval_limit = Column(Float, default=0.0)
+    budgeted_salary = Column(Float, default=0.0)
+    effective_from = Column(DateTime, nullable=True)
+    effective_to = Column(DateTime, nullable=True)
     status = Column(String, default="open", index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class JobFamily(Base):
+    __tablename__ = "hr_job_families"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    family_code = Column(String, index=True, nullable=False)
+    family_name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class JobRole(Base):
+    __tablename__ = "hr_job_roles"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    role_code = Column(String, index=True, nullable=False)
+    role_name = Column(String, nullable=False)
+    job_family_id = Column(String, index=True, nullable=True)
+    description = Column(String, nullable=True)
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EmployeeAssignment(Base):
+    __tablename__ = "hr_employee_assignments"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    employee_id = Column(String, index=True, nullable=False)
+    position_id = Column(String, index=True, nullable=False)
+    assignment_type = Column(String, default="primary", index=True)
+    status = Column(String, default="active", index=True)
+    start_date = Column(Date, default=date.today)
+    end_date = Column(Date, nullable=True)
+    assigned_by = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    organization_id = Column(String, index=True, nullable=True)
+    zone_id = Column(String, index=True, nullable=True)
+    region_id = Column(String, index=True, nullable=True)
+    area_id = Column(String, index=True, nullable=True)
+    branch_id = Column(String, index=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EmployeeTimeline(Base):
+    __tablename__ = "hr_employee_timelines"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    employee_id = Column(String, index=True, nullable=False)
+    event_type = Column(String, nullable=False)
+    event_title = Column(String, nullable=True)
+    event_details = Column(JSON, nullable=True)
+    notes = Column(String, nullable=True)
+    organization_id = Column(String, index=True, nullable=True)
+    zone_id = Column(String, index=True, nullable=True)
+    region_id = Column(String, index=True, nullable=True)
+    area_id = Column(String, index=True, nullable=True)
+    branch_id = Column(String, index=True, nullable=True)
+    event_timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class Employee(Base):
@@ -185,6 +258,124 @@ class AttendanceRecord(Base):
     check_out_at = Column(DateTime, nullable=True)
     status = Column(String, default="present", index=True)
     work_hours = Column(Float, default=0.0)
+
+
+class HRShift(Base):
+    __tablename__ = "hr_shifts"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    shift_code = Column(String, index=True, nullable=False)
+    shift_name = Column(String, nullable=False)
+    start_time = Column(String, nullable=False)
+    end_time = Column(String, nullable=False)
+    break_minutes = Column(Integer, default=0)
+    grace_in = Column(Integer, default=0)
+    grace_out = Column(Integer, default=0)
+    weekly_off = Column(String, nullable=True)
+    status = Column(String, default="active", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EmployeeShift(Base):
+    __tablename__ = "hr_employee_shifts"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    employee_id = Column(String, index=True, nullable=False)
+    shift_id = Column(String, index=True, nullable=False)
+    effective_from = Column(DateTime, nullable=True)
+    effective_to = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Attendance(Base):
+    __tablename__ = "hr_attendance"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    employee_id = Column(String, index=True, nullable=False)
+    attendance_date = Column(Date, index=True, nullable=False)
+    check_in = Column(DateTime, nullable=True)
+    check_out = Column(DateTime, nullable=True)
+    working_hours = Column(Float, default=0.0)
+    late_minutes = Column(Integer, default=0)
+    early_exit_minutes = Column(Integer, default=0)
+    overtime_minutes = Column(Integer, default=0)
+    attendance_status = Column(String, default="present", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AttendanceLog(Base):
+    __tablename__ = "hr_attendance_logs"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    attendance_id = Column(String, index=True, nullable=True)
+    device_ip = Column(String, nullable=True)
+    latitude = Column(String, nullable=True)
+    longitude = Column(String, nullable=True)
+    photo_url = Column(String, nullable=True)
+    device_id = Column(String, nullable=True)
+    captured_at = Column(DateTime, default=datetime.utcnow)
+
+
+class LeaveType(Base):
+    __tablename__ = "hr_leave_types"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False, default="default")
+    code = Column(String, index=True, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    is_paid = Column(String, default="yes")
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class LeaveBalance(Base):
+    __tablename__ = "hr_leave_balances"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    employee_id = Column(String, index=True, nullable=False)
+    leave_type_id = Column(String, index=True, nullable=False)
+    opening = Column(Float, default=0.0)
+    credited = Column(Float, default=0.0)
+    availed = Column(Float, default=0.0)
+    balance = Column(Float, default=0.0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class LeaveApplication(Base):
+    __tablename__ = "hr_leave_applications"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    employee_id = Column(String, index=True, nullable=False)
+    leave_type_id = Column(String, index=True, nullable=False)
+    from_date = Column(Date, nullable=False)
+    to_date = Column(Date, nullable=False)
+    reason = Column(String, nullable=True)
+    status = Column(String, default="pending", index=True)
+    approved_by = Column(String, nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class HolidayCalendar(Base):
+    __tablename__ = "hr_holidays"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    holiday_name = Column(String, nullable=False)
+    holiday_date = Column(Date, nullable=False)
+    branch = Column(String, nullable=True)
+    state = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
     notes = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -353,6 +544,8 @@ class PositionCreate(BaseModel):
     department_id: Optional[str] = None
     designation_id: Optional[str] = None
     grade_id: Optional[str] = None
+    job_role_id: Optional[str] = None
+    organization_unit_id: Optional[str] = None
     organization_id: Optional[str] = None
     zone_id: Optional[str] = None
     region_id: Optional[str] = None
@@ -360,6 +553,9 @@ class PositionCreate(BaseModel):
     branch_id: Optional[str] = None
     reports_to_position_id: Optional[str] = None
     approval_limit: float = Field(default=0.0, ge=0)
+    budgeted_salary: Optional[float] = Field(default=None, ge=0)
+    effective_from: Optional[datetime] = None
+    effective_to: Optional[datetime] = None
 
 
 class PositionUpdate(BaseModel):
@@ -367,6 +563,8 @@ class PositionUpdate(BaseModel):
     department_id: Optional[str] = None
     designation_id: Optional[str] = None
     grade_id: Optional[str] = None
+    job_role_id: Optional[str] = None
+    organization_unit_id: Optional[str] = None
     organization_id: Optional[str] = None
     zone_id: Optional[str] = None
     region_id: Optional[str] = None
@@ -375,6 +573,9 @@ class PositionUpdate(BaseModel):
     reports_to_position_id: Optional[str] = None
     occupied_by_employee_id: Optional[str] = None
     approval_limit: Optional[float] = Field(default=None, ge=0)
+    budgeted_salary: Optional[float] = Field(default=None, ge=0)
+    effective_from: Optional[datetime] = None
+    effective_to: Optional[datetime] = None
     status: Optional[str] = None
 
 
@@ -461,6 +662,103 @@ class EmployeeResponse(BaseModel):
     employment_type: str
     status: str
     joining_date: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class JobFamilyCreate(BaseModel):
+    tenant_id: str = "default"
+    family_code: str
+    family_name: str
+    description: Optional[str] = None
+
+
+class JobFamilyUpdate(BaseModel):
+    family_name: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+
+
+class JobFamilyResponse(JobFamilyCreate):
+    id: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class JobRoleCreate(BaseModel):
+    tenant_id: str = "default"
+    role_code: str
+    role_name: str
+    job_family_id: Optional[str] = None
+    description: Optional[str] = None
+
+
+class JobRoleUpdate(BaseModel):
+    role_name: Optional[str] = None
+    job_family_id: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+
+
+class JobRoleResponse(JobRoleCreate):
+    id: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EmployeeAssignmentCreate(BaseModel):
+    tenant_id: str = "default"
+    employee_id: str
+    position_id: str
+    assignment_type: str = "primary"
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    assigned_by: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class EmployeeAssignmentResponse(EmployeeAssignmentCreate):
+    id: str
+    status: str
+    organization_id: Optional[str]
+    zone_id: Optional[str]
+    region_id: Optional[str]
+    area_id: Optional[str]
+    branch_id: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EmployeeTimelineCreate(BaseModel):
+    event_type: str
+    event_title: Optional[str] = None
+    event_details: Optional[dict] = None
+    notes: Optional[str] = None
+    event_timestamp: Optional[datetime] = None
+
+
+class EmployeeTimelineResponse(EmployeeTimelineCreate):
+    id: str
+    tenant_id: str
+    employee_id: str
+    organization_id: Optional[str]
+    zone_id: Optional[str]
+    region_id: Optional[str]
+    area_id: Optional[str]
+    branch_id: Optional[str]
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -1182,6 +1480,8 @@ async def create_position(
     department = _get_tenant_record(db, HRDepartment, payload.department_id, tenant_id, "Department")
     designation = _get_tenant_record(db, HRDesignation, payload.designation_id, tenant_id, "Designation")
     grade = _get_tenant_record(db, HRGrade, payload.grade_id or (designation.grade_id if designation else None), tenant_id, "Grade")
+    job_role = _get_tenant_record(db, JobRole, payload.job_role_id, tenant_id, "Job role")
+    organization_unit = _get_tenant_record(db, OrganizationUnit, payload.organization_unit_id, tenant_id, "Organization unit")
     _get_tenant_record(db, HRPosition, payload.reports_to_position_id, tenant_id, "Reporting position")
 
     position = HRPosition(
@@ -1192,6 +1492,8 @@ async def create_position(
         department_id=department.id if department else None,
         designation_id=designation.id if designation else None,
         grade_id=grade.id if grade else None,
+        job_role_id=job_role.id if job_role else None,
+        organization_unit_id=organization_unit.id if organization_unit else None,
         organization_id=scope_values["organization_id"],
         zone_id=scope_values["zone_id"],
         region_id=scope_values["region_id"],
@@ -1199,6 +1501,9 @@ async def create_position(
         branch_id=scope_values["branch_id"],
         reports_to_position_id=payload.reports_to_position_id,
         approval_limit=payload.approval_limit,
+        budgeted_salary=payload.budgeted_salary,
+        effective_from=payload.effective_from,
+        effective_to=payload.effective_to,
         status="open",
     )
     db.add(position)
@@ -1258,6 +1563,8 @@ async def update_position(
     designation = _get_tenant_record(db, HRDesignation, update_data.get("designation_id"), tenant_id, "Designation")
     grade_id = update_data.get("grade_id") or (designation.grade_id if designation else None)
     _get_tenant_record(db, HRGrade, grade_id, tenant_id, "Grade")
+    _get_tenant_record(db, JobRole, update_data.get("job_role_id"), tenant_id, "Job role")
+    _get_tenant_record(db, OrganizationUnit, update_data.get("organization_unit_id"), tenant_id, "Organization unit")
     _get_tenant_record(db, HRPosition, update_data.get("reports_to_position_id"), tenant_id, "Reporting position")
 
     occupant_id = update_data.pop("occupied_by_employee_id", None)
@@ -1905,6 +2212,297 @@ async def update_employee(
     db.commit()
     db.refresh(employee)
     return employee
+
+
+@app.post("/job-families", response_model=JobFamilyResponse)
+async def create_job_family(
+    payload: JobFamilyCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    _ensure_unique_code(db, JobFamily, tenant_id, "family_code", payload.family_code, "Job family")
+    family = JobFamily(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        family_code=payload.family_code,
+        family_name=payload.family_name,
+        description=payload.description,
+    )
+    db.add(family)
+    db.commit()
+    db.refresh(family)
+    return family
+
+
+@app.get("/job-families", response_model=List[JobFamilyResponse])
+async def list_job_families(
+    tenant_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(JobFamily).filter(JobFamily.tenant_id == tenant_id)
+    if status:
+        query = query.filter(JobFamily.status == status)
+    return query.order_by(JobFamily.family_name.asc()).all()
+
+
+@app.put("/job-families/{job_family_id}", response_model=JobFamilyResponse)
+async def update_job_family(
+    job_family_id: str,
+    payload: JobFamilyUpdate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    family = _get_tenant_record(db, JobFamily, job_family_id, tenant_id, "Job family")
+    _apply_update(family, payload)
+    db.commit()
+    db.refresh(family)
+    return family
+
+
+@app.post("/job-roles", response_model=JobRoleResponse)
+async def create_job_role(
+    payload: JobRoleCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    _ensure_unique_code(db, JobRole, tenant_id, "role_code", payload.role_code, "Job role")
+    _get_tenant_record(db, JobFamily, payload.job_family_id, tenant_id, "Job family")
+    role = JobRole(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        role_code=payload.role_code,
+        role_name=payload.role_name,
+        job_family_id=payload.job_family_id,
+        description=payload.description,
+    )
+    db.add(role)
+    db.commit()
+    db.refresh(role)
+    return role
+
+
+@app.get("/job-roles", response_model=List[JobRoleResponse])
+async def list_job_roles(
+    tenant_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(JobRole).filter(JobRole.tenant_id == tenant_id)
+    if status:
+        query = query.filter(JobRole.status == status)
+    return query.order_by(JobRole.role_name.asc()).all()
+
+
+@app.put("/job-roles/{job_role_id}", response_model=JobRoleResponse)
+async def update_job_role(
+    job_role_id: str,
+    payload: JobRoleUpdate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    role = _get_tenant_record(db, JobRole, job_role_id, tenant_id, "Job role")
+    if payload.job_family_id:
+        _get_tenant_record(db, JobFamily, payload.job_family_id, tenant_id, "Job family")
+    _apply_update(role, payload)
+    db.commit()
+    db.refresh(role)
+    return role
+
+
+@app.post("/employee-assignments", response_model=EmployeeAssignmentResponse)
+async def create_employee_assignment(
+    payload: EmployeeAssignmentCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    employee = _workflow_employee(payload.employee_id, tenant_id, db, user_claims)
+    position = _get_tenant_record(db, HRPosition, payload.position_id, tenant_id, "Position")
+    if position.occupied_by_employee_id and position.occupied_by_employee_id != employee.id:
+        raise HTTPException(status_code=400, detail="Position is already occupied")
+    if payload.assignment_type == "primary" and employee.position_id and employee.position_id != position.id:
+        _release_employee_position(db, employee)
+    _assign_position_to_employee(db, employee, position.id, tenant_id)
+    assignment = EmployeeAssignment(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        employee_id=employee.id,
+        position_id=position.id,
+        assignment_type=payload.assignment_type,
+        status="active",
+        start_date=payload.start_date or date.today(),
+        end_date=payload.end_date,
+        assigned_by=payload.assigned_by,
+        notes=payload.notes,
+        organization_id=employee.organization_id,
+        zone_id=employee.zone_id,
+        region_id=employee.region_id,
+        area_id=employee.area_id,
+        branch_id=employee.branch_id,
+    )
+    db.add(assignment)
+    timeline_event = EmployeeTimeline(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        employee_id=employee.id,
+        event_type="position_assigned",
+        event_title="Position Assigned",
+        event_details={
+            "position_id": position.id,
+            "position_title": position.position_title,
+            "assignment_type": payload.assignment_type,
+        },
+        notes=payload.notes,
+        organization_id=employee.organization_id,
+        zone_id=employee.zone_id,
+        region_id=employee.region_id,
+        area_id=employee.area_id,
+        branch_id=employee.branch_id,
+        event_timestamp=payload.start_date or datetime.utcnow(),
+    )
+    db.add(timeline_event)
+    db.commit()
+    db.refresh(assignment)
+    return assignment
+
+
+@app.get("/positions/vacant", response_model=List[PositionResponse])
+async def get_vacant_positions(
+    tenant_id: Optional[str] = Query(None),
+    organization_id: Optional[str] = Query(None),
+    zone_id: Optional[str] = Query(None),
+    region_id: Optional[str] = Query(None),
+    area_id: Optional[str] = Query(None),
+    branch_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(HRPosition).filter(HRPosition.tenant_id == tenant_id, HRPosition.status == "open")
+    query = _apply_scope_filters(
+        query,
+        HRPosition,
+        {
+            "organization_id": organization_id,
+            "zone_id": zone_id,
+            "region_id": region_id,
+            "area_id": area_id,
+            "branch_id": branch_id,
+        },
+        user_claims,
+    )
+    return query.order_by(HRPosition.position_code.asc()).all()
+
+
+@app.get("/positions/occupied", response_model=List[PositionResponse])
+async def get_occupied_positions(
+    tenant_id: Optional[str] = Query(None),
+    organization_id: Optional[str] = Query(None),
+    zone_id: Optional[str] = Query(None),
+    region_id: Optional[str] = Query(None),
+    area_id: Optional[str] = Query(None),
+    branch_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(HRPosition).filter(HRPosition.tenant_id == tenant_id, HRPosition.status != "open")
+    query = _apply_scope_filters(
+        query,
+        HRPosition,
+        {
+            "organization_id": organization_id,
+            "zone_id": zone_id,
+            "region_id": region_id,
+            "area_id": area_id,
+            "branch_id": branch_id,
+        },
+        user_claims,
+    )
+    return query.order_by(HRPosition.position_code.asc()).all()
+
+
+@app.get("/organization/{organization_unit_id}/positions", response_model=List[PositionResponse])
+async def get_organization_positions(
+    organization_unit_id: str,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    _get_tenant_record(db, OrganizationUnit, organization_unit_id, tenant_id, "Organization unit")
+    descendant_ids = [organization_unit_id]
+    rows = (
+        db.query(OrganizationUnitClosure.descendant_id)
+        .filter(
+            OrganizationUnitClosure.tenant_id == tenant_id,
+            OrganizationUnitClosure.ancestor_id == organization_unit_id,
+        )
+        .all()
+    )
+    descendant_ids += [row.descendant_id for row in rows if row.descendant_id != organization_unit_id]
+    query = db.query(HRPosition).filter(HRPosition.tenant_id == tenant_id, HRPosition.organization_unit_id.in_(descendant_ids))
+    return query.order_by(HRPosition.position_code.asc()).all()
+
+
+@app.get("/employees/{employee_id}/timeline", response_model=List[EmployeeTimelineResponse])
+async def get_employee_timeline(
+    employee_id: str,
+    tenant_id: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    _workflow_employee(employee_id, tenant_id, db, user_claims)
+    timeline = (
+        db.query(EmployeeTimeline)
+        .filter(EmployeeTimeline.tenant_id == tenant_id, EmployeeTimeline.employee_id == employee_id)
+        .order_by(EmployeeTimeline.event_timestamp.desc())
+        .limit(limit)
+        .all()
+    )
+    return timeline
+
+
+@app.post("/employees/{employee_id}/timeline", response_model=EmployeeTimelineResponse)
+async def add_employee_timeline_event(
+    employee_id: str,
+    payload: EmployeeTimelineCreate,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    employee = _workflow_employee(employee_id, tenant_id, db, user_claims)
+    entry = EmployeeTimeline(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        employee_id=employee.id,
+        event_type=payload.event_type,
+        event_title=payload.event_title,
+        event_details=payload.event_details,
+        notes=payload.notes,
+        organization_id=employee.organization_id,
+        zone_id=employee.zone_id,
+        region_id=employee.region_id,
+        area_id=employee.area_id,
+        branch_id=employee.branch_id,
+        event_timestamp=payload.event_timestamp or datetime.utcnow(),
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
 
 
 @app.post("/employees/{employee_id}/assign-branch", response_model=EmployeeResponse)
