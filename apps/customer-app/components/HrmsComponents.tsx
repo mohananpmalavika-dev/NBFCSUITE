@@ -22,7 +22,6 @@ interface DepartmentUIProps {
 }
 
 export function DepartmentHierarchyTree({ departments }: { departments: DepartmentUIProps['departments'] }) {
-  const byId = new Map(departments.map((d) => [d.id, d]));
   const byCode = new Map(departments.map((d) => [d.department_code, d]));
   const children = new Map<string | null, DepartmentUIProps['departments'][0][]>();
 
