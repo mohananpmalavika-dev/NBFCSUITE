@@ -95,6 +95,75 @@ class LegalEntityCreate(BaseModel):
     compliances: Optional[List[LegalEntityComplianceCreate]] = None
 
 
+class BusinessUnitCreate(BaseModel):
+    legal_entity_id: str
+    business_unit_code: str
+    business_unit_name: str
+    head: Optional[str] = None
+    status: Optional[str] = 'active'
+    description: Optional[str] = None
+
+
+class BusinessUnitUpdate(BaseModel):
+    business_unit_name: Optional[str] = None
+    head: Optional[str] = None
+    status: Optional[str] = None
+    description: Optional[str] = None
+
+
+class BusinessUnitResponse(BaseModel):
+    id: str
+    legal_entity_id: str
+    business_unit_code: str
+    business_unit_name: str
+    head: Optional[str]
+    status: str
+    description: Optional[str]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+
+    class Config:
+        orm_mode = True
+
+
+class BusinessUnitListResponse(BaseModel):
+    total: int
+    items: List[BusinessUnitResponse]
+
+
+class BusinessUnitHealthResponse(BaseModel):
+    health_score: int
+    missing_head: int
+    status: str
+    legal_entity_id: str
+
+
+class BusinessUnitAnalyticsResponse(BaseModel):
+    id: str
+    business_unit_code: str
+    business_unit_name: str
+    status: str
+    head: Optional[str]
+    legal_entity_id: str
+    revenue: float
+    cost: float
+    margin: float
+    headcount: int
+
+
+class BusinessUnitKpiItem(BaseModel):
+    key: str
+    label: str
+    value: float
+    target: float
+    status: str
+
+
+class BusinessUnitKpisResponse(BaseModel):
+    id: str
+    kpis: List[BusinessUnitKpiItem]
+
+
 class LegalEntityResponse(BaseModel):
     id: str
     code: str

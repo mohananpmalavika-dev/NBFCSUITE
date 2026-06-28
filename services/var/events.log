@@ -64,3 +64,58 @@
 {"ts": "2026-06-28T21:00:42.434677+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "41378081-bf83-4621-aa66-0514e63b9d0b", "code": "LE-001", "name": "Legal One"}}
 {"ts": "2026-06-28T21:00:42.633477+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "41378081-bf83-4621-aa66-0514e63b9d0b"}}
 {"ts": "2026-06-28T21:00:42.679213+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "41378081-bf83-4621-aa66-0514e63b9d0b"}}
+{"ts": "2026-06-28T21:22:51.280508+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "3df153df-c658-4a90-a13c-ceedde082d46", "code": "LE-100", "name": "Legal Entity for BU"}}
+{"ts": "2026-06-28T21:22:51.417626+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "ba111ec4-2066-48f0-b5ac-2bca8fc9390c", "code": "BU-001", "name": "Business Unit One"}}
+{"ts": "2026-06-28T21:22:51.499313+00:00", "type": "BUSINESS_UNIT_UPDATED", "payload": {"id": "ba111ec4-2066-48f0-b5ac-2bca8fc9390c"}}
+{"ts": "2026-06-28T21:22:51.554498+00:00", "type": "BUSINESS_UNIT_STATUS_CHANGED", "payload": {"id": "ba111ec4-2066-48f0-b5ac-2bca8fc9390c", "status": "inactive"}}
+{"ts": "2026-06-28T21:24:03.754403+00:00", "type": "BRAND_CREATED", "payload": {"id": "ec075d22-a758-4e49-97ab-0a1cc0dffb1f", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-28T21:24:03.835819+00:00", "type": "BRAND_UPDATED", "payload": {"id": "ec075d22-a758-4e49-97ab-0a1cc0dffb1f"}}
+{"ts": "2026-06-28T21:24:03.880244+00:00", "type": "BRAND_DELETED", "payload": {"id": "ec075d22-a758-4e49-97ab-0a1cc0dffb1f"}}
+{"ts": "2026-06-28T21:24:04.523560+00:00", "type": "BRAND_CREATED", "payload": {"id": "81d2c2d5-d9a1-43e2-ac76-e00062bf661b", "code": "B-AUD", "name": "Audit Brand"}}
+{"ts": "2026-06-28T21:24:04.571402+00:00", "type": "BRAND_UPDATED", "payload": {"id": "81d2c2d5-d9a1-43e2-ac76-e00062bf661b"}}
+{"ts": "2026-06-28T21:24:04.674192+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "e2a87bb3-13b5-4ba8-b82c-caf79a19081c", "code": "LE-100", "name": "Legal Entity for BU"}}
+{"ts": "2026-06-28T21:24:04.777784+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "c29e9b2f-505b-4353-b23c-a8d3de18b33f", "code": "BU-001", "name": "Business Unit One"}}
+{"ts": "2026-06-28T21:24:04.850915+00:00", "type": "BUSINESS_UNIT_UPDATED", "payload": {"id": "c29e9b2f-505b-4353-b23c-a8d3de18b33f"}}
+{"ts": "2026-06-28T21:24:04.898820+00:00", "type": "BUSINESS_UNIT_STATUS_CHANGED", "payload": {"id": "c29e9b2f-505b-4353-b23c-a8d3de18b33f", "status": "inactive"}}
+{"ts": "2026-06-28T21:24:05.019738+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "3540d9a7-fccd-4f02-ae4e-d4189466962d", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T21:24:05.088346+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "b7643921-9ea7-4f21-b400-7b5ecc83874f", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T21:24:05.137629+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "b7643921-9ea7-4f21-b400-7b5ecc83874f"}}
+{"ts": "2026-06-28T21:24:05.189667+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "b7643921-9ea7-4f21-b400-7b5ecc83874f", "status": "suspended"}}
+{"ts": "2026-06-28T21:24:05.242879+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "b7643921-9ea7-4f21-b400-7b5ecc83874f"}}
+{"ts": "2026-06-28T21:24:05.300727+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "93f7dd9c-ac91-4a34-b37a-fa55db1f287a", "code": "LE-001", "name": "Legal One"}}
+{"ts": "2026-06-28T21:24:05.498064+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "93f7dd9c-ac91-4a34-b37a-fa55db1f287a"}}
+{"ts": "2026-06-28T21:24:05.573469+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "93f7dd9c-ac91-4a34-b37a-fa55db1f287a"}}
+{"ts": "2026-06-28T21:24:34.500303+00:00", "type": "BRAND_CREATED", "payload": {"id": "51413a43-4ea9-4a6c-8b24-0e3f29982210", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-28T21:24:34.577578+00:00", "type": "BRAND_UPDATED", "payload": {"id": "51413a43-4ea9-4a6c-8b24-0e3f29982210"}}
+{"ts": "2026-06-28T21:24:34.619019+00:00", "type": "BRAND_DELETED", "payload": {"id": "51413a43-4ea9-4a6c-8b24-0e3f29982210"}}
+{"ts": "2026-06-28T21:24:34.681915+00:00", "type": "BRAND_CREATED", "payload": {"id": "2f4763b5-5833-4adb-87de-df4610bcb3a5", "code": "B-AUD", "name": "Audit Brand"}}
+{"ts": "2026-06-28T21:24:34.730539+00:00", "type": "BRAND_UPDATED", "payload": {"id": "2f4763b5-5833-4adb-87de-df4610bcb3a5"}}
+{"ts": "2026-06-28T21:24:35.340285+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "a89c5284-ebc0-4650-bf80-ab7b17e557a0", "code": "LE-100", "name": "Legal Entity for BU"}}
+{"ts": "2026-06-28T21:24:35.435679+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "928ef512-0a68-42bf-b43d-1807666d0fac", "code": "BU-001", "name": "Business Unit One"}}
+{"ts": "2026-06-28T21:24:35.507780+00:00", "type": "BUSINESS_UNIT_UPDATED", "payload": {"id": "928ef512-0a68-42bf-b43d-1807666d0fac"}}
+{"ts": "2026-06-28T21:24:35.549351+00:00", "type": "BUSINESS_UNIT_STATUS_CHANGED", "payload": {"id": "928ef512-0a68-42bf-b43d-1807666d0fac", "status": "inactive"}}
+{"ts": "2026-06-28T21:24:35.634715+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "34ae0ef2-dfb3-405a-8b66-c0d29f0faadc", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T21:24:35.707416+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "cd79e4d8-4ba9-4304-b353-9aaed5511ef6", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T21:24:35.752765+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "cd79e4d8-4ba9-4304-b353-9aaed5511ef6"}}
+{"ts": "2026-06-28T21:24:35.795534+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "cd79e4d8-4ba9-4304-b353-9aaed5511ef6", "status": "suspended"}}
+{"ts": "2026-06-28T21:24:35.845736+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "cd79e4d8-4ba9-4304-b353-9aaed5511ef6"}}
+{"ts": "2026-06-28T21:24:35.910499+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "28fae130-30ef-447c-a8db-061ec6931265", "code": "LE-001", "name": "Legal One"}}
+{"ts": "2026-06-28T21:24:36.106161+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "28fae130-30ef-447c-a8db-061ec6931265"}}
+{"ts": "2026-06-28T21:24:36.168393+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "28fae130-30ef-447c-a8db-061ec6931265"}}
+{"ts": "2026-06-28T21:27:15.826523+00:00", "type": "BRAND_CREATED", "payload": {"id": "212a494e-32b8-439a-abb8-72633c1baf2f", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-28T21:27:15.900296+00:00", "type": "BRAND_UPDATED", "payload": {"id": "212a494e-32b8-439a-abb8-72633c1baf2f"}}
+{"ts": "2026-06-28T21:27:15.943686+00:00", "type": "BRAND_DELETED", "payload": {"id": "212a494e-32b8-439a-abb8-72633c1baf2f"}}
+{"ts": "2026-06-28T21:27:16.009922+00:00", "type": "BRAND_CREATED", "payload": {"id": "1f2fd7a4-c997-4978-9488-21e601512b17", "code": "B-AUD", "name": "Audit Brand"}}
+{"ts": "2026-06-28T21:27:16.054981+00:00", "type": "BRAND_UPDATED", "payload": {"id": "1f2fd7a4-c997-4978-9488-21e601512b17"}}
+{"ts": "2026-06-28T21:27:16.140750+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "82a1b816-108a-42b7-8029-ebcf019ad99c", "code": "LE-100", "name": "Legal Entity for BU"}}
+{"ts": "2026-06-28T21:27:16.240874+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "8afc7b0c-7895-4cc3-a3b4-9698fd419726", "code": "BU-001", "name": "Business Unit One"}}
+{"ts": "2026-06-28T21:27:16.312088+00:00", "type": "BUSINESS_UNIT_UPDATED", "payload": {"id": "8afc7b0c-7895-4cc3-a3b4-9698fd419726"}}
+{"ts": "2026-06-28T21:27:16.353242+00:00", "type": "BUSINESS_UNIT_STATUS_CHANGED", "payload": {"id": "8afc7b0c-7895-4cc3-a3b4-9698fd419726", "status": "inactive"}}
+{"ts": "2026-06-28T21:27:16.444901+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "c5079d62-4541-4aee-ab08-4e689938e290", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T21:27:16.519506+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "e00e4c73-27da-414d-851f-4aa9b0cbdd84", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T21:27:16.565837+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "e00e4c73-27da-414d-851f-4aa9b0cbdd84"}}
+{"ts": "2026-06-28T21:27:16.607135+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "e00e4c73-27da-414d-851f-4aa9b0cbdd84", "status": "suspended"}}
+{"ts": "2026-06-28T21:27:16.657022+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "e00e4c73-27da-414d-851f-4aa9b0cbdd84"}}
+{"ts": "2026-06-28T21:27:16.738529+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "7015318c-a03a-44e2-afa8-daec316df58b", "code": "LE-001", "name": "Legal One"}}
+{"ts": "2026-06-28T21:27:16.978633+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "7015318c-a03a-44e2-afa8-daec316df58b"}}
+{"ts": "2026-06-28T21:27:17.045527+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "7015318c-a03a-44e2-afa8-daec316df58b"}}

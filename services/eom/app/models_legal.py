@@ -43,6 +43,23 @@ class LegalEntity(Base):
     contacts = relationship('LegalEntityContact', cascade='all, delete-orphan', back_populates='legal_entity')
     documents = relationship('LegalEntityDocument', cascade='all, delete-orphan', back_populates='legal_entity')
     compliances = relationship('LegalEntityCompliance', cascade='all, delete-orphan', back_populates='legal_entity')
+    business_units = relationship('BusinessUnit', cascade='all, delete-orphan', back_populates='legal_entity')
+
+
+class BusinessUnit(Base):
+    __tablename__ = 'business_unit'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    legal_entity_id = Column(String(36), ForeignKey('legal_entity.id'), nullable=False)
+    business_unit_code = Column(String(64), nullable=False)
+    business_unit_name = Column(String(256), nullable=False)
+    head = Column(String(128), nullable=True)
+    status = Column(String(32), nullable=False, default='active')
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    legal_entity = relationship('LegalEntity', back_populates='business_units')
 
 
 class LegalEntityRegistration(Base):
