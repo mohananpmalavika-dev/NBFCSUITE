@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'ARTH.OS Enterprise Shell',
-  description: 'ARTH.OS enterprise design system shell implementation',
+  title: 'FIN.OS Enterprise Shell',
+  description: 'FIN.OS enterprise design system shell implementation',
 };
 
 export default function RootLayout({
@@ -11,7 +11,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

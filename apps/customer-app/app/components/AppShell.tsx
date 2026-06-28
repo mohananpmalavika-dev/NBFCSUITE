@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Bell,
   Compass,
@@ -19,9 +19,10 @@ import {
   ClipboardList,
   HelpCircle,
   CheckCircle2,
-  Command,
+  Palette,
   ShieldAlert as ShieldAlertIcon,
 } from 'lucide-react';
+import { buildCssVariables, themes, type ThemeName } from '../../lib/design-tokens';
 
 const topNavItems = [
   { label: 'AI Assistant', icon: Sparkles },
@@ -56,69 +57,28 @@ const kpis = [
 
 const breadcrumbs = ['Home', 'Expenses', 'Approval Workspace'];
 
-const commandPaletteItems = [
-  'Create Employee',
-  'Employee Directory',
-  'Payroll Summary',
-  'General Ledger',
-  'Create Customer',
-  'Search Loans',
-  'Dashboard Reports',
-  'Approvals Queue',
-];
-
-const megaNavigation = [
-  {
-    title: 'Accounting',
-    categories: [
-      { label: 'Dashboard' },
-      { label: 'Master', children: ['Chart of Accounts', 'Fiscal Year', 'Periods'] },
-      { label: 'Transactions', children: ['Journal', 'Voucher', 'Cash', 'Bank'] },
-      { label: 'Ledger', children: ['General Ledger', 'Sub Ledger'] },
-      { label: 'Reports', children: ['Trial Balance', 'Balance Sheet', 'P&L'] },
-    ],
-  },
-  {
-    title: 'HRMS',
-    categories: [
-      { label: 'Dashboard' },
-      { label: 'Organization', children: ['Departments', 'Designations', 'Grades', 'Positions'] },
-      { label: 'Employees', children: ['Directory', 'Onboarding', 'Transfers', 'Exit'] },
-      { label: 'Attendance' },
-      { label: 'Leave' },
-      { label: 'Payroll' },
-      { label: 'Performance' },
-    ],
-  },
-  {
-    title: 'Customers',
-    categories: [
-      { label: 'Dashboard' },
-      { label: 'Prospects' },
-      { label: 'Directory' },
-      { label: 'Customer 360' },
-      { label: 'Relationships' },
-      { label: 'KYC' },
-      { label: 'Documents' },
-      { label: 'Reports' },
-    ],
-  },
-];
-
 export function AppShell() {
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [themeName, setThemeName] = useState<ThemeName>('default');
+
+  const activeTheme = useMemo(() => themes[themeName], [themeName]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', themeName);
+    Object.assign(document.documentElement.style, buildCssVariables(activeTheme));
+  }, [activeTheme, themeName]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background-default)', color: 'var(--text-primary)' }}>
+      <header className="sticky top-0 z-30 border-b backdrop-blur-sm" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-header)' }}>
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-sm" style={{ backgroundColor: 'var(--background-sidebar)' }}>
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-xs uppercase tracking-[0.24em] text-slate-500">ARTH.OS</p>
-              <p className="truncate font-semibold text-slate-900">Enterprise Navigation System</p>
+              <p className="truncate text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--text-muted)' }}>ARTH.OS</p>
+              <p className="truncate font-semibold" style={{ color: 'var(--text-primary)' }}>Enterprise Navigation System</p>
             </div>
           </div>
 
@@ -129,7 +89,8 @@ export function AppShell() {
                 type="search"
                 aria-label="Search ARTH.OS"
                 placeholder="Search ARTH.OS..."
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                className="w-full rounded-2xl border py-2.5 pl-10 pr-4 text-sm shadow-sm outline-none transition"
+                style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-elevated)', color: 'var(--text-primary)' }}
               />
             </div>
             <div className="hidden items-center gap-2 sm:flex">
@@ -138,7 +99,8 @@ export function AppShell() {
                 return (
                   <button
                     key={item.label}
-                    className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                    className="flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium shadow-sm transition"
+                    style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-surface)', color: 'var(--text-secondary)' }}
                   >
                     <Icon className="h-4 w-4" />
                     {item.label}
@@ -149,29 +111,39 @@ export function AppShell() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+            <button
+              type="button"
+              onClick={() => setThemeName((current) => (current === 'default' ? 'dark' : current === 'dark' ? 'high-contrast' : 'default'))}
+              className="rounded-2xl border p-2 shadow-sm transition"
+              style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-surface)', color: 'var(--text-secondary)' }}
+              aria-label="Cycle theme"
+            >
+              <Palette className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm shadow-sm" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-surface)', color: 'var(--text-secondary)' }}>
               <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
               Branch 1204
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm">Tenant: FinCorp</div>
+            <div className="rounded-2xl border px-3 py-2 text-sm font-medium shadow-sm" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-surface)', color: 'var(--text-secondary)' }}>Tenant: FinCorp</div>
           </div>
         </div>
       </header>
 
       <div className="mx-auto flex max-w-7xl gap-6 px-4 py-6 sm:px-6">
         <aside
-          className={`hidden shrink-0 flex-col gap-4 rounded-3xl border border-slate-200 bg-slate-950 p-4 text-slate-100 lg:flex ${
+          className={`hidden shrink-0 flex-col gap-4 rounded-3xl border p-4 lg:flex ${
             sidebarExpanded ? 'w-72' : 'w-20'
           }`}
+          style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-sidebar)', color: 'var(--text-inverse)' }}
           onMouseEnter={() => setSidebarExpanded(true)}
           onMouseLeave={() => setSidebarExpanded(false)}
         >
-          <div className="mb-4 flex items-center justify-between rounded-3xl bg-slate-900 px-4 py-3">
+          <div className="mb-4 flex items-center justify-between rounded-3xl px-4 py-3" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
             <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Global Navigation</p>
+              <p className="text-xs uppercase tracking-[0.24em]" style={{ color: 'rgba(255,255,255,0.65)' }}>Global Navigation</p>
               <p className="font-semibold">Persistent Sidebar</p>
             </div>
-            <ChevronRight className="h-4 w-4 text-slate-400" />
+            <ChevronRight className="h-4 w-4" style={{ color: 'rgba(255,255,255,0.65)' }} />
           </div>
 
           <nav className="space-y-2">
@@ -181,71 +153,72 @@ export function AppShell() {
                 <a
                   key={item.label}
                   href="#"
-                  className="flex items-center gap-3 rounded-3xl px-4 py-3 text-sm font-semibold text-slate-100 transition hover:bg-slate-800"
+                  className="flex items-center gap-3 rounded-3xl px-4 py-3 text-sm font-semibold transition"
+                  style={{ color: 'var(--text-inverse)' }}
                 >
-                  <Icon className="h-5 w-5 text-slate-300" />
+                  <Icon className="h-5 w-5" style={{ color: 'rgba(255,255,255,0.7)' }} />
                   <span className={`${sidebarExpanded ? 'block' : 'hidden'}`}>{item.label}</span>
                 </a>
               );
             })}
           </nav>
 
-          <div className="mt-auto rounded-3xl bg-slate-900 p-4 text-sm text-slate-400">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Compressed Behavior</p>
-            <p className="mt-3 text-sm leading-6 text-slate-300">
+          <div className="mt-auto rounded-3xl p-4 text-sm" style={{ backgroundColor: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.72)' }}>
+            <p className="text-xs uppercase tracking-[0.24em]" style={{ color: 'rgba(255,255,255,0.58)' }}>Compressed Behavior</p>
+            <p className="mt-3 text-sm leading-6" style={{ color: 'rgba(255,255,255,0.84)' }}>
               Hover expands the sidebar. When collapsed, only icons remain to preserve space.
             </p>
           </div>
         </aside>
 
         <main className="flex-1">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-3xl border p-6 shadow-sm" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-surface)' }}>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.26em] text-blue-600">EDS-003</p>
-                <h1 className="mt-3 text-3xl font-semibold text-slate-950">Enterprise Navigation System</h1>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
-                  A scalable navigation system with global navigation, workspace header, command palette, mega menus, and a universal search experience.
+                <p className="text-xs uppercase tracking-[0.26em]" style={{ color: 'var(--accent-primary)' }}>EDS-005</p>
+                <h1 className="mt-3 text-3xl font-semibold" style={{ color: 'var(--text-primary)' }}>Design Tokens & Theme System</h1>
+                <p className="mt-4 max-w-2xl text-sm leading-7" style={{ color: 'var(--text-secondary)' }}>
+                  Semantic tokens now drive surfaces, borders, text, and interactive states across the enterprise shell.
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {kpis.map((kpi) => (
-                  <div key={kpi.label} className="rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
-                    <p className="text-xs uppercase tracking-[0.24em] text-slate-500">{kpi.label}</p>
-                    <p className="mt-3 text-2xl font-semibold text-slate-950">{kpi.value}</p>
+                  <div key={kpi.label} className="rounded-3xl border p-4 shadow-sm" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-elevated)' }}>
+                    <p className="text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--text-muted)' }}>{kpi.label}</p>
+                    <p className="mt-3 text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>{kpi.value}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <div className="mt-6 rounded-3xl border p-5" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-elevated)' }}>
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.24em] text-slate-700">Workspace Header</p>
-                  <p className="text-sm text-slate-600">Breadcrumbs, workspace title, description, and actions appear at the top of every module.</p>
+                  <p className="text-sm uppercase tracking-[0.24em]" style={{ color: 'var(--text-secondary)' }}>Theme Controls</p>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Themes switch at runtime without changing component logic.</p>
                 </div>
-                <div className="rounded-2xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">Shell pattern</div>
+                <div className="rounded-2xl px-3 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--background-accent)', color: 'var(--accent-primary)' }}>Token-driven</div>
               </div>
 
-              <div className="mt-6 rounded-3xl bg-white p-5 shadow-sm">
+              <div className="mt-6 rounded-3xl p-5 shadow-sm" style={{ backgroundColor: 'var(--background-surface)', border: '1px solid var(--border-default)' }}>
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.24em] text-slate-500">
+                    <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.24em]" style={{ color: 'var(--text-muted)' }}>
                       {breadcrumbs.map((crumb, index) => (
                         <span key={crumb} className="inline-flex items-center gap-2">
-                          {index > 0 && <ChevronRight className="h-3 w-3 text-slate-400" />}
+                          {index > 0 && <ChevronRight className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />}
                           {crumb}
                         </span>
                       ))}
                     </div>
-                    <h2 className="text-2xl font-semibold text-slate-950">Approval Workspace</h2>
-                    <p className="max-w-2xl text-sm text-slate-600">Review and approve employee expenses, with access to tasks, approvals, and help in context.</p>
+                    <h2 className="text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>Approval Workspace</h2>
+                    <p className="max-w-2xl text-sm" style={{ color: 'var(--text-secondary)' }}>Review and approve employee expenses, with access to tasks, approvals, and help in context.</p>
                   </div>
                   <div className="flex flex-wrap gap-3">
-                    <button className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">+ New Approval</button>
-                    <button className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300">Import</button>
-                    <button className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300">Export</button>
+                    <button className="rounded-full px-4 py-2 text-sm font-semibold text-white transition" style={{ backgroundColor: 'var(--accent-primary)' }}>+ New Approval</button>
+                    <button className="rounded-full border px-4 py-2 text-sm font-semibold transition" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-surface)', color: 'var(--text-secondary)' }}>Import</button>
+                    <button className="rounded-full border px-4 py-2 text-sm font-semibold transition" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-surface)', color: 'var(--text-secondary)' }}>Export</button>
                   </div>
                 </div>
               </div>
@@ -253,96 +226,59 @@ export function AppShell() {
           </section>
 
           <section className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-            <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <article className="rounded-3xl border p-6 shadow-sm" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-surface)' }}>
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.24em] text-blue-600">Command Palette</p>
-                  <h2 className="mt-2 text-xl font-semibold text-slate-950">Search Productivity</h2>
+                  <p className="text-sm uppercase tracking-[0.24em]" style={{ color: 'var(--accent-primary)' }}>Theme Surface</p>
+                  <h2 className="mt-2 text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Semantic Tokens</h2>
                 </div>
-                <div className="rounded-2xl bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">VS Code style</div>
+                <div className="rounded-2xl px-3 py-2 text-sm font-semibold" style={{ backgroundColor: 'var(--background-accent)', color: 'var(--accent-primary)' }}>Light / Dark / High Contrast</div>
               </div>
-
-              <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                    <Command className="h-4 w-4 text-blue-600" />
-                    <span>Universal Search</span>
-                  </div>
-                  <p className="mt-3 text-sm text-slate-600">Global Search and command palette let users discover screens, reports, actions, and settings.</p>
+              <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                <div className="rounded-3xl border p-5" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-elevated)' }}>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Background Tokens</p>
+                  <p className="mt-3 text-sm" style={{ color: 'var(--text-secondary)' }}>Default, surface, elevated, header, sidebar, and accent surfaces inherit semantic tokens.</p>
                 </div>
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-950">Shortcut</p>
-                  <p className="mt-3 text-2xl font-semibold text-slate-900">Ctrl + K</p>
-                  <p className="mt-3 text-sm text-slate-600">Search across customers, employees, loans, reports, and workflows.</p>
+                <div className="rounded-3xl border p-5" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-elevated)' }}>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Text & Border Tokens</p>
+                  <p className="mt-3 text-sm" style={{ color: 'var(--text-secondary)' }}>Primary, secondary, muted, inverse, border focus, and state colors all come from the same token map.</p>
                 </div>
-              </div>
-
-              <div className="mt-6 space-y-3">
-                {commandPaletteItems.map((item) => (
-                  <div key={item} className="rounded-3xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm text-slate-700">
-                    {item}
-                  </div>
-                ))}
               </div>
             </article>
 
-            <aside className="space-y-6">
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-sm uppercase tracking-[0.24em] text-blue-600">Top Navigation</p>
-                <div className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
-                  <div className="rounded-3xl bg-slate-50 p-4">Global Search</div>
-                  <div className="rounded-3xl bg-slate-50 p-4">AI Assistant</div>
-                  <div className="rounded-3xl bg-slate-50 p-4">Notifications</div>
-                  <div className="rounded-3xl bg-slate-50 p-4">Approvals</div>
-                  <div className="rounded-3xl bg-slate-50 p-4">Tasks</div>
-                  <div className="rounded-3xl bg-slate-50 p-4">Help & Profile</div>
+            <aside className="rounded-3xl border p-6 text-slate-100 shadow-sm" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-sidebar)' }}>
+              <p className="text-sm uppercase tracking-[0.24em]" style={{ color: 'rgba(255,255,255,0.65)' }}>Theme Preview</p>
+              <h2 className="mt-3 text-xl font-semibold text-white">Runtime switching</h2>
+              <p className="mt-2 text-sm" style={{ color: 'rgba(255,255,255,0.72)' }}>The active theme updates the whole shell without altering component structure or business logic.</p>
+              <div className="mt-6 space-y-4">
+                <div className="rounded-3xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+                  <p className="text-sm font-semibold text-white">Current theme</p>
+                  <p className="mt-2 text-sm" style={{ color: 'rgba(255,255,255,0.72)' }}>{activeTheme.name}</p>
                 </div>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <p className="text-sm uppercase tracking-[0.24em] text-blue-600">Search UI</p>
-                <div className="mt-4 space-y-3 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-                  <p className="font-semibold text-slate-900">Search ARTH.OS</p>
-                  <p>Customers Loans Employees Screens Reports Actions</p>
+                <div className="rounded-3xl p-4" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+                  <p className="text-sm font-semibold text-white">Token coverage</p>
+                  <p className="mt-2 text-sm" style={{ color: 'rgba(255,255,255,0.72)' }}>Backgrounds, text, borders, surfaces, and action colors are all tokenized.</p>
                 </div>
               </div>
             </aside>
           </section>
-
-          <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-blue-600">Mega Navigation</p>
-                <h2 className="mt-2 text-xl font-semibold text-slate-950">Scale for 1,000+ screens</h2>
-                <p className="mt-2 text-sm text-slate-600">Mega menus group deep modules with categories and quick actions.</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">Module menus</div>
-            </div>
-
-            <div className="mt-6 grid gap-4 xl:grid-cols-3">
-              {megaNavigation.map((nav) => (
-                <div key={nav.title} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                  <p className="text-sm font-semibold text-slate-950">{nav.title}</p>
-                  <div className="mt-4 space-y-4 text-sm text-slate-600">
-                    {nav.categories.map((category) => (
-                      <div key={category.label}>
-                        <p className="font-semibold text-slate-900">{category.label}</p>
-                        {category.children ? (
-                          <ul className="mt-2 space-y-2 pl-4 text-slate-600">
-                            {category.children.map((child) => (
-                              <li key={child} className="list-disc">{child}</li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
         </main>
       </div>
+
+      <footer className="border-t px-4 py-3 text-sm sm:px-6" style={{ borderColor: 'var(--border-default)', backgroundColor: 'var(--background-surface)', color: 'var(--text-secondary)' }}>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+          <span>EDS-005 token system active • runtime theming enabled • tenant themes ready</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span>Theme: {activeTheme.name}</span>
+            <span className="rounded-full px-3 py-1" style={{ backgroundColor: 'var(--background-accent)', color: 'var(--accent-primary)' }}>Online</span>
+          </div>
+        </div>
+      </footer>
+
+      <button className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-3 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-2xl transition" style={{ backgroundColor: 'var(--accent-primary)' }}>
+        <Sparkles className="h-5 w-5" />
+        Ask FinDNA
+      </button>
     </div>
   );
 }
