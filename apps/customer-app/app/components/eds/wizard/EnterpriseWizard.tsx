@@ -10,6 +10,7 @@ import { WizardSidebar } from './WizardSidebar';
 import { WizardSteps } from './WizardSteps';
 import { WizardSuccess } from './WizardSuccess';
 import type {
+  WizardApiOperation,
   WizardAttachment,
   WizardAutosaveStatus,
   WizardChecklistItem,
@@ -24,13 +25,29 @@ export interface EnterpriseWizardProps {
   description?: string;
   steps: WizardStep[];
   checklist: WizardChecklistItem[];
+
+
   attachments?: WizardAttachment[];
   validationItems?: WizardValidationItem[];
   reviewGroups?: WizardReviewGroup[];
   aiTips?: string[];
+
   approvalRequired?: boolean;
   approvalApprover?: string;
   autosaveIntervalMs?: number;
+
+  /**
+   * Unique draft id used to load/resume a wizard session.
+   * If omitted, the wizard starts as a fresh local session.
+   */
+  initialDraftId?: string;
+
+  /**
+   * Optional API handler for real drafts/validation/submit.
+   * When not provided, the wizard uses local in-memory + simulated timing.
+   */
+  apiHandler?: (operation: WizardApiOperation) => Promise<unknown>;
+
   renderStep: (step: WizardStep) => ReactNode;
   onEvent?: (event: WizardEvent) => void;
 }
@@ -46,14 +63,17 @@ export function EnterpriseWizard({
   checklist,
   attachments = [],
   validationItems = [],
-  aiTips = [],
   reviewGroups = [],
+  aiTips = [],
   approvalRequired = false,
   approvalApprover,
   autosaveIntervalMs = 30000,
+  initialDraftId,
+  apiHandler,
   renderStep,
   onEvent,
 }: EnterpriseWizardProps) {
+
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedStepIds, setCompletedStepIds] = useState<string[]>([]);
   const [autosaveStatus, setAutosaveStatus] = useState<WizardAutosaveStatus>('idle');

@@ -73,3 +73,23 @@ export interface WizardContract {
     submitMs: number;
   };
 }
+
+export type WizardApiOperation =
+  | { op: 'getDraft'; id: string }
+  | { op: 'createDraft'; payload?: unknown }
+  | { op: 'updateStep'; stepId: string; payload?: unknown }
+  | { op: 'validate'; stepId?: string; payload?: unknown }
+  | { op: 'submit'; payload?: unknown }
+  | { op: 'getReview'; payload?: unknown };
+
+export type WizardApiHandler = (operation: WizardApiOperation) => Promise<unknown>;
+
+export interface EnterpriseWizardDraft {
+  draftId: string;
+  updatedAt?: string;
+}
+
+export interface EnterpriseWizardValidationResult {
+  items: WizardValidationItem[];
+}
+

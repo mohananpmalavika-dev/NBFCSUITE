@@ -85,6 +85,11 @@ The current UI should evolve toward a reusable component library in Next.js with
 - EOM-005: Geographic Organization Management (GOM)
 - EP-007: Branch Management System (BMS)
 - EOM-008: Department Management System (DMS)
+- EOM-009: Section & Team Management System (STMS)
+- EOM-010: Grade Management System (GMS)
+- EOM-011: Designation Management System (DgMS)
+- EOM-012: Enterprise Position Management System (EPMS)
+- EOM-013: Financial Organization Management (FOM)
 - EP-002: Identity & Access Management (IAM)
 - EP-003: Workflow Engine
 - EP-004: Rules Engine
@@ -117,5 +122,9 @@ The current UI should evolve toward a reusable component library in Next.js with
 - ✅ EOM-005: Geographic Organization Management (GOM) — Complete
 - ✅ EP-007: Branch Management System (BMS) — Complete
 - ✅ EOM-008: Department Management System (DMS) — Complete
-- ⏳ EOM-009: Section & Team Management — Next
-- ⏳ EP-002: Identity & Access Management (IAM) — Later
+- ✅ EOM-009: Section & Team Management System (STMS) — Complete
+- ✅ EOM-010: Grade Management System (GMS) — Complete
+- ✅ EOM-011: Designation Management System (DgMS) — Complete
+- ✅ EOM-012: Enterprise Position Management System (EPMS) — Complete
+- ✅ EOM-013: Financial Organization Management (FOM) — Complete
+- ⏳ EP-002: Identity & Access Management (IAM) — Next
