@@ -42,68 +42,8 @@ const authAxiosInstance = axios.create({
   baseURL: getServiceURL('auth'),
 });
 
-const collectionsAxiosInstance = axios.create({
-  baseURL: getServiceURL('collections'),
-});
-
-const customerAxiosInstance = axios.create({
-  baseURL: getServiceURL('customer'),
-});
-
-const findnaAxiosInstance = axios.create({
-  baseURL: getServiceURL('findna'),
-});
-
-const depositsAxiosInstance = axios.create({
-  baseURL: getServiceURL('deposits'),
-});
-
-const accountingAxiosInstance = axios.create({
-  baseURL: getServiceURL('accounting'),
-});
-
-const crmAxiosInstance = axios.create({
-  baseURL: getServiceURL('crm'),
-});
-
-const documentAxiosInstance = axios.create({
-  baseURL: getServiceURL('document'),
-});
-
-const complianceAxiosInstance = axios.create({
-  baseURL: getServiceURL('compliance'),
-});
-
 const hrmsAxiosInstance = axios.create({
   baseURL: getServiceURL('hrms'),
-});
-
-const goldAxiosInstance = axios.create({
-  baseURL: getServiceURL('gold'),
-});
-
-const treasuryAxiosInstance = axios.create({
-  baseURL: getServiceURL('treasury'),
-});
-
-const wealthAxiosInstance = axios.create({
-  baseURL: getServiceURL('wealth'),
-});
-
-const insuranceAxiosInstance = axios.create({
-  baseURL: getServiceURL('insurance'),
-});
-
-const procurementAxiosInstance = axios.create({
-  baseURL: getServiceURL('procurement'),
-});
-
-const platformAxiosInstance = axios.create({
-  baseURL: getServiceURL('platform'),
-});
-
-const notificationsAxiosInstance = axios.create({
-  baseURL: getServiceURL('notifications'),
 });
 
 // Legacy aliases for backward compatibility
