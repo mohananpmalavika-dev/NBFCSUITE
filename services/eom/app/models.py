@@ -18,3 +18,26 @@ class Enterprise(Base):
     description = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AuditEntry(Base):
+    __tablename__ = 'audit_entry'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    entity_type = Column(String(64), nullable=False)
+    entity_id = Column(String(36), nullable=True)
+    action = Column(String(64), nullable=False)
+    payload = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Brand(Base):
+    __tablename__ = 'brand'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    code = Column(String(64), unique=True, index=True, nullable=False)
+    name = Column(String(256), nullable=False)
+    description = Column(Text, nullable=True)
+    status = Column(String(32), nullable=False, default='active')
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { AppShell } from '../../components/AppShell';
 import Link from 'next/link';
 
-export default function EnterprisesPage() {
+export default function BrandsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -12,13 +12,12 @@ export default function EnterprisesPage() {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch('/eom/enterprises');
+        const res = await fetch('/eom/brands');
         if (!res.ok) return;
         const body = await res.json();
-        const items = Array.isArray(body) ? body : (body.items || []);
-        if (mounted) setItems(items);
+        const list = Array.isArray(body) ? body : (body.items || []);
+        if (mounted) setItems(list);
       } catch (e) {
-        // ignore
       } finally {
         if (mounted) setLoading(false);
       }
@@ -30,8 +29,8 @@ export default function EnterprisesPage() {
     <AppShell>
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Enterprises</h2>
-          <Link href="/eom/enterprises/new" className="btn btn-primary">New Enterprise</Link>
+          <h2 className="text-xl font-semibold">Brands</h2>
+          <Link href="/eom/brands/new" className="btn btn-primary">New Brand</Link>
         </div>
         {loading ? (
           <div>Loading…</div>
@@ -48,7 +47,7 @@ export default function EnterprisesPage() {
                 </div>
               </div>
             ))}
-            {items.length === 0 && <div className="text-sm text-text-secondary">No enterprises yet.</div>}
+            {items.length === 0 && <div className="text-sm text-text-secondary">No brands yet.</div>}
           </div>
         )}
       </div>

@@ -7,3 +7,26 @@
 {"ts": "2026-06-28T20:03:55.316442Z", "type": "ENTERPRISE_UPDATED", "payload": {"id": "98f9541e-8f2d-4c56-877f-139d3eb91d0b"}}
 {"ts": "2026-06-28T20:03:55.364791Z", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "98f9541e-8f2d-4c56-877f-139d3eb91d0b", "status": "suspended"}}
 {"ts": "2026-06-28T20:03:55.449444Z", "type": "ENTERPRISE_DELETED", "payload": {"id": "98f9541e-8f2d-4c56-877f-139d3eb91d0b"}}
+{"ts": "2026-06-28T20:08:01.950336+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "8b505587-a562-4d72-8620-9b66134becd8", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T20:08:03.671109+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "482e9fc9-dd13-4c4c-9d6f-0660592cdf5c", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T20:08:03.729373+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "482e9fc9-dd13-4c4c-9d6f-0660592cdf5c"}}
+{"ts": "2026-06-28T20:08:03.780668+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "482e9fc9-dd13-4c4c-9d6f-0660592cdf5c", "status": "suspended"}}
+{"ts": "2026-06-28T20:08:03.850356+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "482e9fc9-dd13-4c4c-9d6f-0660592cdf5c"}}
+{"ts": "2026-06-28T20:09:13.378036+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "84fa8211-c62e-4a57-9e49-365d968b4f5c", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T20:09:13.914853+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "8ac05273-4153-4663-bafe-a5a22acea5ca", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T20:09:13.985774+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "8ac05273-4153-4663-bafe-a5a22acea5ca"}}
+{"ts": "2026-06-28T20:09:14.043874+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "8ac05273-4153-4663-bafe-a5a22acea5ca", "status": "suspended"}}
+{"ts": "2026-06-28T20:09:14.108161+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "8ac05273-4153-4663-bafe-a5a22acea5ca"}}
+{"ts": "2026-06-28T20:09:32.088116+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "2b46dbc4-a676-46e6-8d59-3209ce573f2f", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T20:09:32.185197+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "f3a5ca00-af2d-4391-a044-e24aaa724826", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T20:09:32.253482+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "f3a5ca00-af2d-4391-a044-e24aaa724826"}}
+{"ts": "2026-06-28T20:09:32.308217+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "f3a5ca00-af2d-4391-a044-e24aaa724826", "status": "suspended"}}
+{"ts": "2026-06-28T20:09:32.369038+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "f3a5ca00-af2d-4391-a044-e24aaa724826"}}
+{"ts": "2026-06-28T20:13:03.539150+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "50bae051-6697-4461-9539-24d23d542174", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-28T20:13:03.615148+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "dc2d2304-2523-4d14-bc0a-a2269323a3b7", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-28T20:13:03.662894+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "dc2d2304-2523-4d14-bc0a-a2269323a3b7"}}
+{"ts": "2026-06-28T20:13:03.703366+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "dc2d2304-2523-4d14-bc0a-a2269323a3b7", "status": "suspended"}}
+{"ts": "2026-06-28T20:13:03.754195+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "dc2d2304-2523-4d14-bc0a-a2269323a3b7"}}
+{"ts": "2026-06-28T20:13:03.839933+00:00", "type": "BRAND_CREATED", "payload": {"id": "55937170-4c6f-443e-ac3f-4a6a5486f6b7", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-28T20:13:03.914663+00:00", "type": "BRAND_UPDATED", "payload": {"id": "55937170-4c6f-443e-ac3f-4a6a5486f6b7"}}
+{"ts": "2026-06-28T20:13:03.973330+00:00", "type": "BRAND_DELETED", "payload": {"id": "55937170-4c6f-443e-ac3f-4a6a5486f6b7"}}

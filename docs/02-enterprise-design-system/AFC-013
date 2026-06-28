@@ -1,0 +1,907 @@
+Excellent.
+
+Now we build one of the most important CFO modules.
+
+This is not a spreadsheet replacement.
+
+It becomes the Enterprise Performance Management (EPM) layer of ARTH.OS.
+
+Everything spends against a budget.
+
+Nothing should be purchased, paid, or approved without budget validation.
+
+ARTH.OS Enterprise Financial Core
+AFC-013 — Enterprise Budgeting & Budget Control System (EBCS)
+
+Priority: ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐ (20/10)
+
+Estimated Development: 18–22 Weeks
+
+Estimated UI Screens: 340+
+
+Estimated APIs: 1,300+
+
+Estimated Database Tables: 350+
+
+Vision
+
+Budgeting is not just planning.
+
+It controls:
+
+Planning
+Allocation
+Approval
+Consumption
+Forecasting
+Revisions
+Commitments
+Cash Planning
+Performance
+
+Every financial transaction checks the budget before posting.
+
+Enterprise Architecture
+Strategic Planning
+        │
+Annual Budget
+        │
+Department Budget
+        │
+Branch Budget
+        │
+Cost Center Budget
+        │
+Commitment Control
+        │
+Accounts Payable
+Procurement
+Payroll
+Projects
+Treasury
+        │
+General Ledger
+Budget Modules
+Budget Planning
+
+Budget Calendar
+
+Budget Templates
+
+Budget Versions
+
+Budget Allocation
+
+Budget Revisions
+
+Budget Transfers
+
+Budget Approval
+
+Commitment Control
+
+Encumbrance
+
+Availability Control
+
+Forecasting
+
+Rolling Budget
+
+Scenario Planning
+
+Variance Analysis
+
+CAPEX
+
+OPEX
+
+Project Budget
+
+Branch Budget
+
+Department Budget
+
+Product Budget
+
+Cash Budget
+
+Budget Analytics
+
+AI
+Budget Hierarchy
+Enterprise
+
+↓
+
+Legal Entity
+
+↓
+
+Business Unit
+
+↓
+
+Region
+
+↓
+
+Zone
+
+↓
+
+Area
+
+↓
+
+Branch
+
+↓
+
+Department
+
+↓
+
+Cost Center
+
+↓
+
+Project
+
+Budgets can exist at every level.
+
+Dashboard
+
+KPIs
+
+Approved Budget
+
+Consumed Budget
+
+Available Budget
+
+Budget Variance
+
+Forecast Accuracy
+
+Budget Utilization
+
+Pending Approvals
+
+CAPEX
+
+OPEX
+
+Cash Forecast
+
+Budget Health
+
+Charts
+
+Budget vs Actual
+Branch Budget
+Department Budget
+Product Budget
+CAPEX Trend
+OPEX Trend
+Forecast Trend
+Workspace
+Dashboard
+
+↓
+
+Budget Explorer
+
+↓
+
+Planning
+
+↓
+
+Allocations
+
+↓
+
+Commitments
+
+↓
+
+Forecasts
+
+↓
+
+Approvals
+
+↓
+
+Reports
+Budget Types
+
+Supports
+
+Annual Budget
+
+Quarter Budget
+
+Monthly Budget
+
+Rolling Budget
+
+Forecast Budget
+
+Supplementary Budget
+
+Revised Budget
+
+Zero-Based Budget
+
+Project Budget
+
+Department Budget
+
+Product Budget
+
+Capital Budget
+
+Operating Budget
+Budget Master
+
+Tabs
+
+Overview
+
+Allocation
+
+Consumption
+
+Commitments
+
+Forecast
+
+Variance
+
+Approvals
+
+Versions
+
+Documents
+
+Audit
+
+AI
+Budget Creation Wizard
+Step 1
+
+General
+
+Budget Name
+
+Financial Year
+
+Version
+
+Currency
+
+Status
+Step 2
+
+Scope
+
+Enterprise
+
+Legal Entity
+
+Branch
+
+Department
+
+Cost Center
+
+Project
+
+Product
+Step 3
+
+Budget Lines
+
+Example
+
+GL	Description	Budget
+Salary	Employee Cost	₹2 Cr
+Rent	Office Rent	₹30 L
+IT	Infrastructure	₹50 L
+Step 4
+
+Allocation
+
+Supports
+
+Equal
+
+Percentage
+
+Monthly
+
+Quarterly
+
+Seasonal
+
+Manual
+Step 5
+
+Approval Workflow
+
+Department Head
+
+↓
+
+Finance
+
+↓
+
+CFO
+
+↓
+
+CEO
+
+↓
+
+Board
+Step 6
+
+Publish
+
+Budget Lifecycle
+Draft
+
+↓
+
+Submitted
+
+↓
+
+Reviewed
+
+↓
+
+Approved
+
+↓
+
+Published
+
+↓
+
+Consumed
+
+↓
+
+Closed
+
+↓
+
+Archived
+Budget Versions
+
+Supports
+
+Original
+
+↓
+
+Revision 1
+
+↓
+
+Revision 2
+
+↓
+
+Forecast
+
+↓
+
+Actual
+
+Unlimited versions.
+
+Budget Revisions
+
+Supports
+
+Increase
+
+Decrease
+
+Transfer
+
+Freeze
+
+Supplement
+
+Full audit history.
+
+Budget Transfers
+
+Example
+
+IT Budget
+
+₹10 Lakhs
+
+↓
+
+Marketing Budget
+
+₹2 Lakhs
+
+Workflow required.
+
+Commitment Control
+
+The most important feature.
+
+Example
+
+Budget
+
+₹1 Crore
+
+↓
+
+Purchase Order
+
+₹20 Lakhs
+
+↓
+
+Committed
+
+↓
+
+Available
+
+₹80 Lakhs
+
+Nothing can exceed available budget without approval.
+
+Budget Availability Check
+
+Before
+
+Purchase Order
+Vendor Invoice
+Asset Purchase
+Payroll
+Travel
+Branch Expense
+
+System checks
+
+Budget
+
+↓
+
+Committed
+
+↓
+
+Actual
+
+↓
+
+Available
+Encumbrance Accounting
+
+Tracks
+
+Original Budget
+
+↓
+
+Commitment
+
+↓
+
+Obligation
+
+↓
+
+Actual
+
+↓
+
+Available
+
+Automatic release after payment.
+
+Cash Budget
+
+Forecasts
+
+Collections
+
+↓
+
+Vendor Payments
+
+↓
+
+Payroll
+
+↓
+
+Loans
+
+↓
+
+Treasury
+
+↓
+
+Net Cash
+Scenario Planning
+
+Supports
+
+Best Case
+
+Expected
+
+Worst Case
+
+Growth
+
+Expansion
+
+Cost Reduction
+Rolling Forecast
+
+Example
+
+Current Month
+
+↓
+
+Next 12 Months
+
+↓
+
+Updated Monthly
+Variance Analysis
+
+Compare
+
+Budget
+
+↓
+
+Actual
+
+↓
+
+Forecast
+
+↓
+
+Variance
+
+↓
+
+Variance %
+Budget Alerts
+
+Examples
+
+80% utilized
+
+↓
+
+90% utilized
+
+↓
+
+Budget exceeded
+
+↓
+
+Approval required
+AI Features
+
+Examples
+
+Predict budget overrun.
+
+↓
+
+Suggest budget revision.
+
+↓
+
+Recommend budget allocation.
+
+↓
+
+Forecast branch expenses.
+
+↓
+
+Identify wasteful spending.
+
+↓
+
+Predict year-end utilization.
+
+↓
+
+Generate next year's budget.
+Reports
+
+Standard
+
+Budget Register
+Budget vs Actual
+Budget Utilization
+Forecast Report
+Variance Report
+Commitment Report
+CAPEX Report
+OPEX Report
+Cash Budget
+Department Budget
+Branch Budget
+Product Budget
+Budget Health Score
+
+Calculated using
+
+Variance
+Utilization
+Forecast accuracy
+Commitment accuracy
+Approval SLA
+Revision frequency
+
+Example
+
+Budget Health
+
+96%
+
+★★★★★
+Database Tables
+budget
+
+budget_version
+
+budget_line
+
+budget_allocation
+
+budget_commitment
+
+budget_consumption
+
+budget_revision
+
+budget_transfer
+
+budget_forecast
+
+budget_variance
+
+budget_calendar
+
+budget_workflow
+
+budget_alert
+
+budget_ai
+
+budget_audit
+APIs
+GET    /api/v1/budgets
+
+POST   /api/v1/budgets
+
+GET    /api/v1/budgets/{id}
+
+PUT    /api/v1/budgets/{id}
+
+POST   /api/v1/budgets/{id}/approve
+
+POST   /api/v1/budgets/{id}/forecast
+
+POST   /api/v1/budgets/{id}/revision
+
+POST   /api/v1/budgets/check-availability
+
+GET    /api/v1/budgets/dashboard
+Events
+BUDGET_CREATED
+
+BUDGET_APPROVED
+
+BUDGET_PUBLISHED
+
+BUDGET_REVISED
+
+BUDGET_TRANSFERRED
+
+BUDGET_COMMITTED
+
+BUDGET_CONSUMED
+
+BUDGET_EXCEEDED
+
+BUDGET_FORECAST_UPDATED
+Backend Structure
+services/accounting/
+
+budgeting/
+├── planning/
+├── allocation/
+├── commitments/
+├── forecasting/
+├── revisions/
+├── approvals/
+├── reporting/
+├── analytics/
+├── ai/
+└── tests/
+Frontend Structure
+modules/accounting/
+
+budgeting/
+├── dashboard/
+├── planner/
+├── explorer/
+├── commitments/
+├── forecasts/
+├── approvals/
+├── reports/
+├── analytics/
+├── settings/
+└── components/
+Integration Matrix
+Module	Budget Usage
+Procurement	PO budget validation
+Accounts Payable	Invoice budget check
+Fixed Assets	CAPEX control
+HRMS	Payroll budgets
+Treasury	Cash planning
+General Ledger	Actual expenditure
+Projects	Project budgets
+Branch Management	Branch operating budgets
+Loan Operations	Branch operating cost tracking
+Budget 360 (Digital Budget Twin)
+
+Every budget should expose:
+
+Financial View
+Original budget
+Current budget
+Commitments
+Actual spend
+Available balance
+Operational View
+Departments
+Projects
+Products
+Branch allocation
+Strategic View
+KPIs
+Objectives
+Business outcomes
+Growth targets
+Compliance View
+Approval history
+Policy exceptions
+Audit observations
+AI View
+Overspend prediction
+Budget optimization
+Reallocation suggestions
+Forecast completion
+Scenario comparison
+Enterprise Budget Calendar
+
+The budget lifecycle should be centrally managed:
+
+Strategy Planning
+
+↓
+
+Department Submission
+
+↓
+
+Finance Review
+
+↓
+
+Executive Review
+
+↓
+
+Board Approval
+
+↓
+
+Budget Publication
+
+↓
+
+Monthly Monitoring
+
+↓
+
+Quarterly Review
+
+↓
+
+Forecast Update
+
+↓
+
+Year-End Analysis
+Definition of Done
+
+The Enterprise Budgeting & Budget Control module is complete when it supports:
+
+Enterprise-wide budget planning
+Multi-version budgets
+CAPEX & OPEX budgeting
+Commitment and encumbrance accounting
+Budget availability control
+Budget revisions and transfers
+Rolling forecasts
+Scenario planning
+Variance analysis
+AI-assisted budgeting
+Budget 360
+Complete audit trail
+⭐ Strategic Recommendation (Competitive Advantage)
+
+To make ARTH.OS stand out from SAP, Oracle, and Temenos, add an Enterprise Performance Management (EPM) Layer above budgeting.
+
+Corporate Strategy
+        │
+Strategic Objectives (OKRs)
+        │
+Annual Budget
+        │
+Department Budget
+        │
+Projects
+        │
+KPIs
+        │
+Actual Performance
+        │
+AI Performance Insights
+
+This allows executives to see not just how much was spent, but whether the spending achieved the intended business outcomes. Budget, strategy, and performance become part of one integrated management system rather than separate modules.
+
+🚀 Next Module
+
+The next recommended package is AFC-014 — Enterprise Cost Accounting & Allocation Engine.
+
+This module will include:
+
+Activity-Based Costing (ABC)
+Cost center accounting
+Profit center accounting
+Internal orders
+Shared service allocations
+Branch profitability
+Product profitability
+Customer profitability
+Transfer pricing
+Cost pools
+Allocation cycles
+AI-driven cost optimization
+Profitability 360
+
+This module is especially valuable for an NBFC because it enables precise profitability analysis by branch, loan product, customer segment, and business unit, providing management with far deeper insights than standard financial statements alone.

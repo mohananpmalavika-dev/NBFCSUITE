@@ -39,3 +39,36 @@ class EnterpriseUpdate(BaseModel):
     language: Optional[str] = None
     fiscal_year_start: Optional[str] = None
     description: Optional[str] = None
+
+
+class EnterpriseListResponse(BaseModel):
+    total: int
+    items: list[EnterpriseResponse]
+
+
+class BrandCreate(BaseModel):
+    code: str
+    name: str
+    description: Optional[str] = None
+
+
+class BrandResponse(BaseModel):
+    id: str
+    code: str
+    name: str
+    description: Optional[str]
+    status: str
+
+    class Config:
+        orm_mode = True
+
+
+class BrandUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+
+
+class BrandListResponse(BaseModel):
+    total: int
+    items: list[BrandResponse]
