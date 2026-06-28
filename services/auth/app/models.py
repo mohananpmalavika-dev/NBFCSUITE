@@ -131,7 +131,7 @@ class Device(Base):
     device_type = Column(String, nullable=True)
     last_seen = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    metadata = Column(JSON, nullable=True)
+    device_metadata = Column(JSON, nullable=True)
 
     user = relationship("User", back_populates="devices")
 
