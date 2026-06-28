@@ -18,6 +18,22 @@ from .event_publisher import get_publisher, set_publisher, RabbitMQEventPublishe
 from .ai_service import get_ai_service, set_ai_service, OpenAIAdapter
 import os
 
+try:
+    from app.security import get_current_user_claims, scope_filter_columns
+except ModuleNotFoundError:
+    from .security import get_current_user_claims, scope_filter_columns
+
+app = FastAPI(title="hrms-service", version="0.1.0")
+app.include_router(organization_router)
+
+
+def get_db() -> Session:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -530,6 +546,52 @@ class AttendanceRule(Base):
     actions = Column(JSON, nullable=True)
     active = Column(String, default="yes")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AttendanceRuleResponse(BaseModel):
+    id: str
+    tenant_id: str
+    name: str
+    description: Optional[str] = None
+    conditions: Optional[dict] = None
+    actions: Optional[dict] = None
+    active: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class HRShiftResponse(BaseModel):
+    id: str
+    tenant_id: str
+    shift_code: str
+    shift_name: str
+    start_time: str
+    end_time: str
+    break_minutes: int = 0
+    grace_in: int = 0
+    grace_out: int = 0
+    weekly_off: Optional[str] = None
+    status: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class EmployeeShiftResponse(BaseModel):
+    id: str
+    tenant_id: str
+    employee_id: str
+    shift_id: str
+    effective_from: Optional[datetime] = None
+    effective_to: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class EmployeeShiftHistory(Base):
@@ -1165,6 +1227,40 @@ class PayslipResponse(BaseModel):
         from_attributes = True
 
 
+class SalaryComponentUpdate(BaseModel):
+    component_name: Optional[str] = None
+    component_type: Optional[str] = None
+    calculation_type: Optional[str] = None
+    taxable: Optional[bool] = None
+    pf_applicable: Optional[bool] = None
+    esi_applicable: Optional[bool] = None
+    status: Optional[str] = None
+
+
+class SalaryStructureUpdate(BaseModel):
+    structure_name: Optional[str] = None
+    grade_id: Optional[str] = None
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    status: Optional[str] = None
+
+
+class SalaryStructureComponentUpdate(BaseModel):
+    formula: Optional[str] = None
+    fixed_amount: Optional[float] = None
+    percentage: Optional[float] = None
+    sequence: Optional[int] = None
+
+
+class EmployeeSalaryUpdate(BaseModel):
+    salary_structure_id: Optional[str] = None
+    gross_salary: Optional[float] = None
+    ctc: Optional[float] = None
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    status: Optional[str] = None
+
+
 class AttendanceRecordCreate(BaseModel):
     tenant_id: str = "default"
     employee_id: str
@@ -1232,7 +1328,7 @@ class AttendanceRegularizePayload(BaseModel):
     reason: Optional[str] = None
 
 
-@app.post("/attendance/rules", response_model=AttendanceRule)
+@app.post("/attendance/rules", response_model=AttendanceRuleResponse)
 async def create_attendance_rule(
     payload: dict,
     db: Session = Depends(get_db),
@@ -1309,23 +1405,7 @@ class LeaveRequestResponse(BaseModel):
         from_attributes = True
 
 
-try:
-    from app.security import get_current_user_claims, scope_filter_columns
-except ModuleNotFoundError:
-    from .security import get_current_user_claims, scope_filter_columns
-
-app = FastAPI(title="hrms-service", version="0.1.0")
-app.include_router(organization_router)
-
 SCOPE_FIELDS = ("organization_id", "zone_id", "region_id", "area_id", "branch_id")
-
-
-def get_db() -> Session:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 
 def _sum_components(components: dict) -> float:
@@ -1337,6 +1417,78 @@ def _recalculate_payroll_run(run: PayrollRun, db: Session) -> None:
     run.gross_pay = round(sum(slip.gross_pay or 0.0 for slip in slips), 2)
     run.total_deductions = round(sum(slip.total_deductions or 0.0 for slip in slips), 2)
     run.net_pay = round(sum(slip.net_pay or 0.0 for slip in slips), 2)
+
+
+def _safe_eval(expression: str, variables: dict[str, Any] | None = None) -> float:
+    if not expression:
+        return 0.0
+    variables = variables or {}
+    operators = {
+        ast.Add: op.add,
+        ast.Sub: op.sub,
+        ast.Mult: op.mul,
+        ast.Div: op.truediv,
+        ast.Pow: op.pow,
+        ast.USub: op.neg,
+        ast.UAdd: op.pos,
+    }
+
+    def _eval(node: ast.AST) -> float:
+        if isinstance(node, ast.Expression):
+            return _eval(node.body)
+        if isinstance(node, ast.Constant):
+            return float(node.value)
+        if isinstance(node, ast.Num):
+            return float(node.n)
+        if isinstance(node, ast.BinOp):
+            left = _eval(node.left)
+            right = _eval(node.right)
+            op_type = type(node.op)
+            if op_type not in operators:
+                raise ValueError(f"Unsupported operator: {op_type}")
+            return operators[op_type](left, right)
+        if isinstance(node, ast.UnaryOp):
+            operand = _eval(node.operand)
+            op_type = type(node.op)
+            if op_type not in operators:
+                raise ValueError(f"Unsupported operator: {op_type}")
+            return operators[op_type](operand)
+        if isinstance(node, ast.Name):
+            if node.id in variables:
+                return float(variables[node.id] or 0.0)
+            raise ValueError(f"Unknown variable: {node.id}")
+        raise ValueError(f"Unsupported expression: {type(node)}")
+
+    try:
+        tree = ast.parse(expression, mode="eval")
+        return round(_eval(tree), 2)
+    except Exception:
+        return 0.0
+
+
+def _post_payroll_accounting_event(
+    source_reference: str,
+    amount: float,
+    tenant_id: str,
+    metadata: Optional[dict] = None,
+) -> None:
+    try:
+        import httpx
+
+        accounting_base = os.getenv("ACCOUNTING_BASE_URL", "http://localhost:8008")
+        payload = {
+            "tenant_id": tenant_id,
+            "source_module": "hrms",
+            "source_event": "payroll_release",
+            "source_reference": source_reference,
+            "amount": amount,
+            "idempotency_key": source_reference,
+            "metadata": metadata,
+        }
+        with httpx.Client(timeout=5.0) as client:
+            client.post(f"{accounting_base}/gl-postings/auto", json=payload)
+    except Exception:
+        pass
 
 
 def _claims(user_claims: dict | None) -> dict:
@@ -2350,6 +2502,399 @@ async def payroll_summary(
     }
 
 
+@app.post("/payroll/components", response_model=SalaryComponentResponse)
+async def create_salary_component(
+    payload: SalaryComponentCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    _ensure_unique_code(db, SalaryComponent, tenant_id, "component_code", payload.component_code, "Salary Component")
+    component = SalaryComponent(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        component_code=payload.component_code,
+        component_name=payload.component_name,
+        component_type=payload.component_type,
+        calculation_type=payload.calculation_type,
+        taxable="yes" if payload.taxable else "no",
+        pf_applicable="yes" if payload.pf_applicable else "no",
+        esi_applicable="yes" if payload.esi_applicable else "no",
+        status=payload.status,
+    )
+    db.add(component)
+    db.commit()
+    db.refresh(component)
+    return component
+
+
+@app.get("/payroll/components", response_model=List[SalaryComponentResponse])
+async def list_salary_components(
+    tenant_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(SalaryComponent).filter(SalaryComponent.tenant_id == tenant_id)
+    if status:
+        query = query.filter(SalaryComponent.status == status)
+    return query.order_by(SalaryComponent.created_at.desc()).all()
+
+
+@app.put("/payroll/components/{component_id}", response_model=SalaryComponentResponse)
+async def update_salary_component(
+    component_id: str,
+    payload: SalaryComponentUpdate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    component = _get_tenant_record(db, SalaryComponent, component_id, tenant_id, "Salary Component")
+    _assert_record_in_scope(component, user_claims)
+    _apply_update(component, payload)
+    db.commit()
+    db.refresh(component)
+    return component
+
+
+@app.post("/payroll/structures", response_model=SalaryStructureResponse)
+async def create_salary_structure(
+    payload: SalaryStructureCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    _ensure_unique_code(db, SalaryStructure, tenant_id, "structure_code", payload.structure_code, "Salary Structure")
+    structure = SalaryStructure(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        structure_code=payload.structure_code,
+        structure_name=payload.structure_name,
+        grade_id=payload.grade_id,
+        effective_from=payload.effective_from,
+        effective_to=payload.effective_to,
+        status=payload.status,
+    )
+    db.add(structure)
+    db.commit()
+    db.refresh(structure)
+    return structure
+
+
+@app.get("/payroll/structures", response_model=List[SalaryStructureResponse])
+async def list_salary_structures(
+    tenant_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(SalaryStructure).filter(SalaryStructure.tenant_id == tenant_id)
+    if status:
+        query = query.filter(SalaryStructure.status == status)
+    return query.order_by(SalaryStructure.created_at.desc()).all()
+
+
+@app.post("/payroll/structures/{structure_id}/components", response_model=SalaryStructureComponentResponse)
+async def add_salary_structure_component(
+    structure_id: str,
+    payload: SalaryStructureComponentCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    structure = _get_tenant_record(db, SalaryStructure, structure_id, tenant_id, "Salary Structure")
+    _assert_record_in_scope(structure, user_claims)
+    component = _get_tenant_record(db, SalaryComponent, payload.component_id, tenant_id, "Salary Component")
+    _apply_scope_values(structure, {field: getattr(structure, field) for field in SCOPE_FIELDS})
+    structure_component = SalaryStructureComponent(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        structure_id=structure.id,
+        component_id=component.id,
+        formula=payload.formula,
+        fixed_amount=payload.fixed_amount,
+        percentage=payload.percentage,
+        sequence=payload.sequence,
+    )
+    db.add(structure_component)
+    db.commit()
+    db.refresh(structure_component)
+    return structure_component
+
+
+@app.get("/payroll/structures/{structure_id}/components", response_model=List[SalaryStructureComponentResponse])
+async def list_salary_structure_components(
+    structure_id: str,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    structure = _get_tenant_record(db, SalaryStructure, structure_id, tenant_id, "Salary Structure")
+    _assert_record_in_scope(structure, user_claims)
+    return (
+        db.query(SalaryStructureComponent)
+        .filter(SalaryStructureComponent.structure_id == structure.id, SalaryStructureComponent.tenant_id == tenant_id)
+        .order_by(SalaryStructureComponent.sequence.asc())
+        .all()
+    )
+
+
+@app.post("/payroll/employee-salaries", response_model=EmployeeSalaryResponse)
+async def create_employee_salary(
+    payload: EmployeeSalaryCreate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    employee = _get_tenant_record(db, Employee, payload.employee_id, tenant_id, "Employee")
+    _assert_record_in_scope(employee, user_claims)
+    structure = _get_tenant_record(db, SalaryStructure, payload.salary_structure_id, tenant_id, "Salary Structure")
+    _assert_record_in_scope(structure, user_claims)
+    salary = EmployeeSalary(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        employee_id=employee.id,
+        salary_structure_id=structure.id,
+        gross_salary=payload.gross_salary,
+        ctc=payload.ctc,
+        effective_from=payload.effective_from,
+        effective_to=payload.effective_to,
+        status=payload.status,
+    )
+    db.add(salary)
+    db.commit()
+    db.refresh(salary)
+    return salary
+
+
+@app.get("/payroll/employee-salaries", response_model=List[EmployeeSalaryResponse])
+async def list_employee_salaries(
+    tenant_id: Optional[str] = Query(None),
+    employee_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    query = db.query(EmployeeSalary).filter(EmployeeSalary.tenant_id == tenant_id)
+    if employee_id:
+        query = query.filter(EmployeeSalary.employee_id == employee_id)
+    if status:
+        query = query.filter(EmployeeSalary.status == status)
+    return query.order_by(EmployeeSalary.created_at.desc()).all()
+
+
+@app.put("/payroll/employee-salaries/{salary_id}", response_model=EmployeeSalaryResponse)
+async def update_employee_salary(
+    salary_id: str,
+    payload: EmployeeSalaryUpdate,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(None, user_claims)
+    salary = _get_tenant_record(db, EmployeeSalary, salary_id, tenant_id, "Employee Salary")
+    _assert_record_in_scope(salary, user_claims)
+    if payload.salary_structure_id:
+        structure = _get_tenant_record(db, SalaryStructure, payload.salary_structure_id, tenant_id, "Salary Structure")
+        _assert_record_in_scope(structure, user_claims)
+    _apply_update(salary, payload)
+    db.commit()
+    db.refresh(salary)
+    return salary
+
+
+@app.post("/payroll/runs/{run_id}/approve", response_model=PayrollRunResponse)
+async def approve_payroll_run(
+    run_id: str,
+    payload: PayrollApprovalRequest,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    run = _payroll_run(run_id, tenant_id, db)
+    _assert_record_in_scope(run, user_claims)
+    if run.status not in {"draft", "approved"}:
+        raise HTTPException(status_code=400, detail="Payroll run cannot be approved in its current state")
+    run.status = "approved"
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+@app.post("/payroll/runs/{run_id}/release", response_model=PayrollRunResponse)
+async def release_payroll_run(
+    run_id: str,
+    payload: PayrollReleaseRequest,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    run = _payroll_run(run_id, tenant_id, db)
+    _assert_record_in_scope(run, user_claims)
+    if run.status != "finalized":
+        raise HTTPException(status_code=400, detail="Only finalized payroll runs can be released")
+
+    slips = db.query(PayrollSlip).filter(PayrollSlip.payroll_run_id == run.id, PayrollSlip.tenant_id == tenant_id).all()
+    if not slips:
+        raise HTTPException(status_code=400, detail="Cannot release payroll run without slips")
+
+    for slip in slips:
+        transaction = PayrollTransaction(
+            id=str(uuid4()),
+            tenant_id=tenant_id,
+            payroll_run_id=run.id,
+            employee_id=slip.employee_id,
+            gross_salary=slip.gross_pay,
+            deduction=slip.total_deductions,
+            net_salary=slip.net_pay,
+            bank_account=payload.bank_account,
+            payment_status="released",
+            transaction_type="salary",
+            reference=payload.payment_reference or f"PAYROLL-{run.id}-{slip.employee_id}",
+            processed_at=datetime.utcnow(),
+        )
+        db.add(transaction)
+        slip.status = "released"
+        payslip = Payslip(
+            id=str(uuid4()),
+            tenant_id=tenant_id,
+            payroll_run_id=run.id,
+            employee_id=slip.employee_id,
+            pdf_url=f"/payslips/{slip.id}.pdf",
+            status="generated",
+            generated_at=datetime.utcnow(),
+        )
+        db.add(payslip)
+        _post_payroll_accounting_event(
+            transaction.reference,
+            slip.net_pay,
+            tenant_id,
+            {
+                "employee_id": slip.employee_id,
+                "employee_number": slip.employee_number,
+                "run_id": run.id,
+                "branch_id": slip.branch_id,
+                "gross_pay": slip.gross_pay,
+                "deductions": slip.total_deductions,
+                "net_pay": slip.net_pay,
+            },
+        )
+
+    run.status = "released"
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+@app.get("/payroll/runs/{run_id}/transactions", response_model=List[PayrollTransactionResponse])
+async def list_payroll_transactions(
+    run_id: str,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    _payroll_run(run_id, tenant_id, db)
+    return (
+        db.query(PayrollTransaction)
+        .filter(PayrollTransaction.payroll_run_id == run_id, PayrollTransaction.tenant_id == tenant_id)
+        .order_by(PayrollTransaction.created_at.desc())
+        .all()
+    )
+
+
+@app.get("/payroll/runs/{run_id}/payslips", response_model=List[PayslipResponse])
+async def list_payroll_payslips(
+    run_id: str,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(tenant_id, user_claims)
+    _payroll_run(run_id, tenant_id, db)
+    return (
+        db.query(Payslip)
+        .filter(Payslip.payroll_run_id == run_id, Payslip.tenant_id == tenant_id)
+        .order_by(Payslip.generated_at.desc())
+        .all()
+    )
+
+
+@app.post("/payroll/payslips/{payslip_id}/download", response_model=PayslipResponse)
+async def download_payslip(
+    payslip_id: str,
+    payload: PayslipDownloadRequest,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    payslip = _get_tenant_record(db, Payslip, payslip_id, tenant_id, "Payslip")
+    _assert_record_in_scope(payslip, user_claims)
+    if payslip.id != payload.payslip_id:
+        raise HTTPException(status_code=400, detail="Payslip does not match requested identifier")
+    payslip.status = "downloaded"
+    db.commit()
+    db.refresh(payslip)
+    return payslip
+
+
+@app.post("/payroll/employee-salaries/{salary_id}/revise", response_model=EmployeeSalaryResponse)
+async def revise_employee_salary(
+    salary_id: str,
+    payload: SalaryRevisionRequest,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    salary = _get_tenant_record(db, EmployeeSalary, salary_id, tenant_id, "Employee Salary")
+    _assert_record_in_scope(salary, user_claims)
+    structure = _get_tenant_record(db, SalaryStructure, payload.salary_structure_id, tenant_id, "Salary Structure")
+    _assert_record_in_scope(structure, user_claims)
+    salary.salary_structure_id = structure.id
+    salary.gross_salary = payload.gross_salary
+    salary.ctc = payload.ctc
+    salary.effective_from = payload.effective_from
+    salary.effective_to = payload.effective_to
+    salary.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(salary)
+    return salary
+
+
+@app.post("/payroll/adjustments", response_model=PayrollTransactionResponse)
+async def add_payroll_adjustment(
+    payload: PayrollAdjustmentRequest,
+    db: Session = Depends(get_db),
+    user_claims: dict = Depends(get_current_user_claims),
+):
+    tenant_id = _resolve_tenant_id(payload.tenant_id, user_claims)
+    run = _payroll_run(payload.payroll_run_id, tenant_id, db)
+    _assert_record_in_scope(run, user_claims)
+    employee = _get_tenant_record(db, Employee, payload.employee_id, tenant_id, "Employee")
+    _assert_record_in_scope(employee, user_claims)
+    transaction = PayrollTransaction(
+        id=str(uuid4()),
+        tenant_id=tenant_id,
+        payroll_run_id=run.id,
+        employee_id=employee.id,
+        gross_salary=0.0,
+        deduction=payload.amount,
+        net_salary=-payload.amount,
+        bank_account=payload.bank_account,
+        payment_status="adjusted",
+        transaction_type="adjustment",
+        reference=f"PAYROLL-ADJ-{run.id}-{employee.id}",
+        processed_at=datetime.utcnow(),
+    )
+    db.add(transaction)
+    db.commit()
+    db.refresh(transaction)
+    return transaction
+
+
 @app.post("/attendance/records", response_model=AttendanceRecordResponse)
 async def create_attendance_record(
     payload: AttendanceRecordCreate,
@@ -3100,7 +3645,7 @@ async def apply_leave(
     return response
 
 
-@app.post("/shifts", response_model=HRShift)
+@app.post("/shifts", response_model=HRShiftResponse)
 async def create_shift(
     payload: HrmsShiftPayload,
     db: Session = Depends(get_db),
@@ -3130,7 +3675,7 @@ async def create_shift(
     return shift
 
 
-@app.get("/shifts", response_model=List[HRShift])
+@app.get("/shifts", response_model=List[HRShiftResponse])
 async def list_shifts(
     tenant_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
@@ -3144,7 +3689,7 @@ async def list_shifts(
     return query.order_by(HRShift.shift_name.asc()).all()
 
 
-@app.post("/employees/{employee_id}/shifts", response_model=EmployeeShift)
+@app.post("/employees/{employee_id}/shifts", response_model=EmployeeShiftResponse)
 async def assign_employee_shift(
     employee_id: str,
     payload: dict,

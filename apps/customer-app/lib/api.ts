@@ -442,6 +442,85 @@ export interface PayrollSlipPayload {
   tax_amount: number;
 }
 
+export interface PayrollComponentPayload {
+  tenant_id: string;
+  component_code: string;
+  component_name: string;
+  component_type: string;
+  calculation_type: string;
+  taxable?: boolean;
+  pf_applicable?: boolean;
+  esi_applicable?: boolean;
+  status?: string;
+}
+
+export interface SalaryStructurePayload {
+  tenant_id: string;
+  structure_code: string;
+  structure_name: string;
+  grade_id?: string;
+  effective_from?: string;
+  effective_to?: string;
+  status?: string;
+}
+
+export interface SalaryStructureComponentPayload {
+  tenant_id: string;
+  component_id: string;
+  formula?: string;
+  fixed_amount?: number;
+  percentage?: number;
+  sequence?: number;
+}
+
+export interface EmployeeSalaryPayload {
+  tenant_id: string;
+  employee_id: string;
+  salary_structure_id: string;
+  gross_salary: number;
+  ctc: number;
+  effective_from?: string;
+  effective_to?: string;
+  status?: string;
+}
+
+export interface PayrollReleasePayload {
+  tenant_id: string;
+  run_id: string;
+  bank_account?: string;
+  payment_reference?: string;
+}
+
+export interface PayrollApprovalRequest {
+  tenant_id: string;
+  approved_by: string;
+  approval_notes?: string;
+}
+
+export interface PayrollAdjustmentPayload {
+  tenant_id: string;
+  payroll_run_id: string;
+  employee_id: string;
+  amount: number;
+  description?: string;
+  bank_account?: string;
+}
+
+export interface SalaryRevisionPayload {
+  tenant_id: string;
+  employee_id: string;
+  salary_structure_id: string;
+  gross_salary: number;
+  ctc: number;
+  effective_from: string;
+  effective_to?: string;
+}
+
+export interface PayslipDownloadPayload {
+  tenant_id: string;
+  payslip_id: string;
+}
+
 export interface GlAccountPayload {
   tenant_id: string;
   account_code: string;
@@ -1127,6 +1206,40 @@ export const apiClient = {
     hrmsAxiosInstance.post(`/payroll/runs/${runId}/finalize`, null, { params: { tenant_id: tenantId } }),
   getPayrollSummary: (params: { tenant_id: string; period_start?: string; period_end?: string }) =>
     hrmsAxiosInstance.get(`/payroll/summary`, { params }),
+  getSalaryComponents: (params?: { tenant_id?: string; status?: string }) =>
+    hrmsAxiosInstance.get(`/payroll/components`, { params }),
+  createSalaryComponent: (data: PayrollComponentPayload) =>
+    hrmsAxiosInstance.post(`/payroll/components`, data),
+  updateSalaryComponent: (componentId: string, data: Partial<PayrollComponentPayload>) =>
+    hrmsAxiosInstance.put(`/payroll/components/${componentId}`, data),
+  getSalaryStructures: (params?: { tenant_id?: string; status?: string }) =>
+    hrmsAxiosInstance.get(`/payroll/structures`, { params }),
+  createSalaryStructure: (data: SalaryStructurePayload) =>
+    hrmsAxiosInstance.post(`/payroll/structures`, data),
+  addSalaryStructureComponent: (structureId: string, data: SalaryStructureComponentPayload) =>
+    hrmsAxiosInstance.post(`/payroll/structures/${structureId}/components`, data),
+  getSalaryStructureComponents: (structureId: string, tenantId: string) =>
+    hrmsAxiosInstance.get(`/payroll/structures/${structureId}/components`, { params: { tenant_id: tenantId } }),
+  getEmployeeSalaries: (params?: { tenant_id?: string; employee_id?: string; status?: string }) =>
+    hrmsAxiosInstance.get(`/payroll/employee-salaries`, { params }),
+  createEmployeeSalary: (data: EmployeeSalaryPayload) =>
+    hrmsAxiosInstance.post(`/payroll/employee-salaries`, data),
+  updateEmployeeSalary: (salaryId: string, data: Partial<EmployeeSalaryPayload>) =>
+    hrmsAxiosInstance.put(`/payroll/employee-salaries/${salaryId}`, data),
+  approvePayrollRun: (runId: string, data: PayrollApprovalRequest) =>
+    hrmsAxiosInstance.post(`/payroll/runs/${runId}/approve`, data),
+  releasePayrollRun: (runId: string, data: PayrollReleasePayload) =>
+    hrmsAxiosInstance.post(`/payroll/runs/${runId}/release`, data),
+  getPayrollTransactions: (runId: string, tenantId: string) =>
+    hrmsAxiosInstance.get(`/payroll/runs/${runId}/transactions`, { params: { tenant_id: tenantId } }),
+  getPayrollPayslips: (runId: string, tenantId: string) =>
+    hrmsAxiosInstance.get(`/payroll/runs/${runId}/payslips`, { params: { tenant_id: tenantId } }),
+  downloadPayslip: (payslipId: string, data: PayslipDownloadPayload) =>
+    hrmsAxiosInstance.post(`/payroll/payslips/${payslipId}/download`, data),
+  reviseEmployeeSalary: (salaryId: string, data: SalaryRevisionPayload) =>
+    hrmsAxiosInstance.post(`/payroll/employee-salaries/${salaryId}/revise`, data),
+  addPayrollAdjustment: (data: PayrollAdjustmentPayload) =>
+    hrmsAxiosInstance.post(`/payroll/adjustments`, data),
 
   // LOS Service
   getLoanProducts: () =>
