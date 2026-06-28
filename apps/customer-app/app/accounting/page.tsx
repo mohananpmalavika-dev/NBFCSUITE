@@ -1,10 +1,10 @@
 'use client';
 
-import { apiClient } from '@/lib/api';
+import { apiClient, type PaymentVoucherCategory, type ReceiptVoucherCategory } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type TabKey = 'coa' | 'posting' | 'vouchers' | 'statements' | 'dayend';
+type TabKey = 'coa' | 'posting' | 'receiptVoucher' | 'paymentVoucher' | 'vouchers' | 'statements' | 'dayend';
 
 interface GlAccount {
   id: string;
@@ -81,7 +81,33 @@ interface Voucher {
   payment_mode?: PaymentMode | null;
   payment_reference?: string | null;
   payment_details?: Record<string, unknown> | null;
+  payment_category?: PaymentVoucherCategory | null;
+  receipt_category?: ReceiptVoucherCategory | null;
+  payee_name?: string | null;
+  payer_name?: string | null;
+  customer_id?: string | null;
+  amount?: number | null;
+  metadata?: Record<string, unknown> | null;
   lines?: VoucherLine[];
+}
+
+interface ReceiptVoucherCategoryOption {
+  key: ReceiptVoucherCategory;
+  label: string;
+  credit_account_code: string;
+  description: string;
+}
+
+interface ReceiptVoucherOptions {
+  categories: ReceiptVoucherCategoryOption[];
+  payment_modes: PaymentMode[];
+}
+
+interface PaymentVoucherCategoryOption {
+  key: PaymentVoucherCategory;
+  label: string;
+  debit_account_code: string;
+  description: string;
 }
 
 interface LedgerRow {
@@ -138,9 +164,27 @@ interface Dashboard {
 const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'coa', label: 'COA' },
   { key: 'posting', label: 'Posting Engine' },
+  { key: 'receiptVoucher', label: 'Module 7 Receipt' },
+  { key: 'paymentVoucher', label: 'Module 8 Payment' },
   { key: 'vouchers', label: 'Vouchers' },
   { key: 'statements', label: 'Statements' },
   { key: 'dayend', label: 'Day End' },
+];
+
+const defaultReceiptVoucherOptions: ReceiptVoucherOptions = {
+  categories: [
+    { key: 'customer_payments', label: 'Customer payments', credit_account_code: '1200_LOAN_RECEIVABLE', description: 'Customer payment receipt' },
+  ],
+  payment_modes: ['cash', 'cheque', 'upi', 'rtgs', 'neft', 'imps'],
+};
+
+const defaultPaymentVoucherCategories: PaymentVoucherCategoryOption[] = [
+  { key: 'vendor_payments', label: 'Vendor payments', debit_account_code: '2400_VENDOR_PAYABLE', description: 'Vendor payment' },
+  { key: 'salary', label: 'Salary', debit_account_code: '5210_SALARY_EXPENSE', description: 'Salary payment' },
+  { key: 'rent', label: 'Rent', debit_account_code: '5110_RENT_EXPENSE', description: 'Rent payment' },
+  { key: 'electricity', label: 'Electricity', debit_account_code: '5120_ELECTRICITY_EXPENSE', description: 'Electricity payment' },
+  { key: 'tax', label: 'Tax', debit_account_code: '2300_GST_PAYABLE', description: 'Tax payment' },
+  { key: 'insurance', label: 'Insurance', debit_account_code: '5130_INSURANCE_EXPENSE', description: 'Insurance payment' },
 ];
 
 function money(value: number | undefined) {
@@ -192,6 +236,8 @@ export default function AccountingPage() {
   const [ledgerRows, setLedgerRows] = useState<LedgerRow[]>([]);
   const [subLedgerSummaryRows, setSubLedgerSummaryRows] = useState<SubLedgerSummaryRow[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [receiptVoucherOptions, setReceiptVoucherOptions] = useState<ReceiptVoucherOptions>(defaultReceiptVoucherOptions);
+  const [paymentVoucherCategories, setPaymentVoucherCategories] = useState<PaymentVoucherCategoryOption[]>(defaultPaymentVoucherCategories);
   const [dayEndRows, setDayEndRows] = useState<Array<{ id: string; business_date: string; status: string; is_balanced: string }>>([]);
   const [postingPipeline, setPostingPipeline] = useState<Record<string, any> | null>(null);
 
@@ -248,6 +294,39 @@ export default function AccountingPage() {
       { gl_account_id: '', debit: 0, credit: 0, description: '' },
     ],
   });
+  const [receiptVoucherForm, setReceiptVoucherForm] = useState({
+    receipt_category: 'customer_payments' as ReceiptVoucherCategory,
+    amount: '',
+    payer_name: '',
+    customer_id: '',
+    description: '',
+    reference: '',
+    voucher_date: new Date().toISOString().slice(0, 10),
+    branch_id: '',
+    payment_mode: 'upi' as PaymentMode,
+    payment_reference: '',
+    payment_note: '',
+    debit_account_id: '',
+    credit_account_id: '',
+    cost_center: '',
+    profit_center: '',
+  });
+  const [paymentVoucherForm, setPaymentVoucherForm] = useState({
+    payment_category: 'vendor_payments' as PaymentVoucherCategory,
+    amount: '',
+    payee_name: '',
+    description: '',
+    reference: '',
+    voucher_date: new Date().toISOString().slice(0, 10),
+    branch_id: '',
+    payment_mode: 'neft' as PaymentMode,
+    payment_reference: '',
+    payment_note: '',
+    debit_account_id: '',
+    credit_account_id: '',
+    cost_center: '',
+    profit_center: '',
+  });
   const [dayEndForm, setDayEndForm] = useState({
     business_date: new Date().toISOString().slice(0, 10),
     branch_id: '',
@@ -257,11 +336,19 @@ export default function AccountingPage() {
     () => accounts.filter((account) => String(account.posting_allowed || 'true').toLowerCase() !== 'false'),
     [accounts],
   );
+  const receiptVouchers = useMemo(
+    () => vouchers.filter((voucher) => voucher.voucher_type === 'receipt' && voucher.receipt_category),
+    [vouchers],
+  );
+  const paymentVouchers = useMemo(
+    () => vouchers.filter((voucher) => voucher.voucher_type === 'payment' && voucher.payment_category),
+    [vouchers],
+  );
 
   const refresh = useCallback(async () => {
     if (!token || !tenantId) return;
     try {
-      const [dashboardRes, accountsRes, trialRes, ledgerRes, subLedgerRes, vouchersRes, dayEndRes, postingRulesRes] = await Promise.all([
+      const [dashboardRes, accountsRes, trialRes, ledgerRes, subLedgerRes, vouchersRes, dayEndRes, postingRulesRes, paymentCategoriesRes, receiptOptionsRes] = await Promise.all([
         apiClient.getAccountingDashboard(tenantId),
         apiClient.getGlAccounts(tenantId),
         apiClient.getTrialBalance(tenantId),
@@ -270,6 +357,8 @@ export default function AccountingPage() {
         apiClient.getVouchers(tenantId),
         apiClient.getDayEndCloses(tenantId),
         apiClient.getPostingRules(tenantId),
+        apiClient.getPaymentVoucherCategories(),
+        apiClient.getReceiptVoucherOptions(),
       ]);
       setDashboard(dashboardRes.data);
       setAccounts(accountsRes.data || []);
@@ -285,6 +374,8 @@ export default function AccountingPage() {
       setVouchers(vouchersRes.data.items || []);
       setDayEndRows(dayEndRes.data || []);
       setPostingRules(postingRulesRes.data || []);
+      setPaymentVoucherCategories(paymentCategoriesRes.data.items || defaultPaymentVoucherCategories);
+      setReceiptVoucherOptions(receiptOptionsRes.data || defaultReceiptVoucherOptions);
     } catch (error) {
       setMessage(errorText(error, 'Unable to load accounting workspace.'));
     }
@@ -314,10 +405,25 @@ export default function AccountingPage() {
   const voucherLinesComplete = voucherForm.lines.every((line) => line.gl_account_id && (line.debit > 0 || line.credit > 0));
   const voucherBalanced = voucherTotalDebit === voucherTotalCredit && voucherTotalDebit > 0;
   const isReceipt = voucherForm.voucher_type === 'receipt';
-  const receiptModeValid = !isReceipt || !!voucherForm.payment_mode;
-  const receiptReferenceValid = !isReceipt || voucherForm.payment_mode === 'cash' || !!voucherForm.payment_reference;
+  const isPaymentLikeVoucher = isReceipt || voucherForm.voucher_type === 'payment';
+  const paymentModeValid = !isPaymentLikeVoucher || !!voucherForm.payment_mode;
+  const paymentReferenceValid = !isPaymentLikeVoucher || voucherForm.payment_mode === 'cash' || !!voucherForm.payment_reference;
+  const receiptVoucherAmount = Number(receiptVoucherForm.amount || 0);
+  const receiptVoucherCategory = receiptVoucherOptions.categories.find((category) => category.key === receiptVoucherForm.receipt_category) || receiptVoucherOptions.categories[0];
+  const receiptVoucherNeedsReference = receiptVoucherForm.payment_mode !== 'cash';
+  const canCreateReceiptVoucher = receiptVoucherAmount > 0 &&
+    receiptVoucherForm.payer_name.trim() &&
+    receiptVoucherForm.receipt_category &&
+    (!receiptVoucherNeedsReference || receiptVoucherForm.payment_reference.trim());
+  const paymentVoucherAmount = Number(paymentVoucherForm.amount || 0);
+  const paymentVoucherCategory = paymentVoucherCategories.find((category) => category.key === paymentVoucherForm.payment_category) || paymentVoucherCategories[0];
+  const paymentVoucherNeedsReference = paymentVoucherForm.payment_mode !== 'cash';
+  const canCreatePaymentVoucher = paymentVoucherAmount > 0 &&
+    paymentVoucherForm.payee_name.trim() &&
+    paymentVoucherForm.payment_category &&
+    (!paymentVoucherNeedsReference || paymentVoucherForm.payment_reference.trim());
   const canPost = postingForm.debit_account_id && postingForm.credit_account_id && amount > 0;
-  const canCreateVoucher = voucherForm.description && voucherBalanced && voucherLinesComplete && receiptModeValid && receiptReferenceValid;
+  const canCreateVoucher = voucherForm.description && voucherBalanced && voucherLinesComplete && paymentModeValid && paymentReferenceValid;
 
   if (isLoading || !token) {
     return <div className="p-8 text-center">Loading accounting data...</div>;
@@ -732,6 +838,529 @@ export default function AccountingPage() {
             </div>
           )}
 
+          {activeTab === 'receiptVoucher' && (
+            <div className="mt-5 grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+              <form
+                className="grid gap-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  runAction(
+                    'receipt-voucher',
+                    async () => {
+                      await apiClient.createReceiptVoucher({
+                        tenant_id: tenantId,
+                        receipt_category: receiptVoucherForm.receipt_category,
+                        amount: receiptVoucherAmount,
+                        payer_name: receiptVoucherForm.payer_name,
+                        customer_id: receiptVoucherForm.customer_id || undefined,
+                        description: receiptVoucherForm.description || undefined,
+                        reference: receiptVoucherForm.reference || undefined,
+                        voucher_date: receiptVoucherForm.voucher_date,
+                        branch_id: receiptVoucherForm.branch_id || undefined,
+                        payment_mode: receiptVoucherForm.payment_mode,
+                        payment_reference: receiptVoucherForm.payment_reference || undefined,
+                        payment_details: receiptVoucherForm.payment_note ? { note: receiptVoucherForm.payment_note } : undefined,
+                        created_by: user?.username || 'system',
+                        debit_account_id: receiptVoucherForm.debit_account_id || undefined,
+                        credit_account_id: receiptVoucherForm.credit_account_id || undefined,
+                        cost_center: receiptVoucherForm.cost_center || undefined,
+                        profit_center: receiptVoucherForm.profit_center || undefined,
+                      });
+                      setReceiptVoucherForm({
+                        receipt_category: receiptVoucherForm.receipt_category,
+                        amount: '',
+                        payer_name: '',
+                        customer_id: '',
+                        description: '',
+                        reference: '',
+                        voucher_date: new Date().toISOString().slice(0, 10),
+                        branch_id: '',
+                        payment_mode: receiptVoucherForm.payment_mode,
+                        payment_reference: '',
+                        payment_note: '',
+                        debit_account_id: '',
+                        credit_account_id: '',
+                        cost_center: '',
+                        profit_center: '',
+                      });
+                    },
+                    'Receipt voucher created.',
+                  );
+                }}
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase text-blue-700">Module 7</p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-950">Receipt Voucher</h2>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {receiptVoucherOptions.categories.map((category) => (
+                    <button
+                      key={category.key}
+                      type="button"
+                      onClick={() => setReceiptVoucherForm({ ...receiptVoucherForm, receipt_category: category.key })}
+                      className={`rounded-md border px-3 py-2 text-left text-sm font-semibold ${
+                        receiptVoucherForm.receipt_category === category.key
+                          ? 'border-blue-600 bg-blue-50 text-blue-800'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
+                      }`}
+                    >
+                      {category.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Amount"
+                    value={receiptVoucherForm.amount}
+                    onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, amount: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Customer / payer name"
+                    value={receiptVoucherForm.payer_name}
+                    onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, payer_name: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Customer ID"
+                    value={receiptVoucherForm.customer_id}
+                    onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, customer_id: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="date"
+                    value={receiptVoucherForm.voucher_date}
+                    onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, voucher_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Branch ID"
+                    value={receiptVoucherForm.branch_id}
+                    onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, branch_id: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Reference"
+                    value={receiptVoucherForm.reference}
+                    onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, reference: e.target.value })}
+                  />
+                </div>
+
+                <input
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Description"
+                  value={receiptVoucherForm.description}
+                  onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, description: e.target.value })}
+                />
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    value={receiptVoucherForm.payment_mode}
+                    onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, payment_mode: e.target.value as PaymentMode })}
+                  >
+                    {receiptVoucherOptions.payment_modes.map((mode) => (
+                      <option key={mode} value={mode}>{mode.toUpperCase()}</option>
+                    ))}
+                  </select>
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder={receiptVoucherForm.payment_mode === 'cash' ? 'Cash receipt note' : 'Transaction reference'}
+                    value={receiptVoucherForm.payment_reference}
+                    onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, payment_reference: e.target.value })}
+                  />
+                </div>
+
+                <input
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Receipt note"
+                  value={receiptVoucherForm.payment_note}
+                  onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, payment_note: e.target.value })}
+                />
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-900">GL Posting</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={receiptVoucherForm.debit_account_id}
+                      onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, debit_account_id: e.target.value })}
+                    >
+                      <option value="">Debit: {receiptVoucherForm.payment_mode === 'cash' ? '1000_CASH' : '1120_BANK'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={receiptVoucherForm.credit_account_id}
+                      onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, credit_account_id: e.target.value })}
+                    >
+                      <option value="">Credit: {receiptVoucherCategory?.credit_account_code || 'category default'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Cost center"
+                      value={receiptVoucherForm.cost_center}
+                      onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, cost_center: e.target.value })}
+                    />
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Profit center"
+                      value={receiptVoucherForm.profit_center}
+                      onChange={(e) => setReceiptVoucherForm({ ...receiptVoucherForm, profit_center: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  disabled={!!busyAction || !canCreateReceiptVoucher}
+                  className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {busyAction === 'receipt-voucher' ? 'Saving...' : 'Create Receipt Voucher'}
+                </button>
+              </form>
+
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Draft/Review</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{receiptVouchers.filter((item) => ['draft', 'verified', 'approved'].includes(item.status)).length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Posted</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{receiptVouchers.filter((item) => item.status === 'posted').length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Total</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{money(receiptVouchers.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</dd>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[840px] text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-slate-500">
+                        <th className="px-3 py-2">Voucher</th>
+                        <th className="px-3 py-2">Category</th>
+                        <th className="px-3 py-2">Customer</th>
+                        <th className="px-3 py-2">Mode</th>
+                        <th className="px-3 py-2 text-right">Amount</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {receiptVouchers.map((voucher) => (
+                        <tr key={voucher.id} className="border-b border-slate-100">
+                          <td className="px-3 py-2">
+                            <p className="font-medium text-slate-900">{voucher.voucher_number}</p>
+                            <p className="text-xs text-slate-500">{voucher.reference || voucher.payment_reference || 'No reference'}</p>
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {receiptVoucherOptions.categories.find((category) => category.key === voucher.receipt_category)?.label || voucher.receipt_category}
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            <p>{voucher.payer_name || '-'}</p>
+                            {voucher.customer_id && <p className="text-xs text-slate-500">{voucher.customer_id}</p>}
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">{voucher.payment_mode?.toUpperCase() || '-'}</td>
+                          <td className="px-3 py-2 text-right text-slate-900">{money(Number(voucher.amount || 0))}</td>
+                          <td className="px-3 py-2 text-slate-700">{voucher.status}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap gap-2">
+                              {voucher.status === 'draft' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('verify-receipt', () => apiClient.verifyVoucher(voucher.id, tenantId, user?.username), 'Receipt voucher verified.')}>Verify</button>}
+                              {voucher.status === 'verified' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('approve-receipt', () => apiClient.approveVoucher(voucher.id, tenantId, user?.username), 'Receipt voucher approved.')}>Approve</button>}
+                              {voucher.status === 'approved' && <button className="rounded-md bg-blue-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('post-receipt', () => apiClient.postVoucher(voucher.id, tenantId, user?.username), 'Receipt voucher posted.')}>Post</button>}
+                              {voucher.status === 'posted' && <button className="rounded-md bg-rose-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('reverse-receipt', () => apiClient.reverseVoucher(voucher.id, tenantId, user?.username), 'Receipt voucher reversed.')}>Reverse</button>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {receiptVouchers.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="px-3 py-8 text-center text-sm text-slate-500">No receipt vouchers yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'paymentVoucher' && (
+            <div className="mt-5 grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+              <form
+                className="grid gap-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  runAction(
+                    'payment-voucher',
+                    async () => {
+                      await apiClient.createPaymentVoucher({
+                        tenant_id: tenantId,
+                        payment_category: paymentVoucherForm.payment_category,
+                        amount: paymentVoucherAmount,
+                        payee_name: paymentVoucherForm.payee_name,
+                        description: paymentVoucherForm.description || undefined,
+                        reference: paymentVoucherForm.reference || undefined,
+                        voucher_date: paymentVoucherForm.voucher_date,
+                        branch_id: paymentVoucherForm.branch_id || undefined,
+                        payment_mode: paymentVoucherForm.payment_mode,
+                        payment_reference: paymentVoucherForm.payment_reference || undefined,
+                        payment_details: paymentVoucherForm.payment_note ? { note: paymentVoucherForm.payment_note } : undefined,
+                        created_by: user?.username || 'system',
+                        debit_account_id: paymentVoucherForm.debit_account_id || undefined,
+                        credit_account_id: paymentVoucherForm.credit_account_id || undefined,
+                        cost_center: paymentVoucherForm.cost_center || undefined,
+                        profit_center: paymentVoucherForm.profit_center || undefined,
+                      });
+                      setPaymentVoucherForm({
+                        payment_category: paymentVoucherForm.payment_category,
+                        amount: '',
+                        payee_name: '',
+                        description: '',
+                        reference: '',
+                        voucher_date: new Date().toISOString().slice(0, 10),
+                        branch_id: '',
+                        payment_mode: paymentVoucherForm.payment_mode,
+                        payment_reference: '',
+                        payment_note: '',
+                        debit_account_id: '',
+                        credit_account_id: '',
+                        cost_center: '',
+                        profit_center: '',
+                      });
+                    },
+                    'Payment voucher created.',
+                  );
+                }}
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase text-blue-700">Module 8</p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-950">Payment Voucher</h2>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {paymentVoucherCategories.map((category) => (
+                    <button
+                      key={category.key}
+                      type="button"
+                      onClick={() => setPaymentVoucherForm({ ...paymentVoucherForm, payment_category: category.key })}
+                      className={`rounded-md border px-3 py-2 text-left text-sm font-semibold ${
+                        paymentVoucherForm.payment_category === category.key
+                          ? 'border-blue-600 bg-blue-50 text-blue-800'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
+                      }`}
+                    >
+                      {category.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Amount"
+                    value={paymentVoucherForm.amount}
+                    onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, amount: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Payee name"
+                    value={paymentVoucherForm.payee_name}
+                    onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, payee_name: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="date"
+                    value={paymentVoucherForm.voucher_date}
+                    onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, voucher_date: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Branch ID"
+                    value={paymentVoucherForm.branch_id}
+                    onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, branch_id: e.target.value })}
+                  />
+                </div>
+
+                <input
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Description"
+                  value={paymentVoucherForm.description}
+                  onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, description: e.target.value })}
+                />
+                <input
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Reference"
+                  value={paymentVoucherForm.reference}
+                  onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, reference: e.target.value })}
+                />
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    value={paymentVoucherForm.payment_mode}
+                    onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, payment_mode: e.target.value as PaymentMode })}
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="upi">UPI</option>
+                    <option value="rtgs">RTGS</option>
+                    <option value="neft">NEFT</option>
+                    <option value="imps">IMPS</option>
+                  </select>
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder={paymentVoucherForm.payment_mode === 'cash' ? 'Cash note' : 'Transaction reference'}
+                    value={paymentVoucherForm.payment_reference}
+                    onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, payment_reference: e.target.value })}
+                  />
+                </div>
+
+                <input
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Payment note"
+                  value={paymentVoucherForm.payment_note}
+                  onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, payment_note: e.target.value })}
+                />
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-900">GL Posting</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={paymentVoucherForm.debit_account_id}
+                      onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, debit_account_id: e.target.value })}
+                    >
+                      <option value="">Debit: {paymentVoucherCategory?.debit_account_code || 'category default'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={paymentVoucherForm.credit_account_id}
+                      onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, credit_account_id: e.target.value })}
+                    >
+                      <option value="">Credit: {paymentVoucherForm.payment_mode === 'cash' ? '1000_CASH' : '1120_BANK'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Cost center"
+                      value={paymentVoucherForm.cost_center}
+                      onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, cost_center: e.target.value })}
+                    />
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Profit center"
+                      value={paymentVoucherForm.profit_center}
+                      onChange={(e) => setPaymentVoucherForm({ ...paymentVoucherForm, profit_center: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  disabled={!!busyAction || !canCreatePaymentVoucher}
+                  className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {busyAction === 'payment-voucher' ? 'Saving...' : 'Create Payment Voucher'}
+                </button>
+              </form>
+
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Draft/Review</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{paymentVouchers.filter((item) => ['draft', 'verified', 'approved'].includes(item.status)).length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Posted</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{paymentVouchers.filter((item) => item.status === 'posted').length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Total</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{money(paymentVouchers.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</dd>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[820px] text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-slate-500">
+                        <th className="px-3 py-2">Voucher</th>
+                        <th className="px-3 py-2">Category</th>
+                        <th className="px-3 py-2">Payee</th>
+                        <th className="px-3 py-2 text-right">Amount</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentVouchers.map((voucher) => (
+                        <tr key={voucher.id} className="border-b border-slate-100">
+                          <td className="px-3 py-2">
+                            <p className="font-medium text-slate-900">{voucher.voucher_number}</p>
+                            <p className="text-xs text-slate-500">{voucher.reference || voucher.payment_reference || 'No reference'}</p>
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {paymentVoucherCategories.find((category) => category.key === voucher.payment_category)?.label || voucher.payment_category}
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">{voucher.payee_name || '-'}</td>
+                          <td className="px-3 py-2 text-right text-slate-900">{money(Number(voucher.amount || 0))}</td>
+                          <td className="px-3 py-2 text-slate-700">{voucher.status}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap gap-2">
+                              {voucher.status === 'draft' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('verify-payment', () => apiClient.verifyVoucher(voucher.id, tenantId, user?.username), 'Payment voucher verified.')}>Verify</button>}
+                              {voucher.status === 'verified' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('approve-payment', () => apiClient.approveVoucher(voucher.id, tenantId, user?.username), 'Payment voucher approved.')}>Approve</button>}
+                              {voucher.status === 'approved' && <button className="rounded-md bg-blue-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('post-payment', () => apiClient.postVoucher(voucher.id, tenantId, user?.username), 'Payment voucher posted.')}>Post</button>}
+                              {voucher.status === 'posted' && <button className="rounded-md bg-rose-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('reverse-payment', () => apiClient.reverseVoucher(voucher.id, tenantId, user?.username), 'Payment voucher reversed.')}>Reverse</button>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {paymentVouchers.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">No payment vouchers yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'vouchers' && (
             <div className="mt-5 grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
               <form
@@ -748,9 +1377,9 @@ export default function AccountingPage() {
                         reference: voucherForm.reference,
                         voucher_date: voucherForm.voucher_date,
                         branch_id: voucherForm.branch_id || undefined,
-                        payment_mode: voucherForm.voucher_type === 'receipt' ? voucherForm.payment_mode : undefined,
-                        payment_reference: voucherForm.voucher_type === 'receipt' ? voucherForm.payment_reference : undefined,
-                        payment_details: voucherForm.voucher_type === 'receipt' ? voucherForm.payment_details : undefined,
+                        payment_mode: isPaymentLikeVoucher ? voucherForm.payment_mode : undefined,
+                        payment_reference: isPaymentLikeVoucher ? voucherForm.payment_reference : undefined,
+                        payment_details: isPaymentLikeVoucher ? voucherForm.payment_details : undefined,
                         created_by: user?.username || 'system',
                         lines: voucherForm.lines.map((line) => ({
                           gl_account_id: line.gl_account_id,
@@ -792,7 +1421,7 @@ export default function AccountingPage() {
                 </div>
                 <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" placeholder="Description" value={voucherForm.description} onChange={(e) => setVoucherForm({ ...voucherForm, description: e.target.value })} />
                 <input className="h-10 rounded-md border border-slate-300 px-3 text-sm" placeholder="Reference" value={voucherForm.reference} onChange={(e) => setVoucherForm({ ...voucherForm, reference: e.target.value })} />
-                {voucherForm.voucher_type === 'receipt' && (
+                {isPaymentLikeVoucher && (
                   <div className="grid gap-3">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <select
@@ -809,7 +1438,7 @@ export default function AccountingPage() {
                       </select>
                       <input
                         className="h-10 rounded-md border border-slate-300 px-3 text-sm"
-                        placeholder={voucherForm.payment_mode === 'cash' ? 'Cash receipt note' : 'Transaction reference'}
+                        placeholder={voucherForm.payment_mode === 'cash' ? 'Cash note' : 'Transaction reference'}
                         value={voucherForm.payment_reference}
                         onChange={(e) => setVoucherForm({ ...voucherForm, payment_reference: e.target.value })}
                       />
@@ -938,7 +1567,7 @@ export default function AccountingPage() {
                           <p className="text-slate-500">{voucher.description}</p>
                         </td>
                         <td className="px-3 py-2 text-slate-700">{voucher.voucher_type}</td>
-                        <td className="px-3 py-2 text-slate-700">{voucher.status}{voucher.payment_mode ? ` · ${voucher.payment_mode.toUpperCase()}` : ''}</td>
+                        <td className="px-3 py-2 text-slate-700">{voucher.status}{voucher.payment_mode ? ` - ${voucher.payment_mode.toUpperCase()}` : ''}</td>
                         <td className="px-3 py-2">
                           <div className="flex flex-wrap gap-2">
                             {voucher.status === 'draft' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('verify', () => apiClient.verifyVoucher(voucher.id, tenantId, user?.username), 'Voucher verified.')}>Verify</button>}

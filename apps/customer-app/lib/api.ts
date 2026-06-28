@@ -419,6 +419,57 @@ export interface VoucherPayload {
   lines: AccountingPostingLine[];
 }
 
+export type PaymentVoucherCategory = 'vendor_payments' | 'salary' | 'rent' | 'electricity' | 'tax' | 'insurance';
+
+export interface PaymentVoucherPayload {
+  tenant_id: string;
+  payment_category: PaymentVoucherCategory;
+  amount: number;
+  payee_name: string;
+  voucher_date?: string;
+  description?: string;
+  reference?: string;
+  branch_id?: string;
+  currency?: string;
+  payment_mode: PaymentMode;
+  payment_reference?: string;
+  payment_details?: JsonObject;
+  created_by?: string;
+  debit_account_id?: string;
+  debit_account_code?: string;
+  credit_account_id?: string;
+  credit_account_code?: string;
+  cost_center?: string;
+  profit_center?: string;
+  metadata?: JsonObject;
+}
+
+export type ReceiptVoucherCategory = 'customer_payments';
+
+export interface ReceiptVoucherPayload {
+  tenant_id: string;
+  receipt_category: ReceiptVoucherCategory;
+  amount: number;
+  payer_name: string;
+  customer_id?: string;
+  voucher_date?: string;
+  description?: string;
+  reference?: string;
+  branch_id?: string;
+  currency?: string;
+  payment_mode: PaymentMode;
+  payment_reference?: string;
+  payment_details?: JsonObject;
+  created_by?: string;
+  debit_account_id?: string;
+  debit_account_code?: string;
+  credit_account_id?: string;
+  credit_account_code?: string;
+  cost_center?: string;
+  profit_center?: string;
+  metadata?: JsonObject;
+}
+
 export interface DayEndClosePayload {
   tenant_id: string;
   business_date: string;
@@ -792,6 +843,14 @@ export const apiClient = {
     axiosInstance.post(`/vouchers`, data),
   getVouchers: (tenantId: string, params?: { status?: string; voucher_type?: string }) =>
     axiosInstance.get(`/vouchers`, { params: { tenant_id: tenantId, ...params } }),
+  getPaymentVoucherCategories: () =>
+    axiosInstance.get(`/payment-vouchers/categories`),
+  createPaymentVoucher: (data: PaymentVoucherPayload) =>
+    axiosInstance.post(`/payment-vouchers`, data),
+  getReceiptVoucherOptions: () =>
+    axiosInstance.get(`/receipt-vouchers/options`),
+  createReceiptVoucher: (data: ReceiptVoucherPayload) =>
+    axiosInstance.post(`/receipt-vouchers`, data),
   verifyVoucher: (voucherId: string, tenantId: string, performedBy?: string) =>
     axiosInstance.post(`/vouchers/${voucherId}/verify`, { tenant_id: tenantId, performed_by: performedBy }),
   approveVoucher: (voucherId: string, tenantId: string, performedBy?: string) =>

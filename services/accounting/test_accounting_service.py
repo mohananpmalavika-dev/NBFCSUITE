@@ -3,12 +3,11 @@ import os
 import tempfile
 from pathlib import Path
 import importlib.util
+from uuid import uuid4
 from httpx import AsyncClient, ASGITransport
 
 # Configure local SQLite database before importing the accounting app.
-TEST_DB_PATH = Path(tempfile.gettempdir()) / "accounting_service_test.db"
-if TEST_DB_PATH.exists():
-    TEST_DB_PATH.unlink()
+TEST_DB_PATH = Path(tempfile.gettempdir()) / f"accounting_service_test_{uuid4().hex}.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_PATH}"
 
 spec = importlib.util.spec_from_file_location(
@@ -179,6 +178,115 @@ async def _run_accounting_test():
         assert receipt_voucher["payment_reference"] == "UPI-REF-1234"
         assert receipt_voucher["payment_details"]["note"] == "Receipt via UPI"
 
+        customer_receipt_response = await client.post(
+            "/receipt-vouchers",
+            json={
+                "tenant_id": tenant_id,
+                "receipt_category": "customer_payments",
+                "amount": 800.0,
+                "payer_name": "Asha Customer",
+                "customer_id": "customer-001",
+                "description": "Loan repayment received",
+                "reference": "RCPT-CUST-001",
+                "branch_id": "branch-001",
+                "payment_mode": "upi",
+                "payment_reference": "UPI-CUST-001",
+                "payment_details": {"upi_id": "asha@upi"},
+                "created_by": "tester",
+            },
+        )
+        assert customer_receipt_response.status_code == 200
+        customer_receipt = customer_receipt_response.json()
+        assert customer_receipt["voucher_type"] == "receipt"
+        assert customer_receipt["receipt_category"] == "customer_payments"
+        assert customer_receipt["payer_name"] == "Asha Customer"
+        assert customer_receipt["customer_id"] == "customer-001"
+        assert customer_receipt["amount"] == 800.0
+        assert customer_receipt["payment_mode"] == "upi"
+        assert len(customer_receipt["lines"]) == 2
+
+        receipt_options_response = await client.get("/receipt-vouchers/options")
+        assert receipt_options_response.status_code == 200
+        receipt_options = receipt_options_response.json()
+        assert receipt_options["categories"][0]["key"] == "customer_payments"
+        assert {"cash", "cheque", "upi", "rtgs", "neft", "imps"}.issubset(set(receipt_options["payment_modes"]))
+
+        customer_receipt_verify_response = await client.post(
+            f"/vouchers/{customer_receipt['id']}/verify",
+            json={"tenant_id": tenant_id, "performed_by": "verifier"},
+        )
+        assert customer_receipt_verify_response.status_code == 200
+        customer_receipt_approve_response = await client.post(
+            f"/vouchers/{customer_receipt['id']}/approve",
+            json={"tenant_id": tenant_id, "performed_by": "approver"},
+        )
+        assert customer_receipt_approve_response.status_code == 200
+        customer_receipt_post_response = await client.post(
+            f"/vouchers/{customer_receipt['id']}/post",
+            json={"tenant_id": tenant_id, "performed_by": "poster"},
+        )
+        assert customer_receipt_post_response.status_code == 200
+        assert customer_receipt_post_response.json()["posting_status"] == "posted"
+        customer_receipt_reverse_response = await client.post(
+            f"/vouchers/{customer_receipt['id']}/reverse",
+            json={"tenant_id": tenant_id, "performed_by": "reverser"},
+        )
+        assert customer_receipt_reverse_response.status_code == 200
+        assert customer_receipt_reverse_response.json()["status"] == "reversed"
+
+        salary_payment_response = await client.post(
+            "/payment-vouchers",
+            json={
+                "tenant_id": tenant_id,
+                "payment_category": "salary",
+                "amount": 1200.0,
+                "payee_name": "Operations team",
+                "description": "June salary payout",
+                "reference": "SAL-JUN",
+                "branch_id": "branch-001",
+                "payment_mode": "neft",
+                "payment_reference": "NEFT-SAL-JUN",
+                "payment_details": {"bank": "Primary bank"},
+                "created_by": "tester",
+            },
+        )
+        assert salary_payment_response.status_code == 200
+        salary_payment = salary_payment_response.json()
+        assert salary_payment["voucher_type"] == "payment"
+        assert salary_payment["payment_category"] == "salary"
+        assert salary_payment["payee_name"] == "Operations team"
+        assert salary_payment["amount"] == 1200.0
+        assert salary_payment["payment_mode"] == "neft"
+        assert len(salary_payment["lines"]) == 2
+
+        category_response = await client.get("/payment-vouchers/categories")
+        assert category_response.status_code == 200
+        category_keys = {item["key"] for item in category_response.json()["items"]}
+        assert {"vendor_payments", "salary", "rent", "electricity", "tax", "insurance"}.issubset(category_keys)
+
+        salary_verify_response = await client.post(
+            f"/vouchers/{salary_payment['id']}/verify",
+            json={"tenant_id": tenant_id, "performed_by": "verifier"},
+        )
+        assert salary_verify_response.status_code == 200
+        salary_approve_response = await client.post(
+            f"/vouchers/{salary_payment['id']}/approve",
+            json={"tenant_id": tenant_id, "performed_by": "approver"},
+        )
+        assert salary_approve_response.status_code == 200
+        salary_post_response = await client.post(
+            f"/vouchers/{salary_payment['id']}/post",
+            json={"tenant_id": tenant_id, "performed_by": "poster"},
+        )
+        assert salary_post_response.status_code == 200
+        assert salary_post_response.json()["posting_status"] == "posted"
+        salary_reverse_response = await client.post(
+            f"/vouchers/{salary_payment['id']}/reverse",
+            json={"tenant_id": tenant_id, "performed_by": "reverser"},
+        )
+        assert salary_reverse_response.status_code == 200
+        assert salary_reverse_response.json()["status"] == "reversed"
+
         receipt_verify_response = await client.post(
             f"/vouchers/{receipt_voucher['id']}/verify",
             json={"tenant_id": tenant_id, "performed_by": "verifier"},
@@ -330,11 +438,15 @@ async def _run_accounting_test():
         assert cash_ledger_row["branch"] == "branch-001"
         assert cash_ledger_row["currency"] == "INR"
         assert cash_ledger_row["opening_balance"] == 0.0
-        assert cash_ledger_row["debit"] == 0.0
-        assert cash_ledger_row["credit"] == 250.0
-        assert cash_ledger_row["balance"] == -250.0
-        assert cash_ledger_row["closing_balance"] == -250.0
+        assert cash_ledger_row["debit"] == 500.0
+        assert cash_ledger_row["credit"] == 500.0
+        assert cash_ledger_row["balance"] == 0.0
+        assert cash_ledger_row["closing_balance"] == 0.0
         assert cash_ledger_row["financial_year"] == "2026-27"
+        bank_ledger_row = next(row for row in ledger_rows if row["account_code"] == "1120_BANK")
+        assert bank_ledger_row["debit"] == 2000.0
+        assert bank_ledger_row["credit"] == 2000.0
+        assert bank_ledger_row["balance"] == 0.0
 
         dashboard_response = await client.get("/dashboard", params={"tenant_id": tenant_id})
         assert dashboard_response.status_code == 200

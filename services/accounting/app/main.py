@@ -601,6 +601,76 @@ class VoucherCreate(BaseModel):
     lines: List[VoucherLineCreate]
 
 
+class PaymentVoucherCreate(BaseModel):
+    tenant_id: str
+    payment_category: str
+    amount: float
+    payee_name: str
+    voucher_date: Optional[datetime] = None
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    currency: Optional[str] = "INR"
+    payment_mode: str = "cash"
+    payment_reference: Optional[str] = None
+    payment_details: Optional[dict] = None
+    created_by: Optional[str] = None
+    debit_account_id: Optional[str] = None
+    debit_account_code: Optional[str] = None
+    credit_account_id: Optional[str] = None
+    credit_account_code: Optional[str] = None
+    cost_center: Optional[str] = None
+    profit_center: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class ReceiptVoucherCreate(BaseModel):
+    tenant_id: str
+    receipt_category: str = "customer_payments"
+    amount: float
+    payer_name: str
+    customer_id: Optional[str] = None
+    voucher_date: Optional[datetime] = None
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    currency: Optional[str] = "INR"
+    payment_mode: str = "cash"
+    payment_reference: Optional[str] = None
+    payment_details: Optional[dict] = None
+    created_by: Optional[str] = None
+    debit_account_id: Optional[str] = None
+    debit_account_code: Optional[str] = None
+    credit_account_id: Optional[str] = None
+    credit_account_code: Optional[str] = None
+    cost_center: Optional[str] = None
+    profit_center: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class ContraVoucherCreate(BaseModel):
+    tenant_id: str
+    transfer_type: str
+    amount: float
+    voucher_date: Optional[datetime] = None
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    transfer_reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    currency: Optional[str] = "INR"
+    transfer_details: Optional[dict] = None
+    created_by: Optional[str] = None
+    debit_account_id: Optional[str] = None
+    debit_account_code: Optional[str] = None
+    credit_account_id: Optional[str] = None
+    credit_account_code: Optional[str] = None
+    source_location: Optional[str] = None
+    destination_location: Optional[str] = None
+    cost_center: Optional[str] = None
+    profit_center: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
 class VoucherActionRequest(BaseModel):
     tenant_id: str
     performed_by: Optional[str] = None
@@ -625,6 +695,16 @@ class VoucherResponse(BaseModel):
     verified_by: Optional[str] = None
     approved_by: Optional[str] = None
     lines: List[VoucherLineResponse] = []
+    payment_category: Optional[str] = None
+    receipt_category: Optional[str] = None
+    contra_transfer_type: Optional[str] = None
+    payee_name: Optional[str] = None
+    payer_name: Optional[str] = None
+    customer_id: Optional[str] = None
+    source_location: Optional[str] = None
+    destination_location: Optional[str] = None
+    transfer_reference: Optional[str] = None
+    amount: Optional[float] = None
     metadata: Optional[dict] = None
 
     class Config:
@@ -687,25 +767,115 @@ SUB_LEDGER_LEDGER_MAP = {
 
 DEFAULT_ACCOUNT_NAMES = {
     "1000_CASH": ("Cash", "asset"),
+    "1110_BRANCH_CASH": ("Branch Cash", "asset"),
+    "1120_BANK": ("Bank Account", "asset"),
+    "1130_VAULT_CASH": ("Vault Cash", "asset"),
     "1200_LOAN_RECEIVABLE": ("Loan Receivable", "asset"),
     "1210_GOLD_LOAN_RECEIVABLE": ("Gold Loan Receivable", "asset"),
+    "1500_TREASURY": ("Treasury Account", "asset"),
     "2200_CUSTOMER_DEPOSITS": ("Customer Deposit Liability", "liability"),
     "2300_GST_PAYABLE": ("GST Payable", "liability"),
     "2310_TDS_PAYABLE": ("TDS Payable", "liability"),
+    "2400_VENDOR_PAYABLE": ("Vendor Payable", "liability"),
     "4100_FOREX_INCOME": ("Forex Income", "revenue"),
     "5100_OPERATING_EXPENSE": ("Operating Expense", "expense"),
+    "5110_RENT_EXPENSE": ("Rent Expense", "expense"),
+    "5120_ELECTRICITY_EXPENSE": ("Electricity Expense", "expense"),
+    "5130_INSURANCE_EXPENSE": ("Insurance Expense", "expense"),
     "5200_TAX_EXPENSE": ("Tax Expense", "expense"),
+    "5210_SALARY_EXPENSE": ("Salary Expense", "expense"),
+}
+
+PAYMENT_VOUCHER_CATEGORIES = {
+    "vendor_payments": {
+        "label": "Vendor payments",
+        "debit_account_code": "2400_VENDOR_PAYABLE",
+        "description": "Vendor payment",
+    },
+    "salary": {
+        "label": "Salary",
+        "debit_account_code": "5210_SALARY_EXPENSE",
+        "description": "Salary payment",
+    },
+    "rent": {
+        "label": "Rent",
+        "debit_account_code": "5110_RENT_EXPENSE",
+        "description": "Rent payment",
+    },
+    "electricity": {
+        "label": "Electricity",
+        "debit_account_code": "5120_ELECTRICITY_EXPENSE",
+        "description": "Electricity payment",
+    },
+    "tax": {
+        "label": "Tax",
+        "debit_account_code": "2300_GST_PAYABLE",
+        "description": "Tax payment",
+    },
+    "insurance": {
+        "label": "Insurance",
+        "debit_account_code": "5130_INSURANCE_EXPENSE",
+        "description": "Insurance payment",
+    },
+}
+
+RECEIPT_PAYMENT_MODES = ["cash", "cheque", "upi", "rtgs", "neft", "imps"]
+
+RECEIPT_VOUCHER_CATEGORIES = {
+    "customer_payments": {
+        "label": "Customer payments",
+        "credit_account_code": "1200_LOAN_RECEIVABLE",
+        "description": "Customer payment receipt",
+    },
+}
+
+CONTRA_TRANSFER_TYPES = {
+    "cash_to_bank": {
+        "label": "Cash to Bank",
+        "debit_account_code": "1120_BANK",
+        "credit_account_code": "1000_CASH",
+        "source_label": "Cash",
+        "destination_label": "Bank",
+        "description": "Cash deposited to bank",
+    },
+    "bank_to_cash": {
+        "label": "Bank to Cash",
+        "debit_account_code": "1000_CASH",
+        "credit_account_code": "1120_BANK",
+        "source_label": "Bank",
+        "destination_label": "Cash",
+        "description": "Cash withdrawn from bank",
+    },
+    "vault_to_branch": {
+        "label": "Vault to Branch",
+        "debit_account_code": "1110_BRANCH_CASH",
+        "credit_account_code": "1130_VAULT_CASH",
+        "source_label": "Vault",
+        "destination_label": "Branch",
+        "description": "Cash moved from vault to branch",
+    },
+    "branch_to_treasury": {
+        "label": "Branch to Treasury",
+        "debit_account_code": "1500_TREASURY",
+        "credit_account_code": "1110_BRANCH_CASH",
+        "source_label": "Branch",
+        "destination_label": "Treasury",
+        "description": "Cash moved from branch to treasury",
+    },
 }
 
 DEFAULT_NBFC_COA = [
     {"account_code": "100000", "account_name": "Assets", "account_type": "asset", "category": "Assets", "posting_allowed": "false"},
     {"account_code": "110000", "account_name": "Cash", "account_type": "asset", "category": "Assets", "parent_code": "100000", "posting_allowed": "false"},
     {"account_code": "111000", "account_name": "Branch Cash", "account_type": "asset", "category": "Assets", "parent_code": "110000"},
+    {"account_code": "1110_BRANCH_CASH", "account_name": "Branch Cash Transfer", "account_type": "asset", "category": "Assets", "parent_code": "110000"},
     {"account_code": "112000", "account_name": "Vault Cash", "account_type": "asset", "category": "Assets", "parent_code": "110000"},
+    {"account_code": "1130_VAULT_CASH", "account_name": "Vault Cash Transfer", "account_type": "asset", "category": "Assets", "parent_code": "110000"},
     {"account_code": "120000", "account_name": "Loans", "account_type": "asset", "category": "Assets", "parent_code": "100000"},
     {"account_code": "130000", "account_name": "Gold Loan", "account_type": "asset", "category": "Assets", "parent_code": "100000"},
     {"account_code": "140000", "account_name": "Deposits", "account_type": "asset", "category": "Assets", "parent_code": "100000"},
     {"account_code": "150000", "account_name": "Treasury", "account_type": "asset", "category": "Assets", "parent_code": "100000"},
+    {"account_code": "1500_TREASURY", "account_name": "Treasury Transfer", "account_type": "asset", "category": "Assets", "parent_code": "150000"},
     {"account_code": "200000", "account_name": "Liabilities", "account_type": "liability", "category": "Liabilities", "posting_allowed": "false"},
     {"account_code": "210000", "account_name": "Customer Deposits", "account_type": "liability", "category": "Liabilities", "parent_code": "200000"},
     {"account_code": "220000", "account_name": "Borrowings", "account_type": "liability", "category": "Liabilities", "parent_code": "200000"},
@@ -716,7 +886,11 @@ DEFAULT_NBFC_COA = [
     {"account_code": "420000", "account_name": "Processing Fee Income", "account_type": "revenue", "category": "Income", "parent_code": "400000"},
     {"account_code": "500000", "account_name": "Expenses", "account_type": "expense", "category": "Expenses", "posting_allowed": "false"},
     {"account_code": "510000", "account_name": "Operating Expenses", "account_type": "expense", "category": "Expenses", "parent_code": "500000"},
+    {"account_code": "5110_RENT_EXPENSE", "account_name": "Rent Expense", "account_type": "expense", "category": "Expenses", "parent_code": "510000"},
+    {"account_code": "5120_ELECTRICITY_EXPENSE", "account_name": "Electricity Expense", "account_type": "expense", "category": "Expenses", "parent_code": "510000"},
+    {"account_code": "5130_INSURANCE_EXPENSE", "account_name": "Insurance Expense", "account_type": "expense", "category": "Expenses", "parent_code": "510000"},
     {"account_code": "520000", "account_name": "Employee Expenses", "account_type": "expense", "category": "Expenses", "parent_code": "500000"},
+    {"account_code": "5210_SALARY_EXPENSE", "account_name": "Salary Expense", "account_type": "expense", "category": "Expenses", "parent_code": "520000"},
     {"account_code": "900000", "account_name": "Off Balance Sheet", "account_type": "off_balance", "category": "Off Balance Sheet", "posting_allowed": "false"},
     {"account_code": "910000", "account_name": "Guarantees", "account_type": "off_balance", "category": "Off Balance Sheet", "parent_code": "900000"},
     {"account_code": "990000", "account_name": "Memo Accounts", "account_type": "memo", "category": "Memo Accounts", "posting_allowed": "false"},
@@ -1251,6 +1425,13 @@ def _posting_pipeline(
 
 
 def _voucher_response(voucher: Voucher) -> dict:
+    metadata = voucher.metadata_json or {}
+    payment_voucher = metadata.get("payment_voucher") if isinstance(metadata, dict) else None
+    payment_voucher = payment_voucher if isinstance(payment_voucher, dict) else {}
+    receipt_voucher = metadata.get("receipt_voucher") if isinstance(metadata, dict) else None
+    receipt_voucher = receipt_voucher if isinstance(receipt_voucher, dict) else {}
+    contra_voucher = metadata.get("contra_voucher") if isinstance(metadata, dict) else None
+    contra_voucher = contra_voucher if isinstance(contra_voucher, dict) else {}
     return {
         "id": voucher.id,
         "tenant_id": voucher.tenant_id,
@@ -1280,7 +1461,17 @@ def _voucher_response(voucher: Voucher) -> dict:
         "payment_mode": voucher.payment_mode,
         "payment_reference": voucher.payment_reference,
         "payment_details": voucher.payment_details,
-        "metadata": voucher.metadata_json,
+        "payment_category": payment_voucher.get("category"),
+        "receipt_category": receipt_voucher.get("category"),
+        "contra_transfer_type": contra_voucher.get("transfer_type"),
+        "payee_name": payment_voucher.get("payee_name"),
+        "payer_name": receipt_voucher.get("payer_name"),
+        "customer_id": receipt_voucher.get("customer_id"),
+        "source_location": contra_voucher.get("source_location"),
+        "destination_location": contra_voucher.get("destination_location"),
+        "transfer_reference": contra_voucher.get("transfer_reference"),
+        "amount": payment_voucher.get("amount") or receipt_voucher.get("amount") or contra_voucher.get("amount"),
+        "metadata": metadata,
     }
 
 
@@ -1288,6 +1479,287 @@ def _next_voucher_number(tenant_id: str, voucher_type: str, db: Session) -> str:
     prefix = voucher_type.upper().replace("-", "_")[:8]
     count = db.query(Voucher).filter(Voucher.tenant_id == tenant_id, Voucher.voucher_type == voucher_type).count() + 1
     return f"{prefix}-{datetime.utcnow().strftime('%Y%m%d')}-{count:05d}"
+
+
+def _normalize_payment_category(category: str) -> str:
+    return category.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _normalize_receipt_category(category: str) -> str:
+    return category.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _normalize_contra_transfer_type(transfer_type: str) -> str:
+    return transfer_type.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _payment_category_options() -> list[dict]:
+    return [
+        {"key": key, **value}
+        for key, value in PAYMENT_VOUCHER_CATEGORIES.items()
+    ]
+
+
+def _receipt_voucher_options() -> dict:
+    return {
+        "categories": [
+            {"key": key, **value}
+            for key, value in RECEIPT_VOUCHER_CATEGORIES.items()
+        ],
+        "payment_modes": RECEIPT_PAYMENT_MODES,
+    }
+
+
+def _contra_voucher_options() -> dict:
+    return {
+        "transfer_types": [
+            {"key": key, **value}
+            for key, value in CONTRA_TRANSFER_TYPES.items()
+        ]
+    }
+
+
+def _payment_credit_account_code(payment_mode: Optional[str]) -> str:
+    return "1000_CASH" if str(payment_mode or "").lower() == "cash" else "1120_BANK"
+
+
+def _receipt_debit_account_code(payment_mode: Optional[str]) -> str:
+    return "1000_CASH" if str(payment_mode or "").lower() == "cash" else "1120_BANK"
+
+
+def _build_payment_voucher_payload(payment: PaymentVoucherCreate, db: Session) -> VoucherCreate:
+    category_key = _normalize_payment_category(payment.payment_category)
+    category = PAYMENT_VOUCHER_CATEGORIES.get(category_key)
+    if not category:
+        raise HTTPException(status_code=400, detail="Unsupported payment voucher category")
+    if payment.amount <= 0:
+        raise HTTPException(status_code=400, detail="amount must be positive")
+    if not payment.payee_name.strip():
+        raise HTTPException(status_code=400, detail="payee_name is required")
+    if not payment.payment_mode:
+        raise HTTPException(status_code=400, detail="payment_mode is required")
+    if payment.payment_mode != "cash" and not payment.payment_reference:
+        raise HTTPException(status_code=400, detail="payment_reference is required for non-cash payment vouchers")
+
+    if payment.debit_account_id:
+        debit_account = _get_postable_account_by_id(payment.debit_account_id, payment.tenant_id, db)
+    else:
+        debit_account = _get_postable_account_by_code(
+            payment.debit_account_code or category["debit_account_code"],
+            payment.tenant_id,
+            db,
+        )
+
+    if payment.credit_account_id:
+        credit_account = _get_postable_account_by_id(payment.credit_account_id, payment.tenant_id, db)
+    else:
+        credit_account = _get_postable_account_by_code(
+            payment.credit_account_code or _payment_credit_account_code(payment.payment_mode),
+            payment.tenant_id,
+            db,
+        )
+
+    amount = round(payment.amount, 2)
+    description = payment.description or f"{category['description']} to {payment.payee_name}"
+    metadata = {
+        **(payment.metadata or {}),
+        "payment_voucher": {
+            "module": "module_8",
+            "category": category_key,
+            "category_label": category["label"],
+            "payee_name": payment.payee_name,
+            "amount": amount,
+        },
+    }
+    return VoucherCreate(
+        tenant_id=payment.tenant_id,
+        voucher_type="payment",
+        voucher_date=payment.voucher_date,
+        description=description,
+        reference=payment.reference,
+        branch_id=payment.branch_id,
+        currency=payment.currency or "INR",
+        payment_mode=payment.payment_mode,
+        payment_reference=payment.payment_reference,
+        payment_details=payment.payment_details,
+        created_by=payment.created_by,
+        metadata=metadata,
+        lines=[
+            VoucherLineCreate(
+                gl_account_id=debit_account.id,
+                debit=amount,
+                credit=0.0,
+                description=f"{category['label']} debit",
+                cost_center=payment.cost_center,
+                profit_center=payment.profit_center,
+            ),
+            VoucherLineCreate(
+                gl_account_id=credit_account.id,
+                debit=0.0,
+                credit=amount,
+                description=f"Payment via {payment.payment_mode.upper()}",
+                cost_center=payment.cost_center,
+                profit_center=payment.profit_center,
+            ),
+        ],
+    )
+
+
+def _build_contra_voucher_payload(contra: ContraVoucherCreate, db: Session) -> VoucherCreate:
+    transfer_key = _normalize_contra_transfer_type(contra.transfer_type)
+    transfer = CONTRA_TRANSFER_TYPES.get(transfer_key)
+    if not transfer:
+        raise HTTPException(status_code=400, detail="Unsupported contra transfer type")
+    if contra.amount <= 0:
+        raise HTTPException(status_code=400, detail="amount must be positive")
+
+    if contra.debit_account_id:
+        debit_account = _get_postable_account_by_id(contra.debit_account_id, contra.tenant_id, db)
+    else:
+        debit_account = _get_postable_account_by_code(
+            contra.debit_account_code or transfer["debit_account_code"],
+            contra.tenant_id,
+            db,
+        )
+
+    if contra.credit_account_id:
+        credit_account = _get_postable_account_by_id(contra.credit_account_id, contra.tenant_id, db)
+    else:
+        credit_account = _get_postable_account_by_code(
+            contra.credit_account_code or transfer["credit_account_code"],
+            contra.tenant_id,
+            db,
+        )
+
+    amount = round(contra.amount, 2)
+    description = contra.description or transfer["description"]
+    source_location = contra.source_location or transfer["source_label"]
+    destination_location = contra.destination_location or transfer["destination_label"]
+    metadata = {
+        **(contra.metadata or {}),
+        "contra_voucher": {
+            "module": "module_9",
+            "transfer_type": transfer_key,
+            "transfer_label": transfer["label"],
+            "source_location": source_location,
+            "destination_location": destination_location,
+            "transfer_reference": contra.transfer_reference,
+            "amount": amount,
+        },
+    }
+    return VoucherCreate(
+        tenant_id=contra.tenant_id,
+        voucher_type="contra",
+        voucher_date=contra.voucher_date,
+        description=description,
+        reference=contra.reference or contra.transfer_reference,
+        branch_id=contra.branch_id,
+        currency=contra.currency or "INR",
+        payment_reference=contra.transfer_reference,
+        payment_details=contra.transfer_details,
+        created_by=contra.created_by,
+        metadata=metadata,
+        lines=[
+            VoucherLineCreate(
+                gl_account_id=debit_account.id,
+                debit=amount,
+                credit=0.0,
+                description=f"{transfer['label']} debit to {destination_location}",
+                cost_center=contra.cost_center,
+                profit_center=contra.profit_center,
+            ),
+            VoucherLineCreate(
+                gl_account_id=credit_account.id,
+                debit=0.0,
+                credit=amount,
+                description=f"{transfer['label']} credit from {source_location}",
+                cost_center=contra.cost_center,
+                profit_center=contra.profit_center,
+            ),
+        ],
+    )
+
+
+def _build_receipt_voucher_payload(receipt: ReceiptVoucherCreate, db: Session) -> VoucherCreate:
+    category_key = _normalize_receipt_category(receipt.receipt_category)
+    category = RECEIPT_VOUCHER_CATEGORIES.get(category_key)
+    if not category:
+        raise HTTPException(status_code=400, detail="Unsupported receipt voucher category")
+    if receipt.amount <= 0:
+        raise HTTPException(status_code=400, detail="amount must be positive")
+    if not receipt.payer_name.strip():
+        raise HTTPException(status_code=400, detail="payer_name is required")
+
+    payment_mode = str(receipt.payment_mode or "").lower()
+    if payment_mode not in RECEIPT_PAYMENT_MODES:
+        raise HTTPException(status_code=400, detail="Unsupported receipt payment mode")
+    if payment_mode != "cash" and not receipt.payment_reference:
+        raise HTTPException(status_code=400, detail="payment_reference is required for non-cash receipt vouchers")
+
+    if receipt.debit_account_id:
+        debit_account = _get_postable_account_by_id(receipt.debit_account_id, receipt.tenant_id, db)
+    else:
+        debit_account = _get_postable_account_by_code(
+            receipt.debit_account_code or _receipt_debit_account_code(payment_mode),
+            receipt.tenant_id,
+            db,
+        )
+
+    if receipt.credit_account_id:
+        credit_account = _get_postable_account_by_id(receipt.credit_account_id, receipt.tenant_id, db)
+    else:
+        credit_account = _get_postable_account_by_code(
+            receipt.credit_account_code or category["credit_account_code"],
+            receipt.tenant_id,
+            db,
+        )
+
+    amount = round(receipt.amount, 2)
+    description = receipt.description or f"{category['description']} from {receipt.payer_name}"
+    metadata = {
+        **(receipt.metadata or {}),
+        "receipt_voucher": {
+            "module": "module_7",
+            "category": category_key,
+            "category_label": category["label"],
+            "payer_name": receipt.payer_name,
+            "customer_id": receipt.customer_id,
+            "amount": amount,
+            "payment_mode": payment_mode,
+        },
+    }
+    return VoucherCreate(
+        tenant_id=receipt.tenant_id,
+        voucher_type="receipt",
+        voucher_date=receipt.voucher_date,
+        description=description,
+        reference=receipt.reference,
+        branch_id=receipt.branch_id,
+        currency=receipt.currency or "INR",
+        payment_mode=payment_mode,
+        payment_reference=receipt.payment_reference,
+        payment_details=receipt.payment_details,
+        created_by=receipt.created_by,
+        metadata=metadata,
+        lines=[
+            VoucherLineCreate(
+                gl_account_id=debit_account.id,
+                debit=amount,
+                credit=0.0,
+                description=f"Receipt via {payment_mode.upper()}",
+                cost_center=receipt.cost_center,
+                profit_center=receipt.profit_center,
+            ),
+            VoucherLineCreate(
+                gl_account_id=credit_account.id,
+                debit=0.0,
+                credit=amount,
+                description=f"{category['label']} credit",
+                cost_center=receipt.cost_center,
+                profit_center=receipt.profit_center,
+            ),
+        ],
+    )
 
 
 def _period_filter(query, start_date: Optional[datetime], end_date: Optional[datetime]):
@@ -1957,11 +2429,47 @@ async def create_voucher(voucher: VoucherCreate, db: Session = Depends(get_db)):
     return _voucher_response(new_voucher)
 
 
+@app.get("/payment-vouchers/categories")
+async def payment_voucher_categories():
+    return {"items": _payment_category_options()}
+
+
+@app.get("/receipt-vouchers/options")
+async def receipt_voucher_options():
+    return _receipt_voucher_options()
+
+
+@app.get("/contra-vouchers/options")
+async def contra_voucher_options():
+    return _contra_voucher_options()
+
+
+@app.post("/payment-vouchers", response_model=VoucherResponse)
+async def create_payment_voucher(payment: PaymentVoucherCreate, db: Session = Depends(get_db)):
+    voucher_payload = _build_payment_voucher_payload(payment, db)
+    return await create_voucher(voucher_payload, db)
+
+
+@app.post("/contra-vouchers", response_model=VoucherResponse)
+async def create_contra_voucher(contra: ContraVoucherCreate, db: Session = Depends(get_db)):
+    voucher_payload = _build_contra_voucher_payload(contra, db)
+    return await create_voucher(voucher_payload, db)
+
+
+@app.post("/receipt-vouchers", response_model=VoucherResponse)
+async def create_receipt_voucher(receipt: ReceiptVoucherCreate, db: Session = Depends(get_db)):
+    voucher_payload = _build_receipt_voucher_payload(receipt, db)
+    return await create_voucher(voucher_payload, db)
+
+
 @app.get("/vouchers")
 async def list_vouchers(
     tenant_id: str = Query(...),
     status: Optional[str] = Query(None),
     voucher_type: Optional[str] = Query(None),
+    payment_category: Optional[str] = Query(None),
+    receipt_category: Optional[str] = Query(None),
+    contra_transfer_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     query = db.query(Voucher).filter(Voucher.tenant_id == tenant_id)
@@ -1970,6 +2478,27 @@ async def list_vouchers(
     if voucher_type:
         query = query.filter(Voucher.voucher_type == voucher_type)
     items = query.order_by(Voucher.voucher_date.desc()).all()
+    if payment_category:
+        category_key = _normalize_payment_category(payment_category)
+        items = [
+            item
+            for item in items
+            if ((item.metadata_json or {}).get("payment_voucher") or {}).get("category") == category_key
+        ]
+    if receipt_category:
+        category_key = _normalize_receipt_category(receipt_category)
+        items = [
+            item
+            for item in items
+            if ((item.metadata_json or {}).get("receipt_voucher") or {}).get("category") == category_key
+        ]
+    if contra_transfer_type:
+        transfer_key = _normalize_contra_transfer_type(contra_transfer_type)
+        items = [
+            item
+            for item in items
+            if ((item.metadata_json or {}).get("contra_voucher") or {}).get("transfer_type") == transfer_key
+        ]
     return {"items": [_voucher_response(item) for item in items], "total": len(items)}
 
 
