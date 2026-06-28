@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional, Dict, Any
@@ -77,7 +78,7 @@ class User(UserBase):
     updated_at: datetime
     roles: List[Role] = []
     permissions: List[str] = []
-    groups: List[UserGroup] = []
+    groups: List["UserGroup"] = []
     access_branch_ids: Optional[List[str]] = None
     last_login_at: Optional[datetime] = None
 
