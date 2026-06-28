@@ -4,6 +4,9 @@ import { apiClient } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { DepartmentHierarchyTree, DepartmentSeedButton, DepartmentStats } from '@/components/HrmsComponents';
+import { DepartmentHeadPanel } from '@/components/DepartmentHeadAssignment';
+import { DEPARTMENT_SEEDS } from '@/lib/hrms-seeds';
 
 interface Department {
   id: string;
@@ -276,6 +279,73 @@ export default function HrmsPage() {
     } finally {
       setBusyAction('');
     }
+  };
+
+  const seedDepartments = async () => {
+    if (departments.length > 0) {
+      setMessage('Departments already exist. Skipping seed.');
+      return;
+    }
+
+    setBusyAction('seed-departments');
+    try {
+      for (const seed of DEPARTMENT_SEEDS) {
+        // Find parent department ID if parent_department_id is a code
+        let parentId = undefined;
+        if (seed.parent_department_id) {
+          const parentDept = departments.find(
+            (d) => d.department_code === seed.parent_department_id
+          );
+          if (parentDept) {
+            parentId = parentDept.id;
+          }
+        }
+
+        await apiClient.createHrmsDepartment({
+          tenant_id: tenantId,
+          department_code: seed.department_code,
+          department_name: seed.department_name,
+          parent_department_id: parentId,
+          cost_center_code: seed.cost_center_code,
+          profit_center_code: seed.profit_center_code,
+          annual_budget: seed.annual_budget,
+        });
+      }
+
+      setMessage(`Successfully seeded ${DEPARTMENT_SEEDS.length} departments.`);
+      await loadHrmsData();
+    } catch (error) {
+      setMessage('Failed to seed departments. Check the console for errors.');
+      console.error('Seed error:', error);
+    } finally {
+      setBusyAction('');
+    }
+  };
+
+  const assignDepartmentHead = async (departmentId: string, employeeId: string) => {
+    if (!tenantId || !employeeId) {
+      setMessage('Invalid department or employee selection.');
+      return;
+    }
+
+    await runAction('assign-department-head', async () => {
+      await apiClient.updateHrmsDepartment(departmentId, {
+        department_head_employee_id: employeeId,
+      });
+    }, 'Department head assigned.');
+  };
+
+  const unassignDepartmentHead = async (departmentId: string) => {
+    if (!tenantId) {
+      setMessage('Invalid department.');
+      return;
+    }
+
+    await runAction('unassign-department-head', async () => {
+      await apiClient.updateHrmsDepartment(departmentId, {
+        department_head_employee_id: '',
+      });
+    }, 'Department head removed.');
   };
 
   const handleFormChange =
@@ -571,15 +641,12 @@ export default function HrmsPage() {
 
             <section className="grid gap-6 xl:grid-cols-2">
               <DataPanel title="Departments">
-                <EntityList
-                  emptyText="No departments configured."
-                  items={departments.map((item) => ({
-                    id: item.id,
-                    title: item.department_name,
-                    detail: `${item.department_code} / Cost ${item.cost_center_code || 'NA'} / Profit ${item.profit_center_code || 'NA'}`,
-                    status: item.status,
-                  }))}
-                />
+                <div className="space-y-4">
+                  <DepartmentSeedButton isLoading={busyAction === 'seed-departments'} onSeed={seedDepartments} />
+                  {departments.length > 0 && <DepartmentStats departments={departments} />}
+                  {departments.length > 0 && <DepartmentHierarchyTree departments={departments} />}
+                  {departments.length === 0 && <div className="p-4 text-center text-slate-600">No departments configured. Click "Seed 16 Departments" to create Phase 1 organization structure.</div>}
+                </div>
               </DataPanel>
               <DataPanel title="Positions">
                 <EntityList
@@ -590,6 +657,18 @@ export default function HrmsPage() {
                     detail: `${item.position_code} / ${departmentName(item.department_id, departments)} / ${item.occupied_by_employee_id ? 'Occupied' : 'Vacant'}`,
                     status: item.status,
                   }))}
+                />
+              </DataPanel>
+            </section>
+
+            <section className="grid gap-6">
+              <DataPanel title="Department Head Assignment">
+                <DepartmentHeadPanel
+                  departments={departments}
+                  employees={employees}
+                  isLoading={busyAction === 'assign-department-head' || busyAction === 'unassign-department-head'}
+                  onAssignHead={assignDepartmentHead}
+                  onUnassignHead={unassignDepartmentHead}
                 />
               </DataPanel>
             </section>

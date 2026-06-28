@@ -470,6 +470,81 @@ export interface ReceiptVoucherPayload {
   metadata?: JsonObject;
 }
 
+export type ContraTransferType = 'cash_to_bank' | 'bank_to_cash' | 'vault_to_branch' | 'branch_to_treasury';
+
+export interface ContraVoucherPayload {
+  tenant_id: string;
+  transfer_type: ContraTransferType;
+  amount: number;
+  voucher_date?: string;
+  description?: string;
+  reference?: string;
+  transfer_reference?: string;
+  branch_id?: string;
+  currency?: string;
+  transfer_details?: JsonObject;
+  created_by?: string;
+  debit_account_id?: string;
+  debit_account_code?: string;
+  credit_account_id?: string;
+  credit_account_code?: string;
+  source_location?: string;
+  destination_location?: string;
+  cost_center?: string;
+  profit_center?: string;
+  metadata?: JsonObject;
+}
+
+export type CreditNoteType = 'interest_reversal' | 'refund' | 'adjustment' | 'discount';
+
+export interface CreditNotePayload {
+  tenant_id: string;
+  credit_note_type: CreditNoteType;
+  amount: number;
+  customer_name: string;
+  customer_id?: string;
+  voucher_date?: string;
+  description?: string;
+  reference?: string;
+  credit_note_reference?: string;
+  branch_id?: string;
+  currency?: string;
+  credit_note_details?: JsonObject;
+  created_by?: string;
+  debit_account_id?: string;
+  debit_account_code?: string;
+  credit_account_id?: string;
+  credit_account_code?: string;
+  cost_center?: string;
+  profit_center?: string;
+  metadata?: JsonObject;
+}
+
+export type DebitNoteType = 'penalty' | 'charges' | 'recovery' | 'tax_adjustment';
+
+export interface DebitNotePayload {
+  tenant_id: string;
+  debit_note_type: DebitNoteType;
+  amount: number;
+  customer_name: string;
+  customer_id?: string;
+  voucher_date?: string;
+  description?: string;
+  reference?: string;
+  debit_note_reference?: string;
+  branch_id?: string;
+  currency?: string;
+  debit_note_details?: JsonObject;
+  created_by?: string;
+  debit_account_id?: string;
+  debit_account_code?: string;
+  credit_account_id?: string;
+  credit_account_code?: string;
+  cost_center?: string;
+  profit_center?: string;
+  metadata?: JsonObject;
+}
+
 export interface DayEndClosePayload {
   tenant_id: string;
   business_date: string;
@@ -841,7 +916,15 @@ export const apiClient = {
     axiosInstance.post(`/posting-engine/post`, data),
   createVoucher: (data: VoucherPayload) =>
     axiosInstance.post(`/vouchers`, data),
-  getVouchers: (tenantId: string, params?: { status?: string; voucher_type?: string }) =>
+  getVouchers: (tenantId: string, params?: {
+    status?: string;
+    voucher_type?: string;
+    payment_category?: PaymentVoucherCategory;
+    receipt_category?: ReceiptVoucherCategory;
+    contra_transfer_type?: ContraTransferType;
+    credit_note_type?: CreditNoteType;
+    debit_note_type?: DebitNoteType;
+  }) =>
     axiosInstance.get(`/vouchers`, { params: { tenant_id: tenantId, ...params } }),
   getPaymentVoucherCategories: () =>
     axiosInstance.get(`/payment-vouchers/categories`),
@@ -851,6 +934,18 @@ export const apiClient = {
     axiosInstance.get(`/receipt-vouchers/options`),
   createReceiptVoucher: (data: ReceiptVoucherPayload) =>
     axiosInstance.post(`/receipt-vouchers`, data),
+  getContraVoucherOptions: () =>
+    axiosInstance.get(`/contra-vouchers/options`),
+  createContraVoucher: (data: ContraVoucherPayload) =>
+    axiosInstance.post(`/contra-vouchers`, data),
+  getCreditNoteOptions: () =>
+    axiosInstance.get(`/credit-notes/options`),
+  createCreditNote: (data: CreditNotePayload) =>
+    axiosInstance.post(`/credit-notes`, data),
+  getDebitNoteOptions: () =>
+    axiosInstance.get(`/debit-notes/options`),
+  createDebitNote: (data: DebitNotePayload) =>
+    axiosInstance.post(`/debit-notes`, data),
   verifyVoucher: (voucherId: string, tenantId: string, performedBy?: string) =>
     axiosInstance.post(`/vouchers/${voucherId}/verify`, { tenant_id: tenantId, performed_by: performedBy }),
   approveVoucher: (voucherId: string, tenantId: string, performedBy?: string) =>

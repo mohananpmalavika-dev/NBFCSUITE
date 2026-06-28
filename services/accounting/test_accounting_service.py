@@ -287,6 +287,182 @@ async def _run_accounting_test():
         assert salary_reverse_response.status_code == 200
         assert salary_reverse_response.json()["status"] == "reversed"
 
+        contra_response = await client.post(
+            "/contra-vouchers",
+            json={
+                "tenant_id": tenant_id,
+                "transfer_type": "cash_to_bank",
+                "amount": 600.0,
+                "description": "Deposit branch cash to bank",
+                "reference": "CONTRA-CASH-BANK",
+                "transfer_reference": "DEP-001",
+                "branch_id": "branch-001",
+                "source_location": "Main cash counter",
+                "destination_location": "Primary bank",
+                "transfer_details": {"deposit_slip": "SLIP-001"},
+                "created_by": "tester",
+            },
+        )
+        assert contra_response.status_code == 200
+        contra_voucher = contra_response.json()
+        assert contra_voucher["voucher_type"] == "contra"
+        assert contra_voucher["contra_transfer_type"] == "cash_to_bank"
+        assert contra_voucher["source_location"] == "Main cash counter"
+        assert contra_voucher["destination_location"] == "Primary bank"
+        assert contra_voucher["transfer_reference"] == "DEP-001"
+        assert contra_voucher["amount"] == 600.0
+        assert len(contra_voucher["lines"]) == 2
+
+        contra_options_response = await client.get("/contra-vouchers/options")
+        assert contra_options_response.status_code == 200
+        transfer_keys = {item["key"] for item in contra_options_response.json()["transfer_types"]}
+        assert {"cash_to_bank", "bank_to_cash", "vault_to_branch", "branch_to_treasury"}.issubset(transfer_keys)
+
+        contra_verify_response = await client.post(
+            f"/vouchers/{contra_voucher['id']}/verify",
+            json={"tenant_id": tenant_id, "performed_by": "verifier"},
+        )
+        assert contra_verify_response.status_code == 200
+        contra_approve_response = await client.post(
+            f"/vouchers/{contra_voucher['id']}/approve",
+            json={"tenant_id": tenant_id, "performed_by": "approver"},
+        )
+        assert contra_approve_response.status_code == 200
+        contra_post_response = await client.post(
+            f"/vouchers/{contra_voucher['id']}/post",
+            json={"tenant_id": tenant_id, "performed_by": "poster"},
+        )
+        assert contra_post_response.status_code == 200
+        assert contra_post_response.json()["posting_status"] == "posted"
+        contra_reverse_response = await client.post(
+            f"/vouchers/{contra_voucher['id']}/reverse",
+            json={"tenant_id": tenant_id, "performed_by": "reverser"},
+        )
+        assert contra_reverse_response.status_code == 200
+        assert contra_reverse_response.json()["status"] == "reversed"
+
+        credit_note_response = await client.post(
+            "/credit-notes",
+            json={
+                "tenant_id": tenant_id,
+                "credit_note_type": "discount",
+                "amount": 450.0,
+                "customer_name": "Asha Customer",
+                "customer_id": "customer-001",
+                "description": "Campaign discount credit note",
+                "reference": "CN-DISC-001",
+                "credit_note_reference": "DISC-001",
+                "branch_id": "branch-001",
+                "credit_note_details": {"reason": "Campaign discount"},
+                "created_by": "tester",
+            },
+        )
+        assert credit_note_response.status_code == 200
+        credit_note = credit_note_response.json()
+        assert credit_note["voucher_type"] == "credit_note"
+        assert credit_note["credit_note_type"] == "discount"
+        assert credit_note["customer_name"] == "Asha Customer"
+        assert credit_note["customer_id"] == "customer-001"
+        assert credit_note["credit_note_reference"] == "DISC-001"
+        assert credit_note["amount"] == 450.0
+        assert len(credit_note["lines"]) == 2
+
+        credit_note_options_response = await client.get("/credit-notes/options")
+        assert credit_note_options_response.status_code == 200
+        credit_note_type_keys = {item["key"] for item in credit_note_options_response.json()["credit_note_types"]}
+        assert {"interest_reversal", "refund", "adjustment", "discount"}.issubset(credit_note_type_keys)
+
+        credit_note_filter_response = await client.get(
+            "/vouchers",
+            params={"tenant_id": tenant_id, "voucher_type": "credit_note", "credit_note_type": "discount"},
+        )
+        assert credit_note_filter_response.status_code == 200
+        assert any(item["id"] == credit_note["id"] for item in credit_note_filter_response.json()["items"])
+
+        credit_note_verify_response = await client.post(
+            f"/vouchers/{credit_note['id']}/verify",
+            json={"tenant_id": tenant_id, "performed_by": "verifier"},
+        )
+        assert credit_note_verify_response.status_code == 200
+        credit_note_approve_response = await client.post(
+            f"/vouchers/{credit_note['id']}/approve",
+            json={"tenant_id": tenant_id, "performed_by": "approver"},
+        )
+        assert credit_note_approve_response.status_code == 200
+        credit_note_post_response = await client.post(
+            f"/vouchers/{credit_note['id']}/post",
+            json={"tenant_id": tenant_id, "performed_by": "poster"},
+        )
+        assert credit_note_post_response.status_code == 200
+        assert credit_note_post_response.json()["posting_status"] == "posted"
+        credit_note_reverse_response = await client.post(
+            f"/vouchers/{credit_note['id']}/reverse",
+            json={"tenant_id": tenant_id, "performed_by": "reverser"},
+        )
+        assert credit_note_reverse_response.status_code == 200
+        assert credit_note_reverse_response.json()["status"] == "reversed"
+
+        debit_note_response = await client.post(
+            "/debit-notes",
+            json={
+                "tenant_id": tenant_id,
+                "debit_note_type": "penalty",
+                "amount": 375.0,
+                "customer_name": "Asha Customer",
+                "customer_id": "customer-001",
+                "description": "Late payment penalty debit note",
+                "reference": "DN-PEN-001",
+                "debit_note_reference": "PEN-001",
+                "branch_id": "branch-001",
+                "debit_note_details": {"reason": "Late payment penalty"},
+                "created_by": "tester",
+            },
+        )
+        assert debit_note_response.status_code == 200
+        debit_note = debit_note_response.json()
+        assert debit_note["voucher_type"] == "debit_note"
+        assert debit_note["debit_note_type"] == "penalty"
+        assert debit_note["customer_name"] == "Asha Customer"
+        assert debit_note["customer_id"] == "customer-001"
+        assert debit_note["debit_note_reference"] == "PEN-001"
+        assert debit_note["amount"] == 375.0
+        assert len(debit_note["lines"]) == 2
+
+        debit_note_options_response = await client.get("/debit-notes/options")
+        assert debit_note_options_response.status_code == 200
+        debit_note_type_keys = {item["key"] for item in debit_note_options_response.json()["debit_note_types"]}
+        assert {"penalty", "charges", "recovery", "tax_adjustment"}.issubset(debit_note_type_keys)
+
+        debit_note_filter_response = await client.get(
+            "/vouchers",
+            params={"tenant_id": tenant_id, "voucher_type": "debit_note", "debit_note_type": "penalty"},
+        )
+        assert debit_note_filter_response.status_code == 200
+        assert any(item["id"] == debit_note["id"] for item in debit_note_filter_response.json()["items"])
+
+        debit_note_verify_response = await client.post(
+            f"/vouchers/{debit_note['id']}/verify",
+            json={"tenant_id": tenant_id, "performed_by": "verifier"},
+        )
+        assert debit_note_verify_response.status_code == 200
+        debit_note_approve_response = await client.post(
+            f"/vouchers/{debit_note['id']}/approve",
+            json={"tenant_id": tenant_id, "performed_by": "approver"},
+        )
+        assert debit_note_approve_response.status_code == 200
+        debit_note_post_response = await client.post(
+            f"/vouchers/{debit_note['id']}/post",
+            json={"tenant_id": tenant_id, "performed_by": "poster"},
+        )
+        assert debit_note_post_response.status_code == 200
+        assert debit_note_post_response.json()["posting_status"] == "posted"
+        debit_note_reverse_response = await client.post(
+            f"/vouchers/{debit_note['id']}/reverse",
+            json={"tenant_id": tenant_id, "performed_by": "reverser"},
+        )
+        assert debit_note_reverse_response.status_code == 200
+        assert debit_note_reverse_response.json()["status"] == "reversed"
+
         receipt_verify_response = await client.post(
             f"/vouchers/{receipt_voucher['id']}/verify",
             json={"tenant_id": tenant_id, "performed_by": "verifier"},
@@ -444,9 +620,25 @@ async def _run_accounting_test():
         assert cash_ledger_row["closing_balance"] == 0.0
         assert cash_ledger_row["financial_year"] == "2026-27"
         bank_ledger_row = next(row for row in ledger_rows if row["account_code"] == "1120_BANK")
-        assert bank_ledger_row["debit"] == 2000.0
-        assert bank_ledger_row["credit"] == 2000.0
+        assert bank_ledger_row["debit"] == 2600.0
+        assert bank_ledger_row["credit"] == 2600.0
         assert bank_ledger_row["balance"] == 0.0
+        cash_transfer_row = next(
+            row
+            for row in ledger_rows
+            if row["account_code"] == "1000_CASH" and row["branch"] == "branch-001"
+        )
+        assert cash_transfer_row["debit"] == 600.0
+        assert cash_transfer_row["credit"] == 600.0
+        assert cash_transfer_row["balance"] == 0.0
+        discount_row = next(row for row in ledger_rows if row["account_code"] == "5500_DISCOUNT_ALLOWED")
+        assert discount_row["debit"] == 450.0
+        assert discount_row["credit"] == 450.0
+        assert discount_row["balance"] == 0.0
+        penalty_row = next(row for row in ledger_rows if row["account_code"] == "4120_PENALTY_INCOME")
+        assert penalty_row["debit"] == 375.0
+        assert penalty_row["credit"] == 375.0
+        assert penalty_row["balance"] == 0.0
 
         dashboard_response = await client.get("/dashboard", params={"tenant_id": tenant_id})
         assert dashboard_response.status_code == 200

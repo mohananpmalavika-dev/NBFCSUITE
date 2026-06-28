@@ -671,6 +671,52 @@ class ContraVoucherCreate(BaseModel):
     metadata: Optional[dict] = None
 
 
+class CreditNoteCreate(BaseModel):
+    tenant_id: str
+    credit_note_type: str
+    amount: float
+    customer_name: str
+    customer_id: Optional[str] = None
+    voucher_date: Optional[datetime] = None
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    credit_note_reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    currency: Optional[str] = "INR"
+    credit_note_details: Optional[dict] = None
+    created_by: Optional[str] = None
+    debit_account_id: Optional[str] = None
+    debit_account_code: Optional[str] = None
+    credit_account_id: Optional[str] = None
+    credit_account_code: Optional[str] = None
+    cost_center: Optional[str] = None
+    profit_center: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class DebitNoteCreate(BaseModel):
+    tenant_id: str
+    debit_note_type: str
+    amount: float
+    customer_name: str
+    customer_id: Optional[str] = None
+    voucher_date: Optional[datetime] = None
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    debit_note_reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    currency: Optional[str] = "INR"
+    debit_note_details: Optional[dict] = None
+    created_by: Optional[str] = None
+    debit_account_id: Optional[str] = None
+    debit_account_code: Optional[str] = None
+    credit_account_id: Optional[str] = None
+    credit_account_code: Optional[str] = None
+    cost_center: Optional[str] = None
+    profit_center: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
 class VoucherActionRequest(BaseModel):
     tenant_id: str
     performed_by: Optional[str] = None
@@ -698,12 +744,17 @@ class VoucherResponse(BaseModel):
     payment_category: Optional[str] = None
     receipt_category: Optional[str] = None
     contra_transfer_type: Optional[str] = None
+    credit_note_type: Optional[str] = None
+    debit_note_type: Optional[str] = None
     payee_name: Optional[str] = None
     payer_name: Optional[str] = None
+    customer_name: Optional[str] = None
     customer_id: Optional[str] = None
     source_location: Optional[str] = None
     destination_location: Optional[str] = None
     transfer_reference: Optional[str] = None
+    credit_note_reference: Optional[str] = None
+    debit_note_reference: Optional[str] = None
     amount: Optional[float] = None
     metadata: Optional[dict] = None
 
@@ -777,13 +828,21 @@ DEFAULT_ACCOUNT_NAMES = {
     "2300_GST_PAYABLE": ("GST Payable", "liability"),
     "2310_TDS_PAYABLE": ("TDS Payable", "liability"),
     "2400_VENDOR_PAYABLE": ("Vendor Payable", "liability"),
+    "2500_CUSTOMER_CREDIT_PAYABLE": ("Customer Credit Payable", "liability"),
     "4100_FOREX_INCOME": ("Forex Income", "revenue"),
+    "4110_INTEREST_REVERSAL": ("Interest Reversal", "expense"),
+    "4120_PENALTY_INCOME": ("Penalty Income", "revenue"),
+    "4130_CHARGES_INCOME": ("Charges Income", "revenue"),
+    "4140_RECOVERY_INCOME": ("Recovery Income", "revenue"),
     "5100_OPERATING_EXPENSE": ("Operating Expense", "expense"),
     "5110_RENT_EXPENSE": ("Rent Expense", "expense"),
     "5120_ELECTRICITY_EXPENSE": ("Electricity Expense", "expense"),
     "5130_INSURANCE_EXPENSE": ("Insurance Expense", "expense"),
     "5200_TAX_EXPENSE": ("Tax Expense", "expense"),
     "5210_SALARY_EXPENSE": ("Salary Expense", "expense"),
+    "5300_REFUND_EXPENSE": ("Refund Expense", "expense"),
+    "5400_ADJUSTMENT_EXPENSE": ("Adjustment Expense", "expense"),
+    "5500_DISCOUNT_ALLOWED": ("Discount Allowed", "expense"),
 }
 
 PAYMENT_VOUCHER_CATEGORIES = {
@@ -864,6 +923,60 @@ CONTRA_TRANSFER_TYPES = {
     },
 }
 
+CREDIT_NOTE_TYPES = {
+    "interest_reversal": {
+        "label": "Interest Reversal",
+        "debit_account_code": "4110_INTEREST_REVERSAL",
+        "credit_account_code": "1200_LOAN_RECEIVABLE",
+        "description": "Interest reversal credit note",
+    },
+    "refund": {
+        "label": "Refund",
+        "debit_account_code": "5300_REFUND_EXPENSE",
+        "credit_account_code": "2500_CUSTOMER_CREDIT_PAYABLE",
+        "description": "Customer refund credit note",
+    },
+    "adjustment": {
+        "label": "Adjustment",
+        "debit_account_code": "5400_ADJUSTMENT_EXPENSE",
+        "credit_account_code": "1200_LOAN_RECEIVABLE",
+        "description": "Customer account adjustment credit note",
+    },
+    "discount": {
+        "label": "Discount",
+        "debit_account_code": "5500_DISCOUNT_ALLOWED",
+        "credit_account_code": "1200_LOAN_RECEIVABLE",
+        "description": "Discount allowed credit note",
+    },
+}
+
+DEBIT_NOTE_TYPES = {
+    "penalty": {
+        "label": "Penalty",
+        "debit_account_code": "1200_LOAN_RECEIVABLE",
+        "credit_account_code": "4120_PENALTY_INCOME",
+        "description": "Penalty debit note",
+    },
+    "charges": {
+        "label": "Charges",
+        "debit_account_code": "1200_LOAN_RECEIVABLE",
+        "credit_account_code": "4130_CHARGES_INCOME",
+        "description": "Charges debit note",
+    },
+    "recovery": {
+        "label": "Recovery",
+        "debit_account_code": "1200_LOAN_RECEIVABLE",
+        "credit_account_code": "4140_RECOVERY_INCOME",
+        "description": "Recovery debit note",
+    },
+    "tax_adjustment": {
+        "label": "Tax Adjustment",
+        "debit_account_code": "1200_LOAN_RECEIVABLE",
+        "credit_account_code": "2300_GST_PAYABLE",
+        "description": "Tax adjustment debit note",
+    },
+}
+
 DEFAULT_NBFC_COA = [
     {"account_code": "100000", "account_name": "Assets", "account_type": "asset", "category": "Assets", "posting_allowed": "false"},
     {"account_code": "110000", "account_name": "Cash", "account_type": "asset", "category": "Assets", "parent_code": "100000", "posting_allowed": "false"},
@@ -879,18 +992,26 @@ DEFAULT_NBFC_COA = [
     {"account_code": "200000", "account_name": "Liabilities", "account_type": "liability", "category": "Liabilities", "posting_allowed": "false"},
     {"account_code": "210000", "account_name": "Customer Deposits", "account_type": "liability", "category": "Liabilities", "parent_code": "200000"},
     {"account_code": "220000", "account_name": "Borrowings", "account_type": "liability", "category": "Liabilities", "parent_code": "200000"},
+    {"account_code": "2500_CUSTOMER_CREDIT_PAYABLE", "account_name": "Customer Credit Payable", "account_type": "liability", "category": "Liabilities", "parent_code": "200000"},
     {"account_code": "300000", "account_name": "Capital", "account_type": "equity", "category": "Capital", "posting_allowed": "false"},
     {"account_code": "310000", "account_name": "Share Capital", "account_type": "equity", "category": "Capital", "parent_code": "300000"},
     {"account_code": "400000", "account_name": "Income", "account_type": "revenue", "category": "Income", "posting_allowed": "false"},
     {"account_code": "410000", "account_name": "Interest Income", "account_type": "revenue", "category": "Income", "parent_code": "400000"},
+    {"account_code": "4120_PENALTY_INCOME", "account_name": "Penalty Income", "account_type": "revenue", "category": "Income", "parent_code": "400000"},
+    {"account_code": "4130_CHARGES_INCOME", "account_name": "Charges Income", "account_type": "revenue", "category": "Income", "parent_code": "400000"},
+    {"account_code": "4140_RECOVERY_INCOME", "account_name": "Recovery Income", "account_type": "revenue", "category": "Income", "parent_code": "400000"},
     {"account_code": "420000", "account_name": "Processing Fee Income", "account_type": "revenue", "category": "Income", "parent_code": "400000"},
     {"account_code": "500000", "account_name": "Expenses", "account_type": "expense", "category": "Expenses", "posting_allowed": "false"},
     {"account_code": "510000", "account_name": "Operating Expenses", "account_type": "expense", "category": "Expenses", "parent_code": "500000"},
     {"account_code": "5110_RENT_EXPENSE", "account_name": "Rent Expense", "account_type": "expense", "category": "Expenses", "parent_code": "510000"},
     {"account_code": "5120_ELECTRICITY_EXPENSE", "account_name": "Electricity Expense", "account_type": "expense", "category": "Expenses", "parent_code": "510000"},
     {"account_code": "5130_INSURANCE_EXPENSE", "account_name": "Insurance Expense", "account_type": "expense", "category": "Expenses", "parent_code": "510000"},
+    {"account_code": "4110_INTEREST_REVERSAL", "account_name": "Interest Reversal", "account_type": "expense", "category": "Expenses", "parent_code": "510000"},
     {"account_code": "520000", "account_name": "Employee Expenses", "account_type": "expense", "category": "Expenses", "parent_code": "500000"},
     {"account_code": "5210_SALARY_EXPENSE", "account_name": "Salary Expense", "account_type": "expense", "category": "Expenses", "parent_code": "520000"},
+    {"account_code": "5300_REFUND_EXPENSE", "account_name": "Refund Expense", "account_type": "expense", "category": "Expenses", "parent_code": "500000"},
+    {"account_code": "5400_ADJUSTMENT_EXPENSE", "account_name": "Adjustment Expense", "account_type": "expense", "category": "Expenses", "parent_code": "500000"},
+    {"account_code": "5500_DISCOUNT_ALLOWED", "account_name": "Discount Allowed", "account_type": "expense", "category": "Expenses", "parent_code": "500000"},
     {"account_code": "900000", "account_name": "Off Balance Sheet", "account_type": "off_balance", "category": "Off Balance Sheet", "posting_allowed": "false"},
     {"account_code": "910000", "account_name": "Guarantees", "account_type": "off_balance", "category": "Off Balance Sheet", "parent_code": "900000"},
     {"account_code": "990000", "account_name": "Memo Accounts", "account_type": "memo", "category": "Memo Accounts", "posting_allowed": "false"},
@@ -1432,6 +1553,10 @@ def _voucher_response(voucher: Voucher) -> dict:
     receipt_voucher = receipt_voucher if isinstance(receipt_voucher, dict) else {}
     contra_voucher = metadata.get("contra_voucher") if isinstance(metadata, dict) else None
     contra_voucher = contra_voucher if isinstance(contra_voucher, dict) else {}
+    credit_note = metadata.get("credit_note") if isinstance(metadata, dict) else None
+    credit_note = credit_note if isinstance(credit_note, dict) else {}
+    debit_note = metadata.get("debit_note") if isinstance(metadata, dict) else None
+    debit_note = debit_note if isinstance(debit_note, dict) else {}
     return {
         "id": voucher.id,
         "tenant_id": voucher.tenant_id,
@@ -1464,13 +1589,18 @@ def _voucher_response(voucher: Voucher) -> dict:
         "payment_category": payment_voucher.get("category"),
         "receipt_category": receipt_voucher.get("category"),
         "contra_transfer_type": contra_voucher.get("transfer_type"),
+        "credit_note_type": credit_note.get("type"),
+        "debit_note_type": debit_note.get("type"),
         "payee_name": payment_voucher.get("payee_name"),
         "payer_name": receipt_voucher.get("payer_name"),
-        "customer_id": receipt_voucher.get("customer_id"),
+        "customer_name": credit_note.get("customer_name") or debit_note.get("customer_name"),
+        "customer_id": receipt_voucher.get("customer_id") or credit_note.get("customer_id") or debit_note.get("customer_id"),
         "source_location": contra_voucher.get("source_location"),
         "destination_location": contra_voucher.get("destination_location"),
         "transfer_reference": contra_voucher.get("transfer_reference"),
-        "amount": payment_voucher.get("amount") or receipt_voucher.get("amount") or contra_voucher.get("amount"),
+        "credit_note_reference": credit_note.get("credit_note_reference"),
+        "debit_note_reference": debit_note.get("debit_note_reference"),
+        "amount": payment_voucher.get("amount") or receipt_voucher.get("amount") or contra_voucher.get("amount") or credit_note.get("amount") or debit_note.get("amount"),
         "metadata": metadata,
     }
 
@@ -1491,6 +1621,14 @@ def _normalize_receipt_category(category: str) -> str:
 
 def _normalize_contra_transfer_type(transfer_type: str) -> str:
     return transfer_type.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _normalize_credit_note_type(credit_note_type: str) -> str:
+    return credit_note_type.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _normalize_debit_note_type(debit_note_type: str) -> str:
+    return debit_note_type.strip().lower().replace(" ", "_").replace("-", "_")
 
 
 def _payment_category_options() -> list[dict]:
@@ -1519,12 +1657,180 @@ def _contra_voucher_options() -> dict:
     }
 
 
+def _credit_note_options() -> dict:
+    return {
+        "credit_note_types": [
+            {"key": key, **value}
+            for key, value in CREDIT_NOTE_TYPES.items()
+        ]
+    }
+
+
+def _debit_note_options() -> dict:
+    return {
+        "debit_note_types": [
+            {"key": key, **value}
+            for key, value in DEBIT_NOTE_TYPES.items()
+        ]
+    }
+
+
 def _payment_credit_account_code(payment_mode: Optional[str]) -> str:
     return "1000_CASH" if str(payment_mode or "").lower() == "cash" else "1120_BANK"
 
 
 def _receipt_debit_account_code(payment_mode: Optional[str]) -> str:
     return "1000_CASH" if str(payment_mode or "").lower() == "cash" else "1120_BANK"
+
+
+def _build_credit_note_payload(credit_note: CreditNoteCreate, db: Session) -> VoucherCreate:
+    credit_note_key = _normalize_credit_note_type(credit_note.credit_note_type)
+    note_type = CREDIT_NOTE_TYPES.get(credit_note_key)
+    if not note_type:
+        raise HTTPException(status_code=400, detail="Unsupported credit note type")
+    if credit_note.amount <= 0:
+        raise HTTPException(status_code=400, detail="amount must be positive")
+    if not credit_note.customer_name.strip():
+        raise HTTPException(status_code=400, detail="customer_name is required")
+
+    if credit_note.debit_account_id:
+        debit_account = _get_postable_account_by_id(credit_note.debit_account_id, credit_note.tenant_id, db)
+    else:
+        debit_account = _get_postable_account_by_code(
+            credit_note.debit_account_code or note_type["debit_account_code"],
+            credit_note.tenant_id,
+            db,
+        )
+
+    if credit_note.credit_account_id:
+        credit_account = _get_postable_account_by_id(credit_note.credit_account_id, credit_note.tenant_id, db)
+    else:
+        credit_account = _get_postable_account_by_code(
+            credit_note.credit_account_code or note_type["credit_account_code"],
+            credit_note.tenant_id,
+            db,
+        )
+
+    amount = round(credit_note.amount, 2)
+    description = credit_note.description or f"{note_type['description']} for {credit_note.customer_name}"
+    metadata = {
+        **(credit_note.metadata or {}),
+        "credit_note": {
+            "module": "module_10",
+            "type": credit_note_key,
+            "type_label": note_type["label"],
+            "customer_name": credit_note.customer_name,
+            "customer_id": credit_note.customer_id,
+            "credit_note_reference": credit_note.credit_note_reference,
+            "amount": amount,
+        },
+    }
+    return VoucherCreate(
+        tenant_id=credit_note.tenant_id,
+        voucher_type="credit_note",
+        voucher_date=credit_note.voucher_date,
+        description=description,
+        reference=credit_note.reference or credit_note.credit_note_reference,
+        branch_id=credit_note.branch_id,
+        currency=credit_note.currency or "INR",
+        payment_reference=credit_note.credit_note_reference,
+        payment_details=credit_note.credit_note_details,
+        created_by=credit_note.created_by,
+        metadata=metadata,
+        lines=[
+            VoucherLineCreate(
+                gl_account_id=debit_account.id,
+                debit=amount,
+                credit=0.0,
+                description=f"{note_type['label']} debit",
+                cost_center=credit_note.cost_center,
+                profit_center=credit_note.profit_center,
+            ),
+            VoucherLineCreate(
+                gl_account_id=credit_account.id,
+                debit=0.0,
+                credit=amount,
+                description=f"{note_type['label']} credit",
+                cost_center=credit_note.cost_center,
+                profit_center=credit_note.profit_center,
+            ),
+        ],
+    )
+
+
+def _build_debit_note_payload(debit_note: DebitNoteCreate, db: Session) -> VoucherCreate:
+    debit_note_key = _normalize_debit_note_type(debit_note.debit_note_type)
+    note_type = DEBIT_NOTE_TYPES.get(debit_note_key)
+    if not note_type:
+        raise HTTPException(status_code=400, detail="Unsupported debit note type")
+    if debit_note.amount <= 0:
+        raise HTTPException(status_code=400, detail="amount must be positive")
+    if not debit_note.customer_name.strip():
+        raise HTTPException(status_code=400, detail="customer_name is required")
+
+    if debit_note.debit_account_id:
+        debit_account = _get_postable_account_by_id(debit_note.debit_account_id, debit_note.tenant_id, db)
+    else:
+        debit_account = _get_postable_account_by_code(
+            debit_note.debit_account_code or note_type["debit_account_code"],
+            debit_note.tenant_id,
+            db,
+        )
+
+    if debit_note.credit_account_id:
+        credit_account = _get_postable_account_by_id(debit_note.credit_account_id, debit_note.tenant_id, db)
+    else:
+        credit_account = _get_postable_account_by_code(
+            debit_note.credit_account_code or note_type["credit_account_code"],
+            debit_note.tenant_id,
+            db,
+        )
+
+    amount = round(debit_note.amount, 2)
+    description = debit_note.description or f"{note_type['description']} for {debit_note.customer_name}"
+    metadata = {
+        **(debit_note.metadata or {}),
+        "debit_note": {
+            "module": "module_11",
+            "type": debit_note_key,
+            "type_label": note_type["label"],
+            "customer_name": debit_note.customer_name,
+            "customer_id": debit_note.customer_id,
+            "debit_note_reference": debit_note.debit_note_reference,
+            "amount": amount,
+        },
+    }
+    return VoucherCreate(
+        tenant_id=debit_note.tenant_id,
+        voucher_type="debit_note",
+        voucher_date=debit_note.voucher_date,
+        description=description,
+        reference=debit_note.reference or debit_note.debit_note_reference,
+        branch_id=debit_note.branch_id,
+        currency=debit_note.currency or "INR",
+        payment_reference=debit_note.debit_note_reference,
+        payment_details=debit_note.debit_note_details,
+        created_by=debit_note.created_by,
+        metadata=metadata,
+        lines=[
+            VoucherLineCreate(
+                gl_account_id=debit_account.id,
+                debit=amount,
+                credit=0.0,
+                description=f"{note_type['label']} debit",
+                cost_center=debit_note.cost_center,
+                profit_center=debit_note.profit_center,
+            ),
+            VoucherLineCreate(
+                gl_account_id=credit_account.id,
+                debit=0.0,
+                credit=amount,
+                description=f"{note_type['label']} credit",
+                cost_center=debit_note.cost_center,
+                profit_center=debit_note.profit_center,
+            ),
+        ],
+    )
 
 
 def _build_payment_voucher_payload(payment: PaymentVoucherCreate, db: Session) -> VoucherCreate:
@@ -2444,6 +2750,16 @@ async def contra_voucher_options():
     return _contra_voucher_options()
 
 
+@app.get("/credit-notes/options")
+async def credit_note_options():
+    return _credit_note_options()
+
+
+@app.get("/debit-notes/options")
+async def debit_note_options():
+    return _debit_note_options()
+
+
 @app.post("/payment-vouchers", response_model=VoucherResponse)
 async def create_payment_voucher(payment: PaymentVoucherCreate, db: Session = Depends(get_db)):
     voucher_payload = _build_payment_voucher_payload(payment, db)
@@ -2462,6 +2778,18 @@ async def create_receipt_voucher(receipt: ReceiptVoucherCreate, db: Session = De
     return await create_voucher(voucher_payload, db)
 
 
+@app.post("/credit-notes", response_model=VoucherResponse)
+async def create_credit_note(credit_note: CreditNoteCreate, db: Session = Depends(get_db)):
+    voucher_payload = _build_credit_note_payload(credit_note, db)
+    return await create_voucher(voucher_payload, db)
+
+
+@app.post("/debit-notes", response_model=VoucherResponse)
+async def create_debit_note(debit_note: DebitNoteCreate, db: Session = Depends(get_db)):
+    voucher_payload = _build_debit_note_payload(debit_note, db)
+    return await create_voucher(voucher_payload, db)
+
+
 @app.get("/vouchers")
 async def list_vouchers(
     tenant_id: str = Query(...),
@@ -2470,6 +2798,8 @@ async def list_vouchers(
     payment_category: Optional[str] = Query(None),
     receipt_category: Optional[str] = Query(None),
     contra_transfer_type: Optional[str] = Query(None),
+    credit_note_type: Optional[str] = Query(None),
+    debit_note_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     query = db.query(Voucher).filter(Voucher.tenant_id == tenant_id)
@@ -2498,6 +2828,20 @@ async def list_vouchers(
             item
             for item in items
             if ((item.metadata_json or {}).get("contra_voucher") or {}).get("transfer_type") == transfer_key
+        ]
+    if credit_note_type:
+        note_type_key = _normalize_credit_note_type(credit_note_type)
+        items = [
+            item
+            for item in items
+            if ((item.metadata_json or {}).get("credit_note") or {}).get("type") == note_type_key
+        ]
+    if debit_note_type:
+        note_type_key = _normalize_debit_note_type(debit_note_type)
+        items = [
+            item
+            for item in items
+            if ((item.metadata_json or {}).get("debit_note") or {}).get("type") == note_type_key
         ]
     return {"items": [_voucher_response(item) for item in items], "total": len(items)}
 

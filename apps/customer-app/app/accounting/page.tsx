@@ -1,10 +1,10 @@
 'use client';
 
-import { apiClient, type PaymentVoucherCategory, type ReceiptVoucherCategory } from '@/lib/api';
+import { apiClient, type ContraTransferType, type CreditNoteType, type DebitNoteType, type PaymentVoucherCategory, type ReceiptVoucherCategory } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-type TabKey = 'coa' | 'posting' | 'receiptVoucher' | 'paymentVoucher' | 'vouchers' | 'statements' | 'dayend';
+type TabKey = 'coa' | 'posting' | 'receiptVoucher' | 'paymentVoucher' | 'contraVoucher' | 'creditNote' | 'debitNote' | 'vouchers' | 'statements' | 'dayend';
 
 interface GlAccount {
   id: string;
@@ -83,9 +83,18 @@ interface Voucher {
   payment_details?: Record<string, unknown> | null;
   payment_category?: PaymentVoucherCategory | null;
   receipt_category?: ReceiptVoucherCategory | null;
+  contra_transfer_type?: ContraTransferType | null;
+  credit_note_type?: CreditNoteType | null;
+  debit_note_type?: DebitNoteType | null;
   payee_name?: string | null;
   payer_name?: string | null;
+  customer_name?: string | null;
   customer_id?: string | null;
+  source_location?: string | null;
+  destination_location?: string | null;
+  transfer_reference?: string | null;
+  credit_note_reference?: string | null;
+  debit_note_reference?: string | null;
   amount?: number | null;
   metadata?: Record<string, unknown> | null;
   lines?: VoucherLine[];
@@ -108,6 +117,44 @@ interface PaymentVoucherCategoryOption {
   label: string;
   debit_account_code: string;
   description: string;
+}
+
+interface ContraTransferOption {
+  key: ContraTransferType;
+  label: string;
+  debit_account_code: string;
+  credit_account_code: string;
+  source_label: string;
+  destination_label: string;
+  description: string;
+}
+
+interface ContraVoucherOptions {
+  transfer_types: ContraTransferOption[];
+}
+
+interface CreditNoteTypeOption {
+  key: CreditNoteType;
+  label: string;
+  debit_account_code: string;
+  credit_account_code: string;
+  description: string;
+}
+
+interface CreditNoteOptions {
+  credit_note_types: CreditNoteTypeOption[];
+}
+
+interface DebitNoteTypeOption {
+  key: DebitNoteType;
+  label: string;
+  debit_account_code: string;
+  credit_account_code: string;
+  description: string;
+}
+
+interface DebitNoteOptions {
+  debit_note_types: DebitNoteTypeOption[];
 }
 
 interface LedgerRow {
@@ -166,6 +213,9 @@ const tabs: Array<{ key: TabKey; label: string }> = [
   { key: 'posting', label: 'Posting Engine' },
   { key: 'receiptVoucher', label: 'Module 7 Receipt' },
   { key: 'paymentVoucher', label: 'Module 8 Payment' },
+  { key: 'contraVoucher', label: 'Module 9 Contra' },
+  { key: 'creditNote', label: 'Module 10 Credit' },
+  { key: 'debitNote', label: 'Module 11 Debit' },
   { key: 'vouchers', label: 'Vouchers' },
   { key: 'statements', label: 'Statements' },
   { key: 'dayend', label: 'Day End' },
@@ -186,6 +236,33 @@ const defaultPaymentVoucherCategories: PaymentVoucherCategoryOption[] = [
   { key: 'tax', label: 'Tax', debit_account_code: '2300_GST_PAYABLE', description: 'Tax payment' },
   { key: 'insurance', label: 'Insurance', debit_account_code: '5130_INSURANCE_EXPENSE', description: 'Insurance payment' },
 ];
+
+const defaultContraVoucherOptions: ContraVoucherOptions = {
+  transfer_types: [
+    { key: 'cash_to_bank', label: 'Cash to Bank', debit_account_code: '1120_BANK', credit_account_code: '1000_CASH', source_label: 'Cash', destination_label: 'Bank', description: 'Cash deposited to bank' },
+    { key: 'bank_to_cash', label: 'Bank to Cash', debit_account_code: '1000_CASH', credit_account_code: '1120_BANK', source_label: 'Bank', destination_label: 'Cash', description: 'Cash withdrawn from bank' },
+    { key: 'vault_to_branch', label: 'Vault to Branch', debit_account_code: '1110_BRANCH_CASH', credit_account_code: '1130_VAULT_CASH', source_label: 'Vault', destination_label: 'Branch', description: 'Cash moved from vault to branch' },
+    { key: 'branch_to_treasury', label: 'Branch to Treasury', debit_account_code: '1500_TREASURY', credit_account_code: '1110_BRANCH_CASH', source_label: 'Branch', destination_label: 'Treasury', description: 'Cash moved from branch to treasury' },
+  ],
+};
+
+const defaultCreditNoteOptions: CreditNoteOptions = {
+  credit_note_types: [
+    { key: 'interest_reversal', label: 'Interest Reversal', debit_account_code: '4110_INTEREST_REVERSAL', credit_account_code: '1200_LOAN_RECEIVABLE', description: 'Interest reversal credit note' },
+    { key: 'refund', label: 'Refund', debit_account_code: '5300_REFUND_EXPENSE', credit_account_code: '2500_CUSTOMER_CREDIT_PAYABLE', description: 'Customer refund credit note' },
+    { key: 'adjustment', label: 'Adjustment', debit_account_code: '5400_ADJUSTMENT_EXPENSE', credit_account_code: '1200_LOAN_RECEIVABLE', description: 'Customer account adjustment credit note' },
+    { key: 'discount', label: 'Discount', debit_account_code: '5500_DISCOUNT_ALLOWED', credit_account_code: '1200_LOAN_RECEIVABLE', description: 'Discount allowed credit note' },
+  ],
+};
+
+const defaultDebitNoteOptions: DebitNoteOptions = {
+  debit_note_types: [
+    { key: 'penalty', label: 'Penalty', debit_account_code: '1200_LOAN_RECEIVABLE', credit_account_code: '4120_PENALTY_INCOME', description: 'Penalty debit note' },
+    { key: 'charges', label: 'Charges', debit_account_code: '1200_LOAN_RECEIVABLE', credit_account_code: '4130_CHARGES_INCOME', description: 'Charges debit note' },
+    { key: 'recovery', label: 'Recovery', debit_account_code: '1200_LOAN_RECEIVABLE', credit_account_code: '4140_RECOVERY_INCOME', description: 'Recovery debit note' },
+    { key: 'tax_adjustment', label: 'Tax Adjustment', debit_account_code: '1200_LOAN_RECEIVABLE', credit_account_code: '2300_GST_PAYABLE', description: 'Tax adjustment debit note' },
+  ],
+};
 
 function money(value: number | undefined) {
   return Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -238,6 +315,9 @@ export default function AccountingPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [receiptVoucherOptions, setReceiptVoucherOptions] = useState<ReceiptVoucherOptions>(defaultReceiptVoucherOptions);
   const [paymentVoucherCategories, setPaymentVoucherCategories] = useState<PaymentVoucherCategoryOption[]>(defaultPaymentVoucherCategories);
+  const [contraVoucherOptions, setContraVoucherOptions] = useState<ContraVoucherOptions>(defaultContraVoucherOptions);
+  const [creditNoteOptions, setCreditNoteOptions] = useState<CreditNoteOptions>(defaultCreditNoteOptions);
+  const [debitNoteOptions, setDebitNoteOptions] = useState<DebitNoteOptions>(defaultDebitNoteOptions);
   const [dayEndRows, setDayEndRows] = useState<Array<{ id: string; business_date: string; status: string; is_balanced: string }>>([]);
   const [postingPipeline, setPostingPipeline] = useState<Record<string, any> | null>(null);
 
@@ -327,6 +407,54 @@ export default function AccountingPage() {
     cost_center: '',
     profit_center: '',
   });
+  const [contraVoucherForm, setContraVoucherForm] = useState({
+    transfer_type: 'cash_to_bank' as ContraTransferType,
+    amount: '',
+    description: '',
+    reference: '',
+    transfer_reference: '',
+    voucher_date: new Date().toISOString().slice(0, 10),
+    branch_id: '',
+    source_location: '',
+    destination_location: '',
+    transfer_note: '',
+    debit_account_id: '',
+    credit_account_id: '',
+    cost_center: '',
+    profit_center: '',
+  });
+  const [creditNoteForm, setCreditNoteForm] = useState({
+    credit_note_type: 'interest_reversal' as CreditNoteType,
+    amount: '',
+    customer_name: '',
+    customer_id: '',
+    description: '',
+    reference: '',
+    credit_note_reference: '',
+    voucher_date: new Date().toISOString().slice(0, 10),
+    branch_id: '',
+    credit_note_note: '',
+    debit_account_id: '',
+    credit_account_id: '',
+    cost_center: '',
+    profit_center: '',
+  });
+  const [debitNoteForm, setDebitNoteForm] = useState({
+    debit_note_type: 'penalty' as DebitNoteType,
+    amount: '',
+    customer_name: '',
+    customer_id: '',
+    description: '',
+    reference: '',
+    debit_note_reference: '',
+    voucher_date: new Date().toISOString().slice(0, 10),
+    branch_id: '',
+    debit_note_note: '',
+    debit_account_id: '',
+    credit_account_id: '',
+    cost_center: '',
+    profit_center: '',
+  });
   const [dayEndForm, setDayEndForm] = useState({
     business_date: new Date().toISOString().slice(0, 10),
     branch_id: '',
@@ -344,11 +472,23 @@ export default function AccountingPage() {
     () => vouchers.filter((voucher) => voucher.voucher_type === 'payment' && voucher.payment_category),
     [vouchers],
   );
+  const contraVouchers = useMemo(
+    () => vouchers.filter((voucher) => voucher.voucher_type === 'contra' && voucher.contra_transfer_type),
+    [vouchers],
+  );
+  const creditNotes = useMemo(
+    () => vouchers.filter((voucher) => voucher.voucher_type === 'credit_note' && voucher.credit_note_type),
+    [vouchers],
+  );
+  const debitNotes = useMemo(
+    () => vouchers.filter((voucher) => voucher.voucher_type === 'debit_note' && voucher.debit_note_type),
+    [vouchers],
+  );
 
   const refresh = useCallback(async () => {
     if (!token || !tenantId) return;
     try {
-      const [dashboardRes, accountsRes, trialRes, ledgerRes, subLedgerRes, vouchersRes, dayEndRes, postingRulesRes, paymentCategoriesRes, receiptOptionsRes] = await Promise.all([
+      const [dashboardRes, accountsRes, trialRes, ledgerRes, subLedgerRes, vouchersRes, dayEndRes, postingRulesRes, paymentCategoriesRes, receiptOptionsRes, contraOptionsRes, creditNoteOptionsRes, debitNoteOptionsRes] = await Promise.all([
         apiClient.getAccountingDashboard(tenantId),
         apiClient.getGlAccounts(tenantId),
         apiClient.getTrialBalance(tenantId),
@@ -359,6 +499,9 @@ export default function AccountingPage() {
         apiClient.getPostingRules(tenantId),
         apiClient.getPaymentVoucherCategories(),
         apiClient.getReceiptVoucherOptions(),
+        apiClient.getContraVoucherOptions(),
+        apiClient.getCreditNoteOptions(),
+        apiClient.getDebitNoteOptions(),
       ]);
       setDashboard(dashboardRes.data);
       setAccounts(accountsRes.data || []);
@@ -376,6 +519,9 @@ export default function AccountingPage() {
       setPostingRules(postingRulesRes.data || []);
       setPaymentVoucherCategories(paymentCategoriesRes.data.items || defaultPaymentVoucherCategories);
       setReceiptVoucherOptions(receiptOptionsRes.data || defaultReceiptVoucherOptions);
+      setContraVoucherOptions(contraOptionsRes.data || defaultContraVoucherOptions);
+      setCreditNoteOptions(creditNoteOptionsRes.data || defaultCreditNoteOptions);
+      setDebitNoteOptions(debitNoteOptionsRes.data || defaultDebitNoteOptions);
     } catch (error) {
       setMessage(errorText(error, 'Unable to load accounting workspace.'));
     }
@@ -422,6 +568,15 @@ export default function AccountingPage() {
     paymentVoucherForm.payee_name.trim() &&
     paymentVoucherForm.payment_category &&
     (!paymentVoucherNeedsReference || paymentVoucherForm.payment_reference.trim());
+  const contraVoucherAmount = Number(contraVoucherForm.amount || 0);
+  const contraTransfer = contraVoucherOptions.transfer_types.find((transfer) => transfer.key === contraVoucherForm.transfer_type) || contraVoucherOptions.transfer_types[0];
+  const canCreateContraVoucher = contraVoucherAmount > 0 && contraVoucherForm.transfer_type;
+  const creditNoteAmount = Number(creditNoteForm.amount || 0);
+  const creditNoteType = creditNoteOptions.credit_note_types.find((noteType) => noteType.key === creditNoteForm.credit_note_type) || creditNoteOptions.credit_note_types[0];
+  const canCreateCreditNote = creditNoteAmount > 0 && creditNoteForm.credit_note_type && creditNoteForm.customer_name.trim();
+  const debitNoteAmount = Number(debitNoteForm.amount || 0);
+  const debitNoteType = debitNoteOptions.debit_note_types.find((noteType) => noteType.key === debitNoteForm.debit_note_type) || debitNoteOptions.debit_note_types[0];
+  const canCreateDebitNote = debitNoteAmount > 0 && debitNoteForm.debit_note_type && debitNoteForm.customer_name.trim();
   const canPost = postingForm.debit_account_id && postingForm.credit_account_id && amount > 0;
   const canCreateVoucher = voucherForm.description && voucherBalanced && voucherLinesComplete && paymentModeValid && paymentReferenceValid;
 
@@ -1352,6 +1507,776 @@ export default function AccountingPage() {
                       {paymentVouchers.length === 0 && (
                         <tr>
                           <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">No payment vouchers yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'contraVoucher' && (
+            <div className="mt-5 grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+              <form
+                className="grid gap-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  runAction(
+                    'contra-voucher',
+                    async () => {
+                      await apiClient.createContraVoucher({
+                        tenant_id: tenantId,
+                        transfer_type: contraVoucherForm.transfer_type,
+                        amount: contraVoucherAmount,
+                        description: contraVoucherForm.description || undefined,
+                        reference: contraVoucherForm.reference || undefined,
+                        transfer_reference: contraVoucherForm.transfer_reference || undefined,
+                        voucher_date: contraVoucherForm.voucher_date,
+                        branch_id: contraVoucherForm.branch_id || undefined,
+                        source_location: contraVoucherForm.source_location || undefined,
+                        destination_location: contraVoucherForm.destination_location || undefined,
+                        transfer_details: contraVoucherForm.transfer_note ? { note: contraVoucherForm.transfer_note } : undefined,
+                        created_by: user?.username || 'system',
+                        debit_account_id: contraVoucherForm.debit_account_id || undefined,
+                        credit_account_id: contraVoucherForm.credit_account_id || undefined,
+                        cost_center: contraVoucherForm.cost_center || undefined,
+                        profit_center: contraVoucherForm.profit_center || undefined,
+                      });
+                      setContraVoucherForm({
+                        transfer_type: contraVoucherForm.transfer_type,
+                        amount: '',
+                        description: '',
+                        reference: '',
+                        transfer_reference: '',
+                        voucher_date: new Date().toISOString().slice(0, 10),
+                        branch_id: '',
+                        source_location: '',
+                        destination_location: '',
+                        transfer_note: '',
+                        debit_account_id: '',
+                        credit_account_id: '',
+                        cost_center: '',
+                        profit_center: '',
+                      });
+                    },
+                    'Contra voucher created.',
+                  );
+                }}
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase text-blue-700">Module 9</p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-950">Contra Voucher</h2>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {contraVoucherOptions.transfer_types.map((transfer) => (
+                    <button
+                      key={transfer.key}
+                      type="button"
+                      onClick={() => setContraVoucherForm({ ...contraVoucherForm, transfer_type: transfer.key })}
+                      className={`rounded-md border px-3 py-2 text-left text-sm font-semibold ${
+                        contraVoucherForm.transfer_type === transfer.key
+                          ? 'border-blue-600 bg-blue-50 text-blue-800'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
+                      }`}
+                    >
+                      <span>{transfer.label}</span>
+                      <span className="mt-1 block text-xs font-normal text-slate-500">
+                        Dr {transfer.debit_account_code} / Cr {transfer.credit_account_code}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Amount"
+                    value={contraVoucherForm.amount}
+                    onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, amount: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="date"
+                    value={contraVoucherForm.voucher_date}
+                    onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, voucher_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Reference"
+                    value={contraVoucherForm.reference}
+                    onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, reference: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Transfer reference"
+                    value={contraVoucherForm.transfer_reference}
+                    onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, transfer_reference: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder={`Source (${contraTransfer?.source_label || 'source'})`}
+                    value={contraVoucherForm.source_location}
+                    onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, source_location: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder={`Destination (${contraTransfer?.destination_label || 'destination'})`}
+                    value={contraVoucherForm.destination_location}
+                    onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, destination_location: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Branch ID"
+                    value={contraVoucherForm.branch_id}
+                    onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, branch_id: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Description"
+                    value={contraVoucherForm.description}
+                    onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, description: e.target.value })}
+                  />
+                </div>
+
+                <input
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Transfer note"
+                  value={contraVoucherForm.transfer_note}
+                  onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, transfer_note: e.target.value })}
+                />
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-900">GL Posting</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={contraVoucherForm.debit_account_id}
+                      onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, debit_account_id: e.target.value })}
+                    >
+                      <option value="">Debit: {contraTransfer?.debit_account_code || 'transfer default'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={contraVoucherForm.credit_account_id}
+                      onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, credit_account_id: e.target.value })}
+                    >
+                      <option value="">Credit: {contraTransfer?.credit_account_code || 'transfer default'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Cost center"
+                      value={contraVoucherForm.cost_center}
+                      onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, cost_center: e.target.value })}
+                    />
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Profit center"
+                      value={contraVoucherForm.profit_center}
+                      onChange={(e) => setContraVoucherForm({ ...contraVoucherForm, profit_center: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  disabled={!!busyAction || !canCreateContraVoucher}
+                  className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {busyAction === 'contra-voucher' ? 'Saving...' : 'Create Contra Voucher'}
+                </button>
+              </form>
+
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Draft/Review</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{contraVouchers.filter((item) => ['draft', 'verified', 'approved'].includes(item.status)).length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Posted</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{contraVouchers.filter((item) => item.status === 'posted').length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Total</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{money(contraVouchers.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</dd>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[860px] text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-slate-500">
+                        <th className="px-3 py-2">Voucher</th>
+                        <th className="px-3 py-2">Transfer</th>
+                        <th className="px-3 py-2">Route</th>
+                        <th className="px-3 py-2 text-right">Amount</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contraVouchers.map((voucher) => (
+                        <tr key={voucher.id} className="border-b border-slate-100">
+                          <td className="px-3 py-2">
+                            <p className="font-medium text-slate-900">{voucher.voucher_number}</p>
+                            <p className="text-xs text-slate-500">{voucher.reference || voucher.transfer_reference || 'No reference'}</p>
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {contraVoucherOptions.transfer_types.find((transfer) => transfer.key === voucher.contra_transfer_type)?.label || voucher.contra_transfer_type}
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {(voucher.source_location || 'Source')} to {(voucher.destination_location || 'Destination')}
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-900">{money(Number(voucher.amount || 0))}</td>
+                          <td className="px-3 py-2 text-slate-700">{voucher.status}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap gap-2">
+                              {voucher.status === 'draft' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('verify-contra', () => apiClient.verifyVoucher(voucher.id, tenantId, user?.username), 'Contra voucher verified.')}>Verify</button>}
+                              {voucher.status === 'verified' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('approve-contra', () => apiClient.approveVoucher(voucher.id, tenantId, user?.username), 'Contra voucher approved.')}>Approve</button>}
+                              {voucher.status === 'approved' && <button className="rounded-md bg-blue-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('post-contra', () => apiClient.postVoucher(voucher.id, tenantId, user?.username), 'Contra voucher posted.')}>Post</button>}
+                              {voucher.status === 'posted' && <button className="rounded-md bg-rose-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('reverse-contra', () => apiClient.reverseVoucher(voucher.id, tenantId, user?.username), 'Contra voucher reversed.')}>Reverse</button>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {contraVouchers.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">No contra vouchers yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'creditNote' && (
+            <div className="mt-5 grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+              <form
+                className="grid gap-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  runAction(
+                    'credit-note',
+                    async () => {
+                      await apiClient.createCreditNote({
+                        tenant_id: tenantId,
+                        credit_note_type: creditNoteForm.credit_note_type,
+                        amount: creditNoteAmount,
+                        customer_name: creditNoteForm.customer_name,
+                        customer_id: creditNoteForm.customer_id || undefined,
+                        description: creditNoteForm.description || undefined,
+                        reference: creditNoteForm.reference || undefined,
+                        credit_note_reference: creditNoteForm.credit_note_reference || undefined,
+                        voucher_date: creditNoteForm.voucher_date,
+                        branch_id: creditNoteForm.branch_id || undefined,
+                        credit_note_details: creditNoteForm.credit_note_note ? { note: creditNoteForm.credit_note_note } : undefined,
+                        created_by: user?.username || 'system',
+                        debit_account_id: creditNoteForm.debit_account_id || undefined,
+                        credit_account_id: creditNoteForm.credit_account_id || undefined,
+                        cost_center: creditNoteForm.cost_center || undefined,
+                        profit_center: creditNoteForm.profit_center || undefined,
+                      });
+                      setCreditNoteForm({
+                        credit_note_type: creditNoteForm.credit_note_type,
+                        amount: '',
+                        customer_name: '',
+                        customer_id: '',
+                        description: '',
+                        reference: '',
+                        credit_note_reference: '',
+                        voucher_date: new Date().toISOString().slice(0, 10),
+                        branch_id: '',
+                        credit_note_note: '',
+                        debit_account_id: '',
+                        credit_account_id: '',
+                        cost_center: '',
+                        profit_center: '',
+                      });
+                    },
+                    'Credit note created.',
+                  );
+                }}
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase text-blue-700">Module 10</p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-950">Credit Note</h2>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {creditNoteOptions.credit_note_types.map((noteType) => (
+                    <button
+                      key={noteType.key}
+                      type="button"
+                      onClick={() => setCreditNoteForm({ ...creditNoteForm, credit_note_type: noteType.key })}
+                      className={`rounded-md border px-3 py-2 text-left text-sm font-semibold ${
+                        creditNoteForm.credit_note_type === noteType.key
+                          ? 'border-blue-600 bg-blue-50 text-blue-800'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
+                      }`}
+                    >
+                      <span>{noteType.label}</span>
+                      <span className="mt-1 block text-xs font-normal text-slate-500">
+                        Dr {noteType.debit_account_code} / Cr {noteType.credit_account_code}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Amount"
+                    value={creditNoteForm.amount}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, amount: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="date"
+                    value={creditNoteForm.voucher_date}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, voucher_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Customer name"
+                    value={creditNoteForm.customer_name}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, customer_name: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Customer ID"
+                    value={creditNoteForm.customer_id}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, customer_id: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Reference"
+                    value={creditNoteForm.reference}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, reference: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Credit note reference"
+                    value={creditNoteForm.credit_note_reference}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, credit_note_reference: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Branch ID"
+                    value={creditNoteForm.branch_id}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, branch_id: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Description"
+                    value={creditNoteForm.description}
+                    onChange={(e) => setCreditNoteForm({ ...creditNoteForm, description: e.target.value })}
+                  />
+                </div>
+
+                <input
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Credit note note"
+                  value={creditNoteForm.credit_note_note}
+                  onChange={(e) => setCreditNoteForm({ ...creditNoteForm, credit_note_note: e.target.value })}
+                />
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-900">GL Posting</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={creditNoteForm.debit_account_id}
+                      onChange={(e) => setCreditNoteForm({ ...creditNoteForm, debit_account_id: e.target.value })}
+                    >
+                      <option value="">Debit: {creditNoteType?.debit_account_code || 'credit note default'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={creditNoteForm.credit_account_id}
+                      onChange={(e) => setCreditNoteForm({ ...creditNoteForm, credit_account_id: e.target.value })}
+                    >
+                      <option value="">Credit: {creditNoteType?.credit_account_code || 'credit note default'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Cost center"
+                      value={creditNoteForm.cost_center}
+                      onChange={(e) => setCreditNoteForm({ ...creditNoteForm, cost_center: e.target.value })}
+                    />
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Profit center"
+                      value={creditNoteForm.profit_center}
+                      onChange={(e) => setCreditNoteForm({ ...creditNoteForm, profit_center: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  disabled={!!busyAction || !canCreateCreditNote}
+                  className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {busyAction === 'credit-note' ? 'Saving...' : 'Create Credit Note'}
+                </button>
+              </form>
+
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Draft/Review</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{creditNotes.filter((item) => ['draft', 'verified', 'approved'].includes(item.status)).length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Posted</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{creditNotes.filter((item) => item.status === 'posted').length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Total</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{money(creditNotes.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</dd>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[860px] text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-slate-500">
+                        <th className="px-3 py-2">Voucher</th>
+                        <th className="px-3 py-2">Type</th>
+                        <th className="px-3 py-2">Customer</th>
+                        <th className="px-3 py-2 text-right">Amount</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {creditNotes.map((voucher) => (
+                        <tr key={voucher.id} className="border-b border-slate-100">
+                          <td className="px-3 py-2">
+                            <p className="font-medium text-slate-900">{voucher.voucher_number}</p>
+                            <p className="text-xs text-slate-500">{voucher.reference || voucher.credit_note_reference || 'No reference'}</p>
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {creditNoteOptions.credit_note_types.find((noteType) => noteType.key === voucher.credit_note_type)?.label || voucher.credit_note_type}
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            <p>{voucher.customer_name || 'Customer'}</p>
+                            <p className="text-xs text-slate-500">{voucher.customer_id || 'No customer ID'}</p>
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-900">{money(Number(voucher.amount || 0))}</td>
+                          <td className="px-3 py-2 text-slate-700">{voucher.status}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap gap-2">
+                              {voucher.status === 'draft' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('verify-credit-note', () => apiClient.verifyVoucher(voucher.id, tenantId, user?.username), 'Credit note verified.')}>Verify</button>}
+                              {voucher.status === 'verified' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('approve-credit-note', () => apiClient.approveVoucher(voucher.id, tenantId, user?.username), 'Credit note approved.')}>Approve</button>}
+                              {voucher.status === 'approved' && <button className="rounded-md bg-blue-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('post-credit-note', () => apiClient.postVoucher(voucher.id, tenantId, user?.username), 'Credit note posted.')}>Post</button>}
+                              {voucher.status === 'posted' && <button className="rounded-md bg-rose-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('reverse-credit-note', () => apiClient.reverseVoucher(voucher.id, tenantId, user?.username), 'Credit note reversed.')}>Reverse</button>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {creditNotes.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">No credit notes yet.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'debitNote' && (
+            <div className="mt-5 grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+              <form
+                className="grid gap-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  runAction(
+                    'debit-note',
+                    async () => {
+                      await apiClient.createDebitNote({
+                        tenant_id: tenantId,
+                        debit_note_type: debitNoteForm.debit_note_type,
+                        amount: debitNoteAmount,
+                        customer_name: debitNoteForm.customer_name,
+                        customer_id: debitNoteForm.customer_id || undefined,
+                        description: debitNoteForm.description || undefined,
+                        reference: debitNoteForm.reference || undefined,
+                        debit_note_reference: debitNoteForm.debit_note_reference || undefined,
+                        voucher_date: debitNoteForm.voucher_date,
+                        branch_id: debitNoteForm.branch_id || undefined,
+                        debit_note_details: debitNoteForm.debit_note_note ? { note: debitNoteForm.debit_note_note } : undefined,
+                        created_by: user?.username || 'system',
+                        debit_account_id: debitNoteForm.debit_account_id || undefined,
+                        credit_account_id: debitNoteForm.credit_account_id || undefined,
+                        cost_center: debitNoteForm.cost_center || undefined,
+                        profit_center: debitNoteForm.profit_center || undefined,
+                      });
+                      setDebitNoteForm({
+                        debit_note_type: debitNoteForm.debit_note_type,
+                        amount: '',
+                        customer_name: '',
+                        customer_id: '',
+                        description: '',
+                        reference: '',
+                        debit_note_reference: '',
+                        voucher_date: new Date().toISOString().slice(0, 10),
+                        branch_id: '',
+                        debit_note_note: '',
+                        debit_account_id: '',
+                        credit_account_id: '',
+                        cost_center: '',
+                        profit_center: '',
+                      });
+                    },
+                    'Debit note created.',
+                  );
+                }}
+              >
+                <div>
+                  <p className="text-xs font-semibold uppercase text-blue-700">Module 11</p>
+                  <h2 className="mt-1 text-lg font-semibold text-slate-950">Debit Note</h2>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {debitNoteOptions.debit_note_types.map((noteType) => (
+                    <button
+                      key={noteType.key}
+                      type="button"
+                      onClick={() => setDebitNoteForm({ ...debitNoteForm, debit_note_type: noteType.key })}
+                      className={`rounded-md border px-3 py-2 text-left text-sm font-semibold ${
+                        debitNoteForm.debit_note_type === noteType.key
+                          ? 'border-blue-600 bg-blue-50 text-blue-800'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
+                      }`}
+                    >
+                      <span>{noteType.label}</span>
+                      <span className="mt-1 block text-xs font-normal text-slate-500">
+                        Dr {noteType.debit_account_code} / Cr {noteType.credit_account_code}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Amount"
+                    value={debitNoteForm.amount}
+                    onChange={(e) => setDebitNoteForm({ ...debitNoteForm, amount: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    type="date"
+                    value={debitNoteForm.voucher_date}
+                    onChange={(e) => setDebitNoteForm({ ...debitNoteForm, voucher_date: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Customer name"
+                    value={debitNoteForm.customer_name}
+                    onChange={(e) => setDebitNoteForm({ ...debitNoteForm, customer_name: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Customer ID"
+                    value={debitNoteForm.customer_id}
+                    onChange={(e) => setDebitNoteForm({ ...debitNoteForm, customer_id: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Reference"
+                    value={debitNoteForm.reference}
+                    onChange={(e) => setDebitNoteForm({ ...debitNoteForm, reference: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Debit note reference"
+                    value={debitNoteForm.debit_note_reference}
+                    onChange={(e) => setDebitNoteForm({ ...debitNoteForm, debit_note_reference: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Branch ID"
+                    value={debitNoteForm.branch_id}
+                    onChange={(e) => setDebitNoteForm({ ...debitNoteForm, branch_id: e.target.value })}
+                  />
+                  <input
+                    className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                    placeholder="Description"
+                    value={debitNoteForm.description}
+                    onChange={(e) => setDebitNoteForm({ ...debitNoteForm, description: e.target.value })}
+                  />
+                </div>
+
+                <input
+                  className="h-10 rounded-md border border-slate-300 px-3 text-sm"
+                  placeholder="Debit note note"
+                  value={debitNoteForm.debit_note_note}
+                  onChange={(e) => setDebitNoteForm({ ...debitNoteForm, debit_note_note: e.target.value })}
+                />
+
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-sm font-semibold text-slate-900">GL Posting</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={debitNoteForm.debit_account_id}
+                      onChange={(e) => setDebitNoteForm({ ...debitNoteForm, debit_account_id: e.target.value })}
+                    >
+                      <option value="">Debit: {debitNoteType?.debit_account_code || 'debit note default'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      value={debitNoteForm.credit_account_id}
+                      onChange={(e) => setDebitNoteForm({ ...debitNoteForm, credit_account_id: e.target.value })}
+                    >
+                      <option value="">Credit: {debitNoteType?.credit_account_code || 'debit note default'}</option>
+                      {selectableAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>{accountLabel(account)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Cost center"
+                      value={debitNoteForm.cost_center}
+                      onChange={(e) => setDebitNoteForm({ ...debitNoteForm, cost_center: e.target.value })}
+                    />
+                    <input
+                      className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                      placeholder="Profit center"
+                      value={debitNoteForm.profit_center}
+                      onChange={(e) => setDebitNoteForm({ ...debitNoteForm, profit_center: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  disabled={!!busyAction || !canCreateDebitNote}
+                  className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {busyAction === 'debit-note' ? 'Saving...' : 'Create Debit Note'}
+                </button>
+              </form>
+
+              <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Draft/Review</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{debitNotes.filter((item) => ['draft', 'verified', 'approved'].includes(item.status)).length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Posted</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{debitNotes.filter((item) => item.status === 'posted').length}</dd>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <dt className="text-xs font-semibold uppercase text-slate-500">Total</dt>
+                    <dd className="mt-1 text-2xl font-bold text-slate-950">{money(debitNotes.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</dd>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[860px] text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-left text-slate-500">
+                        <th className="px-3 py-2">Voucher</th>
+                        <th className="px-3 py-2">Type</th>
+                        <th className="px-3 py-2">Customer</th>
+                        <th className="px-3 py-2 text-right">Amount</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {debitNotes.map((voucher) => (
+                        <tr key={voucher.id} className="border-b border-slate-100">
+                          <td className="px-3 py-2">
+                            <p className="font-medium text-slate-900">{voucher.voucher_number}</p>
+                            <p className="text-xs text-slate-500">{voucher.reference || voucher.debit_note_reference || 'No reference'}</p>
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {debitNoteOptions.debit_note_types.find((noteType) => noteType.key === voucher.debit_note_type)?.label || voucher.debit_note_type}
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            <p>{voucher.customer_name || 'Customer'}</p>
+                            <p className="text-xs text-slate-500">{voucher.customer_id || 'No customer ID'}</p>
+                          </td>
+                          <td className="px-3 py-2 text-right text-slate-900">{money(Number(voucher.amount || 0))}</td>
+                          <td className="px-3 py-2 text-slate-700">{voucher.status}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap gap-2">
+                              {voucher.status === 'draft' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('verify-debit-note', () => apiClient.verifyVoucher(voucher.id, tenantId, user?.username), 'Debit note verified.')}>Verify</button>}
+                              {voucher.status === 'verified' && <button className="rounded-md bg-slate-100 px-3 py-1 font-semibold text-slate-700" onClick={() => runAction('approve-debit-note', () => apiClient.approveVoucher(voucher.id, tenantId, user?.username), 'Debit note approved.')}>Approve</button>}
+                              {voucher.status === 'approved' && <button className="rounded-md bg-blue-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('post-debit-note', () => apiClient.postVoucher(voucher.id, tenantId, user?.username), 'Debit note posted.')}>Post</button>}
+                              {voucher.status === 'posted' && <button className="rounded-md bg-rose-600 px-3 py-1 font-semibold text-white" onClick={() => runAction('reverse-debit-note', () => apiClient.reverseVoucher(voucher.id, tenantId, user?.username), 'Debit note reversed.')}>Reverse</button>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {debitNotes.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-8 text-center text-sm text-slate-500">No debit notes yet.</td>
                         </tr>
                       )}
                     </tbody>
