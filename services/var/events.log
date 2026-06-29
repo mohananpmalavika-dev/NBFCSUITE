@@ -299,3 +299,7 @@
 {"ts": "2026-06-29T07:06:54.532549+00:00", "type": "GRADE_CREATED", "payload": {"id": "10a2bd9d-a573-410f-bb85-a0d1808e6e5e", "code": "GMS-TEST-1", "name": "Test Grade 1"}}
 {"ts": "2026-06-29T07:06:54.677834+00:00", "type": "GRADE_CREATED", "payload": {"id": "8a35c7d5-c023-45a0-8839-f7cc2bb00a16", "code": "GMS-TEST-2", "name": "Test Grade 2"}}
 {"ts": "2026-06-29T07:11:24.754594+00:00", "type": "DESIGNATION_CREATED", "payload": {"id": "362d5908-93ea-44d2-bea6-7ea52b71a2b5", "code": "DES-TEST-1", "name": "Test Designation 1"}}
+{"ts": "2026-06-29T08:03:02.714720+00:00", "type": "COST_CENTER_CREATED", "payload": {"id": "70e1ba35-c2be-4b4b-8679-5ad72a1f0122", "code": "CC-TEST-655345f2", "name": "HR Cost"}}
+{"ts": "2026-06-29T08:03:02.876149+00:00", "type": "PROFIT_CENTER_CREATED", "payload": {"id": "22d76141-ade1-4c0d-b22f-fac13367dd35", "code": "PC-TEST-acc97611", "name": "Gold Loan"}}
+{"ts": "2026-06-29T08:03:03.007450+00:00", "type": "INTERNAL_ORDER_OPENED", "payload": {"id": "b0d77b80-3ac7-4385-a37d-3ee83ca593c8", "status": "draft"}}
+{"ts": "2026-06-29T08:03:03.075339+00:00", "type": "BUDGET_CREATED", "payload": {"id": "7f349e07-28e1-4dc2-951c-c7377414bd30"}}

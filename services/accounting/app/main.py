@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.orm import sessionmaker, declarative_base, Session, relationship
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Any
 from uuid import uuid4
 import ast
@@ -331,6 +331,41 @@ class PostingExecutionLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class AccountingEvent(Base):
+    __tablename__ = "accounting_events"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    event_type = Column(String, index=True, nullable=False)
+    source_module = Column(String, index=True, nullable=False)
+    reference_id = Column(String, index=True, nullable=False)
+    reference_number = Column(String, nullable=True, index=True)
+    business_date = Column(DateTime, nullable=False, index=True)
+    currency = Column(String, default="INR")
+    amount = Column(Float, nullable=True)
+    priority = Column(String, default="normal", index=True)
+    status = Column(String, default="created", index=True)
+    queue_status = Column(String, default="normal_queue", index=True)
+    validation_status = Column(String, default="pending", index=True)
+    validation_result = Column(JSON, nullable=True)
+    dimensions = Column(JSON, nullable=True)
+    payload = Column(JSON, nullable=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    version = Column(Integer, default=1)
+    retry_count = Column(Integer, default=0)
+    next_retry_at = Column(DateTime, nullable=True)
+    dead_letter_reason = Column(String, nullable=True)
+    posting_rule_id = Column(String, ForeignKey("posting_rules.id"), nullable=True)
+    posting_execution_id = Column(String, ForeignKey("posting_execution_logs.id"), nullable=True)
+    journal_id = Column(String, ForeignKey("journal_entries.id"), nullable=True)
+    processing_time_ms = Column(Float, default=0.0)
+    created_by = Column(String, nullable=True)
+    approved_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+    posted_at = Column(DateTime, nullable=True)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
@@ -364,6 +399,28 @@ class AccountingPeriod(Base):
     unlock_requested_by = Column(String, nullable=True)
     lock_reason = Column(String, nullable=True)
     unlock_reason = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class FinancialYear(Base):
+    __tablename__ = "financial_years"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "year_code", name="uq_financial_years_tenant_code"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    year_code = Column(String, index=True, nullable=False)
+    description = Column(String, nullable=True)
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
+    calendar_type = Column(String, default="fiscal")
+    status = Column(String, default="draft", index=True)
+    calendars = Column(JSON, nullable=True)
+    close_schedule = Column(JSON, nullable=True)
+    created_by = Column(String, nullable=True)
+    activated_by = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 
@@ -882,7 +939,53 @@ class AccountingPeriodCreate(BaseModel):
     performed_by: Optional[str] = None
 
 
+class FinancialYearCreate(BaseModel):
+    tenant_id: str
+    year_code: str
+    description: Optional[str] = None
+    start_date: datetime
+    end_date: datetime
+    calendar_type: Optional[str] = "fiscal"
+    status: Optional[str] = "draft"
+    calendars: Optional[List[str]] = None
+    close_schedule: Optional[dict] = None
+    generate_periods: Optional[str] = "true"
+    performed_by: Optional[str] = None
+
+
 class AccountingPeriodActionRequest(BaseModel):
+    tenant_id: str
+    performed_by: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class CalendarCloseExecutionRequest(BaseModel):
+    tenant_id: str
+    financial_year: Optional[str] = None
+    period_id: Optional[str] = None
+    business_date: Optional[datetime] = None
+    branch_id: Optional[str] = None
+    performed_by: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class AccountingEventCreate(BaseModel):
+    tenant_id: str
+    event_type: str
+    source_module: str
+    reference_id: str
+    reference_number: Optional[str] = None
+    business_date: Optional[datetime] = None
+    currency: Optional[str] = "INR"
+    amount: Optional[float] = None
+    priority: Optional[str] = "normal"
+    dimensions: Optional[dict] = None
+    payload: Optional[dict] = None
+    metadata: Optional[dict] = None
+    created_by: Optional[str] = None
+
+
+class AccountingEventActionRequest(BaseModel):
     tenant_id: str
     performed_by: Optional[str] = None
     reason: Optional[str] = None
@@ -1610,6 +1713,378 @@ def _period_response(period: AccountingPeriod) -> dict:
     }
 
 
+def _financial_year_response(year: FinancialYear) -> dict:
+    return {
+        "id": year.id,
+        "tenant_id": year.tenant_id,
+        "year_code": year.year_code,
+        "description": year.description,
+        "start_date": year.start_date,
+        "end_date": year.end_date,
+        "calendar_type": year.calendar_type,
+        "status": year.status,
+        "calendars": year.calendars or [],
+        "close_schedule": year.close_schedule or {},
+        "created_by": year.created_by,
+        "activated_by": year.activated_by,
+        "created_at": year.created_at,
+        "updated_at": year.updated_at,
+    }
+
+
+def _month_period_bounds(start_date: datetime, end_date: datetime) -> list[tuple[datetime, datetime]]:
+    periods: list[tuple[datetime, datetime]] = []
+    cursor = start_date
+    while cursor <= end_date:
+        if cursor.month == 12:
+            next_month = datetime(cursor.year + 1, 1, 1)
+        else:
+            next_month = datetime(cursor.year, cursor.month + 1, 1)
+        period_end = min(next_month - timedelta(seconds=1), end_date)
+        periods.append((cursor, period_end))
+        cursor = next_month
+    return periods
+
+
+def _generate_financial_year_periods(db: Session, year: FinancialYear, performed_by: Optional[str] = None) -> list[AccountingPeriod]:
+    created: list[AccountingPeriod] = []
+    for start, end in _month_period_bounds(year.start_date, year.end_date):
+        period_name = start.strftime("%B %Y")
+        existing = (
+            db.query(AccountingPeriod)
+            .filter(
+                AccountingPeriod.tenant_id == year.tenant_id,
+                AccountingPeriod.financial_year == year.year_code,
+                AccountingPeriod.period_name == period_name,
+            )
+            .first()
+        )
+        if existing:
+            continue
+        status = "open" if start <= datetime.utcnow() <= end else "future"
+        period = AccountingPeriod(
+            id=str(uuid4()),
+            tenant_id=year.tenant_id,
+            financial_year=year.year_code,
+            period_name=period_name,
+            period_start=start,
+            period_end=end,
+            status=status,
+        )
+        db.add(period)
+        _log_audit(db, year.tenant_id, "accounting_period", period.id, "generate", _period_response(period), performed_by)
+        created.append(period)
+    return created
+
+
+def _calendar_period_item(period: AccountingPeriod) -> dict:
+    response = _period_response(period)
+    response["state"] = period.status
+    response["posting_window"] = {
+        "posting_allowed_from": period.period_start,
+        "posting_allowed_to": period.period_end + timedelta(days=5),
+        "late_adjustments_allowed": period.status in {"open", "soft_close"},
+    }
+    response["close_checklist"] = [
+        {"key": "pending_transactions", "label": "Pending Transactions", "status": "passed" if period.status in {"soft_close", "hard_close", "archived", "locked"} else "pending"},
+        {"key": "gl_balanced", "label": "GL Balanced", "status": "passed" if period.status in {"hard_close", "archived", "locked"} else "pending"},
+        {"key": "approval", "label": "Close Approval", "status": "passed" if period.status in {"hard_close", "archived", "locked"} else "pending"},
+    ]
+    response["ai"] = {
+        "close_readiness": 95 if period.status in {"hard_close", "archived", "locked"} else 72 if period.status == "soft_close" else 48,
+        "delay_prediction": "low" if period.status in {"hard_close", "archived", "locked"} else "medium",
+        "recommendation": "Proceed to next close stage." if period.status in {"open", "soft_close"} else "Monitor reopen requests and audit exceptions.",
+    }
+    return response
+
+
+def _calendar_dashboard_payload(tenant_id: str, db: Session) -> dict:
+    now = datetime.utcnow()
+    years = db.query(FinancialYear).filter(FinancialYear.tenant_id == tenant_id).all()
+    periods = db.query(AccountingPeriod).filter(AccountingPeriod.tenant_id == tenant_id).all()
+    closes = db.query(DayEndClose).filter(DayEndClose.tenant_id == tenant_id).all()
+    current_year = next((year for year in years if year.start_date <= now <= year.end_date), None)
+    if not current_year and years:
+        current_year = sorted(years, key=lambda item: item.start_date, reverse=True)[0]
+    closed_states = {"soft_close", "hard_close", "archived", "locked", "closed"}
+    by_status: dict[str, int] = {}
+    for period in periods:
+        by_status[period.status or "unknown"] = by_status.get(period.status or "unknown", 0) + 1
+    hard_closed = sum(1 for period in periods if (period.status or "").lower() in {"hard_close", "archived", "locked", "closed"})
+    health = 0 if not periods else round((hard_closed + sum(1 for period in periods if period.status == "open") * 0.6) / len(periods) * 100)
+    return {
+        "tenant_id": tenant_id,
+        "current_financial_year": _financial_year_response(current_year) if current_year else None,
+        "kpis": {
+            "current_financial_year": current_year.year_code if current_year else "-",
+            "open_periods": sum(1 for period in periods if period.status == "open"),
+            "closed_periods": sum(1 for period in periods if period.status in closed_states),
+            "pending_eod": max(0, sum(1 for period in periods if period.status == "open") - len(closes)),
+            "pending_eom": sum(1 for period in periods if period.status == "open" and period.period_end < now),
+            "pending_eoy": 1 if current_year and current_year.end_date < now and current_year.status != "archived" else 0,
+            "late_journals": db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id, JournalEntry.posting_status != "posted").count(),
+            "calendar_exceptions": sum(1 for period in periods if period.status == "pending_unlock"),
+            "calendar_health": health,
+        },
+        "charts": {
+            "period_status": [{"label": key, "value": value} for key, value in sorted(by_status.items())],
+            "close_progress": [
+                {"label": "Hard Closed", "value": hard_closed},
+                {"label": "In Progress", "value": sum(1 for period in periods if period.status in {"open", "soft_close"})},
+                {"label": "Future", "value": sum(1 for period in periods if period.status == "future")},
+            ],
+            "closing_sla": [
+                {"label": "On Time", "value": max(0, len(closes) - sum(1 for close in closes if close.status != "closed"))},
+                {"label": "Exceptions", "value": sum(1 for close in closes if close.status != "closed")},
+            ],
+        },
+        "summary": {
+            "status": "setup-required" if not years else "attention" if health < 70 else "controlled",
+            "message": "Create a financial year and generate periods." if not years else "Close orchestration is ready for period governance.",
+        },
+    }
+
+
+def _normalize_event_source(event_type: str, source_module: str, payload: Optional[dict] = None) -> tuple[str, str]:
+    payload = payload or {}
+    module = str(source_module or payload.get("sourceModule") or payload.get("source_module") or "").strip().lower().replace(" ", "_")
+    module_aliases = {
+        "loan": "loans",
+        "lending": "loans",
+        "deposit": "deposits",
+        "gold_loan": "gold",
+        "hr": "hrms",
+        "human_resources": "hrms",
+    }
+    module = module_aliases.get(module, module)
+    explicit_event = payload.get("source_event") or payload.get("sourceEvent")
+    if explicit_event:
+        return module, str(explicit_event).strip().lower().replace(" ", "_")
+    normalized_type = str(event_type or "").strip().lower().replace(" ", "_")
+    event_aliases = {
+        "loan_disbursed": "disbursement",
+        "loan_released": "disbursement",
+        "emi_paid": "payment",
+        "loan_payment": "payment",
+        "fd_opened": "deposit",
+        "deposit_opened": "deposit",
+        "currency_purchased": "transaction",
+        "currency_sold": "transaction",
+        "gold_loan_released": "disbursement",
+        "salary_paid": "salary_payment",
+        "salary_processed": "salary_payment",
+    }
+    return module, event_aliases.get(normalized_type, normalized_type)
+
+
+def _accounting_event_response(event: AccountingEvent) -> dict:
+    return {
+        "id": event.id,
+        "event_id": event.id,
+        "tenant_id": event.tenant_id,
+        "event_type": event.event_type,
+        "source_module": event.source_module,
+        "reference_id": event.reference_id,
+        "reference_number": event.reference_number,
+        "business_date": event.business_date,
+        "currency": event.currency,
+        "amount": event.amount,
+        "priority": event.priority,
+        "status": event.status,
+        "queue_status": event.queue_status,
+        "validation_status": event.validation_status,
+        "validation_result": event.validation_result,
+        "dimensions": event.dimensions or {},
+        "payload": event.payload or {},
+        "metadata": event.metadata_json or {},
+        "version": event.version,
+        "retry_count": event.retry_count,
+        "next_retry_at": event.next_retry_at,
+        "dead_letter_reason": event.dead_letter_reason,
+        "posting_rule_id": event.posting_rule_id,
+        "posting_execution_id": event.posting_execution_id,
+        "journal_id": event.journal_id,
+        "processing_time_ms": event.processing_time_ms,
+        "created_by": event.created_by,
+        "approved_by": event.approved_by,
+        "created_at": event.created_at,
+        "updated_at": event.updated_at,
+        "posted_at": event.posted_at,
+    }
+
+
+def _validate_accounting_event(event: AccountingEvent, db: Session) -> dict:
+    started_at = datetime.utcnow()
+    checks: list[dict] = []
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    mandatory_fields = {
+        "event_type": event.event_type,
+        "source_module": event.source_module,
+        "reference_id": event.reference_id,
+        "business_date": event.business_date,
+        "currency": event.currency,
+    }
+    missing = [field for field, value in mandatory_fields.items() if value in {None, ""}]
+    if missing:
+        errors.append(f"Missing mandatory fields: {', '.join(missing)}")
+    checks.append({"key": "mandatory_fields", "label": "Mandatory fields", "status": "failed" if missing else "passed", "detail": ", ".join(missing) if missing else None})
+
+    if event.amount is not None and event.amount < 0:
+        errors.append("amount must not be negative")
+    if event.amount is None:
+        warnings.append("amount is not supplied; posting simulation may be unavailable")
+    checks.append({"key": "amount", "label": "Amount", "status": "failed" if event.amount is not None and event.amount < 0 else "warning" if event.amount is None else "passed"})
+
+    duplicate = (
+        db.query(AccountingEvent)
+        .filter(
+            AccountingEvent.tenant_id == event.tenant_id,
+            AccountingEvent.event_type == event.event_type,
+            AccountingEvent.source_module == event.source_module,
+            AccountingEvent.reference_id == event.reference_id,
+            AccountingEvent.id != event.id,
+            AccountingEvent.status.notin_(["archived", "cancelled"]),
+        )
+        .first()
+    )
+    if duplicate:
+        errors.append(f"Duplicate event risk: {duplicate.id}")
+    checks.append({"key": "duplicate_detection", "label": "Duplicate detection", "status": "failed" if duplicate else "passed", "detail": duplicate.id if duplicate else None})
+
+    try:
+        _assert_period_open(db, event.tenant_id, event.business_date, branch_id=(event.dimensions or {}).get("branch_id"))
+        checks.append({"key": "accounting_period", "label": "Accounting period", "status": "passed"})
+    except HTTPException as exc:
+        errors.append(str(exc.detail))
+        checks.append({"key": "accounting_period", "label": "Accounting period", "status": "failed", "detail": exc.detail})
+
+    dimensions = event.dimensions or {}
+    recommended_dimensions = ["legal_entity", "business_unit", "branch_id", "cost_center", "product_id", "currency"]
+    missing_dimensions = [dimension for dimension in recommended_dimensions if not dimensions.get(dimension) and dimension != "currency"]
+    if missing_dimensions:
+        warnings.append(f"Missing recommended dimensions: {', '.join(missing_dimensions)}")
+    checks.append({"key": "dimensions", "label": "Dimensions", "status": "warning" if missing_dimensions else "passed", "detail": ", ".join(missing_dimensions) if missing_dimensions else None})
+
+    rule_source_module, rule_source_event = _normalize_event_source(event.event_type, event.source_module, event.payload)
+    rule_event_data = {"amount": event.amount or 0.0, **(event.payload or {}), **(event.metadata_json or {})}
+    rule = _find_posting_rule(db, event.tenant_id, rule_source_module, rule_source_event, rule_event_data)
+    default_map_exists = (rule_source_module, rule_source_event) in DEFAULT_POSTING_MAP
+    if not rule and not default_map_exists:
+        errors.append(f"No posting rule or default map for {rule_source_module}.{rule_source_event}")
+    checks.append(
+        {
+            "key": "posting_rule",
+            "label": "Posting rule",
+            "status": "passed" if rule or default_map_exists else "failed",
+            "detail": rule.rule_name if rule else "Default map" if default_map_exists else f"{rule_source_module}.{rule_source_event}",
+        }
+    )
+
+    status = "passed" if not errors else "failed"
+    return {
+        "status": status,
+        "errors": errors,
+        "warnings": warnings,
+        "checks": checks,
+        "normalized_source_module": rule_source_module,
+        "normalized_source_event": rule_source_event,
+        "posting_rule_id": rule.id if rule else None,
+        "processing_time_ms": round((datetime.utcnow() - started_at).total_seconds() * 1000, 2),
+    }
+
+
+def _accounting_events_dashboard_payload(tenant_id: str, db: Session) -> dict:
+    today = datetime.utcnow().date()
+    events = db.query(AccountingEvent).filter(AccountingEvent.tenant_id == tenant_id).all()
+    todays_events = [event for event in events if event.created_at and event.created_at.date() == today]
+    by_module: dict[str, int] = {}
+    by_status: dict[str, int] = {}
+    failure_analysis: dict[str, int] = {}
+    for event in events:
+        by_module[event.source_module] = by_module.get(event.source_module, 0) + 1
+        by_status[event.status] = by_status.get(event.status, 0) + 1
+        if event.dead_letter_reason:
+            key = event.dead_letter_reason.split(":")[0]
+            failure_analysis[key] = failure_analysis.get(key, 0) + 1
+    posted = sum(1 for event in events if event.status in {"posted", "completed"})
+    failed = sum(1 for event in events if event.status in {"failed", "dead_letter"})
+    avg_processing = 0 if not events else round(sum(event.processing_time_ms or 0.0 for event in events) / len(events), 2)
+    success_rate = 100 if not events else round((posted / len(events)) * 100, 1)
+    event_health = 100 if not events else max(0, round(success_rate - (sum(1 for event in events if event.retry_count) / len(events) * 20) - (failed / len(events) * 30)))
+    return {
+        "tenant_id": tenant_id,
+        "kpis": {
+            "todays_events": len(todays_events),
+            "pending": sum(1 for event in events if event.status in {"created", "validated", "queued"}),
+            "failed": failed,
+            "posted": posted,
+            "average_processing_time_ms": avg_processing,
+            "retry_queue": sum(1 for event in events if event.queue_status == "retry_queue"),
+            "dead_letter_queue": sum(1 for event in events if event.queue_status == "dead_letter_queue"),
+            "event_health": event_health,
+        },
+        "charts": {
+            "events_by_module": [{"label": key, "value": value} for key, value in sorted(by_module.items())],
+            "events_by_status": [{"label": key, "value": value} for key, value in sorted(by_status.items())],
+            "success_rate": [{"label": "Success", "value": success_rate}, {"label": "Failed", "value": round(100 - success_rate, 1)}],
+            "failure_analysis": [{"label": key, "value": value} for key, value in sorted(failure_analysis.items())],
+        },
+        "monitoring": {
+            "queue_size": sum(1 for event in events if event.queue_status in {"normal_queue", "priority_queue", "retry_queue"}),
+            "average_latency_ms": avg_processing,
+            "throughput": len(todays_events),
+            "success_percent": success_rate,
+            "error_percent": round(100 - success_rate, 1),
+            "retry_count": sum(event.retry_count or 0 for event in events),
+        },
+        "summary": {
+            "status": "healthy" if event_health >= 90 else "attention" if event_health >= 70 else "critical",
+            "message": "Accounting event intake is operating within tolerance." if event_health >= 70 else "Review failed and dead-letter events before close.",
+        },
+    }
+
+
+def _event_360_payload(event: AccountingEvent) -> dict:
+    response = _accounting_event_response(event)
+    response["business_view"] = {
+        "source_module": event.source_module,
+        "business_transaction": event.event_type,
+        "reference_id": event.reference_id,
+        "customer": (event.dimensions or {}).get("customer_id") or (event.payload or {}).get("customer_id"),
+        "product": (event.dimensions or {}).get("product_id") or (event.payload or {}).get("product_id"),
+    }
+    response["processing_view"] = {
+        "validation_status": event.validation_status,
+        "queue_status": event.queue_status,
+        "retry_count": event.retry_count,
+        "processing_time_ms": event.processing_time_ms,
+        "next_retry_at": event.next_retry_at,
+    }
+    response["financial_view"] = {
+        "posting_rule_id": event.posting_rule_id,
+        "journal_id": event.journal_id,
+        "currency": event.currency,
+        "amount": event.amount,
+        "financial_period": event.business_date.strftime("%B %Y") if event.business_date else None,
+    }
+    response["audit_view"] = {
+        "created_by": event.created_by,
+        "approved_by": event.approved_by,
+        "version": event.version,
+        "created_at": event.created_at,
+        "updated_at": event.updated_at,
+    }
+    response["ai_view"] = {
+        "failure_prediction": "high" if event.queue_status == "dead_letter_queue" else "medium" if event.retry_count else "low",
+        "duplicate_risk": "high" if event.validation_result and any(check.get("key") == "duplicate_detection" and check.get("status") == "failed" for check in event.validation_result.get("checks", [])) else "low",
+        "posting_recommendation": "Fix posting rule and replay." if event.queue_status == "dead_letter_queue" else "Ready for posting pipeline.",
+        "processing_anomaly": "retry_required" if event.retry_count else "none",
+    }
+    return response
+
+
 def _assert_period_open(
     db: Session,
     tenant_id: str,
@@ -1629,7 +2104,7 @@ def _assert_period_open(
         period = query.filter(AccountingPeriod.branch_id.is_(None)).first()
     if not period:
         return
-    if str(period.status or "open").lower() in {"locked", "closed", "pending_unlock"}:
+    if str(period.status or "open").lower() in {"future", "locked", "closed", "pending_unlock", "hard_close", "archived"}:
         raise HTTPException(
             status_code=400,
             detail=f"Accounting period {period.period_name} is {period.status}; posting is blocked",
@@ -4080,6 +4555,373 @@ async def api_gl_account_usage(account_id: str, tenant_id: str = Query(...), db:
             for line in lines[:25]
         ],
     }
+
+
+@app.get("/api/v1/accounting/calendar/dashboard")
+async def api_accounting_calendar_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return _calendar_dashboard_payload(tenant_id, db)
+
+
+@app.get("/api/v1/accounting/calendar/years")
+async def api_list_financial_years(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    years = db.query(FinancialYear).filter(FinancialYear.tenant_id == tenant_id).order_by(FinancialYear.start_date.desc()).all()
+    return {"tenant_id": tenant_id, "items": [_financial_year_response(year) for year in years]}
+
+
+@app.post("/api/v1/accounting/calendar/years")
+async def api_create_financial_year(payload: FinancialYearCreate, db: Session = Depends(get_db)):
+    if payload.end_date <= payload.start_date:
+        raise HTTPException(status_code=400, detail="end_date must be after start_date")
+    existing = db.query(FinancialYear).filter(FinancialYear.tenant_id == payload.tenant_id, FinancialYear.year_code == payload.year_code).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Financial year already exists for tenant")
+    year = FinancialYear(
+        id=str(uuid4()),
+        tenant_id=payload.tenant_id,
+        year_code=payload.year_code,
+        description=payload.description,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        calendar_type=payload.calendar_type or "fiscal",
+        status=payload.status or "draft",
+        calendars=payload.calendars or ["Corporate", "Tax", "Treasury"],
+        close_schedule=payload.close_schedule or {"daily_close": "EOD", "month_close": "M+5", "year_close": "Y+30"},
+        created_by=payload.performed_by,
+        activated_by=payload.performed_by if payload.status == "active" else None,
+    )
+    db.add(year)
+    generated_periods: list[AccountingPeriod] = []
+    if _is_truthy(payload.generate_periods):
+        generated_periods = _generate_financial_year_periods(db, year, payload.performed_by)
+    _log_audit(
+        db,
+        payload.tenant_id,
+        "financial_year",
+        year.id,
+        "create",
+        {"year_code": year.year_code, "generated_periods": len(generated_periods)},
+        payload.performed_by,
+    )
+    db.commit()
+    db.refresh(year)
+    return {
+        "financial_year": _financial_year_response(year),
+        "generated_periods": [_calendar_period_item(period) for period in generated_periods],
+        "generated_count": len(generated_periods),
+    }
+
+
+@app.get("/api/v1/accounting/calendar/periods")
+async def api_list_calendar_periods(
+    tenant_id: str = Query(...),
+    financial_year: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AccountingPeriod).filter(AccountingPeriod.tenant_id == tenant_id)
+    if financial_year:
+        query = query.filter(AccountingPeriod.financial_year == financial_year)
+    if status:
+        query = query.filter(AccountingPeriod.status == status)
+    periods = query.order_by(AccountingPeriod.period_start.asc()).all()
+    return {"tenant_id": tenant_id, "items": [_calendar_period_item(period) for period in periods]}
+
+
+def _calendar_period_action(period_id: str, request: AccountingPeriodActionRequest, db: Session, new_status: str, action: str) -> dict:
+    period = db.query(AccountingPeriod).filter(AccountingPeriod.id == period_id, AccountingPeriod.tenant_id == request.tenant_id).first()
+    if not period:
+        raise HTTPException(status_code=404, detail="Accounting period not found for tenant")
+    period.status = new_status
+    if new_status in {"hard_close", "locked"}:
+        period.locked_by = request.performed_by
+        period.lock_reason = request.reason
+    if action == "reopen":
+        period.unlocked_by = request.performed_by
+        period.unlock_reason = request.reason
+    period.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "accounting_period", period.id, action, _period_response(period), request.performed_by)
+    db.commit()
+    db.refresh(period)
+    return _calendar_period_item(period)
+
+
+@app.post("/api/v1/accounting/calendar/periods/{period_id}/open")
+async def api_open_calendar_period(period_id: str, request: AccountingPeriodActionRequest, db: Session = Depends(get_db)):
+    return _calendar_period_action(period_id, request, db, "open", "open")
+
+
+@app.post("/api/v1/accounting/calendar/periods/{period_id}/soft-close")
+async def api_soft_close_calendar_period(period_id: str, request: AccountingPeriodActionRequest, db: Session = Depends(get_db)):
+    return _calendar_period_action(period_id, request, db, "soft_close", "soft_close")
+
+
+@app.post("/api/v1/accounting/calendar/periods/{period_id}/hard-close")
+async def api_hard_close_calendar_period(period_id: str, request: AccountingPeriodActionRequest, db: Session = Depends(get_db)):
+    return _calendar_period_action(period_id, request, db, "hard_close", "hard_close")
+
+
+@app.post("/api/v1/accounting/calendar/periods/{period_id}/reopen")
+async def api_reopen_calendar_period(period_id: str, request: AccountingPeriodActionRequest, db: Session = Depends(get_db)):
+    return _calendar_period_action(period_id, request, db, "open", "reopen")
+
+
+@app.get("/api/v1/accounting/calendar/eod")
+async def api_calendar_eod(tenant_id: str = Query(...), branch_id: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    query = db.query(DayEndClose).filter(DayEndClose.tenant_id == tenant_id)
+    if branch_id:
+        query = query.filter(DayEndClose.branch_id == branch_id)
+    closes = query.order_by(DayEndClose.business_date.desc()).limit(20).all()
+    return {
+        "tenant_id": tenant_id,
+        "branch_id": branch_id,
+        "business_day": {
+            "date": datetime.utcnow().date().isoformat(),
+            "status": "closed" if closes and closes[0].business_date.date() == datetime.utcnow().date() else "open",
+            "lifecycle": ["Open", "Transactions", "Validation", "EOD", "Closed"],
+        },
+        "items": [
+            {
+                "id": close.id,
+                "business_date": close.business_date,
+                "branch_id": close.branch_id,
+                "status": close.status,
+                "is_balanced": close.is_balanced,
+                "closed_by": close.closed_by,
+                "closed_at": close.closed_at,
+                "checks": close.checks,
+            }
+            for close in closes
+        ],
+    }
+
+
+@app.post("/api/v1/accounting/calendar/eod/execute")
+async def api_execute_calendar_eod(request: CalendarCloseExecutionRequest, db: Session = Depends(get_db)):
+    close = await close_day(
+        DayEndCloseRequest(
+            tenant_id=request.tenant_id,
+            business_date=request.business_date or datetime.utcnow(),
+            branch_id=request.branch_id,
+            closed_by=request.performed_by,
+        ),
+        db,
+    )
+    return {"event": "EOD_COMPLETED", "close": close}
+
+
+@app.post("/api/v1/accounting/calendar/eom/execute")
+async def api_execute_calendar_eom(request: CalendarCloseExecutionRequest, db: Session = Depends(get_db)):
+    if not request.period_id:
+        raise HTTPException(status_code=400, detail="period_id is required for EOM execution")
+    period = _calendar_period_action(
+        request.period_id,
+        AccountingPeriodActionRequest(tenant_id=request.tenant_id, performed_by=request.performed_by, reason=request.reason or "EOM close"),
+        db,
+        "hard_close",
+        "eom_execute",
+    )
+    return {
+        "event": "EOM_COMPLETED",
+        "period": period,
+        "checklist": ["Interest Accrual", "Depreciation", "Provisioning", "GL Reconciliation", "Trial Balance", "Close Month"],
+    }
+
+
+@app.post("/api/v1/accounting/calendar/eoy/execute")
+async def api_execute_calendar_eoy(request: CalendarCloseExecutionRequest, db: Session = Depends(get_db)):
+    if not request.financial_year:
+        raise HTTPException(status_code=400, detail="financial_year is required for EOY execution")
+    periods = db.query(AccountingPeriod).filter(AccountingPeriod.tenant_id == request.tenant_id, AccountingPeriod.financial_year == request.financial_year).all()
+    closed = 0
+    for period in periods:
+        if period.status != "archived":
+            period.status = "archived"
+            period.locked_by = request.performed_by
+            period.lock_reason = request.reason or "EOY archive"
+            period.updated_at = datetime.utcnow()
+            closed += 1
+    year = db.query(FinancialYear).filter(FinancialYear.tenant_id == request.tenant_id, FinancialYear.year_code == request.financial_year).first()
+    if year:
+        year.status = "archived"
+        year.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "financial_year", request.financial_year, "eoy_execute", {"periods_archived": closed}, request.performed_by)
+    db.commit()
+    return {
+        "event": "EOY_COMPLETED",
+        "financial_year": request.financial_year,
+        "periods_archived": closed,
+        "checklist": ["Close Journals", "Final Trial Balance", "Profit Transfer", "Opening Balance", "Archive"],
+    }
+
+
+@app.post("/api/v1/accounting/events")
+async def api_create_accounting_event(payload: AccountingEventCreate, db: Session = Depends(get_db)):
+    event_payload = payload.payload or {}
+    amount = payload.amount if payload.amount is not None else event_payload.get("amount")
+    event = AccountingEvent(
+        id=str(uuid4()),
+        tenant_id=payload.tenant_id,
+        event_type=payload.event_type.strip().upper(),
+        source_module=payload.source_module.strip(),
+        reference_id=payload.reference_id.strip(),
+        reference_number=payload.reference_number,
+        business_date=payload.business_date or datetime.utcnow(),
+        currency=payload.currency or event_payload.get("currency") or "INR",
+        amount=float(amount) if amount not in {None, ""} else None,
+        priority=(payload.priority or "normal").lower(),
+        status="created",
+        queue_status="priority_queue" if (payload.priority or "normal").lower() in {"high", "urgent", "priority"} else "normal_queue",
+        validation_status="pending",
+        dimensions=payload.dimensions or event_payload.get("dimensions") or {},
+        payload=event_payload,
+        metadata_json=payload.metadata or {},
+        created_by=payload.created_by,
+    )
+    db.add(event)
+    _log_audit(
+        db,
+        payload.tenant_id,
+        "accounting_event",
+        event.id,
+        "create",
+        {"event_type": event.event_type, "source_module": event.source_module, "reference_id": event.reference_id},
+        payload.created_by,
+    )
+    db.commit()
+    db.refresh(event)
+    return _accounting_event_response(event)
+
+
+@app.get("/api/v1/accounting/events")
+async def api_list_accounting_events(
+    tenant_id: str = Query(...),
+    q: Optional[str] = Query(None),
+    source_module: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    queue_status: Optional[str] = Query(None),
+    limit: int = Query(50),
+    offset: int = Query(0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AccountingEvent).filter(AccountingEvent.tenant_id == tenant_id)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (AccountingEvent.event_type.ilike(like))
+            | (AccountingEvent.source_module.ilike(like))
+            | (AccountingEvent.reference_id.ilike(like))
+            | (AccountingEvent.reference_number.ilike(like))
+        )
+    if source_module:
+        query = query.filter(AccountingEvent.source_module == source_module)
+    if status:
+        query = query.filter(AccountingEvent.status == status)
+    if queue_status:
+        query = query.filter(AccountingEvent.queue_status == queue_status)
+    total = query.count()
+    rows = query.order_by(AccountingEvent.created_at.desc()).offset(offset).limit(limit).all()
+    return {"tenant_id": tenant_id, "total": total, "items": [_accounting_event_response(event) for event in rows]}
+
+
+@app.get("/api/v1/accounting/events/dashboard")
+async def api_accounting_events_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return _accounting_events_dashboard_payload(tenant_id, db)
+
+
+@app.get("/api/v1/accounting/events/queue")
+async def api_accounting_events_queue(
+    tenant_id: str = Query(...),
+    queue_status: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(AccountingEvent).filter(AccountingEvent.tenant_id == tenant_id)
+    if queue_status:
+        query = query.filter(AccountingEvent.queue_status == queue_status)
+    else:
+        query = query.filter(AccountingEvent.queue_status.in_(["priority_queue", "normal_queue", "retry_queue", "dead_letter_queue"]))
+    rows = query.order_by(AccountingEvent.priority.desc(), AccountingEvent.created_at.asc()).limit(100).all()
+    counts: dict[str, int] = {}
+    all_events = db.query(AccountingEvent).filter(AccountingEvent.tenant_id == tenant_id).all()
+    for event in all_events:
+        counts[event.queue_status] = counts.get(event.queue_status, 0) + 1
+    return {
+        "tenant_id": tenant_id,
+        "queue_status": queue_status,
+        "counts": counts,
+        "items": [_accounting_event_response(event) for event in rows],
+    }
+
+
+@app.get("/api/v1/accounting/events/{event_id}")
+async def api_get_accounting_event(event_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    event = db.query(AccountingEvent).filter(AccountingEvent.id == event_id, AccountingEvent.tenant_id == tenant_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Accounting event not found for tenant")
+    return _event_360_payload(event)
+
+
+@app.post("/api/v1/accounting/events/{event_id}/validate")
+async def api_validate_accounting_event(event_id: str, request: AccountingEventActionRequest, db: Session = Depends(get_db)):
+    event = db.query(AccountingEvent).filter(AccountingEvent.id == event_id, AccountingEvent.tenant_id == request.tenant_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Accounting event not found for tenant")
+    result = _validate_accounting_event(event, db)
+    event.validation_result = result
+    event.validation_status = result["status"]
+    event.processing_time_ms = result["processing_time_ms"]
+    event.posting_rule_id = result.get("posting_rule_id")
+    event.updated_at = datetime.utcnow()
+    if result["status"] == "passed":
+        event.status = "queued"
+        event.queue_status = "priority_queue" if event.priority in {"high", "urgent", "priority"} else "normal_queue"
+        event.dead_letter_reason = None
+        action = "validate"
+    else:
+        event.status = "failed"
+        event.queue_status = "dead_letter_queue"
+        event.dead_letter_reason = "; ".join(result.get("errors") or ["Validation failed"])
+        action = "validate_failed"
+    _log_audit(db, request.tenant_id, "accounting_event", event.id, action, result, request.performed_by)
+    db.commit()
+    db.refresh(event)
+    return _event_360_payload(event)
+
+
+@app.post("/api/v1/accounting/events/{event_id}/retry")
+async def api_retry_accounting_event(event_id: str, request: AccountingEventActionRequest, db: Session = Depends(get_db)):
+    event = db.query(AccountingEvent).filter(AccountingEvent.id == event_id, AccountingEvent.tenant_id == request.tenant_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Accounting event not found for tenant")
+    intervals = [1, 5, 15, 30]
+    retry_count = (event.retry_count or 0) + 1
+    event.retry_count = retry_count
+    event.next_retry_at = datetime.utcnow() + timedelta(minutes=intervals[min(retry_count - 1, len(intervals) - 1)])
+    event.status = "queued"
+    event.queue_status = "retry_queue"
+    event.validation_status = "pending"
+    event.dead_letter_reason = None
+    event.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "accounting_event", event.id, "retry", {"retry_count": retry_count, "reason": request.reason}, request.performed_by)
+    db.commit()
+    db.refresh(event)
+    return _event_360_payload(event)
+
+
+@app.post("/api/v1/accounting/events/{event_id}/replay")
+async def api_replay_accounting_event(event_id: str, request: AccountingEventActionRequest, db: Session = Depends(get_db)):
+    event = db.query(AccountingEvent).filter(AccountingEvent.id == event_id, AccountingEvent.tenant_id == request.tenant_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Accounting event not found for tenant")
+    event.version = (event.version or 1) + 1
+    event.status = "queued"
+    event.queue_status = "priority_queue" if event.priority in {"high", "urgent", "priority"} else "normal_queue"
+    event.validation_status = "pending"
+    event.dead_letter_reason = None
+    event.updated_at = datetime.utcnow()
+    _log_audit(db, request.tenant_id, "accounting_event", event.id, "replay", {"version": event.version, "reason": request.reason}, request.performed_by)
+    db.commit()
+    db.refresh(event)
+    return _event_360_payload(event)
 
 
 @app.post("/accounting-periods", response_model=AccountingPeriodResponse)

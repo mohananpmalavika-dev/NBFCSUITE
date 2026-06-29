@@ -100,6 +100,8 @@ const navItems = [
   { label: 'Gold Loans', icon: FileText },
   { label: 'Treasury', icon: Compass },
   { label: 'Accounting', icon: FileText, href: '/accounting/chart-of-accounts' },
+  { label: 'Financial Calendar', icon: ClipboardList, href: '/accounting/financial-calendar' },
+  { label: 'Event Engine', icon: Layers, href: '/accounting/event-engine' },
   { label: 'Finance Workspace', icon: ClipboardList, href: '/eom/finance' },
   { label: 'HRMS', icon: ShieldCheck, href: '/eom' },
   { label: 'CRM', icon: Users2 },
@@ -127,7 +129,7 @@ const kpis = [
   { label: 'Avg Turnaround', value: '2.4h', change: 'Fast lane' },
 ];
 
-const favorites = ['Employee Directory', 'Customer 360', 'General Ledger', 'Finance Workspace'];
+const favorites = ['Employee Directory', 'Customer 360', 'General Ledger', 'Financial Calendar', 'Event Engine', 'Finance Workspace'];
 // Add EOM Dashboard favorite
 favorites.unshift('EOM Dashboard');
 const recent = ['Expense Approval', 'Branch 1204', 'Policy Exceptions'];
@@ -661,6 +663,10 @@ export function AppShell({ children }: { children?: ReactNode }) {
                       ? '/eom/finance'
                       : item === 'General Ledger'
                         ? '/accounting/chart-of-accounts'
+                        : item === 'Financial Calendar'
+                          ? '/accounting/financial-calendar'
+                          : item === 'Event Engine'
+                            ? '/accounting/event-engine'
                         : '#';
                 return (
                   <a key={item} href={href} className="block truncate text-sm text-text-inverseMuted">

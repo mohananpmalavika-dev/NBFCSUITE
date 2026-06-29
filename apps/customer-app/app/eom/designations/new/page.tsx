@@ -1,11 +1,12 @@
 "use client";
+
 import React, { useState } from 'react';
 import { createDesignation } from '../designationApi';
 
 export default function NewDesignation() {
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
-  const [status, setStatus] = useState('draft');
+  const [status, setStatus] = useState<'draft' | 'active' | 'inactive'>('draft');
   const [message, setMessage] = useState('');
 
   async function submit(e: React.FormEvent) {
@@ -13,7 +14,7 @@ export default function NewDesignation() {
     try {
       await createDesignation({ code, name, status });
       setMessage('Created');
-    } catch (err) {
+    } catch {
       setMessage('Failed');
     }
   }
@@ -32,7 +33,7 @@ export default function NewDesignation() {
         </div>
         <div>
           <label>Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <select value={status} onChange={(e) => setStatus(e.target.value as any)}>
             <option value="draft">draft</option>
             <option value="active">active</option>
             <option value="inactive">inactive</option>
@@ -44,3 +45,4 @@ export default function NewDesignation() {
     </div>
   );
 }
+

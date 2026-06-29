@@ -14,17 +14,19 @@ export interface Designation {
 }
 
 export async function listDesignations() {
-  const res = await fetch(eomApiUrl('/designations'));
+  const res = await fetch(eomApiUrl('/eom/designations'));
   if (!res.ok) throw new Error('Failed to load designations');
   return res.json();
 }
 
 export async function createDesignation(payload: Partial<Designation>) {
-  const res = await fetch(eomApiUrl('/designations'), {
+  const res = await fetch(eomApiUrl('/eom/designations'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+
   if (!res.ok) throw new Error('Failed to create designation');
   return res.json();
 }
+

@@ -1013,6 +1013,185 @@ async def _run_accounting_test():
         assert approve_unlock_response.status_code == 200
         assert approve_unlock_response.json()["status"] == "open"
 
+        event_response = await client.post(
+            "/api/v1/accounting/events",
+            json={
+                "tenant_id": tenant_id,
+                "event_type": "LOAN_DISBURSED",
+                "source_module": "Loan",
+                "reference_id": "LN-9001",
+                "reference_number": "LD-9001",
+                "business_date": "2026-07-16T00:00:00",
+                "currency": "INR",
+                "amount": 250000,
+                "priority": "high",
+                "dimensions": {"branch_id": "branch-001", "product_id": "gold-loan", "customer_id": "cust-001"},
+                "payload": {"loan_id": "LN-9001", "customer_id": "cust-001", "amount": 250000},
+                "created_by": "loan-service",
+            },
+        )
+        assert event_response.status_code == 200
+        accounting_event = event_response.json()
+        assert accounting_event["status"] == "created"
+        assert accounting_event["queue_status"] == "priority_queue"
+
+        validate_event_response = await client.post(
+            f"/api/v1/accounting/events/{accounting_event['id']}/validate",
+            json={"tenant_id": tenant_id, "performed_by": "event-engine"},
+        )
+        assert validate_event_response.status_code == 200
+        validated_event = validate_event_response.json()
+        assert validated_event["validation_status"] == "passed"
+        assert validated_event["status"] == "queued"
+        assert validated_event["business_view"]["source_module"] == "Loan"
+
+        event_list_response = await client.get(
+            "/api/v1/accounting/events",
+            params={"tenant_id": tenant_id, "source_module": "Loan"},
+        )
+        assert event_list_response.status_code == 200
+        assert event_list_response.json()["total"] >= 1
+
+        event_dashboard_response = await client.get(
+            "/api/v1/accounting/events/dashboard",
+            params={"tenant_id": tenant_id},
+        )
+        assert event_dashboard_response.status_code == 200
+        assert event_dashboard_response.json()["kpis"]["pending"] >= 1
+
+        event_queue_response = await client.get(
+            "/api/v1/accounting/events/queue",
+            params={"tenant_id": tenant_id},
+        )
+        assert event_queue_response.status_code == 200
+        assert any(item["id"] == accounting_event["id"] for item in event_queue_response.json()["items"])
+
+        failed_event_response = await client.post(
+            "/api/v1/accounting/events",
+            json={
+                "tenant_id": tenant_id,
+                "event_type": "PURCHASE_ORDER_APPROVED",
+                "source_module": "Procurement",
+                "reference_id": "PO-FAIL-1",
+                "business_date": "2026-07-17T00:00:00",
+                "currency": "INR",
+                "amount": 1000,
+            },
+        )
+        assert failed_event_response.status_code == 200
+        failed_event = failed_event_response.json()
+        failed_validate_response = await client.post(
+            f"/api/v1/accounting/events/{failed_event['id']}/validate",
+            json={"tenant_id": tenant_id, "performed_by": "event-engine"},
+        )
+        assert failed_validate_response.status_code == 200
+        assert failed_validate_response.json()["queue_status"] == "dead_letter_queue"
+
+        retry_response = await client.post(
+            f"/api/v1/accounting/events/{failed_event['id']}/retry",
+            json={"tenant_id": tenant_id, "performed_by": "finance", "reason": "rule fix pending"},
+        )
+        assert retry_response.status_code == 200
+        assert retry_response.json()["queue_status"] == "retry_queue"
+        assert retry_response.json()["retry_count"] == 1
+
+        replay_response = await client.post(
+            f"/api/v1/accounting/events/{failed_event['id']}/replay",
+            json={"tenant_id": tenant_id, "performed_by": "finance", "reason": "manual replay"},
+        )
+        assert replay_response.status_code == 200
+        assert replay_response.json()["version"] == 2
+
+        financial_year_response = await client.post(
+            "/api/v1/accounting/calendar/years",
+            json={
+                "tenant_id": tenant_id,
+                "year_code": "2028-29",
+                "description": "Fiscal year 2028-29",
+                "start_date": "2028-04-01T00:00:00",
+                "end_date": "2029-03-31T23:59:59",
+                "calendar_type": "fiscal",
+                "status": "active",
+                "calendars": ["Corporate", "Tax", "Treasury"],
+                "performed_by": "tester",
+            },
+        )
+        assert financial_year_response.status_code == 200
+        financial_year = financial_year_response.json()
+        assert financial_year["financial_year"]["year_code"] == "2028-29"
+        assert financial_year["generated_count"] == 12
+
+        calendar_dashboard_response = await client.get(
+            "/api/v1/accounting/calendar/dashboard",
+            params={"tenant_id": tenant_id},
+        )
+        assert calendar_dashboard_response.status_code == 200
+        assert calendar_dashboard_response.json()["kpis"]["open_periods"] >= 1
+
+        years_response = await client.get(
+            "/api/v1/accounting/calendar/years",
+            params={"tenant_id": tenant_id},
+        )
+        assert years_response.status_code == 200
+        assert any(item["year_code"] == "2028-29" for item in years_response.json()["items"])
+
+        periods_response = await client.get(
+            "/api/v1/accounting/calendar/periods",
+            params={"tenant_id": tenant_id, "financial_year": "2028-29"},
+        )
+        assert periods_response.status_code == 200
+        generated_period = periods_response.json()["items"][0]
+        assert generated_period["posting_window"]["late_adjustments_allowed"] is False
+
+        open_response = await client.post(
+            f"/api/v1/accounting/calendar/periods/{generated_period['id']}/open",
+            json={"tenant_id": tenant_id, "performed_by": "finance"},
+        )
+        assert open_response.status_code == 200
+        assert open_response.json()["status"] == "open"
+
+        soft_close_response = await client.post(
+            f"/api/v1/accounting/calendar/periods/{generated_period['id']}/soft-close",
+            json={"tenant_id": tenant_id, "performed_by": "finance"},
+        )
+        assert soft_close_response.status_code == 200
+        assert soft_close_response.json()["status"] == "soft_close"
+
+        eom_response = await client.post(
+            "/api/v1/accounting/calendar/eom/execute",
+            json={"tenant_id": tenant_id, "period_id": generated_period["id"], "performed_by": "finance-head"},
+        )
+        assert eom_response.status_code == 200
+        assert eom_response.json()["event"] == "EOM_COMPLETED"
+        assert eom_response.json()["period"]["status"] == "hard_close"
+
+        reopen_response = await client.post(
+            f"/api/v1/accounting/calendar/periods/{generated_period['id']}/reopen",
+            json={"tenant_id": tenant_id, "performed_by": "cfo", "reason": "late adjustment"},
+        )
+        assert reopen_response.status_code == 200
+        assert reopen_response.json()["status"] == "open"
+
+        eod_response = await client.post(
+            "/api/v1/accounting/calendar/eod/execute",
+            json={
+                "tenant_id": tenant_id,
+                "business_date": "2026-06-27T00:00:00",
+                "branch_id": "branch-fcpm",
+                "performed_by": "tester",
+            },
+        )
+        assert eod_response.status_code == 200
+        assert eod_response.json()["event"] == "EOD_COMPLETED"
+
+        eoy_response = await client.post(
+            "/api/v1/accounting/calendar/eoy/execute",
+            json={"tenant_id": tenant_id, "financial_year": "2028-29", "performed_by": "cfo"},
+        )
+        assert eoy_response.status_code == 200
+        assert eoy_response.json()["event"] == "EOY_COMPLETED"
+        assert eoy_response.json()["periods_archived"] == 12
+
         close_response = await client.post(
             "/day-end/close",
             json={

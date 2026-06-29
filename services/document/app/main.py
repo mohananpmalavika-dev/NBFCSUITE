@@ -114,7 +114,12 @@ class DocumentListResponse(BaseModel):
 
 app = FastAPI(title="document-service", version="0.1.0")
 
+# EDMS core is being implemented incrementally.
+# This module currently holds the legacy “single-table” document implementation.
+# New EDMS routes will be added with /api/v1 prefix while keeping existing routes working.
+
 DOCUMENT_STATUSES = {"pending", "verified", "rejected", "expired", "signed", "active"}
+
 
 
 def get_db() -> Session:

@@ -13,15 +13,18 @@ from .routers import sections
 from .routers import teams
 from .routers import positions
 from .routers import designations
+from .routers import designation_supporting
 from .db import engine
 from . import models, models_legal, models_geography, models_enterprise_master, models_branch, models_department, models_grade
 from . import models_section, models_team, models_position
 from . import models_financial_organization
 from . import models_designation
+from . import models_designation_supporting
 
 
 
 app = FastAPI(title='EOM Service')
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,8 +45,11 @@ models_section.Base.metadata.create_all(bind=engine)
 models_team.Base.metadata.create_all(bind=engine)
 models_position.Base.metadata.create_all(bind=engine)
 models_financial_organization.Base.metadata.create_all(bind=engine)
+models_designation_supporting.Base.metadata.create_all(bind=engine)
 
 app.include_router(enterprise)
+
+
 
 
 app.include_router(brand)
@@ -58,8 +64,10 @@ app.include_router(sections)
 app.include_router(teams)
 app.include_router(positions)
 app.include_router(designations)
+app.include_router(designation_supporting.router)
 from .routers_financial_organization import router as finance_router
 app.include_router(finance_router)
+
 
 
 
