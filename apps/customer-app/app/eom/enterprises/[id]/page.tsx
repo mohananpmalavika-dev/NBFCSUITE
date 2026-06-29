@@ -109,13 +109,18 @@ export default async function EnterpriseDetailPage({ params }: { params: { id: s
             <h2 className="mt-2 text-2xl font-semibold">{enterprise.display_name || enterprise.name}</h2>
             <p className="mt-1 text-sm text-text-secondary">{enterprise.code} · {enterprise.status} · {enterprise.currency_code || 'Currency not set'}</p>
           </div>
-          <div className="rounded-md border border-border-default bg-background-surface p-4 lg:min-w-72">
-            <div className="text-sm text-text-secondary">Enterprise Health</div>
-            <div className="mt-1 text-3xl font-semibold">{health?.score ?? 0}%</div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-background-muted">
-              <div className="h-full bg-primary-500" style={{ width: `${health?.score ?? 0}%` }} />
+          <div className="flex flex-col gap-3">
+            <Link href={`/eom/enterprises/${enterprise.id}/edit`} className="btn btn-secondary w-full text-center sm:w-auto">
+              Edit Enterprise Profile
+            </Link>
+            <div className="rounded-md border border-border-default bg-background-surface p-4 lg:min-w-72">
+              <div className="text-sm text-text-secondary">Enterprise Health</div>
+              <div className="mt-1 text-3xl font-semibold">{health?.score ?? 0}%</div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-background-muted">
+                <div className="h-full bg-primary-500" style={{ width: `${health?.score ?? 0}%` }} />
+              </div>
+              <div className="mt-2 text-sm font-medium capitalize">{health?.status?.replace(/-/g, ' ') || 'setup required'}</div>
             </div>
-            <div className="mt-2 text-sm font-medium capitalize">{health?.status?.replace(/-/g, ' ') || 'setup required'}</div>
           </div>
         </div>
 

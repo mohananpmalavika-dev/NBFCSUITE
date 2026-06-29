@@ -241,8 +241,15 @@ export default function EnterpriseProfileEditPage({ params }: { params: { id: st
       });
 
       await enterpriseApi.updateEnterpriseProfile(id, {
-        ...form,
-        enterprise: undefined as any,
+        branding: form.branding,
+        legal: form.legal,
+        finance: form.finance,
+        localization: form.localization,
+        contact: form.contact,
+        compliance: form.compliance,
+        integrations: form.integrations,
+        documents: form.documents,
+        settings: form.settings,
       });
 
       setSuccess('Enterprise profile updated successfully.');

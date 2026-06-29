@@ -176,11 +176,13 @@ export interface EnterpriseProfileResponse extends EnterpriseProfile {
   };
 }
 
+export type EnterpriseProfilePayload = Omit<EnterpriseProfile, 'enterprise'>;
+
 export const enterpriseApi = {
   getEnterprise: (id: string) => getJson<Enterprise>(`/eom/enterprises/${id}`),
   getEnterpriseProfile: (id: string) => getJson<EnterpriseProfile>(`/eom/enterprises/${id}/profile`),
   patchEnterprise: (id: string, payload: Partial<Enterprise>) => patchJson<Enterprise>(`/eom/enterprises/${id}`, payload, { 'X-User-Roles': 'enterprise.admin' }),
-  updateEnterpriseProfile: (id: string, payload: EnterpriseProfile) => putJson<EnterpriseProfileResponse>(`/eom/enterprises/${id}/profile`, payload, { 'X-User-Roles': 'enterprise.admin' }),
+  updateEnterpriseProfile: (id: string, payload: EnterpriseProfilePayload) => putJson<EnterpriseProfileResponse>(`/eom/enterprises/${id}/profile`, payload, { 'X-User-Roles': 'enterprise.admin' }),
 };
 
 export const financeApi = {
