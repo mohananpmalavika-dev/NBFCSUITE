@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 
 from ..db import SessionLocal
 from .. import models_position
@@ -145,3 +145,97 @@ def set_position_status(position_id: str, status_body: dict, db: Session = Depen
         pass
     publish_event('POSITION_STATUS_CHANGED', {'id': position.id, 'status': new_status})
     return position
+
+
+@router.get('/positions/{position_id}/organization')
+def get_position_organization(position_id: str, db: Session = Depends(get_db)):
+    position = get_position(db, position_id)
+    ancestors = []
+    current = position
+    while current and current.reports_to_position_id:
+        parent = db.query(models_position.Position).filter(models_position.Position.id == current.reports_to_position_id).first()
+        if not parent:
+            break
+        ancestors.append({
+            'id': parent.id,
+            'code': parent.code,
+            'title': parent.title,
+            'reports_to_position_id': parent.reports_to_position_id,
+        })
+        current = parent
+    # return root-first order
+    return {'position_id': position.id, 'ancestors': ancestors[::-1]}
+
+
+@router.get('/positions/{position_id}/successors')
+def get_position_successors(position_id: str, recursive: bool = False, db: Session = Depends(get_db)):
+    position = get_position(db, position_id)
+    results: List[dict] = []
+    stack = [position.id]
+    seen = set()
+    while stack:
+        pid = stack.pop()
+        if pid in seen:
+            continue
+        seen.add(pid)
+        children = db.query(models_position.Position).filter(models_position.Position.reports_to_position_id == pid).all()
+        for c in children:
+            results.append({'id': c.id, 'code': c.code, 'title': c.title, 'status': c.status, 'reports_to_position_id': c.reports_to_position_id})
+            if recursive:
+                stack.append(c.id)
+    return {'position_id': position.id, 'successors': results}
+
+
+@router.get('/positions/{position_id}/health')
+def get_position_health(position_id: str, db: Session = Depends(get_db)):
+    position = get_position(db, position_id)
+    total = 0
+    filled = 0
+    stack = [position.id]
+    seen = set()
+    while stack:
+        pid = stack.pop()
+        if pid in seen:
+            continue
+        seen.add(pid)
+        p = db.query(models_position.Position).filter(models_position.Position.id == pid).first()
+        if not p:
+            continue
+        total += 1
+        if p.status == 'filled':
+            filled += 1
+        children = db.query(models_position.Position).filter(models_position.Position.reports_to_position_id == pid).all()
+        for child in children:
+            stack.append(child.id)
+    health_score = None
+    if total > 0:
+        health_score = filled / total
+    return {'position_id': position.id, 'total_positions': total, 'filled_positions': filled, 'health_score': health_score}
+
+
+@router.get('/positions/{position_id}/budget')
+def get_position_budget(position_id: str, db: Session = Depends(get_db)):
+    position = get_position(db, position_id)
+    open_positions = 0
+    stack = [position.id]
+    seen = set()
+    while stack:
+        pid = stack.pop()
+        if pid in seen:
+            continue
+        seen.add(pid)
+        p = db.query(models_position.Position).filter(models_position.Position.id == pid).first()
+        if not p:
+            continue
+        if p.status == 'open':
+            open_positions += 1
+        children = db.query(models_position.Position).filter(models_position.Position.reports_to_position_id == pid).all()
+        for child in children:
+            stack.append(child.id)
+    # salary budget and vacancy cost are not modeled yet; return placeholders
+    return {
+        'position_id': position.id,
+        'open_positions': open_positions,
+        'salary_budget': None,
+        'vacancy_cost_estimate': None,
+    }

@@ -548,6 +548,12 @@ class GLAccountUpdate(BaseModel):
     metadata: Optional[dict] = None
 
 
+class GLAccountStatusUpdate(BaseModel):
+    tenant_id: str
+    status: str
+    performed_by: Optional[str] = None
+
+
 class COASeedRequest(BaseModel):
     tenant_id: str
     currency: Optional[str] = "INR"
@@ -1757,6 +1763,109 @@ def _build_coa_tree(accounts: list[GLAccount]) -> list[dict]:
         else:
             roots.append(node)
     return roots
+
+
+def _gl_account_api_item(account: GLAccount, child_count: int = 0) -> dict:
+    metadata = account.metadata_json or {}
+    dimensions = metadata.get("dimensions") or []
+    reporting = metadata.get("reporting") or {}
+    tax = metadata.get("tax") or {}
+    product = metadata.get("product") or {}
+    workflow = metadata.get("workflow") or {}
+    security = metadata.get("security") or {}
+    ai = metadata.get("ai") or {}
+    return {
+        "id": account.id,
+        "tenant_id": account.tenant_id,
+        "gl_code": account.account_code,
+        "account_code": account.account_code,
+        "name": account.account_name,
+        "account_name": account.account_name,
+        "short_name": metadata.get("short_name"),
+        "account_type": account.account_type,
+        "category": account.category,
+        "parent_account_id": account.parent_account_id,
+        "posting_allowed": account.posting_allowed,
+        "allow_manual_posting": account.allow_manual_posting,
+        "allow_auto_posting": account.allow_auto_posting,
+        "requires_approval": account.requires_approval,
+        "freeze_status": account.freeze_status,
+        "currency": account.currency,
+        "base_currency": account.base_currency,
+        "normal_balance": account.normal_balance,
+        "opening_balance": account.opening_balance,
+        "balance": account.balance,
+        "financial_year": account.financial_year,
+        "branch_id": account.branch_id,
+        "branch_specific": account.branch_specific,
+        "status": account.status,
+        "child_count": child_count,
+        "dimensions": dimensions,
+        "reporting": reporting,
+        "tax": tax,
+        "product": product,
+        "workflow": workflow,
+        "security": security,
+        "ai": ai,
+        "metadata": metadata,
+        "created_at": account.created_at,
+    }
+
+
+def _coa_child_counts(accounts: list[GLAccount]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for account in accounts:
+        if account.parent_account_id:
+            counts[account.parent_account_id] = counts.get(account.parent_account_id, 0) + 1
+    return counts
+
+
+def _coa_dashboard_payload(tenant_id: str, db: Session) -> dict:
+    accounts = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all()
+    child_counts = _coa_child_counts(accounts)
+    by_type: dict[str, int] = {}
+    by_category: dict[str, int] = {}
+    by_status: dict[str, int] = {}
+    for account in accounts:
+        by_type[account.account_type or "unclassified"] = by_type.get(account.account_type or "unclassified", 0) + 1
+        by_category[account.category or "Uncategorized"] = by_category.get(account.category or "Uncategorized", 0) + 1
+        by_status[account.status or "unknown"] = by_status.get(account.status or "unknown", 0) + 1
+
+    active_accounts = sum(1 for account in accounts if (account.status or "").lower() == "active")
+    posting_accounts = sum(1 for account in accounts if _is_truthy(account.posting_allowed))
+    control_accounts = len(accounts) - posting_accounts
+    parent_accounts = len(child_counts)
+    inactive_accounts = sum(1 for account in accounts if (account.status or "").lower() in {"inactive", "deactivated", "closed"})
+    pending_approvals = sum(1 for account in accounts if (account.status or "").lower() in {"draft", "finance_review", "cfo_review", "approved"})
+
+    complete = 0
+    for account in accounts:
+        if account.category and account.currency and account.account_type and account.normal_balance is not None:
+            complete += 1
+    ai_health = 0 if not accounts else round((complete / len(accounts)) * 100)
+
+    return {
+        "tenant_id": tenant_id,
+        "kpis": {
+            "total_accounts": len(accounts),
+            "active_accounts": active_accounts,
+            "control_accounts": control_accounts,
+            "posting_accounts": posting_accounts,
+            "parent_accounts": parent_accounts,
+            "inactive_accounts": inactive_accounts,
+            "pending_approvals": pending_approvals,
+            "ai_health": ai_health,
+        },
+        "charts": {
+            "accounts_by_type": [{"label": key, "value": value} for key, value in sorted(by_type.items())],
+            "accounts_by_category": [{"label": key, "value": value} for key, value in sorted(by_category.items())],
+            "accounts_by_status": [{"label": key, "value": value} for key, value in sorted(by_status.items())],
+        },
+        "summary": {
+            "status": "setup-required" if len(accounts) < 10 else "attention" if ai_health < 75 else "strong",
+            "message": "Seed or complete account metadata before production posting." if ai_health < 75 else "Chart of accounts metadata is ready for controlled posting.",
+        },
+    }
 
 
 def _validate_double_entry(lines: List[PostingEngineLine]) -> dict:
@@ -3772,6 +3881,205 @@ async def update_gl_account(account_id: str, payload: GLAccountUpdate, tenant_id
     db.commit()
     db.refresh(account)
     return account
+
+
+@app.get("/api/v1/gl/dashboard")
+async def api_gl_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return _coa_dashboard_payload(tenant_id, db)
+
+
+@app.get("/api/v1/gl/accounts")
+async def api_list_gl_accounts(
+    tenant_id: str = Query(...),
+    q: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    account_type: Optional[str] = Query(None),
+    posting_allowed: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    limit: int = Query(50),
+    offset: int = Query(0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (GLAccount.account_code.ilike(like))
+            | (GLAccount.account_name.ilike(like))
+            | (GLAccount.category.ilike(like))
+            | (GLAccount.account_type.ilike(like))
+        )
+    if category:
+        query = query.filter(GLAccount.category == category)
+    if account_type:
+        query = query.filter(GLAccount.account_type == account_type)
+    if posting_allowed:
+        query = query.filter(GLAccount.posting_allowed == posting_allowed)
+    if status:
+        query = query.filter(GLAccount.status == status)
+    total = query.count()
+    rows = query.order_by(GLAccount.account_code).offset(offset).limit(limit).all()
+    all_accounts = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all()
+    child_counts = _coa_child_counts(all_accounts)
+    return {
+        "tenant_id": tenant_id,
+        "total": total,
+        "items": [_gl_account_api_item(account, child_counts.get(account.id, 0)) for account in rows],
+    }
+
+
+@app.post("/api/v1/gl/accounts")
+async def api_create_gl_account(account: GLAccountCreate, db: Session = Depends(get_db)):
+    created = await create_gl_account(account, db)
+    _log_audit(db, account.tenant_id, "gl_account", created.id, "api_create", {"account_code": created.account_code})
+    db.commit()
+    db.refresh(created)
+    child_counts = _coa_child_counts(db.query(GLAccount).filter(GLAccount.tenant_id == account.tenant_id).all())
+    return _gl_account_api_item(created, child_counts.get(created.id, 0))
+
+
+@app.post("/api/v1/gl/accounts/seed-defaults")
+async def api_seed_default_gl_accounts(request: COASeedRequest, db: Session = Depends(get_db)):
+    return await seed_default_gl_accounts(request, db)
+
+
+@app.get("/api/v1/gl/accounts/tree")
+async def api_gl_accounts_tree(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return await gl_account_hierarchy(tenant_id, db)
+
+
+@app.get("/api/v1/gl/accounts/search")
+async def api_search_gl_accounts(
+    tenant_id: str = Query(...),
+    q: str = Query(""),
+    limit: int = Query(20),
+    db: Session = Depends(get_db),
+):
+    query_text = q.lower().strip()
+    query = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id)
+    if query_text:
+        like = f"%{query_text}%"
+        query = query.filter(
+            (GLAccount.account_code.ilike(like))
+            | (GLAccount.account_name.ilike(like))
+            | (GLAccount.category.ilike(like))
+            | (GLAccount.account_type.ilike(like))
+        )
+    rows = query.order_by(GLAccount.account_code).limit(limit).all()
+    child_counts = _coa_child_counts(db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all())
+    return {
+        "tenant_id": tenant_id,
+        "query": q,
+        "items": [_gl_account_api_item(account, child_counts.get(account.id, 0)) for account in rows],
+    }
+
+
+@app.get("/api/v1/gl/accounts/{account_id}")
+async def api_get_gl_account(account_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    account = db.query(GLAccount).filter(GLAccount.id == account_id, GLAccount.tenant_id == tenant_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="GL account not found for tenant")
+    child_counts = _coa_child_counts(db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all())
+    return _gl_account_api_item(account, child_counts.get(account.id, 0))
+
+
+@app.put("/api/v1/gl/accounts/{account_id}")
+async def api_update_gl_account(
+    account_id: str,
+    payload: GLAccountUpdate,
+    tenant_id: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    updated = await update_gl_account(account_id, payload, tenant_id, db)
+    _log_audit(db, tenant_id, "gl_account", updated.id, "api_update", payload.dict(exclude_unset=True))
+    db.commit()
+    db.refresh(updated)
+    child_counts = _coa_child_counts(db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all())
+    return _gl_account_api_item(updated, child_counts.get(updated.id, 0))
+
+
+@app.patch("/api/v1/gl/accounts/{account_id}/status")
+async def api_update_gl_account_status(
+    account_id: str,
+    payload: GLAccountStatusUpdate,
+    db: Session = Depends(get_db),
+):
+    account = db.query(GLAccount).filter(GLAccount.id == account_id, GLAccount.tenant_id == payload.tenant_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="GL account not found for tenant")
+    allowed = {
+        "draft": {"finance_review", "inactive"},
+        "finance_review": {"cfo_review", "draft"},
+        "cfo_review": {"approved", "finance_review"},
+        "approved": {"published", "active"},
+        "published": {"active", "inactive"},
+        "active": {"inactive"},
+        "inactive": {"active"},
+    }
+    current = (account.status or "active").lower()
+    new_status = payload.status.lower()
+    if new_status != current and new_status not in allowed.get(current, set()):
+        raise HTTPException(status_code=400, detail=f"Invalid status transition from {account.status} to {payload.status}")
+    account.status = new_status
+    _log_audit(db, payload.tenant_id, "gl_account", account.id, "status_changed", {"status": new_status}, payload.performed_by)
+    db.commit()
+    db.refresh(account)
+    child_counts = _coa_child_counts(db.query(GLAccount).filter(GLAccount.tenant_id == payload.tenant_id).all())
+    return _gl_account_api_item(account, child_counts.get(account.id, 0))
+
+
+@app.get("/api/v1/gl/accounts/{account_id}/usage")
+async def api_gl_account_usage(account_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    account = db.query(GLAccount).filter(GLAccount.id == account_id, GLAccount.tenant_id == tenant_id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="GL account not found for tenant")
+    lines = (
+        db.query(JournalLine)
+        .join(JournalEntry, JournalLine.journal_entry_id == JournalEntry.id)
+        .filter(JournalEntry.tenant_id == tenant_id, JournalLine.gl_account_id == account_id)
+        .order_by(JournalEntry.entry_date.desc())
+        .limit(100)
+        .all()
+    )
+    entry_ids = [line.journal_entry_id for line in lines]
+    entries = {
+        entry.id: entry
+        for entry in db.query(JournalEntry).filter(JournalEntry.id.in_(entry_ids)).all()
+    } if entry_ids else {}
+    total_debit = round(sum(line.debit or 0.0 for line in lines), 2)
+    total_credit = round(sum(line.credit or 0.0 for line in lines), 2)
+    source_totals: dict[str, float] = {}
+    for line in lines:
+        entry = entries.get(line.journal_entry_id)
+        source = entry.source_module if entry and entry.source_module else "manual"
+        source_totals[source] = round(source_totals.get(source, 0.0) + (line.debit or 0.0) + (line.credit or 0.0), 2)
+    return {
+        "tenant_id": tenant_id,
+        "account": _gl_account_api_item(account),
+        "summary": {
+            "transaction_count": len(lines),
+            "total_debit": total_debit,
+            "total_credit": total_credit,
+            "net_movement": round(total_debit - total_credit, 2),
+            "last_activity": entries[lines[0].journal_entry_id].entry_date if lines and lines[0].journal_entry_id in entries else None,
+            "ai_summary": f"{account.account_name} has {len(lines)} recent journal lines and net movement {round(total_debit - total_credit, 2)}.",
+        },
+        "source_modules": [{"source_module": key, "amount": value} for key, value in sorted(source_totals.items())],
+        "recent_lines": [
+            {
+                "journal_entry_id": line.journal_entry_id,
+                "entry_date": entries[line.journal_entry_id].entry_date if line.journal_entry_id in entries else None,
+                "description": line.description,
+                "debit": line.debit,
+                "credit": line.credit,
+                "currency": line.currency,
+                "branch_id": line.branch_id,
+                "cost_center": line.cost_center,
+                "profit_center": line.profit_center,
+            }
+            for line in lines[:25]
+        ],
+    }
 
 
 @app.post("/accounting-periods", response_model=AccountingPeriodResponse)

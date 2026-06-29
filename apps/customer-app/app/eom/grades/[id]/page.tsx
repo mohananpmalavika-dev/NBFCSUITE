@@ -5,8 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '../../../components/AppShell';
 import { eomApiUrl } from '../../eomApi';
 
-
-
 function TabButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
     <button
@@ -28,6 +26,7 @@ export default function GradeProfilePage({ params }: { params: { id: string } })
   const [grade, setGrade] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [health, setHealth] = useState<any>(null);
+
 
   const tabs = useMemo(
     () => [

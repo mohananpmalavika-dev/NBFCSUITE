@@ -10,6 +10,7 @@ from .positions import router as positions
 from .grade import router as grade
 from .sections import router as sections
 from .teams import router as teams
+from .designations import router as designations
 from .grade import router as grade
 from .sections import router as sections
 from .teams import router as teams

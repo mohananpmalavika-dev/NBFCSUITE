@@ -252,3 +252,50 @@
 {"ts": "2026-06-29T06:41:50.242877+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "2926916c-3c86-479b-8931-611231fd9e6c"}}
 {"ts": "2026-06-29T06:41:50.309804+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "2926916c-3c86-479b-8931-611231fd9e6c"}}
 {"ts": "2026-06-29T06:41:50.393618+00:00", "type": "POSITION_CREATED", "payload": {"id": "542d6530-525a-4bdb-b93a-6512fbf83a5c", "code": "POS-TEST-1", "title": "Test Position 1"}}
+{"ts": "2026-06-29T06:59:21.403243+00:00", "type": "SECTION_CREATED", "payload": {"id": "78007000-e092-41d3-bf44-cd89dfc6f72f", "code": "SEC-TEST-1", "name": "Test Section 1"}}
+{"ts": "2026-06-29T07:00:19.443287+00:00", "type": "SECTION_CREATED", "payload": {"id": "0d8ff238-b63b-4906-8077-e1a79b6a0e14", "code": "SEC-FOR-TEAM-1", "name": "Section for Team"}}
+{"ts": "2026-06-29T07:00:19.528589+00:00", "type": "TEAM_CREATED", "payload": {"id": "2b35f021-7e1b-4e22-9dfc-1e8588604a4a", "code": "TEAM-TEST-1", "name": "Test Team 1"}}
+{"ts": "2026-06-29T07:01:34.160938+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "1814cd4f-7a31-4c82-ac3f-b9070f63b5fc", "code": "LE-BR-001", "name": "Branch Legal Entity"}}
+{"ts": "2026-06-29T07:01:34.286757+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "2e186daa-f7a2-4424-bc1d-6ae6cafeda75", "code": "BU-BR-001", "name": "Branch Business Unit"}}
+{"ts": "2026-06-29T07:01:34.381729+00:00", "type": "BRANCH_CREATED", "payload": {"id": "2b42f2b9-4dd4-4c64-b589-3f94872440c8", "code": "BR-001", "name": "Main Branch"}}
+{"ts": "2026-06-29T07:01:34.487529+00:00", "type": "BRANCH_UPDATED", "payload": {"id": "2b42f2b9-4dd4-4c64-b589-3f94872440c8"}}
+{"ts": "2026-06-29T07:01:34.553229+00:00", "type": "BRANCH_STATUS_CHANGED", "payload": {"id": "2b42f2b9-4dd4-4c64-b589-3f94872440c8", "status": "inactive"}}
+{"ts": "2026-06-29T07:01:34.661532+00:00", "type": "BRAND_CREATED", "payload": {"id": "aeedff48-e285-4026-94a2-83faa03e9bdd", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-29T07:01:34.723117+00:00", "type": "BRAND_UPDATED", "payload": {"id": "aeedff48-e285-4026-94a2-83faa03e9bdd"}}
+{"ts": "2026-06-29T07:01:34.767774+00:00", "type": "BRAND_DELETED", "payload": {"id": "aeedff48-e285-4026-94a2-83faa03e9bdd"}}
+{"ts": "2026-06-29T07:01:34.832858+00:00", "type": "BRAND_CREATED", "payload": {"id": "85698185-97cc-470e-ae74-c19b2118f8c3", "code": "B-AUD", "name": "Audit Brand"}}
+{"ts": "2026-06-29T07:01:34.877739+00:00", "type": "BRAND_UPDATED", "payload": {"id": "85698185-97cc-470e-ae74-c19b2118f8c3"}}
+{"ts": "2026-06-29T07:01:34.947301+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "673c035f-c94d-4082-b810-cdccecc47c0d", "code": "LE-100", "name": "Legal Entity for BU"}}
+{"ts": "2026-06-29T07:01:35.006581+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "3678c2a0-1aef-45ea-bf79-9af8822a7301", "code": "BU-001", "name": "Business Unit One"}}
+{"ts": "2026-06-29T07:01:35.075628+00:00", "type": "BUSINESS_UNIT_UPDATED", "payload": {"id": "3678c2a0-1aef-45ea-bf79-9af8822a7301"}}
+{"ts": "2026-06-29T07:01:35.128240+00:00", "type": "BUSINESS_UNIT_STATUS_CHANGED", "payload": {"id": "3678c2a0-1aef-45ea-bf79-9af8822a7301", "status": "inactive"}}
+{"ts": "2026-06-29T07:01:35.271765+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "244c02e8-0a0e-4c20-8150-e75b2f99c548", "code": "ENT-DASH", "name": "Dashboard Enterprise"}}
+{"ts": "2026-06-29T07:01:35.345377+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "9678d1a2-5b61-4886-ba24-64333d3e05a1", "code": "LE-DASH", "name": "Dashboard Legal Entity"}}
+{"ts": "2026-06-29T07:01:35.422395+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "0ede3d51-8048-426f-8252-98528f23fef2", "code": "BU-DASH", "name": "Dashboard Business Unit"}}
+{"ts": "2026-06-29T07:01:35.561025+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "f07b0a68-8d33-4498-bc76-b845356279e7", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-29T07:01:35.641332+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "170fa12d-c77a-4942-af7f-736ad9e987b9", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-29T07:01:35.691391+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "170fa12d-c77a-4942-af7f-736ad9e987b9"}}
+{"ts": "2026-06-29T07:01:35.734918+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "170fa12d-c77a-4942-af7f-736ad9e987b9", "status": "suspended"}}
+{"ts": "2026-06-29T07:01:35.941906+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "170fa12d-c77a-4942-af7f-736ad9e987b9"}}
+{"ts": "2026-06-29T07:01:36.000316+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "f80d9898-59cd-4994-a4b8-992872070d08", "code": "ENT-MASTER", "name": "Enterprise Master"}}
+{"ts": "2026-06-29T07:01:36.130083+00:00", "type": "ENTERPRISE_CONFIGURATION_CHANGED", "payload": {"id": "f80d9898-59cd-4994-a4b8-992872070d08", "code": "ENT-MASTER"}}
+{"ts": "2026-06-29T07:01:36.133084+00:00", "type": "ENTERPRISE_HEALTH_CHANGED", "payload": {"id": "f80d9898-59cd-4994-a4b8-992872070d08", "score": 100, "status": "strong"}}
+{"ts": "2026-06-29T07:01:36.542683+00:00", "type": "COST_CENTER_CREATED", "payload": {"id": "f632a1db-a5d8-4392-9b12-d0795d1f6db8", "code": "CC-TEST-2652f7a3", "name": "HR Cost"}}
+{"ts": "2026-06-29T07:01:36.728496+00:00", "type": "PROFIT_CENTER_CREATED", "payload": {"id": "cf33df34-7928-4b07-af4e-0604c4fd952a", "code": "PC-TEST-f9f787b5", "name": "Gold Loan"}}
+{"ts": "2026-06-29T07:01:36.900395+00:00", "type": "INTERNAL_ORDER_OPENED", "payload": {"id": "780a3dd7-1ab7-4b2f-aaf5-055dcdc99b43", "status": "draft"}}
+{"ts": "2026-06-29T07:01:36.992016+00:00", "type": "BUDGET_CREATED", "payload": {"id": "f1938ad0-861d-454a-af9c-9b880ffc14ca"}}
+{"ts": "2026-06-29T07:01:37.332975+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "2579247c-94f0-4bda-90bf-ce9d18e8fc2e", "code": "LE-GEO-001", "name": "Geography Legal Entity"}}
+{"ts": "2026-06-29T07:01:37.427142+00:00", "type": "GEOGRAPHY_CREATED", "payload": {"id": "1bd39454-982a-42db-a7fd-e455860c1cb8", "code": "GEO-001", "name": "Geography Root"}}
+{"ts": "2026-06-29T07:01:37.549744+00:00", "type": "GEOGRAPHY_UPDATED", "payload": {"id": "1bd39454-982a-42db-a7fd-e455860c1cb8"}}
+{"ts": "2026-06-29T07:01:37.655373+00:00", "type": "GRADE_CREATED", "payload": {"id": "cb3f884a-1c7c-40dd-aa90-43042be1817c", "code": "GMS-TEST-1", "name": "Test Grade 1"}}
+{"ts": "2026-06-29T07:01:37.857370+00:00", "type": "GRADE_CREATED", "payload": {"id": "23336734-51eb-44d6-bda9-af1bdf93df7a", "code": "GMS-TEST-2", "name": "Test Grade 2"}}
+{"ts": "2026-06-29T07:01:38.154841+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "0161c9b5-ac72-4bf5-af2f-cceb9f7f13f7", "code": "LE-001", "name": "Legal One"}}
+{"ts": "2026-06-29T07:01:38.379232+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "0161c9b5-ac72-4bf5-af2f-cceb9f7f13f7"}}
+{"ts": "2026-06-29T07:01:38.483464+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "0161c9b5-ac72-4bf5-af2f-cceb9f7f13f7"}}
+{"ts": "2026-06-29T07:01:38.600557+00:00", "type": "POSITION_CREATED", "payload": {"id": "f279b44d-c7d9-465c-bf80-c32a0eed3d7f", "code": "POS-TEST-1", "title": "Test Position 1"}}
+{"ts": "2026-06-29T07:01:38.904290+00:00", "type": "SECTION_CREATED", "payload": {"id": "9814118d-4e8d-4040-ab7c-c28672b9c8c7", "code": "SEC-TEST-1", "name": "Test Section 1"}}
+{"ts": "2026-06-29T07:01:39.079358+00:00", "type": "SECTION_CREATED", "payload": {"id": "7fb9ae2d-1a50-40a0-b93d-569f69757376", "code": "SEC-FOR-TEAM-1", "name": "Section for Team"}}
+{"ts": "2026-06-29T07:01:39.196150+00:00", "type": "TEAM_CREATED", "payload": {"id": "5815522c-5741-4c96-95b4-f7f9bfe910cb", "code": "TEAM-TEST-1", "name": "Test Team 1"}}
+{"ts": "2026-06-29T07:06:54.532549+00:00", "type": "GRADE_CREATED", "payload": {"id": "10a2bd9d-a573-410f-bb85-a0d1808e6e5e", "code": "GMS-TEST-1", "name": "Test Grade 1"}}
+{"ts": "2026-06-29T07:06:54.677834+00:00", "type": "GRADE_CREATED", "payload": {"id": "8a35c7d5-c023-45a0-8839-f7cc2bb00a16", "code": "GMS-TEST-2", "name": "Test Grade 2"}}
+{"ts": "2026-06-29T07:11:24.754594+00:00", "type": "DESIGNATION_CREATED", "payload": {"id": "362d5908-93ea-44d2-bea6-7ea52b71a2b5", "code": "DES-TEST-1", "name": "Test Designation 1"}}

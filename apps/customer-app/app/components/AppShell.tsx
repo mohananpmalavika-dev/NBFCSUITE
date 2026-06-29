@@ -99,6 +99,7 @@ const navItems = [
   { label: 'Deposits', icon: Banknote },
   { label: 'Gold Loans', icon: FileText },
   { label: 'Treasury', icon: Compass },
+  { label: 'Accounting', icon: FileText, href: '/accounting/chart-of-accounts' },
   { label: 'Finance Workspace', icon: ClipboardList, href: '/eom/finance' },
   { label: 'HRMS', icon: ShieldCheck, href: '/eom' },
   { label: 'CRM', icon: Users2 },
@@ -653,7 +654,14 @@ export function AppShell({ children }: { children?: ReactNode }) {
             </p>
               <div className="mt-3 space-y-2">
               {favorites.map((item) => {
-                const href = item === 'EOM Dashboard' ? '/eom' : item === 'Finance Workspace' ? '/eom/finance' : '#';
+                const href =
+                  item === 'EOM Dashboard'
+                    ? '/eom'
+                    : item === 'Finance Workspace'
+                      ? '/eom/finance'
+                      : item === 'General Ledger'
+                        ? '/accounting/chart-of-accounts'
+                        : '#';
                 return (
                   <a key={item} href={href} className="block truncate text-sm text-text-inverseMuted">
                     {item}

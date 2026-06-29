@@ -10,6 +10,10 @@ export default function PositionDetailPage() {
   const params = useParams<{ id: string }>();
   const [position, setPosition] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [organization, setOrganization] = useState<any[]>([]);
+  const [successors, setSuccessors] = useState<any[]>([]);
+  const [health, setHealth] = useState<any | null>(null);
+  const [budget, setBudget] = useState<any | null>(null);
 
   useEffect(() => {
     if (!params?.id) return;
@@ -20,6 +24,20 @@ export default function PositionDetailPage() {
         if (!res.ok) return;
         const body = await res.json();
         if (mounted) setPosition(body);
+
+        // fetch auxiliary endpoints
+        const [orgRes, sucRes, healthRes, budgetRes] = await Promise.all([
+          fetch(eomApiUrl(`/eom/positions/${params.id}/organization`)),
+          fetch(eomApiUrl(`/eom/positions/${params.id}/successors`)),
+          fetch(eomApiUrl(`/eom/positions/${params.id}/health`)),
+          fetch(eomApiUrl(`/eom/positions/${params.id}/budget`)),
+        ]);
+        if (mounted) {
+          setOrganization(orgRes.ok ? await orgRes.json().then(r => r.ancestors || []) : []);
+          setSuccessors(sucRes.ok ? await sucRes.json().then(r => r.successors || []) : []);
+          setHealth(healthRes.ok ? await healthRes.json() : null);
+          setBudget(budgetRes.ok ? await budgetRes.json() : null);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -42,7 +60,7 @@ export default function PositionDetailPage() {
           <Link href="/eom/positions" className="btn">Back to positions</Link>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-3">
           <section className="rounded-md border p-4 space-y-3">
             <h3 className="font-semibold">Role details</h3>
             <div className="grid gap-2 text-sm">
@@ -53,10 +71,48 @@ export default function PositionDetailPage() {
               <div><span className="font-medium">Updated:</span> {position.updated_at || '—'}</div>
             </div>
           </section>
+
           <section className="rounded-md border p-4 space-y-3">
+            <h3 className="font-semibold">Organization</h3>
+            {organization.length === 0 ? (
+              <div className="text-sm text-text-secondary">No reporting ancestors.</div>
+            ) : (
+              <ul className="text-sm">
+                {organization.map((a) => (
+                  <li key={a.id}>{a.code} — {a.title}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-md border p-4 space-y-3">
+            <h3 className="font-semibold">Health & Budget</h3>
+            <div className="text-sm">
+              <div><span className="font-medium">Total positions:</span> {health?.total_positions ?? '—'}</div>
+              <div><span className="font-medium">Filled:</span> {health?.filled_positions ?? '—'}</div>
+              <div><span className="font-medium">Health score:</span> {health?.health_score ? Math.round(health.health_score * 100) + '%' : '—'}</div>
+              <div><span className="font-medium">Open positions:</span> {budget?.open_positions ?? '—'}</div>
+            </div>
+          </section>
+
+          <section className="rounded-md border p-4 lg:col-span-2 space-y-3">
             <h3 className="font-semibold">Description</h3>
             <p className="text-sm text-text-secondary">{position.description || 'No description provided.'}</p>
           </section>
+
+          <section className="rounded-md border p-4 lg:col-span-3 space-y-3">
+            <h3 className="font-semibold">Successors</h3>
+            {successors.length === 0 ? (
+              <div className="text-sm text-text-secondary">No direct reports.</div>
+            ) : (
+              <ul className="text-sm">
+                {successors.map((s) => (
+                  <li key={s.id}>{s.code} — {s.title} ({s.status})</li>
+                ))}
+              </ul>
+            )}
+          </section>
+
         </div>
       </div>
     </AppShell>

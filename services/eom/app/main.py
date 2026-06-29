@@ -12,10 +12,12 @@ from .routers import grade
 from .routers import sections
 from .routers import teams
 from .routers import positions
+from .routers import designations
 from .db import engine
 from . import models, models_legal, models_geography, models_enterprise_master, models_branch, models_department, models_grade
 from . import models_section, models_team, models_position
 from . import models_financial_organization
+from . import models_designation
 
 
 
@@ -55,6 +57,7 @@ app.include_router(grade)
 app.include_router(sections)
 app.include_router(teams)
 app.include_router(positions)
+app.include_router(designations)
 from .routers_financial_organization import router as finance_router
 app.include_router(finance_router)
 

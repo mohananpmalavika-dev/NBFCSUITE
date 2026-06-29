@@ -103,6 +103,40 @@ async def _run_accounting_test():
         assert summary["total_accounts"] >= 3
         assert any(row["category"] == "Assets" for row in summary["categories"])
 
+        afc_dashboard_response = await client.get("/api/v1/gl/dashboard", params={"tenant_id": tenant_id})
+        assert afc_dashboard_response.status_code == 200
+        afc_dashboard = afc_dashboard_response.json()
+        assert afc_dashboard["kpis"]["total_accounts"] >= 3
+        assert "accounts_by_type" in afc_dashboard["charts"]
+
+        afc_list_response = await client.get("/api/v1/gl/accounts", params={"tenant_id": tenant_id, "q": "Cash"})
+        assert afc_list_response.status_code == 200
+        afc_accounts = afc_list_response.json()
+        assert afc_accounts["total"] >= 2
+        assert any(item["gl_code"] == "111000_BRANCH_CASH" for item in afc_accounts["items"])
+
+        afc_tree_response = await client.get("/api/v1/gl/accounts/tree", params={"tenant_id": tenant_id})
+        assert afc_tree_response.status_code == 200
+        assert any(item["account_code"] == "111000_BRANCH_CASH" for item in afc_tree_response.json()["items"])
+
+        afc_search_response = await client.get("/api/v1/gl/accounts/search", params={"tenant_id": tenant_id, "q": "cash"})
+        assert afc_search_response.status_code == 200
+        assert any(item["account_code"] == "111000_BRANCH_CASH" for item in afc_search_response.json()["items"])
+
+        afc_detail_response = await client.get(
+            f"/api/v1/gl/accounts/{cash_account['id']}",
+            params={"tenant_id": tenant_id},
+        )
+        assert afc_detail_response.status_code == 200
+        assert afc_detail_response.json()["gl_code"] == "111000_BRANCH_CASH"
+
+        afc_usage_response = await client.get(
+            f"/api/v1/gl/accounts/{cash_account['id']}/usage",
+            params={"tenant_id": tenant_id},
+        )
+        assert afc_usage_response.status_code == 200
+        assert "summary" in afc_usage_response.json()
+
         seed_tenant = "tenant-local-accounting-seed"
         seed_response = await client.post(
             "/gl-accounts/seed-defaults",
