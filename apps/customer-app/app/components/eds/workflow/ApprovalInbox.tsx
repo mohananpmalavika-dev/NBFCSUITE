@@ -54,10 +54,17 @@ export function ApprovalInbox({ tasks, activeTaskId, onSelectTask, onAction }: A
 
       <div className="max-h-[620px] space-y-3 overflow-y-auto p-4">
         {tasks.map((task) => (
-          <button
+          <div
             key={task.workflowId}
-            type="button"
+            role="button"
+            tabIndex={0}
             onClick={() => onSelectTask(task.workflowId)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onSelectTask(task.workflowId);
+              }
+            }}
             className={`block w-full rounded-xl text-left transition duration-normal ease-standard ${
               activeTaskId === task.workflowId ? 'ring-2 ring-border-focus' : ''
             }`}
@@ -73,7 +80,7 @@ export function ApprovalInbox({ tasks, activeTaskId, onSelectTask, onAction }: A
                 <Badge tone="neutral">{task.branch}</Badge>
               </div>
             </ApprovalCard>
-          </button>
+          </div>
         ))}
       </div>
     </section>

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
+from .schemas_branch import BranchCreate, BranchResponse, BranchUpdate, BranchListResponse, BranchDashboardResponse, BranchHealthResponse, BranchAnalyticsResponse
 
 class EnterpriseCreate(BaseModel):
     code: str = Field(..., min_length=2)

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from .. import models, models_geography, models_legal
+from .. import models, models_geography, models_legal, models_department, models_position
 from ..db import SessionLocal
 
 router = APIRouter(prefix="/eom", tags=["eom"])
@@ -52,6 +52,7 @@ def get_eom_dashboard(db: Session = Depends(get_db)):
     legal_entities = _count_rows(db, models_legal.LegalEntity)
     business_units = _count_rows(db, models_legal.BusinessUnit)
     geography_nodes = _count_rows(db, models_geography.GeographyNode)
+    positions = _count_rows(db, models_position.Position)
 
     return {
         "title": "Enterprise Organization Management",
@@ -62,9 +63,9 @@ def get_eom_dashboard(db: Session = Depends(get_db)):
             "business_units": business_units,
             "geography_nodes": geography_nodes,
             "branches": db.query(func.count(models_geography.GeographyNode.id)).filter(models_geography.GeographyNode.node_type == "branch").scalar() or 0,
-            "departments": 0,
+            "departments": db.query(func.count(models_department.Department.id)).scalar() or 0,
             "employees": 0,
-            "positions": 0,
+            "positions": positions,
             "open_approvals": 0,
         },
         "status": {

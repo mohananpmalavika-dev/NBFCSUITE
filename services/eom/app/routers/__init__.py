@@ -3,4 +3,7 @@ from .brand import router as brand
 from .legal_entity import router as legal_entity
 from .business_unit import router as business_unit
 from .geography import router as geography
+from .branch import router as branch
+from .department import router as department
 from .dashboard import router as dashboard
+from .positions import router as positions

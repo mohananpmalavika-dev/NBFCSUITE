@@ -5,9 +5,19 @@ from .routers import brand
 from .routers import legal_entity
 from .routers import business_unit
 from .routers import geography
+from .routers import branch
+from .routers import department
 from .routers import dashboard
+from .routers import grade
+from .routers import sections
+from .routers import teams
+from .routers import positions
 from .db import engine
-from . import models, models_legal, models_geography
+from . import models, models_legal, models_geography, models_enterprise_master, models_branch, models_department, models_grade
+from . import models_section, models_team, models_position
+from . import models_financial_organization
+
+
 
 app = FastAPI(title='EOM Service')
 
@@ -22,13 +32,33 @@ app.add_middleware(
 models.Base.metadata.create_all(bind=engine)
 models_legal.Base.metadata.create_all(bind=engine)
 models_geography.Base.metadata.create_all(bind=engine)
+models_enterprise_master.Base.metadata.create_all(bind=engine)
+models_branch.Base.metadata.create_all(bind=engine)
+models_department.Base.metadata.create_all(bind=engine)
+models_grade.Base.metadata.create_all(bind=engine)
+models_section.Base.metadata.create_all(bind=engine)
+models_team.Base.metadata.create_all(bind=engine)
+models_position.Base.metadata.create_all(bind=engine)
+models_financial_organization.Base.metadata.create_all(bind=engine)
 
 app.include_router(enterprise)
+
+
 app.include_router(brand)
 app.include_router(legal_entity)
 app.include_router(business_unit)
 app.include_router(geography)
+app.include_router(branch)
+app.include_router(department)
 app.include_router(dashboard)
+app.include_router(grade)
+app.include_router(sections)
+app.include_router(teams)
+app.include_router(positions)
+from .routers_financial_organization import router as finance_router
+app.include_router(finance_router)
+
+
 
 @app.get('/')
 def root():

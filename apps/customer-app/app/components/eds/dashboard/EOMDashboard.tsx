@@ -131,6 +131,7 @@ export default function EOMDashboard({ data }: { data?: EOMDashboardData | null 
     { label: 'Brands', value: normalizeCount(summary.brands), icon: <Sparkles className="h-5 w-5" /> },
     { label: 'Legal Entities', value: normalizeCount(summary.legal_entities), icon: <ShieldCheck className="h-5 w-5" /> },
     { label: 'Business Units', value: normalizeCount(summary.business_units), icon: <Network className="h-5 w-5" /> },
+    { label: 'Departments', value: normalizeCount(summary.departments), icon: <Users2 className="h-5 w-5" /> },
     { label: 'Geography Nodes', value: normalizeCount(summary.geography_nodes), icon: <Map className="h-5 w-5" /> },
     { label: 'Open Approvals', value: normalizeCount(summary.open_approvals), icon: <FileText className="h-5 w-5" /> },
   ];
