@@ -828,6 +828,26 @@ class JournalDocumentCreate(BaseModel):
     attachments: Optional[List[JournalAttachmentCreate]] = None
 
 
+class JournalDocumentUpdate(BaseModel):
+    batch_id: Optional[str] = None
+    posting_date: Optional[datetime] = None
+    voucher_type: Optional[str] = None
+    source_module: Optional[str] = None
+    source_event: Optional[str] = None
+    source_reference: Optional[str] = None
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    currency: Optional[str] = None
+    exchange_rate: Optional[float] = None
+    branch_id: Optional[str] = None
+    financial_year: Optional[str] = None
+    template_id: Optional[str] = None
+    metadata: Optional[dict] = None
+    lines: Optional[List[JournalLineCreate]] = None
+    attachments: Optional[List[JournalAttachmentCreate]] = None
+    performed_by: Optional[str] = None
+
+
 class JournalActionRequest(BaseModel):
     tenant_id: str
     journal_id: Optional[str] = None
@@ -3292,6 +3312,180 @@ def _journal_document_response(entry: JournalEntry) -> dict:
     }
 
 
+def _journal_api_item(entry: JournalEntry) -> dict:
+    response = _journal_document_response(entry)
+    metadata = response.get("metadata") or {}
+    validation = response.get("validation_result") or {}
+    line_count = len(response.get("lines") or [])
+    return {
+        **response,
+        "journal_number": entry.journal_no,
+        "business_event": entry.source_event or entry.voucher_type or "manual_journal",
+        "journal_type": entry.voucher_type or "journal",
+        "amount": response["total_debit"],
+        "accounting_date": entry.business_date or entry.entry_date,
+        "posting_window": {
+            "posting_date": entry.entry_date,
+            "period": entry.period,
+            "financial_year": entry.financial_year,
+            "status": "locked" if entry.posting_status in {"posted", "reversed"} else "editable",
+        },
+        "legal_entity": metadata.get("legal_entity"),
+        "business_unit": metadata.get("business_unit"),
+        "approval_state": {
+            "status": entry.posting_status,
+            "created_by": entry.created_by,
+            "approved_by": entry.approved_by,
+            "approved_at": entry.approved_at,
+            "maker_checker_required": entry.voucher_type in {"manual_journal", "adjustment", "write_off", "intercompany", "journal"},
+        },
+        "validation_summary": {
+            "valid": validation.get("valid"),
+            "is_balanced": response["total_debit"] == response["total_credit"],
+            "errors": validation.get("errors") or [],
+            "warnings": validation.get("warnings") or [],
+            "checks": validation.get("checks") or [],
+        },
+        "ai": {
+            "duplicate_risk": "medium" if entry.reference and entry.reference == entry.source_reference else "low",
+            "anomaly_score": 8 if response["total_debit"] > 1000000 else 2,
+            "fraud_indicators": [],
+            "suggested_corrections": [] if validation.get("valid", True) else validation.get("errors") or [],
+            "explanation": f"{entry.journal_no or 'Journal'} records {line_count} lines for {entry.description}.",
+        },
+    }
+
+
+def _journal_dashboard_payload(tenant_id: str, db: Session) -> dict:
+    journals = db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id).all()
+    today = datetime.utcnow().date()
+    status_counts: dict[str, int] = {}
+    type_counts: dict[str, int] = {}
+    module_counts: dict[str, int] = {}
+    volume_by_day: dict[str, float] = {}
+    validation_errors = 0
+    total_amount = 0.0
+    for journal in journals:
+        status = journal.posting_status or "draft"
+        journal_type = journal.voucher_type or "journal"
+        module = journal.source_module or "manual"
+        amount = round(sum(line.debit or 0.0 for line in journal.lines), 2)
+        status_counts[status] = status_counts.get(status, 0) + 1
+        type_counts[journal_type] = type_counts.get(journal_type, 0) + 1
+        module_counts[module] = module_counts.get(module, 0) + 1
+        day_key = (journal.entry_date or journal.created_at or datetime.utcnow()).date().isoformat()
+        volume_by_day[day_key] = round(volume_by_day.get(day_key, 0.0) + amount, 2)
+        total_amount += amount
+        validation = journal.validation_result or {}
+        validation_errors += len(validation.get("errors") or [])
+    reversed_count = status_counts.get("reversed", 0)
+    pending_count = status_counts.get("pending", 0) + status_counts.get("approved", 0)
+    failed_count = status_counts.get("failed", 0)
+    health = 100 if not journals else max(
+        0,
+        round(
+            100
+            - min(25, validation_errors * 3)
+            - min(20, reversed_count * 4)
+            - min(15, pending_count * 2)
+            - min(25, failed_count * 5)
+        ),
+    )
+    recurring_count = db.query(JournalTemplate).filter(JournalTemplate.tenant_id == tenant_id, JournalTemplate.status == "active").count()
+    return {
+        "tenant_id": tenant_id,
+        "kpis": {
+            "todays_journals": sum(1 for journal in journals if (journal.entry_date or journal.created_at or datetime.utcnow()).date() == today),
+            "posted": status_counts.get("posted", 0),
+            "draft": status_counts.get("draft", 0),
+            "pending_approval": pending_count,
+            "rejected": status_counts.get("rejected", 0),
+            "reversed": reversed_count,
+            "recurring": recurring_count,
+            "failed": failed_count,
+            "processing_time_ms": 0,
+            "journal_health": health,
+            "total_journals": len(journals),
+            "total_amount": round(total_amount, 2),
+        },
+        "charts": {
+            "journals_by_type": [{"label": key, "value": value} for key, value in sorted(type_counts.items())],
+            "posting_volume": [{"label": key, "value": value} for key, value in sorted(volume_by_day.items())[-14:]],
+            "approval_status": [{"label": key, "value": value} for key, value in sorted(status_counts.items())],
+            "module_distribution": [{"label": key, "value": value} for key, value in sorted(module_counts.items())],
+            "daily_throughput": [{"label": key, "value": value} for key, value in sorted(volume_by_day.items())[-14:]],
+        },
+        "summary": {
+            "status": "healthy" if health >= 90 else "attention" if health >= 70 else "critical",
+            "message": "Journal engine is ready for balanced, auditable posting." if health >= 70 else "Review failed validations, reversals, and pending approvals.",
+        },
+    }
+
+
+def _journal_360_payload(entry: JournalEntry, db: Session) -> dict:
+    response = _journal_api_item(entry)
+    audit_rows = (
+        db.query(AuditLog)
+        .filter(AuditLog.tenant_id == entry.tenant_id, AuditLog.entity == "journal", AuditLog.entity_id == entry.id)
+        .order_by(AuditLog.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    source_event = None
+    if entry.source_reference:
+        source_event = (
+            db.query(AccountingEvent)
+            .filter(AccountingEvent.tenant_id == entry.tenant_id, AccountingEvent.reference_id == entry.source_reference)
+            .order_by(AccountingEvent.created_at.desc())
+            .first()
+        )
+    response["business_view"] = {
+        "source_transaction": entry.source_reference or entry.reference,
+        "source_module": entry.source_module or "manual",
+        "business_event": entry.source_event or "manual_journal",
+        "customer": (entry.metadata_json or {}).get("customer_id"),
+        "product": (entry.metadata_json or {}).get("product_id"),
+    }
+    response["accounting_view"] = {
+        "header": {
+            "journal_number": entry.journal_no,
+            "journal_type": entry.voucher_type,
+            "posting_date": entry.entry_date,
+            "accounting_date": entry.business_date or entry.entry_date,
+            "period": entry.period,
+            "financial_year": entry.financial_year,
+            "currency": entry.currency,
+            "exchange_rate": entry.exchange_rate,
+        },
+        "lines": response["lines"],
+        "posting_rules": [execution.rule_id for execution in db.query(PostingExecutionLog).filter(PostingExecutionLog.tenant_id == entry.tenant_id, PostingExecutionLog.journal_id == entry.id).all() if execution.rule_id],
+    }
+    response["financial_view"] = {
+        "currency": entry.currency,
+        "exchange_rate": entry.exchange_rate,
+        "total_debit": response["total_debit"],
+        "total_credit": response["total_credit"],
+        "budget_impact": (entry.validation_result or {}).get("impact", {}).get("gl_accounts", []),
+    }
+    response["compliance_view"] = {
+        "approvals": response["approvals"],
+        "attachments": response["attachments"],
+        "audit_trail": [_audit_log_response(row) for row in audit_rows],
+        "regulatory_references": (entry.metadata_json or {}).get("regulatory_references", []),
+    }
+    response["timeline"] = [
+        {"state": "Created", "at": entry.created_at, "by": entry.created_by},
+        *[
+            {"state": approval.decision.title(), "at": approval.approved_time, "by": approval.approver, "level": approval.level}
+            for approval in sorted(entry.approvals, key=lambda item: item.approved_time or datetime.min)
+        ],
+        {"state": entry.posting_status.title(), "at": entry.approved_at or entry.entry_date, "by": entry.approved_by},
+    ]
+    response["source_transaction"] = _accounting_event_response(source_event) if source_event else None
+    response["ai_view"] = response["ai"]
+    return response
+
+
 def _journal_batch_response(batch: JournalBatch, journal_count: int = 0) -> dict:
     return {
         "id": batch.id,
@@ -5159,6 +5353,212 @@ async def api_replay_accounting_event(event_id: str, request: AccountingEventAct
     db.commit()
     db.refresh(event)
     return _event_360_payload(event)
+
+
+@app.get("/api/v1/accounting/journals/dashboard")
+async def api_journals_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return _journal_dashboard_payload(tenant_id, db)
+
+
+@app.get("/api/v1/accounting/journals/search")
+async def api_search_journals(
+    tenant_id: str = Query(...),
+    q: str = Query(""),
+    min_amount: Optional[float] = Query(None),
+    max_amount: Optional[float] = Query(None),
+    status: Optional[str] = Query(None),
+    journal_type: Optional[str] = Query(None),
+    source_module: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=250),
+    db: Session = Depends(get_db),
+):
+    query = db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (JournalEntry.journal_no.ilike(like))
+            | (JournalEntry.description.ilike(like))
+            | (JournalEntry.reference.ilike(like))
+            | (JournalEntry.source_reference.ilike(like))
+            | (JournalEntry.source_event.ilike(like))
+            | (JournalEntry.branch_id.ilike(like))
+        )
+    if status:
+        query = query.filter(JournalEntry.posting_status == status)
+    if journal_type:
+        query = query.filter(JournalEntry.voucher_type == journal_type)
+    if source_module:
+        query = query.filter(JournalEntry.source_module == source_module)
+    rows = query.order_by(JournalEntry.entry_date.desc(), JournalEntry.created_at.desc()).limit(500).all()
+    filtered = []
+    for journal in rows:
+        amount = round(sum(line.debit or 0.0 for line in journal.lines), 2)
+        if min_amount is not None and amount < min_amount:
+            continue
+        if max_amount is not None and amount > max_amount:
+            continue
+        filtered.append(journal)
+        if len(filtered) >= limit:
+            break
+    return {"tenant_id": tenant_id, "query": q, "total": len(filtered), "items": [_journal_api_item(item) for item in filtered]}
+
+
+@app.get("/api/v1/accounting/journals")
+async def api_list_journals(
+    tenant_id: str = Query(...),
+    q: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    journal_type: Optional[str] = Query(None),
+    source_module: Optional[str] = Query(None),
+    branch_id: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=250),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (JournalEntry.journal_no.ilike(like))
+            | (JournalEntry.description.ilike(like))
+            | (JournalEntry.reference.ilike(like))
+            | (JournalEntry.source_reference.ilike(like))
+        )
+    if status:
+        statuses = [item.strip() for item in status.split(",") if item.strip()]
+        query = query.filter(JournalEntry.posting_status.in_(statuses))
+    if journal_type:
+        query = query.filter(JournalEntry.voucher_type == journal_type)
+    if source_module:
+        query = query.filter(JournalEntry.source_module == source_module)
+    if branch_id:
+        query = query.filter(JournalEntry.branch_id == branch_id)
+    total = query.count()
+    rows = query.order_by(JournalEntry.entry_date.desc(), JournalEntry.created_at.desc()).offset(offset).limit(limit).all()
+    status_rows = db.query(JournalEntry.posting_status, JournalEntry.id).filter(JournalEntry.tenant_id == tenant_id).all()
+    status_counts: dict[str, int] = {}
+    for item_status, _ in status_rows:
+        status_counts[item_status or "draft"] = status_counts.get(item_status or "draft", 0) + 1
+    return {"tenant_id": tenant_id, "total": total, "status_counts": status_counts, "items": [_journal_api_item(item) for item in rows]}
+
+
+@app.post("/api/v1/accounting/journals")
+async def api_create_journal(request: JournalDocumentCreate, db: Session = Depends(get_db)):
+    created = await create_journal_document(request, db)
+    persisted = db.query(JournalEntry).filter(JournalEntry.id == created["id"], JournalEntry.tenant_id == request.tenant_id).first()
+    return _journal_360_payload(persisted, db) if persisted else created
+
+
+@app.get("/api/v1/accounting/journals/{journal_id}")
+async def api_get_journal(journal_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return _journal_360_payload(_get_journal_document(journal_id, tenant_id, db), db)
+
+
+@app.put("/api/v1/accounting/journals/{journal_id}")
+async def api_update_journal(journal_id: str, request: JournalDocumentUpdate, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    journal = _get_journal_document(journal_id, tenant_id, db)
+    if journal.posting_status not in {"draft", "pending"}:
+        raise HTTPException(status_code=400, detail="Only draft or pending journals can be updated")
+    posting_date = request.posting_date or journal.entry_date or datetime.utcnow()
+    financial_year = request.financial_year or journal.financial_year or _current_financial_year(posting_date)
+    if request.batch_id is not None:
+        journal.batch_id = request.batch_id
+    if request.posting_date is not None:
+        journal.entry_date = posting_date
+        journal.business_date = posting_date
+        journal.period = _journal_period_name(posting_date)
+    if request.voucher_type is not None:
+        journal.voucher_type = request.voucher_type
+    if request.source_module is not None:
+        journal.source_module = request.source_module
+    if request.source_event is not None:
+        journal.source_event = request.source_event
+    if request.source_reference is not None:
+        journal.source_reference = request.source_reference
+    if request.description is not None:
+        journal.description = request.description
+    if request.reference is not None:
+        journal.reference = request.reference
+    if request.currency is not None:
+        journal.currency = str(request.currency or "INR").upper()
+    if request.exchange_rate is not None:
+        journal.exchange_rate = request.exchange_rate
+    if request.branch_id is not None:
+        journal.branch_id = request.branch_id
+    if request.financial_year is not None:
+        journal.financial_year = financial_year
+    if request.template_id is not None:
+        journal.template_id = request.template_id
+    if request.metadata is not None:
+        journal.metadata_json = request.metadata
+    if request.lines is not None:
+        if len(request.lines) < 2:
+            raise HTTPException(status_code=400, detail="Journal must contain at least two lines")
+        engine_lines = _journal_request_lines(request.lines, tenant_id, db)
+        db.query(JournalLine).filter(JournalLine.journal_entry_id == journal.id).delete(synchronize_session=False)
+        db.flush()
+        for index, line in enumerate(engine_lines, start=1):
+            source = request.lines[index - 1]
+            db.add(JournalLine(
+                id=str(uuid4()), journal_entry_id=journal.id, sequence=source.sequence or index,
+                gl_account_id=line.gl_account_id, debit=line.debit, credit=line.credit,
+                currency=line.currency or journal.currency, transaction_currency=line.transaction_currency,
+                transaction_amount=line.transaction_amount, exchange_rate=line.exchange_rate,
+                branch_id=line.branch_id or journal.branch_id, department_id=line.department_id,
+                cost_center=line.cost_center, profit_center=line.profit_center, project_id=line.project_id,
+                employee_id=line.employee_id, product_id=line.product_id, business_unit_id=line.business_unit_id,
+                description=line.description,
+            ))
+    if request.attachments is not None:
+        db.query(JournalAttachment).filter(JournalAttachment.journal_id == journal.id).delete(synchronize_session=False)
+        for attachment in request.attachments:
+            db.add(JournalAttachment(
+                id=str(uuid4()), journal_id=journal.id, document_id=attachment.document_id,
+                file_name=attachment.file_name, uploaded_by=attachment.uploaded_by or request.performed_by,
+            ))
+    db.flush()
+    journal.validation_result = _journal_validation(
+        db, tenant_id, _engine_lines_from_document(journal), journal.entry_date,
+        source_module=journal.source_module, source_event=journal.source_event,
+        branch_id=journal.branch_id, financial_year=journal.financial_year,
+        currency=journal.currency, exchange_rate=journal.exchange_rate, metadata=journal.metadata_json,
+    )
+    _refresh_journal_batch(journal.batch_id, db)
+    _log_audit(db, tenant_id, "journal", journal.id, "update", {"status": journal.posting_status}, request.performed_by)
+    db.commit()
+    db.refresh(journal)
+    return _journal_360_payload(journal, db)
+
+
+@app.post("/api/v1/accounting/journals/{journal_id}/approve")
+async def api_approve_journal(journal_id: str, request: JournalApprovalActionRequest, db: Session = Depends(get_db)):
+    journal = _get_journal_document(journal_id, request.tenant_id, db)
+    if journal.posting_status == "draft":
+        await submit_journal_document(journal_id, JournalActionRequest(tenant_id=request.tenant_id, performed_by=request.performed_by, remarks=request.remarks), db)
+    journal = _get_journal_document(journal_id, request.tenant_id, db)
+    if journal.posting_status == "approved":
+        return _journal_360_payload(journal, db)
+    approved = await approve_journal_document(journal_id, request, db)
+    persisted = db.query(JournalEntry).filter(JournalEntry.id == approved["id"], JournalEntry.tenant_id == request.tenant_id).first()
+    return _journal_360_payload(persisted, db) if persisted else approved
+
+
+@app.post("/api/v1/accounting/journals/{journal_id}/post")
+async def api_post_journal(journal_id: str, request: JournalActionRequest, db: Session = Depends(get_db)):
+    posted = await post_journal_document(journal_id, request, db)
+    persisted = db.query(JournalEntry).filter(JournalEntry.id == posted["id"], JournalEntry.tenant_id == request.tenant_id).first()
+    return _journal_360_payload(persisted, db) if persisted else posted
+
+
+@app.post("/api/v1/accounting/journals/{journal_id}/reverse")
+async def api_reverse_journal(journal_id: str, request: JournalActionRequest, db: Session = Depends(get_db)):
+    result = await reverse_journal_document(journal_id, request, db)
+    reversal = db.query(JournalEntry).filter(JournalEntry.id == result["reversal"]["id"], JournalEntry.tenant_id == request.tenant_id).first()
+    original = db.query(JournalEntry).filter(JournalEntry.id == journal_id, JournalEntry.tenant_id == request.tenant_id).first()
+    return {
+        "journal": _journal_360_payload(original, db) if original else result["journal"],
+        "reversal": _journal_360_payload(reversal, db) if reversal else result["reversal"],
+    }
 
 
 @app.get("/api/v1/accounting/posting-rules/dashboard")

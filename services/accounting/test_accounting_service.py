@@ -1405,6 +1405,41 @@ async def _run_journal_engine_test():
         assert journal["validation_result"]["valid"] is True
         assert journal["attachments"][0]["file_name"] == "payroll-june.pdf"
 
+        afc_dashboard_response = await client.get(
+            "/api/v1/accounting/journals/dashboard",
+            params={"tenant_id": tenant_id},
+        )
+        assert afc_dashboard_response.status_code == 200
+        assert afc_dashboard_response.json()["kpis"]["draft"] == 1
+        assert afc_dashboard_response.json()["kpis"]["journal_health"] >= 90
+
+        afc_detail_response = await client.get(
+            f"/api/v1/accounting/journals/{journal['id']}",
+            params={"tenant_id": tenant_id},
+        )
+        assert afc_detail_response.status_code == 200
+        assert afc_detail_response.json()["journal_number"] == "JRN-2026-00000001"
+        assert afc_detail_response.json()["business_view"]["business_event"] == "manual_journal"
+        assert afc_detail_response.json()["validation_summary"]["is_balanced"] is True
+
+        afc_update_response = await client.put(
+            f"/api/v1/accounting/journals/{journal['id']}",
+            params={"tenant_id": tenant_id},
+            json={
+                "description": "June salary posting - reviewed",
+                "performed_by": "journal-maker",
+            },
+        )
+        assert afc_update_response.status_code == 200
+        assert afc_update_response.json()["description"] == "June salary posting - reviewed"
+
+        afc_search_response = await client.get(
+            "/api/v1/accounting/journals/search",
+            params={"tenant_id": tenant_id, "q": "PAYROLL", "min_amount": 100000},
+        )
+        assert afc_search_response.status_code == 200
+        assert afc_search_response.json()["total"] == 1
+
         submit_response = await client.post(
             f"/journals/{journal['id']}/submit",
             json={"tenant_id": tenant_id, "performed_by": "journal-maker", "remarks": "Ready for review"},
@@ -1419,7 +1454,7 @@ async def _run_journal_engine_test():
         assert self_approval_response.status_code == 400
 
         approval_response = await client.post(
-            f"/journals/{journal['id']}/approve",
+            f"/api/v1/accounting/journals/{journal['id']}/approve",
             json={
                 "tenant_id": tenant_id,
                 "performed_by": "journal-checker",
@@ -1432,7 +1467,7 @@ async def _run_journal_engine_test():
         assert approval_response.json()["approved_by"] == "journal-checker"
 
         post_response = await client.post(
-            f"/journals/{journal['id']}/post",
+            f"/api/v1/accounting/journals/{journal['id']}/post",
             json={"tenant_id": tenant_id, "performed_by": "finance-head"},
         )
         assert post_response.status_code == 200
@@ -1460,7 +1495,7 @@ async def _run_journal_engine_test():
         assert {"create", "submit", "approved", "post"}.issubset(history_actions)
 
         reverse_response = await client.post(
-            f"/journals/{journal['id']}/reverse",
+            f"/api/v1/accounting/journals/{journal['id']}/reverse",
             json={"tenant_id": tenant_id, "performed_by": "finance-head", "remarks": "Controlled reversal test"},
         )
         assert reverse_response.status_code == 200
@@ -1512,6 +1547,11 @@ async def _run_journal_engine_test():
         assert journal_list["status_counts"]["reversed"] == 1
         assert journal_list["status_counts"]["posted"] == 1
         assert journal_list["status_counts"]["cancelled"] == 1
+
+        afc_list_response = await client.get("/api/v1/accounting/journals", params={"tenant_id": tenant_id})
+        assert afc_list_response.status_code == 200
+        assert afc_list_response.json()["total"] == 3
+        assert afc_list_response.json()["status_counts"]["reversed"] == 1
 
         batches_response = await client.get("/journal-batches", params={"tenant_id": tenant_id})
         assert batches_response.status_code == 200

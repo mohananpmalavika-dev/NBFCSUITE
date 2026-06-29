@@ -514,6 +514,138 @@ export interface PostingRuleSimulationResponse {
   ai?: Record<string, unknown>;
 }
 
+export interface JournalLine {
+  id?: string;
+  sequence?: number | null;
+  gl_account_id?: string | null;
+  account_code?: string | null;
+  account_name?: string | null;
+  debit: number;
+  credit: number;
+  currency?: string | null;
+  transaction_currency?: string | null;
+  transaction_amount?: number | null;
+  exchange_rate?: number | null;
+  branch_id?: string | null;
+  department_id?: string | null;
+  cost_center?: string | null;
+  profit_center?: string | null;
+  project_id?: string | null;
+  employee_id?: string | null;
+  product_id?: string | null;
+  business_unit_id?: string | null;
+  description?: string | null;
+}
+
+export interface Journal {
+  id: string;
+  tenant_id: string;
+  journal_no?: string | null;
+  journal_number?: string | null;
+  posting_date?: string | null;
+  accounting_date?: string | null;
+  entry_date?: string | null;
+  business_date?: string | null;
+  business_event?: string | null;
+  journal_type?: string | null;
+  voucher_type?: string | null;
+  description: string;
+  reference?: string | null;
+  source_module?: string | null;
+  source_event?: string | null;
+  source_reference?: string | null;
+  branch_id?: string | null;
+  legal_entity?: string | null;
+  business_unit?: string | null;
+  financial_year?: string | null;
+  period?: string | null;
+  currency?: string | null;
+  exchange_rate?: number | null;
+  status: string;
+  posting_status?: string | null;
+  created_by?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  reversal_of?: string | null;
+  voucher_id?: string | null;
+  template_id?: string | null;
+  amount?: number | null;
+  total_debit: number;
+  total_credit: number;
+  total_amount?: number | null;
+  lines: JournalLine[];
+  attachments?: Array<Record<string, unknown>>;
+  approvals?: Array<Record<string, unknown>>;
+  validation_result?: Record<string, unknown> | null;
+  validation_summary?: {
+    valid?: boolean;
+    is_balanced: boolean;
+    errors: string[];
+    warnings: string[];
+    checks: Array<Record<string, unknown>>;
+  };
+  approval_state?: Record<string, unknown>;
+  posting_window?: Record<string, unknown>;
+  business_view?: Record<string, unknown>;
+  accounting_view?: Record<string, unknown>;
+  financial_view?: Record<string, unknown>;
+  compliance_view?: Record<string, unknown>;
+  source_transaction?: Record<string, unknown> | null;
+  timeline?: Array<Record<string, unknown>>;
+  ai?: Record<string, unknown>;
+  ai_view?: Record<string, unknown>;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface JournalPayload {
+  tenant_id: string;
+  posting_date?: string;
+  voucher_type?: string;
+  source_module?: string;
+  source_event?: string;
+  source_reference?: string;
+  description: string;
+  reference?: string;
+  currency?: string;
+  exchange_rate?: number;
+  branch_id?: string;
+  financial_year?: string;
+  template_id?: string;
+  created_by?: string;
+  metadata?: Record<string, unknown>;
+  lines: JournalLine[];
+  attachments?: Array<{ document_id?: string; file_name: string; uploaded_by?: string }>;
+}
+
+export interface JournalDashboard {
+  tenant_id: string;
+  kpis: {
+    todays_journals: number;
+    posted: number;
+    draft: number;
+    pending_approval: number;
+    rejected: number;
+    reversed: number;
+    recurring: number;
+    failed: number;
+    processing_time_ms: number;
+    journal_health: number;
+    total_journals: number;
+    total_amount: number;
+  };
+  charts: {
+    journals_by_type: Array<{ label: string; value: number }>;
+    posting_volume: Array<{ label: string; value: number }>;
+    approval_status: Array<{ label: string; value: number }>;
+    module_distribution: Array<{ label: string; value: number }>;
+    daily_throughput: Array<{ label: string; value: number }>;
+  };
+  summary: {
+    status: string;
+    message: string;
+  };
+}
+
 function tenantParam(tenantId = DEFAULT_ACCOUNTING_TENANT) {
   return `tenant_id=${encodeURIComponent(tenantId)}`;
 }
@@ -612,4 +744,22 @@ export const accountingApi = {
     postJson<PostingRule>(`/api/v1/accounting/posting-rules/${id}/publish`, { tenant_id: tenantId, performed_by: 'rule-console' }),
   getPostingRuleVersions: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
     getJson<{ tenant_id: string; rule_id: string; items: PostingRule[] }>(`/api/v1/accounting/posting-rules/${id}/versions?${tenantParam(tenantId)}`),
+  getJournalDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<JournalDashboard>(`/api/v1/accounting/journals/dashboard?${tenantParam(tenantId)}`),
+  listJournals: (tenantId = DEFAULT_ACCOUNTING_TENANT, params = '') =>
+    getJson<{ tenant_id: string; total: number; status_counts: Record<string, number>; items: Journal[] }>(`/api/v1/accounting/journals?${tenantParam(tenantId)}${params ? `&${params}` : ''}`),
+  searchJournals: (tenantId = DEFAULT_ACCOUNTING_TENANT, params = '') =>
+    getJson<{ tenant_id: string; query: string; total: number; items: Journal[] }>(`/api/v1/accounting/journals/search?${tenantParam(tenantId)}${params ? `&${params}` : ''}`),
+  createJournal: (payload: JournalPayload) =>
+    postJson<Journal>('/api/v1/accounting/journals', payload),
+  getJournal: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<Journal>(`/api/v1/accounting/journals/${id}?${tenantParam(tenantId)}`),
+  updateJournal: (id: string, tenantId: string, payload: Partial<JournalPayload> & { performed_by?: string }) =>
+    putJson<Journal>(`/api/v1/accounting/journals/${id}?${tenantParam(tenantId)}`, payload),
+  approveJournal: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT, performedBy = 'journal-checker') =>
+    postJson<Journal>(`/api/v1/accounting/journals/${id}/approve`, { tenant_id: tenantId, performed_by: performedBy, decision: 'approved' }),
+  postJournal: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT, performedBy = 'finance-head') =>
+    postJson<Journal>(`/api/v1/accounting/journals/${id}/post`, { tenant_id: tenantId, performed_by: performedBy }),
+  reverseJournal: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT, remarks = 'Controlled reversal from journal console') =>
+    postJson<{ journal: Journal; reversal: Journal }>(`/api/v1/accounting/journals/${id}/reverse`, { tenant_id: tenantId, performed_by: 'finance-head', remarks }),
 };

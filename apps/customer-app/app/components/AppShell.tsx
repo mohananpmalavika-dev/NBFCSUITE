@@ -103,6 +103,7 @@ const navItems = [
   { label: 'Financial Calendar', icon: ClipboardList, href: '/accounting/financial-calendar' },
   { label: 'Event Engine', icon: Layers, href: '/accounting/event-engine' },
   { label: 'Posting Rules', icon: Settings2, href: '/accounting/posting-rules' },
+  { label: 'Journal Engine', icon: FileText, href: '/accounting/journal-engine' },
   { label: 'Finance Workspace', icon: ClipboardList, href: '/eom/finance' },
   { label: 'HRMS', icon: ShieldCheck, href: '/eom' },
   { label: 'CRM', icon: Users2 },
@@ -130,7 +131,7 @@ const kpis = [
   { label: 'Avg Turnaround', value: '2.4h', change: 'Fast lane' },
 ];
 
-const favorites = ['Employee Directory', 'Customer 360', 'General Ledger', 'Financial Calendar', 'Event Engine', 'Posting Rules', 'Finance Workspace'];
+const favorites = ['Employee Directory', 'Customer 360', 'General Ledger', 'Financial Calendar', 'Event Engine', 'Posting Rules', 'Journal Engine', 'Finance Workspace'];
 // Add EOM Dashboard favorite
 favorites.unshift('EOM Dashboard');
 const recent = ['Expense Approval', 'Branch 1204', 'Policy Exceptions'];
@@ -670,6 +671,8 @@ export function AppShell({ children }: { children?: ReactNode }) {
                             ? '/accounting/event-engine'
                             : item === 'Posting Rules'
                               ? '/accounting/posting-rules'
+                              : item === 'Journal Engine'
+                                ? '/accounting/journal-engine'
                         : '#';
                 return (
                   <a key={item} href={href} className="block truncate text-sm text-text-inverseMuted">

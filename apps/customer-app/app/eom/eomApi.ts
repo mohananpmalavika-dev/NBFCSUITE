@@ -13,10 +13,10 @@ async function getJson<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function postJson<T>(path: string, payload: unknown): Promise<T> {
+async function postJson<T>(path: string, payload: unknown, headers?: Record<string, string>): Promise<T> {
   const response = await fetch(eomApiUrl(path), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(headers ?? {}) },
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
@@ -25,10 +25,10 @@ async function postJson<T>(path: string, payload: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function putJson<T>(path: string, payload: unknown): Promise<T> {
+async function putJson<T>(path: string, payload: unknown, headers?: Record<string, string>): Promise<T> {
   const response = await fetch(eomApiUrl(path), {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(headers ?? {}) },
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
@@ -37,10 +37,10 @@ async function putJson<T>(path: string, payload: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-async function patchJson<T>(path: string, payload: unknown): Promise<T> {
+async function patchJson<T>(path: string, payload: unknown, headers?: Record<string, string>): Promise<T> {
   const response = await fetch(eomApiUrl(path), {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(headers ?? {}) },
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
@@ -139,6 +139,49 @@ export interface FinanceDashboard {
     status: string;
   };
 }
+
+export interface Enterprise {
+  id: string;
+  code: string;
+  name: string;
+  display_name?: string | null;
+  short_name?: string | null;
+  status: string;
+  currency_code?: string | null;
+  timezone?: string | null;
+  language?: string | null;
+  fiscal_year_start?: string | null;
+  description?: string | null;
+}
+
+export interface EnterpriseProfile {
+  enterprise: Enterprise;
+  branding: Record<string, string | null>;
+  legal: Record<string, string | null>;
+  finance: Record<string, string | null>;
+  localization: Record<string, string | null>;
+  contact: Record<string, string | null>;
+  compliance: Record<string, string | boolean | null>;
+  integrations: Array<{ integration_type: string; provider?: string | null; status: string }>;
+  documents: Array<{ document_type: string; name: string; status: string; ocr_metadata?: string | null }>;
+  settings: Array<{ setting_group: string; setting_key: string; setting_value?: string | null; inherited: boolean }>;
+}
+
+export interface EnterpriseProfileResponse extends EnterpriseProfile {
+  health?: {
+    score: number;
+    status: string;
+    passed?: string[];
+    missing?: string[];
+  };
+}
+
+export const enterpriseApi = {
+  getEnterprise: (id: string) => getJson<Enterprise>(`/eom/enterprises/${id}`),
+  getEnterpriseProfile: (id: string) => getJson<EnterpriseProfile>(`/eom/enterprises/${id}/profile`),
+  patchEnterprise: (id: string, payload: Partial<Enterprise>) => patchJson<Enterprise>(`/eom/enterprises/${id}`, payload, { 'X-User-Roles': 'enterprise.admin' }),
+  updateEnterpriseProfile: (id: string, payload: EnterpriseProfile) => putJson<EnterpriseProfileResponse>(`/eom/enterprises/${id}/profile`, payload, { 'X-User-Roles': 'enterprise.admin' }),
+};
 
 export const financeApi = {
   getDashboard: () => getJson<FinanceDashboard>('/api/v1/finance/dashboard'),
