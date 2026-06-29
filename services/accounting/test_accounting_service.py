@@ -634,6 +634,47 @@ async def _run_accounting_test():
         assert formula_simulation["total_debit"] == 1000.0
         assert formula_simulation["total_credit"] == 1000.0
 
+        afc_rule_dashboard_response = await client.get(
+            "/api/v1/accounting/posting-rules/dashboard",
+            params={"tenant_id": tenant_id},
+        )
+        assert afc_rule_dashboard_response.status_code == 200
+        assert afc_rule_dashboard_response.json()["kpis"]["posting_rules"] >= 3
+
+        afc_rule_list_response = await client.get(
+            "/api/v1/accounting/posting-rules",
+            params={"tenant_id": tenant_id, "source_module": "collections"},
+        )
+        assert afc_rule_list_response.status_code == 200
+        assert any(item["id"] == formula_rule["id"] for item in afc_rule_list_response.json()["items"])
+
+        afc_rule_detail_response = await client.get(
+            f"/api/v1/accounting/posting-rules/{formula_rule['id']}",
+            params={"tenant_id": tenant_id},
+        )
+        assert afc_rule_detail_response.status_code == 200
+        afc_rule_detail = afc_rule_detail_response.json()
+        assert afc_rule_detail["accounting_view"]["debit_lines"][0]["account_code"] == "1120_BANK"
+        assert afc_rule_detail["operations_view"]["execution_count"] >= 1
+
+        afc_rule_simulation_response = await client.post(
+            f"/api/v1/accounting/posting-rules/{formula_rule['id']}/simulate",
+            json={
+                "tenant_id": tenant_id,
+                "source_reference": "AFC-SIM-001",
+                "amount": 1000.0,
+                "event_data": {
+                    "product": "gold_loan",
+                    "emi_amount": 1000.0,
+                    "principal": 700.0,
+                    "interest": 250.0,
+                    "penalty": 50.0,
+                },
+            },
+        )
+        assert afc_rule_simulation_response.status_code == 200
+        assert afc_rule_simulation_response.json()["is_balanced"] is True
+
         formula_publish_response = await client.post(
             f"/posting-rules/{formula_rule['id']}/publish",
             json={"tenant_id": tenant_id, "performed_by": "tester"},
@@ -687,6 +728,13 @@ async def _run_accounting_test():
         assert new_version_response.json()["version"] == 2.0
         assert new_version_response.json()["supersedes_rule_id"] == formula_rule["id"]
         assert new_version_response.json()["status"] == "draft"
+
+        afc_rule_versions_response = await client.get(
+            f"/api/v1/accounting/posting-rules/{formula_rule['id']}/versions",
+            params={"tenant_id": tenant_id},
+        )
+        assert afc_rule_versions_response.status_code == 200
+        assert len(afc_rule_versions_response.json()["items"]) >= 2
 
         formula_history_response = await client.get(
             f"/posting-rules/{formula_rule['id']}/history",

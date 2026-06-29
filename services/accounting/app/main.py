@@ -906,6 +906,15 @@ class PostingRuleSimulationRequest(BaseModel):
     event_data: Optional[dict] = None
 
 
+class PostingRuleDirectSimulationRequest(BaseModel):
+    tenant_id: str
+    source_reference: Optional[str] = None
+    amount: Optional[float] = None
+    currency: Optional[str] = "INR"
+    branch_id: Optional[str] = None
+    event_data: Optional[dict] = None
+
+
 class PostingRulePublishRequest(BaseModel):
     tenant_id: str
     performed_by: Optional[str] = None
@@ -2906,6 +2915,234 @@ def _posting_rule_response(rule: PostingRule) -> dict:
         "created_by": rule.created_by,
         "metadata": rule.metadata_json,
     }
+
+
+def _posting_rule_api_item(rule: PostingRule, executions: Optional[list[PostingExecutionLog]] = None) -> dict:
+    base = _posting_rule_response(rule)
+    lines = base.get("lines") or []
+    debit_lines = [line for line in lines if str(line.get("direction", "")).lower() == "debit"]
+    credit_lines = [line for line in lines if str(line.get("direction", "")).lower() == "credit"]
+    metadata = base.get("metadata") or {}
+    execution_rows = executions or []
+    success_count = sum(1 for item in execution_rows if item.status in {"success", "posted", "simulated"})
+    failure_count = sum(1 for item in execution_rows if item.status not in {"success", "posted", "simulated"})
+    avg_time = 0 if not execution_rows else round(sum(item.execution_time_ms or 0.0 for item in execution_rows) / len(execution_rows), 2)
+    return {
+        **base,
+        "rule_code": metadata.get("rule_code") or f"{rule.source_module}.{rule.source_event}.v{rule.version:g}",
+        "accounting_event": rule.source_event,
+        "product": metadata.get("product") or metadata.get("product_id"),
+        "scope": metadata.get("scope") or {
+            "enterprise": metadata.get("enterprise"),
+            "legal_entity": metadata.get("legal_entity"),
+            "business_unit": metadata.get("business_unit"),
+            "product": metadata.get("product"),
+            "branch": metadata.get("branch_id"),
+        },
+        "debit_lines": debit_lines,
+        "credit_lines": credit_lines,
+        "dimensions": metadata.get("dimensions") or {},
+        "taxes": metadata.get("taxes") or [],
+        "validation_rules": metadata.get("validation_rules") or ["debits_equal_credits", "currency_exists", "gl_active", "period_open"],
+        "workflow": {
+            "maker_by": rule.maker_by,
+            "checker_by": rule.checker_by,
+            "finance_head_by": rule.finance_head_by,
+            "approval_status": rule.approval_status,
+        },
+        "execution_summary": {
+            "execution_count": len(execution_rows),
+            "success_count": success_count,
+            "failure_count": failure_count,
+            "average_execution_time_ms": avg_time,
+        },
+        "ai": {
+            "duplicate_risk": "medium" if metadata.get("duplicate_risk") else "low",
+            "conflict_detection": "review" if failure_count else "clear",
+            "recommendation": "Publish after finance-head approval." if rule.status in {"draft", "pending_approval"} else "Monitor execution performance.",
+            "predicted_failure": "medium" if failure_count else "low",
+        },
+    }
+
+
+def _posting_rule_dashboard_payload(tenant_id: str, db: Session) -> dict:
+    rules = db.query(PostingRule).filter(PostingRule.tenant_id == tenant_id).all()
+    executions = db.query(PostingExecutionLog).filter(PostingExecutionLog.tenant_id == tenant_id).all()
+    execution_rule_ids = {item.rule_id for item in executions if item.rule_id}
+    by_product: dict[str, int] = {}
+    by_status: dict[str, int] = {}
+    execution_frequency: dict[str, int] = {}
+    rule_lookup = {rule.id: rule for rule in rules}
+    for rule in rules:
+        metadata = rule.metadata_json or {}
+        product = metadata.get("product") or metadata.get("product_id") or "Enterprise Default"
+        by_product[product] = by_product.get(product, 0) + 1
+        by_status[rule.status or "unknown"] = by_status.get(rule.status or "unknown", 0) + 1
+    for execution in executions:
+        rule = rule_lookup.get(execution.rule_id)
+        label = rule.rule_name if rule else f"{execution.source_module}.{execution.source_event}"
+        execution_frequency[label] = execution_frequency.get(label, 0) + 1
+    active_rules = sum(1 for rule in rules if rule.status in {"active", "published"} or rule.is_active in {"true", "1", "yes", "active"})
+    failed_executions = sum(1 for execution in executions if execution.status not in {"success", "posted", "simulated"})
+    average_execution = 0 if not executions else round(sum(execution.execution_time_ms or 0.0 for execution in executions) / len(executions), 2)
+    event_keys = {(event.source_module, _normalize_event_source(event.event_type, event.source_module, event.payload)[1]) for event in db.query(AccountingEvent).filter(AccountingEvent.tenant_id == tenant_id).all()}
+    rule_keys = {(rule.source_module, rule.source_event) for rule in rules}
+    coverage = 100 if not event_keys else round((len(event_keys & rule_keys) / len(event_keys)) * 100)
+    unused_rules = sum(1 for rule in rules if rule.id not in execution_rule_ids)
+    health = 100 if not rules else max(0, round((active_rules / len(rules)) * 70 + (coverage * 0.2) - min(30, failed_executions * 5)))
+    return {
+        "tenant_id": tenant_id,
+        "kpis": {
+            "posting_rules": len(rules),
+            "active_rules": active_rules,
+            "draft_rules": sum(1 for rule in rules if rule.status == "draft"),
+            "failed_rules": failed_executions,
+            "average_execution_time_ms": average_execution,
+            "rule_coverage": coverage,
+            "unused_rules": unused_rules,
+            "ai_recommendations": failed_executions + unused_rules,
+            "rule_health": health,
+        },
+        "charts": {
+            "rules_by_product": [{"label": key, "value": value} for key, value in sorted(by_product.items())],
+            "execution_frequency": [{"label": key, "value": value} for key, value in sorted(execution_frequency.items())],
+            "rule_success_rate": [
+                {"label": "Success", "value": 100 if not executions else round(((len(executions) - failed_executions) / len(executions)) * 100, 1)},
+                {"label": "Failed", "value": 0 if not executions else round((failed_executions / len(executions)) * 100, 1)},
+            ],
+            "rules_by_status": [{"label": key, "value": value} for key, value in sorted(by_status.items())],
+        },
+        "summary": {
+            "status": "healthy" if health >= 90 else "attention" if health >= 70 else "critical",
+            "message": "Posting rules are ready for event-driven journal generation." if health >= 70 else "Review coverage, failed executions, and unused rules.",
+        },
+    }
+
+
+def _simulate_posting_rule_instance(
+    rule: PostingRule,
+    request: PostingRuleDirectSimulationRequest,
+    db: Session,
+) -> dict:
+    event_data = {"amount": request.amount or 0.0, **(request.event_data or {})}
+    amount = float(request.amount or event_data.get("amount") or event_data.get("loan_amount") or event_data.get("emi_amount") or 0.0)
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="amount or event_data.amount must be positive")
+    started_at = datetime.utcnow()
+    lines = _build_posting_lines_from_rule(
+        rule,
+        amount,
+        branch_id=request.branch_id,
+        currency=request.currency,
+        description_prefix=f"{rule.source_module}.{rule.source_event}",
+        event_data=event_data,
+    )
+    validation = _validate_double_entry(lines)
+    resolved_lines = []
+    for line in lines:
+        account = _get_postable_account_by_code(line.account_code or "", request.tenant_id, db)
+        _validate_account_for_line(account, line.debit or 0.0, line.credit or 0.0, posting_mode="auto")
+        resolved_lines.append(
+            {
+                "account_id": account.id,
+                "account_code": account.account_code,
+                "account_name": account.account_name,
+                "direction": "debit" if line.debit else "credit",
+                "debit": line.debit,
+                "credit": line.credit,
+                "description": line.description,
+                "branch_id": line.branch_id,
+                "department_id": line.department_id,
+                "cost_center": line.cost_center,
+                "profit_center": line.profit_center,
+                "project_id": line.project_id,
+                "employee_id": line.employee_id,
+                "product_id": line.product_id,
+                "business_unit_id": line.business_unit_id,
+                "currency": line.currency,
+                "transaction_currency": line.transaction_currency,
+                "exchange_rate": line.exchange_rate,
+            }
+        )
+    _log_posting_execution(
+        db,
+        tenant_id=request.tenant_id,
+        rule_id=rule.id,
+        source_module=rule.source_module,
+        source_event=rule.source_event,
+        source_reference=request.source_reference,
+        status="simulated",
+        input_payload=event_data,
+        generated_lines=resolved_lines,
+        started_at=started_at,
+    )
+    db.commit()
+    return {
+        "rule": _posting_rule_api_item(rule),
+        "is_balanced": validation["is_balanced"],
+        "total_debit": validation["total_debit"],
+        "total_credit": validation["total_credit"],
+        "lines": resolved_lines,
+        "pipeline": _posting_pipeline(posting_rule_status="simulated", posting_rule=_posting_rule_response(rule)),
+        "ai": {
+            "impact": f"Rule {rule.rule_name} generates {len(resolved_lines)} journal lines.",
+            "risk": "low" if validation["is_balanced"] else "high",
+            "recommendation": "Simulation is balanced; proceed to approval workflow." if validation["is_balanced"] else "Fix debit/credit imbalance before publishing.",
+        },
+    }
+
+
+def _posting_rule_360_payload(rule: PostingRule, db: Session) -> dict:
+    executions = (
+        db.query(PostingExecutionLog)
+        .filter(PostingExecutionLog.tenant_id == rule.tenant_id, PostingExecutionLog.rule_id == rule.id)
+        .order_by(PostingExecutionLog.created_at.desc())
+        .all()
+    )
+    history = (
+        db.query(AuditLog)
+        .filter(AuditLog.tenant_id == rule.tenant_id, AuditLog.entity == "posting_rule", AuditLog.entity_id == rule.id)
+        .order_by(AuditLog.created_at.desc())
+        .limit(25)
+        .all()
+    )
+    response = _posting_rule_api_item(rule, executions)
+    response["business_view"] = {
+        "triggering_events": [f"{rule.source_module}.{rule.source_event}"],
+        "supported_products": [response.get("product") or "Enterprise Default"],
+        "effective_from": rule.effective_from,
+        "effective_to": rule.effective_to,
+    }
+    response["accounting_view"] = {
+        "debit_lines": response["debit_lines"],
+        "credit_lines": response["credit_lines"],
+        "formula_definitions": [line for line in response["lines"] if line.get("formula") or line.get("amount_source")],
+        "validation_rules": response["validation_rules"],
+    }
+    response["operations_view"] = response["execution_summary"]
+    response["governance_view"] = {
+        "versions": db.query(PostingRule).filter(PostingRule.tenant_id == rule.tenant_id, (PostingRule.id == rule.id) | (PostingRule.supersedes_rule_id == rule.id)).count(),
+        "approval_history": response["workflow"],
+        "change_log": [_audit_log_response(item) for item in history],
+        "impact_analysis": f"{len(executions)} executions reference this rule.",
+    }
+    response["ai_view"] = response["ai"]
+    response["recent_executions"] = [
+        {
+            "id": item.id,
+            "source_module": item.source_module,
+            "source_event": item.source_event,
+            "source_reference": item.source_reference,
+            "status": item.status,
+            "execution_time_ms": item.execution_time_ms,
+            "journal_id": item.journal_id,
+            "error_message": item.error_message,
+            "created_at": item.created_at,
+            "generated_lines": item.generated_lines,
+        }
+        for item in executions[:25]
+    ]
+    return response
 
 
 def _audit_log_response(log: AuditLog) -> dict:
@@ -4922,6 +5159,106 @@ async def api_replay_accounting_event(event_id: str, request: AccountingEventAct
     db.commit()
     db.refresh(event)
     return _event_360_payload(event)
+
+
+@app.get("/api/v1/accounting/posting-rules/dashboard")
+async def api_posting_rules_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return _posting_rule_dashboard_payload(tenant_id, db)
+
+
+@app.get("/api/v1/accounting/posting-rules")
+async def api_list_posting_rules(
+    tenant_id: str = Query(...),
+    q: Optional[str] = Query(None),
+    source_module: Optional[str] = Query(None),
+    source_event: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    product: Optional[str] = Query(None),
+    limit: int = Query(50),
+    offset: int = Query(0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(PostingRule).filter(PostingRule.tenant_id == tenant_id)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (PostingRule.rule_name.ilike(like))
+            | (PostingRule.source_module.ilike(like))
+            | (PostingRule.source_event.ilike(like))
+            | (PostingRule.description.ilike(like))
+        )
+    if source_module:
+        query = query.filter(PostingRule.source_module == source_module)
+    if source_event:
+        query = query.filter(PostingRule.source_event == source_event)
+    if status:
+        query = query.filter(PostingRule.status == status)
+    rows = query.order_by(PostingRule.source_module, PostingRule.source_event, PostingRule.priority.asc()).all()
+    if product:
+        rows = [rule for rule in rows if (rule.metadata_json or {}).get("product") == product or (rule.metadata_json or {}).get("product_id") == product]
+    total = len(rows)
+    selected = rows[offset : offset + limit]
+    execution_rows = db.query(PostingExecutionLog).filter(PostingExecutionLog.tenant_id == tenant_id).all()
+    executions_by_rule: dict[str, list[PostingExecutionLog]] = {}
+    for execution in execution_rows:
+        if execution.rule_id:
+            executions_by_rule.setdefault(execution.rule_id, []).append(execution)
+    return {
+        "tenant_id": tenant_id,
+        "total": total,
+        "items": [_posting_rule_api_item(rule, executions_by_rule.get(rule.id, [])) for rule in selected],
+    }
+
+
+@app.post("/api/v1/accounting/posting-rules")
+async def api_create_posting_rule(rule: PostingRuleCreate, db: Session = Depends(get_db)):
+    created = await create_posting_rule(rule, db)
+    persisted = db.query(PostingRule).filter(PostingRule.id == created["id"], PostingRule.tenant_id == rule.tenant_id).first()
+    return _posting_rule_api_item(persisted) if persisted else created
+
+
+@app.get("/api/v1/accounting/posting-rules/{rule_id}")
+async def api_get_posting_rule(rule_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    rule = db.query(PostingRule).filter(PostingRule.id == rule_id, PostingRule.tenant_id == tenant_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Posting rule not found for tenant")
+    return _posting_rule_360_payload(rule, db)
+
+
+@app.put("/api/v1/accounting/posting-rules/{rule_id}")
+async def api_update_posting_rule(rule_id: str, update: PostingRuleUpdate, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    updated = await update_posting_rule(rule_id, update, tenant_id, db)
+    persisted = db.query(PostingRule).filter(PostingRule.id == updated["id"], PostingRule.tenant_id == tenant_id).first()
+    return _posting_rule_360_payload(persisted, db) if persisted else updated
+
+
+@app.post("/api/v1/accounting/posting-rules/{rule_id}/simulate")
+async def api_simulate_posting_rule_by_id(rule_id: str, request: PostingRuleDirectSimulationRequest, db: Session = Depends(get_db)):
+    rule = db.query(PostingRule).filter(PostingRule.id == rule_id, PostingRule.tenant_id == request.tenant_id).first()
+    if not rule:
+        raise HTTPException(status_code=404, detail="Posting rule not found for tenant")
+    return _simulate_posting_rule_instance(rule, request, db)
+
+
+@app.post("/api/v1/accounting/posting-rules/{rule_id}/publish")
+async def api_publish_posting_rule(rule_id: str, request: PostingRulePublishRequest, db: Session = Depends(get_db)):
+    published = await publish_posting_rule(rule_id, request, db)
+    persisted = db.query(PostingRule).filter(PostingRule.id == published["id"], PostingRule.tenant_id == request.tenant_id).first()
+    return _posting_rule_360_payload(persisted, db) if persisted else published
+
+
+@app.get("/api/v1/accounting/posting-rules/{rule_id}/versions")
+async def api_posting_rule_versions(rule_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    root = db.query(PostingRule).filter(PostingRule.id == rule_id, PostingRule.tenant_id == tenant_id).first()
+    if not root:
+        raise HTTPException(status_code=404, detail="Posting rule not found for tenant")
+    versions = (
+        db.query(PostingRule)
+        .filter(PostingRule.tenant_id == tenant_id, (PostingRule.id == rule_id) | (PostingRule.supersedes_rule_id == rule_id))
+        .order_by(PostingRule.version.asc(), PostingRule.created_at.asc())
+        .all()
+    )
+    return {"tenant_id": tenant_id, "rule_id": rule_id, "items": [_posting_rule_api_item(rule) for rule in versions]}
 
 
 @app.post("/accounting-periods", response_model=AccountingPeriodResponse)

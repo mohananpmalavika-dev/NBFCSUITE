@@ -376,6 +376,144 @@ export interface EventQueueResponse {
   items: AccountingEvent[];
 }
 
+export interface PostingRuleLine {
+  account_code: string;
+  direction: 'debit' | 'credit' | string;
+  description?: string | null;
+  sequence?: number | null;
+  amount_source?: string | null;
+  percentage?: number | null;
+  formula?: string | null;
+  currency?: string | null;
+  dimension_source?: Record<string, unknown> | null;
+  transaction_currency_source?: string | null;
+  exchange_rate_source?: string | null;
+}
+
+export interface PostingRuleCondition {
+  field: string;
+  operator: string;
+  value?: unknown;
+}
+
+export interface PostingRule {
+  id: string;
+  tenant_id: string;
+  source_module: string;
+  source_event: string;
+  rule_name?: string | null;
+  rule_code?: string;
+  accounting_event?: string;
+  product?: string | null;
+  scope?: string | Record<string, unknown> | null;
+  priority: number;
+  status?: string | null;
+  version?: number | null;
+  supersedes_rule_id?: string | null;
+  effective_from?: string | null;
+  effective_to?: string | null;
+  requires_approval?: string | null;
+  approval_status?: string | null;
+  maker_by?: string | null;
+  checker_by?: string | null;
+  finance_head_by?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  dependency_rule_ids?: string[];
+  rollback_strategy?: string | null;
+  debit_account_code?: string | null;
+  credit_account_code?: string | null;
+  description?: string | null;
+  is_active: string;
+  lines: PostingRuleLine[];
+  debit_lines?: PostingRuleLine[];
+  credit_lines?: PostingRuleLine[];
+  conditions: PostingRuleCondition[];
+  dimensions?: Record<string, unknown>;
+  validation_rules?: string[];
+  workflow?: Record<string, unknown>;
+  execution_summary?: {
+    execution_count: number;
+    success_count: number;
+    failure_count: number;
+    success_rate?: number;
+    average_execution_time_ms: number;
+  };
+  ai?: {
+    duplicate_risk?: string;
+    conflict_detection?: string;
+    recommendation?: string;
+    predicted_failure?: string;
+    health_score?: number;
+    coverage?: string;
+  };
+  business_view?: Record<string, unknown>;
+  accounting_view?: Record<string, unknown>;
+  operations_view?: Record<string, unknown>;
+  governance_view?: Record<string, unknown>;
+  ai_view?: Record<string, unknown>;
+  recent_executions?: Array<Record<string, unknown>>;
+  created_at?: string | null;
+  updated_at?: string | null;
+  created_by?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface PostingRulePayload {
+  tenant_id: string;
+  source_module: string;
+  source_event: string;
+  rule_name?: string;
+  priority?: number;
+  status?: string;
+  version?: number;
+  effective_from?: string;
+  effective_to?: string;
+  requires_approval?: string;
+  debit_account_code?: string;
+  credit_account_code?: string;
+  description?: string;
+  lines?: PostingRuleLine[];
+  conditions?: PostingRuleCondition[];
+  created_by?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface PostingRuleDashboard {
+  tenant_id: string;
+  kpis: {
+    posting_rules: number;
+    active_rules: number;
+    draft_rules: number;
+    failed_rules: number;
+    average_execution_time_ms: number;
+    rule_coverage: number;
+    unused_rules: number;
+    ai_recommendations: number;
+    rule_health: number;
+  };
+  charts: {
+    rules_by_product: Array<{ label: string; value: number }>;
+    execution_frequency: Array<{ label: string; value: number }>;
+    rule_success_rate: Array<{ label: string; value: number }>;
+    rules_by_status: Array<{ label: string; value: number }>;
+  };
+  summary: {
+    status: string;
+    message: string;
+  };
+}
+
+export interface PostingRuleSimulationResponse {
+  rule: PostingRule;
+  is_balanced: boolean;
+  total_debit: number;
+  total_credit: number;
+  lines: Array<Record<string, unknown>>;
+  pipeline?: Record<string, unknown>;
+  ai?: Record<string, unknown>;
+}
+
 function tenantParam(tenantId = DEFAULT_ACCOUNTING_TENANT) {
   return `tenant_id=${encodeURIComponent(tenantId)}`;
 }
@@ -455,4 +593,23 @@ export const accountingApi = {
     postJson<AccountingEvent>(`/api/v1/accounting/events/${id}/replay`, { tenant_id: tenantId, performed_by: 'event-console', reason }),
   getEventQueue: (tenantId = DEFAULT_ACCOUNTING_TENANT, queueStatus = '') =>
     getJson<EventQueueResponse>(`/api/v1/accounting/events/queue?${tenantParam(tenantId)}${queueStatus ? `&queue_status=${encodeURIComponent(queueStatus)}` : ''}`),
+  getPostingRuleDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<PostingRuleDashboard>(`/api/v1/accounting/posting-rules/dashboard?${tenantParam(tenantId)}`),
+  listPostingRules: (tenantId = DEFAULT_ACCOUNTING_TENANT, params = '') =>
+    getJson<{ tenant_id: string; total: number; items: PostingRule[] }>(`/api/v1/accounting/posting-rules?${tenantParam(tenantId)}${params ? `&${params}` : ''}`),
+  createPostingRule: (payload: PostingRulePayload) =>
+    postJson<PostingRule>('/api/v1/accounting/posting-rules', payload),
+  getPostingRule: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<PostingRule>(`/api/v1/accounting/posting-rules/${id}?${tenantParam(tenantId)}`),
+  updatePostingRule: (id: string, tenantId: string, payload: Partial<PostingRulePayload>) =>
+    putJson<PostingRule>(`/api/v1/accounting/posting-rules/${id}?${tenantParam(tenantId)}`, payload),
+  simulatePostingRule: (id: string, tenantId: string, payload: { amount: number; source_reference?: string; currency?: string; branch_id?: string; event_data?: Record<string, unknown> }) =>
+    postJson<PostingRuleSimulationResponse>(`/api/v1/accounting/posting-rules/${id}/simulate`, {
+      tenant_id: tenantId,
+      ...payload,
+    }),
+  publishPostingRule: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    postJson<PostingRule>(`/api/v1/accounting/posting-rules/${id}/publish`, { tenant_id: tenantId, performed_by: 'rule-console' }),
+  getPostingRuleVersions: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<{ tenant_id: string; rule_id: string; items: PostingRule[] }>(`/api/v1/accounting/posting-rules/${id}/versions?${tenantParam(tenantId)}`),
 };
