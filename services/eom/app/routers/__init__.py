@@ -7,3 +7,9 @@ from .branch import router as branch
 from .department import router as department
 from .dashboard import router as dashboard
 from .positions import router as positions
+from .grade import router as grade
+from .sections import router as sections
+from .teams import router as teams
+from .grade import router as grade
+from .sections import router as sections
+from .teams import router as teams

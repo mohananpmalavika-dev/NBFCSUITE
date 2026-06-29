@@ -22,6 +22,8 @@ class Position(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    grade = relationship('Grade', foreign_keys=[grade_id])
-    team = relationship('Team', foreign_keys=[team_id])
+    # grade_id is intentionally not linked via a FK in this codebase.
+    # Using relationship() without a ForeignKey causes SQLAlchemy mapper configuration failures.
+    grade = None  # type: ignore
+    team = None  # type: ignore
     reports_to = relationship('Position', remote_side=[id])

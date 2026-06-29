@@ -100,7 +100,7 @@ def list_cost_centers(
 
     return {
         'total': total,
-        'items': [s.CostCenterResponse.from_orm(r) for r in rows],
+        'items': [s.CostCenterResponse.model_validate(r) for r in rows],
     }
 
 
@@ -217,7 +217,7 @@ def list_profit_centers(
     total = query.count()
     rows = query.order_by(m.ProfitCenter.created_at.desc()).limit(limit).offset(offset).all()
 
-    return {'total': total, 'items': [s.ProfitCenterResponse.from_orm(r) for r in rows]}
+    return {'total': total, 'items': [s.ProfitCenterResponse.model_validate(r) for r in rows]}
 
 
 @router.post('/profit-centers', response_model=s.ProfitCenterResponse, status_code=status.HTTP_201_CREATED)
@@ -335,7 +335,7 @@ def list_budgets(
     total = query.count()
     rows = query.order_by(m.Budget.created_at.desc()).limit(limit).offset(offset).all()
 
-    return {'total': total, 'items': [s.BudgetResponse.from_orm(r) for r in rows]}
+    return {'total': total, 'items': [s.BudgetResponse.model_validate(r) for r in rows]}
 
 
 @router.post('/budgets', response_model=s.BudgetResponse, status_code=status.HTTP_201_CREATED)
@@ -414,7 +414,7 @@ def list_internal_orders(
     total = query.count()
     rows = query.order_by(m.InternalOrder.created_at.desc()).limit(limit).offset(offset).all()
 
-    return {'total': total, 'items': [s.InternalOrderResponse.from_orm(r) for r in rows]}
+    return {'total': total, 'items': [s.InternalOrderResponse.model_validate(r) for r in rows]}
 
 
 @router.post('/internal-orders', response_model=s.InternalOrderResponse, status_code=status.HTTP_201_CREATED)

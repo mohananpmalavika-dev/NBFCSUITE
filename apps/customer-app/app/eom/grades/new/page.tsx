@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { AppShell } from '../../../components/AppShell';
-import { eomApiUrl } from './eomApi';
+import { eomApiUrl } from '../../eomApi';
 
 
 

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Literal
 from datetime import datetime
 
@@ -37,6 +37,8 @@ class CostCenterUpdate(BaseModel):
 
 
 class CostCenterResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     enterprise_id: Optional[str] = None
     code: str
@@ -53,9 +55,6 @@ class CostCenterResponse(BaseModel):
 
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
-    class Config:
-        orm_mode = True
 
 
 class CostCenterListResponse(BaseModel):
@@ -97,6 +96,8 @@ class ProfitCenterUpdate(BaseModel):
 
 
 class ProfitCenterResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     enterprise_id: Optional[str] = None
     code: str
@@ -113,9 +114,6 @@ class ProfitCenterResponse(BaseModel):
 
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
-    class Config:
-        orm_mode = True
 
 
 class ProfitCenterListResponse(BaseModel):
@@ -163,6 +161,8 @@ class BudgetUpdate(BaseModel):
 
 
 class BudgetResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     enterprise_id: Optional[str] = None
     budget_center_id: Optional[str] = None
@@ -181,9 +181,6 @@ class BudgetResponse(BaseModel):
 
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
-    class Config:
-        orm_mode = True
 
 
 class BudgetListResponse(BaseModel):
@@ -224,6 +221,8 @@ class InternalOrderUpdate(BaseModel):
 
 
 class InternalOrderResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     enterprise_id: Optional[str] = None
     code: str
@@ -239,9 +238,6 @@ class InternalOrderResponse(BaseModel):
 
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-
-    class Config:
-        orm_mode = True
 
 
 class InternalOrderListResponse(BaseModel):

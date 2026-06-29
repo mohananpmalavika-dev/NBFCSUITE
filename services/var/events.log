@@ -202,3 +202,53 @@
 {"ts": "2026-06-28T23:09:45.596751+00:00", "type": "BRANCH_CREATED", "payload": {"id": "c19564b6-8072-4aca-bc9b-64c8fa424830", "code": "BR-001", "name": "Main Branch"}}
 {"ts": "2026-06-28T23:09:45.693170+00:00", "type": "BRANCH_UPDATED", "payload": {"id": "c19564b6-8072-4aca-bc9b-64c8fa424830"}}
 {"ts": "2026-06-28T23:09:45.753993+00:00", "type": "BRANCH_STATUS_CHANGED", "payload": {"id": "c19564b6-8072-4aca-bc9b-64c8fa424830", "status": "inactive"}}
+{"ts": "2026-06-29T06:34:54.656174+00:00", "type": "COST_CENTER_CREATED", "payload": {"id": "2111a95a-92f8-4173-afbc-b6b741c20a11", "code": "CC-TEST-1", "name": "HR Cost"}}
+{"ts": "2026-06-29T06:34:54.805200+00:00", "type": "PROFIT_CENTER_CREATED", "payload": {"id": "018d2670-f37f-4712-bf15-c3067745aa40", "code": "PC-TEST-1", "name": "Gold Loan"}}
+{"ts": "2026-06-29T06:34:54.919114+00:00", "type": "INTERNAL_ORDER_OPENED", "payload": {"id": "00eefb0f-018c-4dba-9e7b-4502e47650ea", "status": "draft"}}
+{"ts": "2026-06-29T06:35:51.639044+00:00", "type": "POSITION_CREATED", "payload": {"id": "2731c782-ae4a-4c1c-b4d0-4d839ecd6046", "code": "POS-TEST-1", "title": "Test Position 1"}}
+{"ts": "2026-06-29T06:37:39.788190+00:00", "type": "COST_CENTER_CREATED", "payload": {"id": "88f8c74d-6dca-4728-86cc-1493ef5adb68", "code": "CC-TEST-2e035cd2", "name": "HR Cost"}}
+{"ts": "2026-06-29T06:37:41.857496+00:00", "type": "PROFIT_CENTER_CREATED", "payload": {"id": "c3d8be05-627d-414c-b810-322e2a235c25", "code": "PC-TEST-62384683", "name": "Gold Loan"}}
+{"ts": "2026-06-29T06:37:42.788129+00:00", "type": "INTERNAL_ORDER_OPENED", "payload": {"id": "99eae82c-e3aa-4f7c-a28a-2d0ba1b3630a", "status": "draft"}}
+{"ts": "2026-06-29T06:37:42.843991+00:00", "type": "BUDGET_CREATED", "payload": {"id": "c683317a-6956-40c6-b6f6-ff64fcf8d9fa"}}
+{"ts": "2026-06-29T06:38:48.764911+00:00", "type": "COST_CENTER_CREATED", "payload": {"id": "89f134f2-f10c-4924-a83d-086d74e9dea7", "code": "CC-TEST-3e37aa6f", "name": "HR Cost"}}
+{"ts": "2026-06-29T06:38:49.160167+00:00", "type": "PROFIT_CENTER_CREATED", "payload": {"id": "49a48f7a-5727-45ef-86b1-ca9319fc165c", "code": "PC-TEST-ec77d784", "name": "Gold Loan"}}
+{"ts": "2026-06-29T06:38:49.390597+00:00", "type": "INTERNAL_ORDER_OPENED", "payload": {"id": "f91f0a17-5485-453d-b8bf-883400fda867", "status": "draft"}}
+{"ts": "2026-06-29T06:38:50.264112+00:00", "type": "BUDGET_CREATED", "payload": {"id": "84baa1e4-8934-44b2-8cb8-bd8c8545b381"}}
+{"ts": "2026-06-29T06:41:46.092557+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "f51dcd6c-c452-444c-ae64-478a4403b54a", "code": "LE-BR-001", "name": "Branch Legal Entity"}}
+{"ts": "2026-06-29T06:41:46.220000+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "19348f00-35f1-4083-96db-291447b11d8f", "code": "BU-BR-001", "name": "Branch Business Unit"}}
+{"ts": "2026-06-29T06:41:46.282365+00:00", "type": "BRANCH_CREATED", "payload": {"id": "ebfbeffa-2d7e-43bd-8811-4877cf8acc05", "code": "BR-001", "name": "Main Branch"}}
+{"ts": "2026-06-29T06:41:46.374022+00:00", "type": "BRANCH_UPDATED", "payload": {"id": "ebfbeffa-2d7e-43bd-8811-4877cf8acc05"}}
+{"ts": "2026-06-29T06:41:46.417219+00:00", "type": "BRANCH_STATUS_CHANGED", "payload": {"id": "ebfbeffa-2d7e-43bd-8811-4877cf8acc05", "status": "inactive"}}
+{"ts": "2026-06-29T06:41:46.523162+00:00", "type": "BRAND_CREATED", "payload": {"id": "08e5ace7-336b-4536-9955-1fe45d03d7f2", "code": "BR-001", "name": "Brand One"}}
+{"ts": "2026-06-29T06:41:46.598730+00:00", "type": "BRAND_UPDATED", "payload": {"id": "08e5ace7-336b-4536-9955-1fe45d03d7f2"}}
+{"ts": "2026-06-29T06:41:46.641141+00:00", "type": "BRAND_DELETED", "payload": {"id": "08e5ace7-336b-4536-9955-1fe45d03d7f2"}}
+{"ts": "2026-06-29T06:41:46.717770+00:00", "type": "BRAND_CREATED", "payload": {"id": "760e4e4b-d9b0-4a3c-af8c-29d017f22a1b", "code": "B-AUD", "name": "Audit Brand"}}
+{"ts": "2026-06-29T06:41:46.759078+00:00", "type": "BRAND_UPDATED", "payload": {"id": "760e4e4b-d9b0-4a3c-af8c-29d017f22a1b"}}
+{"ts": "2026-06-29T06:41:46.839894+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "2b292d76-4197-4c94-b6c8-77b616b817db", "code": "LE-100", "name": "Legal Entity for BU"}}
+{"ts": "2026-06-29T06:41:46.925028+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "ed451771-ba8f-4e11-8f5c-d8ca385cb139", "code": "BU-001", "name": "Business Unit One"}}
+{"ts": "2026-06-29T06:41:47.031801+00:00", "type": "BUSINESS_UNIT_UPDATED", "payload": {"id": "ed451771-ba8f-4e11-8f5c-d8ca385cb139"}}
+{"ts": "2026-06-29T06:41:47.080898+00:00", "type": "BUSINESS_UNIT_STATUS_CHANGED", "payload": {"id": "ed451771-ba8f-4e11-8f5c-d8ca385cb139", "status": "inactive"}}
+{"ts": "2026-06-29T06:41:47.171427+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "0275c85f-f42b-4e8b-8ede-842bb516b157", "code": "ENT-DASH", "name": "Dashboard Enterprise"}}
+{"ts": "2026-06-29T06:41:47.212406+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "d898915d-1c32-44de-befb-a74cd17f5a82", "code": "LE-DASH", "name": "Dashboard Legal Entity"}}
+{"ts": "2026-06-29T06:41:47.276813+00:00", "type": "BUSINESS_UNIT_CREATED", "payload": {"id": "baefe9fc-6a52-46c5-8d98-516fc0eb8e99", "code": "BU-DASH", "name": "Dashboard Business Unit"}}
+{"ts": "2026-06-29T06:41:47.412138+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "9ebf84f3-c0a7-410b-bf53-942d412bbc49", "code": "ENT-001", "name": "Test Enterprise"}}
+{"ts": "2026-06-29T06:41:47.492534+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "d963cbb0-81ca-4f25-888a-e8d392e16b5d", "code": "ENT-002", "name": "Second Ent"}}
+{"ts": "2026-06-29T06:41:47.532277+00:00", "type": "ENTERPRISE_UPDATED", "payload": {"id": "d963cbb0-81ca-4f25-888a-e8d392e16b5d"}}
+{"ts": "2026-06-29T06:41:47.575380+00:00", "type": "ENTERPRISE_STATUS_CHANGED", "payload": {"id": "d963cbb0-81ca-4f25-888a-e8d392e16b5d", "status": "suspended"}}
+{"ts": "2026-06-29T06:41:47.702896+00:00", "type": "ENTERPRISE_DELETED", "payload": {"id": "d963cbb0-81ca-4f25-888a-e8d392e16b5d"}}
+{"ts": "2026-06-29T06:41:47.768154+00:00", "type": "ENTERPRISE_CREATED", "payload": {"id": "5266f402-f248-4ac3-b422-06b61850b2d1", "code": "ENT-MASTER", "name": "Enterprise Master"}}
+{"ts": "2026-06-29T06:41:47.885864+00:00", "type": "ENTERPRISE_CONFIGURATION_CHANGED", "payload": {"id": "5266f402-f248-4ac3-b422-06b61850b2d1", "code": "ENT-MASTER"}}
+{"ts": "2026-06-29T06:41:47.887768+00:00", "type": "ENTERPRISE_HEALTH_CHANGED", "payload": {"id": "5266f402-f248-4ac3-b422-06b61850b2d1", "score": 100, "status": "strong"}}
+{"ts": "2026-06-29T06:41:48.190963+00:00", "type": "COST_CENTER_CREATED", "payload": {"id": "028614ea-1939-4399-868d-4d7eb922582a", "code": "CC-TEST-53389d9c", "name": "HR Cost"}}
+{"ts": "2026-06-29T06:41:48.757697+00:00", "type": "PROFIT_CENTER_CREATED", "payload": {"id": "443cc838-8607-4f67-a320-0bfbcf1c2273", "code": "PC-TEST-2fd53833", "name": "Gold Loan"}}
+{"ts": "2026-06-29T06:41:48.992242+00:00", "type": "INTERNAL_ORDER_OPENED", "payload": {"id": "e3964831-892d-4cac-a0d4-cfbc8fbcda6d", "status": "draft"}}
+{"ts": "2026-06-29T06:41:49.148179+00:00", "type": "BUDGET_CREATED", "payload": {"id": "8310e748-6733-4f02-9fd5-c7c666dfa86e"}}
+{"ts": "2026-06-29T06:41:49.327483+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "dc528dbd-da85-4e25-94e4-c93cfa35491f", "code": "LE-GEO-001", "name": "Geography Legal Entity"}}
+{"ts": "2026-06-29T06:41:49.403481+00:00", "type": "GEOGRAPHY_CREATED", "payload": {"id": "cd1acdc8-df44-4e61-ac4d-31821e4a2f43", "code": "GEO-001", "name": "Geography Root"}}
+{"ts": "2026-06-29T06:41:49.491163+00:00", "type": "GEOGRAPHY_UPDATED", "payload": {"id": "cd1acdc8-df44-4e61-ac4d-31821e4a2f43"}}
+{"ts": "2026-06-29T06:41:49.580320+00:00", "type": "GRADE_CREATED", "payload": {"id": "3cd54211-da96-46ab-b09b-ea950212628d", "code": "GMS-TEST-1", "name": "Test Grade 1"}}
+{"ts": "2026-06-29T06:41:49.777468+00:00", "type": "GRADE_CREATED", "payload": {"id": "f7261368-36fa-4590-a755-86a75a0f396e", "code": "GMS-TEST-2", "name": "Test Grade 2"}}
+{"ts": "2026-06-29T06:41:50.025244+00:00", "type": "LEGAL_ENTITY_CREATED", "payload": {"id": "2926916c-3c86-479b-8931-611231fd9e6c", "code": "LE-001", "name": "Legal One"}}
+{"ts": "2026-06-29T06:41:50.242877+00:00", "type": "LEGAL_ENTITY_UPDATED", "payload": {"id": "2926916c-3c86-479b-8931-611231fd9e6c"}}
+{"ts": "2026-06-29T06:41:50.309804+00:00", "type": "LEGAL_ENTITY_DELETED", "payload": {"id": "2926916c-3c86-479b-8931-611231fd9e6c"}}
+{"ts": "2026-06-29T06:41:50.393618+00:00", "type": "POSITION_CREATED", "payload": {"id": "542d6530-525a-4bdb-b93a-6512fbf83a5c", "code": "POS-TEST-1", "title": "Test Position 1"}}

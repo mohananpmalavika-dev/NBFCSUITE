@@ -74,7 +74,10 @@ class SectionWorkflow(Base):
     completed_at = Column(DateTime(timezone=True), nullable=True)
     remarks = Column(Text, nullable=True)
 
-    section = relationship('Section', backref='workflows')
+    # backref name 'workflows' conflicts with Section.workflows column.
+    # Disable relationship backref in this MVP build.
+    section = relationship('Section', backref=None)
+
 
 
 class SectionAudit(Base):

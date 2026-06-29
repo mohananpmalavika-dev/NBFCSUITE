@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AppShell } from '../../../../components/AppShell';
-import { eomApiUrl } from '../../../eomApi';
+import { AppShell } from '../../../components/AppShell';
+import { eomApiUrl } from '../../eomApi';
 
 export default function NewPositionPage() {
   const router = useRouter();

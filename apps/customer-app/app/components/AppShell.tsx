@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   Banknote,
   Bell,
@@ -92,14 +93,14 @@ const topNavItems = [
 ];
 
 const navItems = [
-  { label: 'Dashboard', icon: LayoutDashboard },
+  { label: 'Dashboard', icon: LayoutDashboard, href: '/' },
   { label: 'Customers', icon: Users2 },
   { label: 'Lending', icon: DollarSign },
   { label: 'Deposits', icon: Banknote },
   { label: 'Gold Loans', icon: FileText },
   { label: 'Treasury', icon: Compass },
-  { label: 'Accounting', icon: ClipboardList },
-  { label: 'HRMS', icon: ShieldCheck },
+  { label: 'Finance Workspace', icon: ClipboardList, href: '/eom/finance' },
+  { label: 'HRMS', icon: ShieldCheck, href: '/eom' },
   { label: 'CRM', icon: Users2 },
   { label: 'Risk', icon: ShieldAlert },
   { label: 'Compliance', icon: Layers },
@@ -125,7 +126,7 @@ const kpis = [
   { label: 'Avg Turnaround', value: '2.4h', change: 'Fast lane' },
 ];
 
-const favorites = ['Employee Directory', 'Customer 360', 'General Ledger'];
+const favorites = ['Employee Directory', 'Customer 360', 'General Ledger', 'Finance Workspace'];
 // Add EOM Dashboard favorite
 favorites.unshift('EOM Dashboard');
 const recent = ['Expense Approval', 'Branch 1204', 'Policy Exceptions'];
@@ -541,6 +542,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
   const [commandOpen, setCommandOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
   const [autosaveEnabled, setAutosaveEnabled] = useState(true);
   const [dashboardPersona, setDashboardPersona] = useState<'executive' | 'branch'>('executive');
   const [lastGridEvent, setLastGridEvent] = useState('GRID_OPENED');
@@ -620,12 +622,18 @@ export function AppShell({ children }: { children?: ReactNode }) {
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Global navigation">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = item.label === 'HRMS';
+          const href = item.href ?? '#';
+          const isActive =
+            item.href === '/'
+              ? pathname === '/'
+              : item.href === '/eom'
+                ? pathname === '/eom' || (pathname.startsWith('/eom/') && !pathname.startsWith('/eom/finance'))
+                : Boolean(item.href && pathname.startsWith(item.href));
 
           return (
             <a
               key={item.label}
-              href="#"
+              href={href}
               className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold text-text-inverse transition duration-normal ease-standard hover:bg-background-sidebarSubtle"
               style={isActive ? { backgroundColor: 'var(--background-sidebar-subtle)' } : undefined}
               title={sidebarExpanded ? undefined : item.label}
@@ -645,7 +653,7 @@ export function AppShell({ children }: { children?: ReactNode }) {
             </p>
               <div className="mt-3 space-y-2">
               {favorites.map((item) => {
-                const href = item === 'EOM Dashboard' ? '/eom' : '#';
+                const href = item === 'EOM Dashboard' ? '/eom' : item === 'Finance Workspace' ? '/eom/finance' : '#';
                 return (
                   <a key={item} href={href} className="block truncate text-sm text-text-inverseMuted">
                     {item}

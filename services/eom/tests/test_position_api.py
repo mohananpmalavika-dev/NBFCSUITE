@@ -1,5 +1,5 @@
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 
 from services.eom.app.main import app
 
@@ -14,7 +14,7 @@ def test_create_and_fetch_position():
         "description": "Position created by test",
     }
 
-    res = client.post('/eom/positions', json=payload)
+    res = client.post('/eom/positions', json=payload, headers={'X-User-Roles': 'enterprise.admin'})
     assert res.status_code in (200, 201)
     data = res.json()
     assert data['code'] == 'POS-TEST-1'
