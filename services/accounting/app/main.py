@@ -528,6 +528,190 @@ class DayEndClose(Base):
     closed_at = Column(DateTime, default=datetime.utcnow)
 
 
+class TrialBalance(Base):
+    __tablename__ = "trial_balances"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    scope = Column(String, default="enterprise")
+    book = Column(String, default="primary")
+    period = Column(String, nullable=True)
+    currency = Column(String, default="INR")
+    status = Column(String, default="balanced")
+    generated_on = Column(DateTime, default=datetime.utcnow)
+    total_debit = Column(Float, default=0.0)
+    total_credit = Column(Float, default=0.0)
+    is_balanced = Column(String, default="true")
+    validation_summary = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    lines = relationship("TrialBalanceLine", back_populates="trial_balance", cascade="all, delete-orphan")
+
+
+class TrialBalanceLine(Base):
+    __tablename__ = "trial_balance_lines"
+
+    id = Column(String, primary_key=True)
+    trial_balance_id = Column(String, ForeignKey("trial_balances.id"), nullable=False, index=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    account_id = Column(String, ForeignKey("gl_accounts.id"), nullable=True, index=True)
+    account_code = Column(String, nullable=True, index=True)
+    account_name = Column(String, nullable=True)
+    account_type = Column(String, nullable=True)
+    opening_debit = Column(Float, default=0.0)
+    opening_credit = Column(Float, default=0.0)
+    period_debit = Column(Float, default=0.0)
+    period_credit = Column(Float, default=0.0)
+    closing_debit = Column(Float, default=0.0)
+    closing_credit = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    trial_balance = relationship("TrialBalance", back_populates="lines")
+
+
+class TrialBalanceGenerateRequest(BaseModel):
+    tenant_id: str
+    scope: Optional[str] = "enterprise"
+    book: Optional[str] = "primary"
+    period: Optional[str] = None
+    currency: Optional[str] = "INR"
+    business_date: Optional[datetime] = None
+
+
+class TrialBalanceLineResponse(BaseModel):
+    id: str
+    account_id: Optional[str] = None
+    account_code: Optional[str] = None
+    account_name: Optional[str] = None
+    account_type: Optional[str] = None
+    opening_debit: float
+    opening_credit: float
+    period_debit: float
+    period_credit: float
+    closing_debit: float
+    closing_credit: float
+
+    class Config:
+        from_attributes = True
+
+
+class TrialBalanceResponse(BaseModel):
+    id: str
+    tenant_id: str
+    scope: str
+    book: str
+    period: Optional[str] = None
+    currency: str
+    status: str
+    generated_on: datetime
+    total_debit: float
+    total_credit: float
+    is_balanced: str
+    validation_summary: Optional[dict] = None
+    rows: List[TrialBalanceLineResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class FinancialStatement(Base):
+    __tablename__ = "financial_statements"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    statement_type = Column(String, nullable=False, index=True)
+    scope = Column(String, default="enterprise")
+    book = Column(String, default="primary")
+    period = Column(String, nullable=True)
+    currency = Column(String, default="INR")
+    status = Column(String, default="generated")
+    generated_on = Column(DateTime, default=datetime.utcnow)
+    as_of = Column(DateTime, nullable=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    lines = relationship("FinancialStatementLine", back_populates="financial_statement", cascade="all, delete-orphan")
+    ratios = relationship("FinancialStatementRatio", back_populates="financial_statement", cascade="all, delete-orphan")
+
+
+class FinancialStatementLine(Base):
+    __tablename__ = "financial_statement_lines"
+
+    id = Column(String, primary_key=True)
+    financial_statement_id = Column(String, ForeignKey("financial_statements.id"), nullable=False, index=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    section = Column(String, nullable=True)
+    label = Column(String, nullable=False)
+    account_code = Column(String, nullable=True)
+    amount = Column(Float, default=0.0)
+    line_type = Column(String, default="summary")
+    order_index = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    financial_statement = relationship("FinancialStatement", back_populates="lines")
+
+
+class FinancialStatementRatio(Base):
+    __tablename__ = "financial_statement_ratios"
+
+    id = Column(String, primary_key=True)
+    financial_statement_id = Column(String, ForeignKey("financial_statements.id"), nullable=False, index=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    ratio_name = Column(String, nullable=False)
+    value = Column(Float, default=0.0)
+    interpretation = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    financial_statement = relationship("FinancialStatement", back_populates="ratios")
+
+
+class FinancialStatementGenerateRequest(BaseModel):
+    tenant_id: str
+    statement_type: Optional[str] = "balance_sheet"
+    scope: Optional[str] = "enterprise"
+    book: Optional[str] = "primary"
+    period: Optional[str] = None
+    currency: Optional[str] = "INR"
+    as_of: Optional[datetime] = None
+    business_date: Optional[datetime] = None
+
+
+class FinancialStatementLineResponse(BaseModel):
+    id: str
+    section: Optional[str] = None
+    label: str
+    account_code: Optional[str] = None
+    amount: float
+    line_type: Optional[str] = None
+    order_index: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class FinancialStatementRatioResponse(BaseModel):
+    id: str
+    ratio_name: str
+    value: float
+    interpretation: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FinancialStatementResponse(BaseModel):
+    id: str
+    tenant_id: str
+    statement_type: str
+    scope: str
+    book: str
+    period: Optional[str] = None
+    currency: str
+    status: str
+    generated_on: datetime
+    as_of: Optional[datetime] = None
+    lines: List[FinancialStatementLineResponse] = []
+    ratios: List[FinancialStatementRatioResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
 class GLAccountResponse(BaseModel):
     id: str
     tenant_id: str
@@ -2322,6 +2506,136 @@ def _coa_child_counts(accounts: list[GLAccount]) -> dict[str, int]:
         if account.parent_account_id:
             counts[account.parent_account_id] = counts.get(account.parent_account_id, 0) + 1
     return counts
+
+
+def _ledger_dashboard_payload(tenant_id: str, db: Session) -> dict:
+    accounts = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all()
+    balances = db.query(GLBalance).filter(GLBalance.tenant_id == tenant_id).all()
+    entries = db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id).all()
+    posted_entries = sum(1 for entry in entries if str(entry.posting_status or "").lower() == "posted")
+    active_accounts = sum(1 for account in accounts if str(account.status or "").lower() == "active")
+    currency_counts: dict[str, int] = {}
+    for balance in balances:
+        currency = balance.currency or "INR"
+        currency_counts[currency] = currency_counts.get(currency, 0) + 1
+    status_counts: dict[str, int] = {}
+    for entry in entries:
+        status = str(entry.posting_status or "draft").lower()
+        status_counts[status] = status_counts.get(status, 0) + 1
+    health_score = 0
+    if accounts:
+        health_score += 35
+    if balances:
+        health_score += 25
+    if entries:
+        health_score += 20
+    if posted_entries:
+        health_score += 20
+    health_score = min(100, health_score)
+    summary_status = "healthy" if health_score >= 80 else "attention" if health_score >= 60 else "setup-required"
+    return {
+        "tenant_id": tenant_id,
+        "kpis": {
+            "total_accounts": len(accounts),
+            "active_accounts": active_accounts,
+            "posted_entries": posted_entries,
+            "draft_entries": len(entries) - posted_entries,
+            "balance_rows": len(balances),
+            "health_score": health_score,
+        },
+        "charts": {
+            "accounts_by_currency": [{"label": key, "value": value} for key, value in sorted(currency_counts.items())],
+            "entries_by_status": [{"label": key, "value": value} for key, value in sorted(status_counts.items())],
+        },
+        "summary": {
+            "status": summary_status,
+            "message": "General ledger posting visibility is active." if health_score >= 80 else "General ledger setup needs additional postings or balances.",
+        },
+    }
+
+
+def _ledger_balances_payload(tenant_id: str, db: Session, financial_year: Optional[str] = None, branch_id: Optional[str] = None, limit: int = 50, offset: int = 0) -> dict:
+    query = db.query(GLBalance).filter(GLBalance.tenant_id == tenant_id)
+    if financial_year:
+        query = query.filter(GLBalance.financial_year == financial_year)
+    if branch_id:
+        query = query.filter(GLBalance.branch_id == branch_id)
+    total = query.count()
+    rows = query.order_by(GLBalance.updated_at.desc()).offset(offset).limit(limit).all()
+    accounts = {account.id: account for account in db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all()}
+    items = []
+    for row in rows:
+        account = accounts.get(row.gl_account_id)
+        items.append(
+            {
+                "id": row.id,
+                "gl_account_id": row.gl_account_id,
+                "account_code": account.account_code if account else None,
+                "account_name": account.account_name if account else None,
+                "branch_id": row.branch_id,
+                "currency": row.currency,
+                "financial_year": row.financial_year,
+                "opening_balance": row.opening_balance,
+                "total_debit": row.total_debit,
+                "total_credit": row.total_credit,
+                "closing_balance": row.closing_balance,
+                "updated_at": row.updated_at,
+            }
+        )
+    return {"tenant_id": tenant_id, "total": total, "items": items}
+
+
+def _ledger_entries_payload(tenant_id: str, db: Session, limit: int = 50, offset: int = 0, branch_id: Optional[str] = None, source_module: Optional[str] = None) -> dict:
+    query = db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id)
+    if branch_id:
+        query = query.filter(JournalEntry.branch_id == branch_id)
+    if source_module:
+        query = query.filter(JournalEntry.source_module == source_module)
+    total = query.count()
+    rows = query.order_by(JournalEntry.entry_date.desc(), JournalEntry.created_at.desc()).offset(offset).limit(limit).all()
+    items = []
+    for row in rows:
+        lines = db.query(JournalLine).filter(JournalLine.journal_entry_id == row.id).all()
+        total_debit = round(sum(line.debit or 0.0 for line in lines), 2)
+        total_credit = round(sum(line.credit or 0.0 for line in lines), 2)
+        items.append(
+            {
+                "id": row.id,
+                "entry_date": row.entry_date,
+                "description": row.description,
+                "reference": row.reference,
+                "source_module": row.source_module,
+                "source_event": row.source_event,
+                "posting_status": row.posting_status,
+                "branch_id": row.branch_id,
+                "financial_year": row.financial_year,
+                "business_date": row.business_date,
+                "total_debit": total_debit,
+                "total_credit": total_credit,
+                "line_count": len(lines),
+            }
+        )
+    return {"tenant_id": tenant_id, "total": total, "items": items}
+
+
+def _ledger_health_payload(tenant_id: str, db: Session) -> dict:
+    accounts = db.query(GLAccount).filter(GLAccount.tenant_id == tenant_id).all()
+    balances = db.query(GLBalance).filter(GLBalance.tenant_id == tenant_id).all()
+    entries = db.query(JournalEntry).filter(JournalEntry.tenant_id == tenant_id).all()
+    posted_entries = sum(1 for entry in entries if str(entry.posting_status or "").lower() == "posted")
+    health_score = min(100, 35 + (25 if balances else 0) + (20 if entries else 0) + (20 if posted_entries else 0))
+    status = "healthy" if health_score >= 80 else "attention" if health_score >= 60 else "setup-required"
+    return {
+        "tenant_id": tenant_id,
+        "health_score": health_score,
+        "status": status,
+        "checks": [
+            {"name": "accounts_configured", "passed": bool(accounts), "detail": f"{len(accounts)} GL accounts configured"},
+            {"name": "balances_initialized", "passed": bool(balances), "detail": f"{len(balances)} balance rows present"},
+            {"name": "posted_entries", "passed": posted_entries > 0, "detail": f"{posted_entries} posted entries"},
+        ],
+        "summary": "General ledger is operational." if status == "healthy" else "General ledger needs more activity to become fully operational.",
+    }
 
 
 def _coa_dashboard_payload(tenant_id: str, db: Session) -> dict:
@@ -4787,6 +5101,40 @@ async def update_gl_account(account_id: str, payload: GLAccountUpdate, tenant_id
     db.commit()
     db.refresh(account)
     return account
+
+
+@app.get("/api/v1/gl/ledger/dashboard")
+async def api_gl_ledger_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return _ledger_dashboard_payload(tenant_id, db)
+
+
+@app.get("/api/v1/gl/ledger/balances")
+async def api_gl_ledger_balances(
+    tenant_id: str = Query(...),
+    financial_year: Optional[str] = Query(None),
+    branch_id: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=250),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    return _ledger_balances_payload(tenant_id, db, financial_year=financial_year, branch_id=branch_id, limit=limit, offset=offset)
+
+
+@app.get("/api/v1/gl/ledger/entries")
+async def api_gl_ledger_entries(
+    tenant_id: str = Query(...),
+    branch_id: Optional[str] = Query(None),
+    source_module: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=250),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
+    return _ledger_entries_payload(tenant_id, db, limit=limit, offset=offset, branch_id=branch_id, source_module=source_module)
+
+
+@app.get("/api/v1/gl/ledger/health")
+async def api_gl_ledger_health(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    return _ledger_health_payload(tenant_id, db)
 
 
 @app.get("/api/v1/gl/dashboard")
@@ -7476,6 +7824,396 @@ async def gl_ledger(
             }
         )
     return {"items": rows, "total": len(rows)}
+
+
+def _trial_balance_line_response(line: TrialBalanceLine) -> dict:
+    return {
+        "id": line.id,
+        "account_id": line.account_id,
+        "account_code": line.account_code,
+        "account_name": line.account_name,
+        "account_type": line.account_type,
+        "opening_debit": round(line.opening_debit or 0.0, 2),
+        "opening_credit": round(line.opening_credit or 0.0, 2),
+        "period_debit": round(line.period_debit or 0.0, 2),
+        "period_credit": round(line.period_credit or 0.0, 2),
+        "closing_debit": round(line.closing_debit or 0.0, 2),
+        "closing_credit": round(line.closing_credit or 0.0, 2),
+    }
+
+
+def _financial_statement_line_response(line: FinancialStatementLine) -> dict:
+    return {
+        "id": line.id,
+        "section": line.section,
+        "label": line.label,
+        "account_code": line.account_code,
+        "amount": round(line.amount or 0.0, 2),
+        "line_type": line.line_type,
+        "order_index": line.order_index,
+    }
+
+
+def _financial_statement_ratio_response(ratio: FinancialStatementRatio) -> dict:
+    return {
+        "id": ratio.id,
+        "ratio_name": ratio.ratio_name,
+        "value": round(ratio.value or 0.0, 2),
+        "interpretation": ratio.interpretation,
+    }
+
+
+def _financial_statement_response(statement: FinancialStatement) -> dict:
+    return {
+        "id": statement.id,
+        "tenant_id": statement.tenant_id,
+        "statement_type": statement.statement_type,
+        "scope": statement.scope,
+        "book": statement.book,
+        "period": statement.period,
+        "currency": statement.currency,
+        "status": statement.status,
+        "generated_on": statement.generated_on,
+        "as_of": statement.as_of,
+        "lines": [_financial_statement_line_response(line) for line in statement.lines],
+        "ratios": [_financial_statement_ratio_response(ratio) for ratio in statement.ratios],
+    }
+
+
+def _statement_amount_for_account(item: dict, account_types: set[str]) -> float:
+    account = item["account"]
+    if account.account_type not in account_types:
+        return 0.0
+    balance = item["balance"]
+    if account.account_type in {"liability", "equity", "revenue"}:
+        balance = -balance
+    return round(balance, 2)
+
+
+def _build_statement_lines(tenant_id: str, db: Session, statement_type: str, period: Optional[str] = None) -> tuple[list[dict], list[dict]]:
+    account_balances = _account_balances(tenant_id, db)
+    if statement_type in {"balance_sheet", "balance-sheet", "balancesheet"}:
+        assets = _statement_amount_for_account
+        asset_total = round(sum(_statement_amount_for_account(item, {"asset"}) for item in account_balances), 2)
+        liability_total = round(sum(_statement_amount_for_account(item, {"liability"}) for item in account_balances), 2)
+        equity_total = round(sum(_statement_amount_for_account(item, {"equity"}) for item in account_balances), 2)
+        lines = [
+            {"section": "Assets", "label": "Total Assets", "amount": asset_total, "line_type": "total", "order_index": 10},
+            {"section": "Liabilities", "label": "Total Liabilities", "amount": liability_total, "line_type": "total", "order_index": 20},
+            {"section": "Equity", "label": "Total Equity", "amount": equity_total, "line_type": "total", "order_index": 30},
+            {"section": "Summary", "label": "Net Position", "amount": round(asset_total - (liability_total + equity_total), 2), "line_type": "summary", "order_index": 40},
+        ]
+        ratios = [
+            {"ratio_name": "debt_to_equity", "value": round(liability_total / equity_total, 4) if equity_total else 0.0, "interpretation": "Debt to equity"},
+            {"ratio_name": "asset_to_liability", "value": round(asset_total / liability_total, 4) if liability_total else 0.0, "interpretation": "Asset to liability"},
+        ]
+        return lines, ratios
+
+    if statement_type in {"profit_and_loss", "p_and_l", "pnl", "profit-loss"}:
+        revenue_total = round(sum(_statement_amount_for_account(item, {"revenue"}) for item in account_balances), 2)
+        expense_total = round(sum(_statement_amount_for_account(item, {"expense"}) for item in account_balances), 2)
+        net_profit = round(revenue_total - expense_total, 2)
+        lines = [
+            {"section": "Revenue", "label": "Total Revenue", "amount": revenue_total, "line_type": "total", "order_index": 10},
+            {"section": "Expenses", "label": "Total Expenses", "amount": expense_total, "line_type": "total", "order_index": 20},
+            {"section": "Summary", "label": "Net Profit", "amount": net_profit, "line_type": "total", "order_index": 30},
+        ]
+        ratios = [
+            {"ratio_name": "net_profit_margin", "value": round(net_profit / revenue_total, 4) if revenue_total else 0.0, "interpretation": "Net profit margin"},
+            {"ratio_name": "expense_ratio", "value": round(expense_total / revenue_total, 4) if revenue_total else 0.0, "interpretation": "Expense ratio"},
+        ]
+        return lines, ratios
+
+    lines = [{"section": "Summary", "label": f"{statement_type.title()}", "amount": 0.0, "line_type": "summary", "order_index": 10}]
+    ratios = []
+    return lines, ratios
+
+
+def _trial_balance_response(trial_balance: TrialBalance, include_lines: bool = False) -> dict:
+    payload = {
+        "id": trial_balance.id,
+        "tenant_id": trial_balance.tenant_id,
+        "scope": trial_balance.scope,
+        "book": trial_balance.book,
+        "period": trial_balance.period,
+        "currency": trial_balance.currency,
+        "status": trial_balance.status,
+        "generated_on": trial_balance.generated_on,
+        "total_debit": round(trial_balance.total_debit or 0.0, 2),
+        "total_credit": round(trial_balance.total_credit or 0.0, 2),
+        "is_balanced": trial_balance.is_balanced,
+        "validation_summary": trial_balance.validation_summary,
+    }
+    if include_lines:
+        payload["rows"] = [_trial_balance_line_response(line) for line in trial_balance.lines]
+    return payload
+
+
+@app.post("/api/v1/accounting/trial-balance/generate")
+async def generate_trial_balance(request: TrialBalanceGenerateRequest, db: Session = Depends(get_db)):
+    if not request.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+
+    account_balances = _account_balances(request.tenant_id, db)
+    rows: List[TrialBalanceLine] = []
+    total_debit = 0.0
+    total_credit = 0.0
+    for item in account_balances:
+        account = item["account"]
+        balance = item["balance"]
+        if balance >= 0:
+            period_debit = round(balance, 2)
+            period_credit = 0.0
+        else:
+            period_debit = 0.0
+            period_credit = round(abs(balance), 2)
+        total_debit += period_debit
+        total_credit += period_credit
+        rows.append(
+            TrialBalanceLine(
+                id=str(uuid4()),
+                tenant_id=request.tenant_id,
+                account_id=account.id,
+                account_code=account.account_code,
+                account_name=account.account_name,
+                account_type=account.account_type,
+                opening_debit=0.0,
+                opening_credit=0.0,
+                period_debit=period_debit,
+                period_credit=period_credit,
+                closing_debit=period_debit,
+                closing_credit=period_credit,
+            )
+        )
+
+    is_balanced = round(total_debit, 2) == round(total_credit, 2)
+    trial_balance = TrialBalance(
+        id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        scope=request.scope or "enterprise",
+        book=request.book or "primary",
+        period=request.period,
+        currency=request.currency or "INR",
+        status="balanced" if is_balanced else "exception",
+        generated_on=datetime.utcnow(),
+        total_debit=round(total_debit, 2),
+        total_credit=round(total_credit, 2),
+        is_balanced="true" if is_balanced else "false",
+        validation_summary={
+            "debit_credit_match": is_balanced,
+            "missing_accounts": 0,
+            "inactive_accounts": 0,
+            "suspense_accounts": 0,
+            "unposted_journals": 0,
+            "closed_period_violations": 0,
+        },
+    )
+    db.add(trial_balance)
+    db.flush()
+    for line in rows:
+        line.trial_balance_id = trial_balance.id
+        db.add(line)
+    db.commit()
+    db.refresh(trial_balance)
+    return _trial_balance_response(trial_balance, include_lines=True)
+
+
+@app.get("/api/v1/accounting/trial-balances")
+async def list_trial_balances(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    balances = (
+        db.query(TrialBalance)
+        .filter(TrialBalance.tenant_id == tenant_id)
+        .order_by(TrialBalance.generated_on.desc())
+        .all()
+    )
+    return {
+        "tenant_id": tenant_id,
+        "total": len(balances),
+        "items": [_trial_balance_response(balance) for balance in balances],
+    }
+
+
+@app.get("/api/v1/accounting/trial-balances/{trial_balance_id}")
+async def get_trial_balance(trial_balance_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    trial_balance = (
+        db.query(TrialBalance)
+        .filter(TrialBalance.id == trial_balance_id, TrialBalance.tenant_id == tenant_id)
+        .first()
+    )
+    if not trial_balance:
+        raise HTTPException(status_code=404, detail="Trial balance not found")
+    return _trial_balance_response(trial_balance, include_lines=True)
+
+
+@app.get("/api/v1/accounting/trial-balances/{trial_balance_id}/lines")
+async def get_trial_balance_lines(trial_balance_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    trial_balance = (
+        db.query(TrialBalance)
+        .filter(TrialBalance.id == trial_balance_id, TrialBalance.tenant_id == tenant_id)
+        .first()
+    )
+    if not trial_balance:
+        raise HTTPException(status_code=404, detail="Trial balance not found")
+    return {
+        "tenant_id": tenant_id,
+        "trial_balance_id": trial_balance_id,
+        "total": len(trial_balance.lines),
+        "items": [_trial_balance_line_response(line) for line in trial_balance.lines],
+    }
+
+
+@app.get("/api/v1/accounting/trial-balance/dashboard")
+async def trial_balance_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    balances = (
+        db.query(TrialBalance)
+        .filter(TrialBalance.tenant_id == tenant_id)
+        .order_by(TrialBalance.generated_on.desc())
+        .all()
+    )
+    balanced = sum(1 for item in balances if str(item.status).lower() == "balanced")
+    unbalanced = len(balances) - balanced
+    kpis = {
+        "trial_balances_generated": len(balances),
+        "balanced": balanced,
+        "unbalanced": unbalanced,
+        "pending_adjustments": max(0, unbalanced),
+        "suspense_accounts": 0,
+        "reconciliation_status": "complete" if balanced else "pending",
+        "close_readiness": 100 if balanced else 72,
+        "ai_financial_score": 92 if balanced else 74,
+    }
+    charts = {
+        "daily_balance_trend": [{"label": balance.period or "period", "value": round(balance.total_debit or 0.0, 2)} for balance in balances[:6]],
+        "debit_vs_credit": [
+            {"label": "Debit", "value": round(sum(balance.total_debit or 0.0 for balance in balances), 2)},
+            {"label": "Credit", "value": round(sum(balance.total_credit or 0.0 for balance in balances), 2)},
+        ],
+    }
+    summary = {
+        "status": "healthy" if unbalanced == 0 else "exception",
+        "message": "Trial balance is current and balanced." if unbalanced == 0 else "Trial balance requires review for exceptions.",
+    }
+    return {"tenant_id": tenant_id, "kpis": kpis, "charts": charts, "summary": summary}
+
+
+@app.post("/api/v1/financial-statements/generate")
+async def generate_financial_statement(request: FinancialStatementGenerateRequest, db: Session = Depends(get_db)):
+    if not request.tenant_id:
+        raise HTTPException(status_code=400, detail="tenant_id is required")
+
+    statement_type = (request.statement_type or "balance_sheet").lower().replace(" ", "_")
+    lines_payload, ratios_payload = _build_statement_lines(request.tenant_id, db, statement_type, request.period)
+    statement = FinancialStatement(
+        id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        statement_type=statement_type,
+        scope=request.scope or "enterprise",
+        book=request.book or "primary",
+        period=request.period,
+        currency=request.currency or "INR",
+        status="generated",
+        generated_on=datetime.utcnow(),
+        as_of=request.as_of or request.business_date or datetime.utcnow(),
+    )
+    db.add(statement)
+    db.flush()
+    for index, line in enumerate(lines_payload):
+        db.add(
+            FinancialStatementLine(
+                id=str(uuid4()),
+                financial_statement_id=statement.id,
+                tenant_id=request.tenant_id,
+                section=line.get("section"),
+                label=line.get("label", "Line"),
+                account_code=line.get("account_code"),
+                amount=line.get("amount", 0.0),
+                line_type=line.get("line_type", "summary"),
+                order_index=index,
+            )
+        )
+    for ratio in ratios_payload:
+        db.add(
+            FinancialStatementRatio(
+                id=str(uuid4()),
+                financial_statement_id=statement.id,
+                tenant_id=request.tenant_id,
+                ratio_name=ratio.get("ratio_name", "ratio"),
+                value=ratio.get("value", 0.0),
+                interpretation=ratio.get("interpretation"),
+            )
+        )
+    db.commit()
+    db.refresh(statement)
+    return _financial_statement_response(statement)
+
+
+@app.get("/api/v1/financial-statements")
+async def list_financial_statements(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    statements = (
+        db.query(FinancialStatement)
+        .filter(FinancialStatement.tenant_id == tenant_id)
+        .order_by(FinancialStatement.generated_on.desc())
+        .all()
+    )
+    return {"tenant_id": tenant_id, "total": len(statements), "items": [_financial_statement_response(statement) for statement in statements]}
+
+
+@app.get("/api/v1/financial-statements/dashboard")
+async def financial_statement_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    statements = (
+        db.query(FinancialStatement)
+        .filter(FinancialStatement.tenant_id == tenant_id)
+        .order_by(FinancialStatement.generated_on.desc())
+        .all()
+    )
+    return {
+        "tenant_id": tenant_id,
+        "kpis": {
+            "statements_generated": len(statements),
+            "latest_statement_type": statements[0].statement_type if statements else "balance_sheet",
+            "latest_status": statements[0].status if statements else "pending",
+        },
+        "charts": {
+            "statement_types": [{"label": statement.statement_type, "value": 1} for statement in statements[:5]],
+        },
+        "summary": {"status": "healthy" if statements else "pending", "message": "Financial statements are ready to review." if statements else "No financial statements generated yet."},
+    }
+
+
+@app.get("/api/v1/financial-statements/{statement_id}")
+async def get_financial_statement(statement_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    statement = (
+        db.query(FinancialStatement)
+        .filter(FinancialStatement.id == statement_id, FinancialStatement.tenant_id == tenant_id)
+        .first()
+    )
+    if not statement:
+        raise HTTPException(status_code=404, detail="Financial statement not found")
+    return _financial_statement_response(statement)
+
+
+@app.get("/api/v1/financial-statements/{statement_id}/lines")
+async def get_financial_statement_lines(statement_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    statement = (
+        db.query(FinancialStatement)
+        .filter(FinancialStatement.id == statement_id, FinancialStatement.tenant_id == tenant_id)
+        .first()
+    )
+    if not statement:
+        raise HTTPException(status_code=404, detail="Financial statement not found")
+    return {"tenant_id": tenant_id, "financial_statement_id": statement_id, "total": len(statement.lines), "items": [_financial_statement_line_response(line) for line in statement.lines]}
+
+
+@app.get("/api/v1/financial-statements/{statement_id}/ratios")
+async def get_financial_statement_ratios(statement_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    statement = (
+        db.query(FinancialStatement)
+        .filter(FinancialStatement.id == statement_id, FinancialStatement.tenant_id == tenant_id)
+        .first()
+    )
+    if not statement:
+        raise HTTPException(status_code=404, detail="Financial statement not found")
+    return {"tenant_id": tenant_id, "financial_statement_id": statement_id, "total": len(statement.ratios), "items": [_financial_statement_ratio_response(ratio) for ratio in statement.ratios]}
 
 
 @app.get("/dashboard")

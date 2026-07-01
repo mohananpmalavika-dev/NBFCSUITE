@@ -646,6 +646,119 @@ export interface JournalDashboard {
   };
 }
 
+export interface GeneralLedgerDashboard {
+  tenant_id: string;
+  kpis: {
+    total_accounts: number;
+    active_accounts: number;
+    posted_entries: number;
+    draft_entries: number;
+    balance_rows: number;
+    health_score: number;
+  };
+  charts: {
+    accounts_by_currency: Array<{ label: string; value: number }>;
+    entries_by_status: Array<{ label: string; value: number }>;
+  };
+  summary: {
+    status: string;
+    message: string;
+  };
+}
+
+export interface TrialBalanceLineItem {
+  id: string;
+  account_id?: string | null;
+  account_code?: string | null;
+  account_name?: string | null;
+  account_type?: string | null;
+  opening_debit: number;
+  opening_credit: number;
+  period_debit: number;
+  period_credit: number;
+  closing_debit: number;
+  closing_credit: number;
+}
+
+export interface TrialBalanceItem {
+  id: string;
+  tenant_id: string;
+  scope: string;
+  book: string;
+  period?: string | null;
+  currency: string;
+  status: string;
+  generated_on: string;
+  total_debit: number;
+  total_credit: number;
+  is_balanced: string;
+  validation_summary?: Record<string, unknown> | null;
+  rows?: TrialBalanceLineItem[];
+}
+
+export interface GeneralLedgerBalanceItem {
+  id: string;
+  gl_account_id: string;
+  account_code?: string | null;
+  account_name?: string | null;
+  branch_id?: string | null;
+  currency?: string | null;
+  financial_year?: string | null;
+  opening_balance?: number | null;
+  total_debit?: number | null;
+  total_credit?: number | null;
+  closing_balance?: number | null;
+  updated_at?: string | null;
+}
+
+export interface GeneralLedgerEntryItem {
+  id: string;
+  entry_date?: string | null;
+  description?: string | null;
+  reference?: string | null;
+  source_module?: string | null;
+  source_event?: string | null;
+  posting_status?: string | null;
+  branch_id?: string | null;
+  financial_year?: string | null;
+  business_date?: string | null;
+  total_debit?: number | null;
+  total_credit?: number | null;
+  line_count?: number | null;
+}
+
+export interface FinancialStatementLineItem {
+  id: string;
+  section?: string | null;
+  label: string;
+  account_code?: string | null;
+  amount: number;
+  line_type?: string | null;
+  order_index: number;
+}
+
+export interface FinancialStatementRatioItem {
+  id: string;
+  ratio_name: string;
+  value: number;
+  interpretation?: string | null;
+}
+
+export interface FinancialStatementItem {
+  id: string;
+  tenant_id: string;
+  statement_type: string;
+  scope: string;
+  book: string;
+  period?: string | null;
+  currency: string;
+  status: string;
+  generated_on: string;
+  as_of?: string | null;
+  lines: FinancialStatementLineItem[];
+  ratios: FinancialStatementRatioItem[];
+}
+
 function tenantParam(tenantId = DEFAULT_ACCOUNTING_TENANT) {
   return `tenant_id=${encodeURIComponent(tenantId)}`;
 }
@@ -744,6 +857,36 @@ export const accountingApi = {
     postJson<PostingRule>(`/api/v1/accounting/posting-rules/${id}/publish`, { tenant_id: tenantId, performed_by: 'rule-console' }),
   getPostingRuleVersions: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
     getJson<{ tenant_id: string; rule_id: string; items: PostingRule[] }>(`/api/v1/accounting/posting-rules/${id}/versions?${tenantParam(tenantId)}`),
+  getGeneralLedgerDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<GeneralLedgerDashboard>(`/api/v1/gl/ledger/dashboard?${tenantParam(tenantId)}`),
+  getGeneralLedgerBalances: (tenantId = DEFAULT_ACCOUNTING_TENANT, params = '') =>
+    getJson<{ tenant_id: string; total: number; items: GeneralLedgerBalanceItem[] }>(`/api/v1/gl/ledger/balances?${tenantParam(tenantId)}${params ? `&${params}` : ''}`),
+  getGeneralLedgerEntries: (tenantId = DEFAULT_ACCOUNTING_TENANT, params = '') =>
+    getJson<{ tenant_id: string; total: number; items: GeneralLedgerEntryItem[] }>(`/api/v1/gl/ledger/entries?${tenantParam(tenantId)}${params ? `&${params}` : ''}`),
+  getGeneralLedgerHealth: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<{ tenant_id: string; health_score: number; status: string; checks: Array<{ name: string; passed: boolean; detail: string }>; summary: string }>(`/api/v1/gl/ledger/health?${tenantParam(tenantId)}`),
+  generateTrialBalance: (payload: { tenant_id: string; scope?: string; book?: string; period?: string; currency?: string; business_date?: string }) =>
+    postJson<TrialBalanceItem>('/api/v1/accounting/trial-balance/generate', payload),
+  listTrialBalances: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<{ tenant_id: string; total: number; items: TrialBalanceItem[] }>(`/api/v1/accounting/trial-balances?${tenantParam(tenantId)}`),
+  getTrialBalance: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<TrialBalanceItem>(`/api/v1/accounting/trial-balances/${id}?${tenantParam(tenantId)}`),
+  getTrialBalanceLines: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<{ tenant_id: string; trial_balance_id: string; total: number; items: TrialBalanceLineItem[] }>(`/api/v1/accounting/trial-balances/${id}/lines?${tenantParam(tenantId)}`),
+  getTrialBalanceDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<{ tenant_id: string; kpis: Record<string, number | string>; charts: Record<string, Array<{ label: string; value: number }>>; summary: { status: string; message: string } }>(`/api/v1/accounting/trial-balance/dashboard?${tenantParam(tenantId)}`),
+  generateFinancialStatement: (payload: { tenant_id: string; statement_type?: string; scope?: string; book?: string; period?: string; currency?: string; business_date?: string; as_of?: string }) =>
+    postJson<FinancialStatementItem>('/api/v1/financial-statements/generate', payload),
+  listFinancialStatements: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<{ tenant_id: string; total: number; items: FinancialStatementItem[] }>(`/api/v1/financial-statements?${tenantParam(tenantId)}`),
+  getFinancialStatement: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<FinancialStatementItem>(`/api/v1/financial-statements/${id}?${tenantParam(tenantId)}`),
+  getFinancialStatementLines: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<{ tenant_id: string; financial_statement_id: string; total: number; items: FinancialStatementLineItem[] }>(`/api/v1/financial-statements/${id}/lines?${tenantParam(tenantId)}`),
+  getFinancialStatementRatios: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<{ tenant_id: string; financial_statement_id: string; total: number; items: FinancialStatementRatioItem[] }>(`/api/v1/financial-statements/${id}/ratios?${tenantParam(tenantId)}`),
+  getFinancialStatementDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<{ tenant_id: string; kpis: Record<string, number | string>; charts: Record<string, Array<{ label: string; value: number }>>; summary: { status: string; message: string } }>(`/api/v1/financial-statements/dashboard?${tenantParam(tenantId)}`),
   getJournalDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
     getJson<JournalDashboard>(`/api/v1/accounting/journals/dashboard?${tenantParam(tenantId)}`),
   listJournals: (tenantId = DEFAULT_ACCOUNTING_TENANT, params = '') =>
