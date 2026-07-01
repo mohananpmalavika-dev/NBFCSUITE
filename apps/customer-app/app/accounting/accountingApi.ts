@@ -759,6 +759,94 @@ export interface FinancialStatementItem {
   ratios: FinancialStatementRatioItem[];
 }
 
+export interface APVendor {
+  id: string;
+  tenant_id: string;
+  vendor_code: string;
+  vendor_name: string;
+  vendor_type: string;
+  status: string;
+  payment_terms?: string | null;
+  credit_limit?: number | null;
+  gst_number?: string | null;
+  currency?: string | null;
+  branch_id?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_by?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface APVendorPayload {
+  tenant_id: string;
+  vendor_code: string;
+  vendor_name: string;
+  vendor_type?: string;
+  status?: string;
+  payment_terms?: string;
+  credit_limit?: number;
+  gst_number?: string;
+  currency?: string;
+  branch_id?: string;
+  metadata?: Record<string, unknown>;
+  created_by?: string;
+}
+
+export interface APInvoice {
+  id: string;
+  tenant_id: string;
+  vendor_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date?: string | null;
+  currency: string;
+  total_amount: number;
+  status: string;
+  branch_id?: string | null;
+  reference?: string | null;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_by?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface APInvoicePayload {
+  tenant_id: string;
+  vendor_id: string;
+  invoice_number: string;
+  invoice_date: string;
+  due_date?: string;
+  currency?: string;
+  total_amount: number;
+  status?: string;
+  branch_id?: string;
+  reference?: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+  created_by?: string;
+}
+
+export interface APVendorLedgerResponse {
+  tenant_id: string;
+  vendor: APVendor;
+  total_invoices: number;
+  total_payments: number;
+  outstanding_balance: number;
+  invoices: APInvoice[];
+  subledger_entries: Array<Record<string, unknown>>;
+}
+
+export interface APDashboardResponse {
+  tenant_id: string;
+  total_vendors: number;
+  total_invoices: number;
+  outstanding_payables: number;
+  invoices_pending: number;
+  invoices_overdue: number;
+  payments_recorded: number;
+}
+
 function tenantParam(tenantId = DEFAULT_ACCOUNTING_TENANT) {
   return `tenant_id=${encodeURIComponent(tenantId)}`;
 }
@@ -905,4 +993,18 @@ export const accountingApi = {
     postJson<Journal>(`/api/v1/accounting/journals/${id}/post`, { tenant_id: tenantId, performed_by: performedBy }),
   reverseJournal: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT, remarks = 'Controlled reversal from journal console') =>
     postJson<{ journal: Journal; reversal: Journal }>(`/api/v1/accounting/journals/${id}/reverse`, { tenant_id: tenantId, performed_by: 'finance-head', remarks }),
+  createVendor: (payload: APVendorPayload) => postJson<APVendor>('/api/v1/ap/vendors', payload),
+  listVendors: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<APVendor[]>(`/api/v1/ap/vendors?${tenantParam(tenantId)}`),
+  getVendor: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<APVendor>(`/api/v1/ap/vendors/${id}?${tenantParam(tenantId)}`),
+  createAPInvoice: (payload: APInvoicePayload) => postJson<APInvoice>('/api/v1/ap/invoices', payload),
+  listAPInvoices: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<APInvoice[]>(`/api/v1/ap/invoices?${tenantParam(tenantId)}`),
+  getAPInvoice: (id: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<APInvoice>(`/api/v1/ap/invoices/${id}?${tenantParam(tenantId)}`),
+  getVendorLedger: (vendorId: string, tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<APVendorLedgerResponse>(`/api/v1/ap/vendors/${vendorId}/ledger?${tenantParam(tenantId)}`),
+  getAPDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<APDashboardResponse>(`/api/v1/ap/dashboard?${tenantParam(tenantId)}`),
 };

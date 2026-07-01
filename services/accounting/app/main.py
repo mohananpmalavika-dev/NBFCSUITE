@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
-from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime, ForeignKey, JSON, UniqueConstraint
-from sqlalchemy.orm import sessionmaker, declarative_base, Session, relationship
+from sqlalchemy import Column, String, Float, Integer, DateTime, ForeignKey, JSON, UniqueConstraint
+from sqlalchemy.orm import Session, relationship
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import Optional, List, Any
@@ -9,10 +9,7 @@ import ast
 import operator
 import os
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://nbfc_user:nbfc_pass@localhost:5432/nbfcsuite")
-engine = create_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
+from app.db import engine, Base, SessionLocal, get_db
 
 
 class GLAccount(Base):
@@ -440,6 +437,54 @@ class SubLedgerEntry(Base):
     reversed_at = Column(DateTime, nullable=True)
     metadata_json = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Vendor(Base):
+    __tablename__ = "ap_vendors"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "vendor_code", name="uq_ap_vendors_tenant_code"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    vendor_code = Column(String, index=True, nullable=False)
+    vendor_name = Column(String, nullable=False)
+    vendor_type = Column(String, default="supplier")
+    status = Column(String, default="draft")
+    payment_terms = Column(String, nullable=True)
+    credit_limit = Column(Float, default=0.0)
+    gst_number = Column(String, nullable=True)
+    currency = Column(String, default="INR")
+    branch_id = Column(String, nullable=True, index=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    created_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class APInvoice(Base):
+    __tablename__ = "ap_invoices"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "invoice_number", name="uq_ap_invoices_tenant_number"),
+    )
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    vendor_id = Column(String, ForeignKey("ap_vendors.id"), nullable=False, index=True)
+    invoice_number = Column(String, index=True, nullable=False)
+    invoice_date = Column(DateTime, nullable=False)
+    due_date = Column(DateTime, nullable=False)
+    currency = Column(String, default="INR")
+    total_amount = Column(Float, nullable=False)
+    status = Column(String, default="draft")
+    branch_id = Column(String, nullable=True, index=True)
+    reference = Column(String, nullable=True)
+    description = Column(String, nullable=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    created_by = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+    vendor = relationship("Vendor")
 
 
 class GLBalance(Base):
@@ -1459,6 +1504,8 @@ class PaymentVoucherCreate(BaseModel):
     payment_category: str
     amount: float
     payee_name: str
+    vendor_id: Optional[str] = None
+    vendor_code: Optional[str] = None
     voucher_date: Optional[datetime] = None
     description: Optional[str] = None
     reference: Optional[str] = None
@@ -1475,6 +1522,90 @@ class PaymentVoucherCreate(BaseModel):
     cost_center: Optional[str] = None
     profit_center: Optional[str] = None
     metadata: Optional[dict] = None
+
+
+class VendorCreate(BaseModel):
+    tenant_id: str
+    vendor_code: str
+    vendor_name: str
+    vendor_type: Optional[str] = "supplier"
+    status: Optional[str] = "draft"
+    payment_terms: Optional[str] = None
+    credit_limit: Optional[float] = 0.0
+    gst_number: Optional[str] = None
+    currency: Optional[str] = "INR"
+    branch_id: Optional[str] = None
+    metadata: Optional[dict] = None
+    created_by: Optional[str] = None
+
+
+class VendorResponse(BaseModel):
+    id: str
+    tenant_id: str
+    vendor_code: str
+    vendor_name: str
+    vendor_type: str
+    status: str
+    payment_terms: Optional[str] = None
+    credit_limit: float
+    gst_number: Optional[str] = None
+    currency: str
+    branch_id: Optional[str] = None
+    metadata: Optional[dict] = None
+    created_by: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class APInvoiceCreate(BaseModel):
+    tenant_id: str
+    vendor_id: str
+    invoice_number: str
+    invoice_date: datetime
+    due_date: datetime
+    total_amount: float
+    currency: Optional[str] = "INR"
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    status: Optional[str] = "draft"
+    created_by: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class APInvoiceResponse(BaseModel):
+    id: str
+    tenant_id: str
+    vendor_id: str
+    invoice_number: str
+    invoice_date: datetime
+    due_date: datetime
+    total_amount: float
+    currency: str
+    status: str
+    description: Optional[str] = None
+    reference: Optional[str] = None
+    branch_id: Optional[str] = None
+    created_by: Optional[str] = None
+    metadata: Optional[dict] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class APVendorLedgerResponse(BaseModel):
+    tenant_id: str
+    vendor: VendorResponse
+    total_invoices: int
+    total_payments: float
+    outstanding_balance: float
+    invoices: List[APInvoiceResponse]
+    subledger_entries: List[SubLedgerEntryResponse]
 
 
 class ReceiptVoucherCreate(BaseModel):
@@ -1653,10 +1784,21 @@ class AccountingQuickActionRequest(BaseModel):
     metadata: Optional[dict] = None
 
 
+from app.accounts_receivable.routes import router as ar_router
+from app.budgeting.routes import router as budgeting_router
+from app.cash_bank.routes import router as cash_bank_router
+from app.fixed_assets.routes import router as fixed_assets_router
+
 app = FastAPI(title="accounting-service", version="0.1.0")
+app.include_router(ar_router, prefix="/api/v1/ar")
+app.include_router(cash_bank_router, prefix="/api/v1")
+app.include_router(fixed_assets_router)
+app.include_router(budgeting_router)
 
 
 def get_db() -> Session:
+    from app.db import SessionLocal
+
     db = SessionLocal()
     try:
         yield db
@@ -3907,6 +4049,8 @@ def _voucher_response(voucher: Voucher) -> dict:
         "payer_name": receipt_voucher.get("payer_name"),
         "customer_name": credit_note.get("customer_name") or debit_note.get("customer_name"),
         "customer_id": receipt_voucher.get("customer_id") or credit_note.get("customer_id") or debit_note.get("customer_id"),
+        "vendor_id": payment_voucher.get("vendor_id"),
+        "vendor_code": payment_voucher.get("vendor_code"),
         "source_location": contra_voucher.get("source_location"),
         "destination_location": contra_voucher.get("destination_location"),
         "transfer_reference": contra_voucher.get("transfer_reference"),
@@ -3915,6 +4059,61 @@ def _voucher_response(voucher: Voucher) -> dict:
         "amount": payment_voucher.get("amount") or receipt_voucher.get("amount") or contra_voucher.get("amount") or credit_note.get("amount") or debit_note.get("amount"),
         "metadata": metadata,
     }
+
+
+def _vendor_response(vendor: Vendor) -> dict:
+    return {
+        "id": vendor.id,
+        "tenant_id": vendor.tenant_id,
+        "vendor_code": vendor.vendor_code,
+        "vendor_name": vendor.vendor_name,
+        "vendor_type": vendor.vendor_type,
+        "status": vendor.status,
+        "payment_terms": vendor.payment_terms,
+        "credit_limit": vendor.credit_limit,
+        "gst_number": vendor.gst_number,
+        "currency": vendor.currency,
+        "branch_id": vendor.branch_id,
+        "metadata": vendor.metadata_json,
+        "created_by": vendor.created_by,
+        "created_at": vendor.created_at,
+        "updated_at": vendor.updated_at,
+    }
+
+
+def _ap_invoice_response(invoice: APInvoice) -> dict:
+    return {
+        "id": invoice.id,
+        "tenant_id": invoice.tenant_id,
+        "vendor_id": invoice.vendor_id,
+        "invoice_number": invoice.invoice_number,
+        "invoice_date": invoice.invoice_date,
+        "due_date": invoice.due_date,
+        "total_amount": invoice.total_amount,
+        "currency": invoice.currency,
+        "status": invoice.status,
+        "description": invoice.description,
+        "reference": invoice.reference,
+        "branch_id": invoice.branch_id,
+        "created_by": invoice.created_by,
+        "created_at": invoice.created_at,
+        "updated_at": invoice.updated_at,
+        "metadata": invoice.metadata_json,
+    }
+
+
+def _get_vendor_by_id(vendor_id: str, tenant_id: str, db: Session) -> Vendor:
+    vendor = db.query(Vendor).filter(Vendor.id == vendor_id, Vendor.tenant_id == tenant_id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found for tenant")
+    return vendor
+
+
+def _get_vendor_by_code(vendor_code: str, tenant_id: str, db: Session) -> Vendor:
+    vendor = db.query(Vendor).filter(Vendor.vendor_code == vendor_code, Vendor.tenant_id == tenant_id).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found for tenant")
+    return vendor
 
 
 def _next_voucher_number(tenant_id: str, voucher_type: str, db: Session) -> str:
@@ -4642,6 +4841,11 @@ def _build_payment_voucher_payload(payment: PaymentVoucherCreate, db: Session) -
             "amount": amount,
         },
     }
+    if payment.vendor_id:
+        metadata["payment_voucher"]["vendor_id"] = payment.vendor_id
+    if payment.vendor_code:
+        metadata["payment_voucher"]["vendor_code"] = payment.vendor_code
+
     return VoucherCreate(
         tenant_id=payment.tenant_id,
         voucher_type="payment",
@@ -7593,6 +7797,170 @@ async def debit_note_options():
 async def create_payment_voucher(payment: PaymentVoucherCreate, db: Session = Depends(get_db)):
     voucher_payload = _build_payment_voucher_payload(payment, db)
     return await create_voucher(voucher_payload, db)
+
+
+@app.post("/api/v1/ap/vendors", response_model=VendorResponse)
+async def create_vendor(vendor: VendorCreate, db: Session = Depends(get_db)):
+    if not vendor.vendor_name.strip():
+        raise HTTPException(status_code=400, detail="vendor_name is required")
+    new_vendor = Vendor(
+        id=str(uuid4()),
+        tenant_id=vendor.tenant_id,
+        vendor_code=vendor.vendor_code,
+        vendor_name=vendor.vendor_name,
+        vendor_type=vendor.vendor_type or "supplier",
+        status=vendor.status or "draft",
+        payment_terms=vendor.payment_terms,
+        credit_limit=vendor.credit_limit or 0.0,
+        gst_number=vendor.gst_number,
+        currency=vendor.currency or "INR",
+        branch_id=vendor.branch_id,
+        metadata_json=vendor.metadata,
+        created_by=vendor.created_by,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.add(new_vendor)
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc))
+    db.refresh(new_vendor)
+    return _vendor_response(new_vendor)
+
+
+@app.get("/api/v1/ap/vendors", response_model=List[VendorResponse])
+async def list_vendors(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    vendors = db.query(Vendor).filter(Vendor.tenant_id == tenant_id).order_by(Vendor.vendor_name).all()
+    return [_vendor_response(vendor) for vendor in vendors]
+
+
+@app.get("/api/v1/ap/vendors/{vendor_id}", response_model=VendorResponse)
+async def get_vendor(vendor_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    vendor = _get_vendor_by_id(vendor_id, tenant_id, db)
+    return _vendor_response(vendor)
+
+
+@app.post("/api/v1/ap/invoices", response_model=APInvoiceResponse)
+async def create_ap_invoice(invoice: APInvoiceCreate, db: Session = Depends(get_db)):
+    if invoice.total_amount <= 0:
+        raise HTTPException(status_code=400, detail="total_amount must be positive")
+    _get_vendor_by_id(invoice.vendor_id, invoice.tenant_id, db)
+    new_invoice = APInvoice(
+        id=str(uuid4()),
+        tenant_id=invoice.tenant_id,
+        vendor_id=invoice.vendor_id,
+        invoice_number=invoice.invoice_number,
+        invoice_date=invoice.invoice_date,
+        due_date=invoice.due_date,
+        currency=invoice.currency or "INR",
+        total_amount=round(invoice.total_amount, 2),
+        status=invoice.status or "draft",
+        branch_id=invoice.branch_id,
+        reference=invoice.reference,
+        description=invoice.description,
+        metadata_json=invoice.metadata,
+        created_by=invoice.created_by,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow(),
+    )
+    db.add(new_invoice)
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc))
+    db.refresh(new_invoice)
+    _create_subledger_entry(
+        db=db,
+        tenant_id=invoice.tenant_id,
+        source_module="vendor",
+        source_event="invoice_received",
+        source_reference=invoice.invoice_number,
+        amount=invoice.total_amount,
+        metadata={
+            "vendor_id": invoice.vendor_id,
+            "invoice_number": invoice.invoice_number,
+            "due_date": invoice.due_date.isoformat(),
+        },
+    )
+    db.commit()
+    return _ap_invoice_response(new_invoice)
+
+
+@app.get("/api/v1/ap/invoices", response_model=List[APInvoiceResponse])
+async def list_ap_invoices(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    invoices = db.query(APInvoice).filter(APInvoice.tenant_id == tenant_id).order_by(APInvoice.invoice_date.desc()).all()
+    return [_ap_invoice_response(invoice) for invoice in invoices]
+
+
+@app.get("/api/v1/ap/invoices/{invoice_id}", response_model=APInvoiceResponse)
+async def get_ap_invoice(invoice_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    invoice = (
+        db.query(APInvoice)
+        .filter(APInvoice.id == invoice_id, APInvoice.tenant_id == tenant_id)
+        .first()
+    )
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found for tenant")
+    return _ap_invoice_response(invoice)
+
+
+@app.get("/api/v1/ap/vendors/{vendor_id}/ledger", response_model=APVendorLedgerResponse)
+async def get_vendor_ledger(vendor_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    vendor = _get_vendor_by_id(vendor_id, tenant_id, db)
+    invoices = db.query(APInvoice).filter(APInvoice.vendor_id == vendor_id, APInvoice.tenant_id == tenant_id).order_by(APInvoice.invoice_date.desc()).all()
+    payments = []
+    for voucher in db.query(Voucher).filter(Voucher.tenant_id == tenant_id, Voucher.voucher_type == "payment").all():
+        metadata = voucher.metadata_json or {}
+        payment_voucher = metadata.get("payment_voucher") if isinstance(metadata, dict) else {}
+        payment_voucher = payment_voucher or {}
+        if payment_voucher.get("vendor_id") == vendor_id:
+            payments.append(round(payment_voucher.get("amount") or 0.0, 2))
+    subledger_entries = (
+        db.query(SubLedgerEntry)
+        .filter(SubLedgerEntry.tenant_id == tenant_id, SubLedgerEntry.source_module == "vendor")
+        .order_by(SubLedgerEntry.created_at.desc())
+        .all()
+    )
+    vendor_subledger = [entry for entry in subledger_entries if (entry.metadata_json or {}).get("vendor_id") == vendor_id or (entry.source_reference and any(invoice.invoice_number == entry.source_reference for invoice in invoices))]
+    total_payments = sum(payments)
+    outstanding_balance = sum(invoice.total_amount for invoice in invoices) - total_payments
+    return {
+        "tenant_id": tenant_id,
+        "vendor": _vendor_response(vendor),
+        "total_invoices": len(invoices),
+        "total_payments": round(total_payments, 2),
+        "outstanding_balance": round(outstanding_balance, 2),
+        "invoices": [_ap_invoice_response(invoice) for invoice in invoices],
+        "subledger_entries": [_subledger_response(entry) for entry in vendor_subledger],
+    }
+
+
+@app.get("/api/v1/ap/dashboard")
+async def ap_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    vendors = db.query(Vendor).filter(Vendor.tenant_id == tenant_id).all()
+    invoices = db.query(APInvoice).filter(APInvoice.tenant_id == tenant_id).all()
+    payments = []
+    for voucher in db.query(Voucher).filter(Voucher.tenant_id == tenant_id, Voucher.voucher_type == "payment").all():
+        metadata = voucher.metadata_json or {}
+        payment_voucher = metadata.get("payment_voucher") if isinstance(metadata, dict) else None
+        payment_voucher = payment_voucher if isinstance(payment_voucher, dict) else {}
+        if payment_voucher.get("vendor_id"):
+            payments.append(round(payment_voucher.get("amount") or 0.0, 2))
+    outstanding_balance = sum(invoice.total_amount for invoice in invoices) - sum(payments)
+    overdue_invoices = sum(1 for invoice in invoices if invoice.due_date and invoice.due_date < datetime.utcnow() and invoice.status != "paid")
+    pending_invoices = sum(1 for invoice in invoices if invoice.status not in {"paid", "closed"})
+    return {
+        "tenant_id": tenant_id,
+        "total_vendors": len(vendors),
+        "total_invoices": len(invoices),
+        "outstanding_payables": round(outstanding_balance, 2),
+        "invoices_pending": pending_invoices,
+        "invoices_overdue": overdue_invoices,
+        "payments_recorded": len(payments),
+    }
 
 
 @app.post("/contra-vouchers", response_model=VoucherResponse)

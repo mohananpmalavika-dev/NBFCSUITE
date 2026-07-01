@@ -293,6 +293,78 @@ async def _run_accounting_test():
         assert salary_payment["payment_mode"] == "neft"
         assert len(salary_payment["lines"]) == 2
 
+        vendor_response = await client.post(
+            "/api/v1/ap/vendors",
+            json={
+                "tenant_id": tenant_id,
+                "vendor_code": "VEND-001",
+                "vendor_name": "Acme Supplies",
+                "vendor_type": "supplier",
+                "status": "active",
+                "payment_terms": "45 days",
+                "credit_limit": 50000.0,
+                "gst_number": "GSTIN12345",
+                "currency": "INR",
+                "branch_id": "branch-001",
+                "metadata": {"preferred_contact": "ap@acme.com"},
+                "created_by": "tester",
+            },
+        )
+        assert vendor_response.status_code == 200
+        vendor = vendor_response.json()
+        assert vendor["vendor_name"] == "Acme Supplies"
+        assert vendor["vendor_code"] == "VEND-001"
+
+        invoice_response = await client.post(
+            "/api/v1/ap/invoices",
+            json={
+                "tenant_id": tenant_id,
+                "vendor_id": vendor["id"],
+                "invoice_number": "INV-2026-001",
+                "invoice_date": "2026-06-20T00:00:00",
+                "due_date": "2026-07-20T00:00:00",
+                "currency": "INR",
+                "total_amount": 15000.0,
+                "status": "pending",
+                "branch_id": "branch-001",
+                "reference": "PO-1234",
+                "description": "Office supplies procurement",
+                "metadata": {"cost_center": "ops"},
+                "created_by": "tester",
+            },
+        )
+        assert invoice_response.status_code == 200
+        ap_invoice = invoice_response.json()
+        assert ap_invoice["vendor_id"] == vendor["id"]
+        assert ap_invoice["invoice_number"] == "INV-2026-001"
+        assert ap_invoice["total_amount"] == 15000.0
+
+        list_invoices_response = await client.get(
+            "/api/v1/ap/invoices",
+            params={"tenant_id": tenant_id},
+        )
+        assert list_invoices_response.status_code == 200
+        assert any(item["id"] == ap_invoice["id"] for item in list_invoices_response.json())
+
+        vendor_ledger_response = await client.get(
+            f"/api/v1/ap/vendors/{vendor['id']}/ledger",
+            params={"tenant_id": tenant_id},
+        )
+        assert vendor_ledger_response.status_code == 200
+        vendor_ledger = vendor_ledger_response.json()
+        assert vendor_ledger["vendor"]["id"] == vendor["id"]
+        assert vendor_ledger["total_invoices"] == 1
+        assert vendor_ledger["outstanding_balance"] == 15000.0
+
+        ap_dashboard_response = await client.get(
+            "/api/v1/ap/dashboard",
+            params={"tenant_id": tenant_id},
+        )
+        assert ap_dashboard_response.status_code == 200
+        ap_dashboard = ap_dashboard_response.json()
+        assert ap_dashboard["total_vendors"] >= 1
+        assert ap_dashboard["total_invoices"] >= 1
+
         category_response = await client.get("/payment-vouchers/categories")
         assert category_response.status_code == 200
         category_keys = {item["key"] for item in category_response.json()["items"]}

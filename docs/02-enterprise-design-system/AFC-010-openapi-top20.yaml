@@ -1,0 +1,220 @@
+openapi: 3.0.3
+info:
+  title: ARTH.OS Accounts Receivable - Top 20 API Catalog
+  version: '0.1.0'
+servers:
+  - url: http://localhost:8000
+paths:
+  /api/v1/ar/customers:
+    get:
+      summary: List customers with receivable summary
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+          description: free-text search
+        - in: query
+          name: page
+          schema:
+            type: integer
+          description: page number
+      responses:
+        '200':
+          description: OK
+  /api/v1/ar/receivables:
+    get:
+      summary: List receivables
+      parameters:
+        - in: query
+          name: product
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create a receivable (invoice or schedule)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                product_ref:
+                  type: string
+                amount:
+                  type: number
+                due_date:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: Created
+  /api/v1/ar/receivables/{id}:
+    get:
+      summary: Get receivable by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /api/v1/ar/receivables/{id}/schedule:
+    get:
+      summary: Get schedule rows for a receivable
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /api/v1/ar/receivables/{id}/charges:
+    get:
+      summary: Get charges for receivable
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /api/v1/ar/receipts:
+    post:
+      summary: Create receipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                amount:
+                  type: number
+                method:
+                  type: string
+                instrument_ref:
+                  type: string
+      responses:
+        '201':
+          description: Created
+  /api/v1/ar/receipts/{id}:
+    get:
+      summary: Get receipt
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /api/v1/ar/allocate:
+    post:
+      summary: Allocate receipt to receivables
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                receipt_id:
+                  type: string
+                allocations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      receivable_id:
+                        type: string
+                      amount:
+                        type: number
+      responses:
+        '200':
+          description: OK
+  /api/v1/ar/ledger:
+    get:
+      summary: Customer ledger
+      parameters:
+        - in: query
+          name: customer_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+  /api/v1/ar/aging:
+    get:
+      summary: Aging buckets
+      parameters:
+        - in: query
+          name: as_of
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+  /api/v1/ar/settlement:
+    post:
+      summary: Create settlement request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                receivable_ids:
+                  type: array
+                  items:
+                    type: string
+                amount:
+                  type: number
+      responses:
+        '201':
+          description: Created
+  /api/v1/ar/writeoff:
+    post:
+      summary: Write off receivable
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                receivable_id:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: OK
+  /api/v1/ar/dashboard:
+    get:
+      summary: AR dashboard KPIs
+      responses:
+        '200':
+          description: OK

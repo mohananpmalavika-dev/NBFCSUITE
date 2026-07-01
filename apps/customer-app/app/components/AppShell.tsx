@@ -101,6 +101,7 @@ const navItems = [
   { label: 'Treasury', icon: Compass },
   { label: 'Accounting', icon: FileText, href: '/accounting/chart-of-accounts' },
   { label: 'General Ledger', icon: FileText, href: '/accounting/general-ledger' },
+  { label: 'Accounts Payable', icon: FileText, href: '/accounting/accounts-payable' },
   { label: 'Trial Balance', icon: FileText, href: '/accounting/trial-balance' },
   { label: 'Financial Statements', icon: FileText, href: '/accounting/financial-statements' },
   { label: 'Financial Calendar', icon: ClipboardList, href: '/accounting/financial-calendar' },
