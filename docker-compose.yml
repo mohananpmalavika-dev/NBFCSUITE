@@ -403,6 +403,27 @@ services:
       timeout: 5s
       retries: 5
 
+  # Enterprise AI Platform Service
+  ai-service:
+    build:
+      context: ./services/ai
+      dockerfile: Dockerfile
+    container_name: nbfcsuite-ai
+    environment:
+      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+    ports:
+      - "8030:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Enterprise Risk Management Service
   risk-service:
     build:
@@ -424,8 +445,28 @@ services:
       timeout: 5s
       retries: 5
 
+  # Enterprise Governance, Risk & Compliance Service
+  grc-service:
+    build:
+      context: ./services/grc
+      dockerfile: Dockerfile
+    container_name: nbfcsuite-grc
+    environment:
+      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+    ports:
+      - "8020:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Frontend Web App
-  web-app:
     build:
       context: ./apps/customer-app
       dockerfile: Dockerfile
@@ -433,11 +474,16 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8001
       NEXT_PUBLIC_RISK_API_URL: http://localhost:8019
+      NEXT_PUBLIC_GRC_API_URL: http://localhost:8020
+      NEXT_PUBLIC_PLATFORM_API_URL: http://localhost:8018
+      NEXT_PUBLIC_AI_API_URL: http://localhost:8030
     ports:
       - "3000:3000"
     depends_on:
       - auth-service
       - risk-service
+      - grc-service
+      - platform-service
     networks:
       - nbfcsuite-network
 

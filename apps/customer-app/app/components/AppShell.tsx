@@ -111,6 +111,8 @@ const navItems = [
   { label: 'Tax Engine', icon: FileText, href: '/accounting/tax-engine' },
   { label: 'Financial Close', icon: Layers, href: '/accounting/financial-close' },
   { label: 'Risk', icon: ShieldAlert, href: '/risk' },
+  { label: 'GRC', icon: ShieldCheck, href: '/grc' },
+  { label: 'EDP', icon: Layers, href: '/platform' },
   { label: 'Finance Workspace', icon: ClipboardList, href: '/eom/finance' },
   { label: 'HRMS', icon: ShieldCheck, href: '/eom' },
   { label: 'CRM', icon: Users2 },
@@ -118,7 +120,7 @@ const navItems = [
   { label: 'Compliance', icon: Layers },
   { label: 'Reports', icon: ChartPie },
   { label: 'Administration', icon: Settings2 },
-  { label: 'AI', icon: Sparkles },
+  { label: 'AI', icon: Sparkles, href: '/platform/ai' },
 ];
 
 const mobileTabs = [

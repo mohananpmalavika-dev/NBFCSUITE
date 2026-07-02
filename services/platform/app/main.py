@@ -5,7 +5,7 @@ import os
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, DateTime, Integer, JSON, String, UniqueConstraint, create_engine
+from sqlalchemy import Column, DateTime, Integer, JSON, String, UniqueConstraint, create_engine, or_
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 
@@ -261,6 +261,184 @@ class DomainEventResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DataDomain(Base):
+    __tablename__ = "edp_data_domains"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    domain_code = Column(String, index=True, nullable=False)
+    domain_name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    status = Column(String, default="active")
+    metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DataAsset(Base):
+    __tablename__ = "edp_data_assets"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    asset_code = Column(String, index=True, nullable=False)
+    asset_name = Column(String, nullable=False)
+    asset_type = Column(String, nullable=True)
+    domain_code = Column(String, nullable=True)
+    owner = Column(String, nullable=True)
+    status = Column(String, default="active")
+    description = Column(String, nullable=True)
+    metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DataQualityCheck(Base):
+    __tablename__ = "edp_data_quality_checks"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    check_name = Column(String, nullable=False)
+    data_asset_id = Column(String, nullable=False)
+    status = Column(String, default="pass")
+    score = Column(Integer, default=100)
+    last_run_at = Column(DateTime, default=datetime.utcnow)
+    metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DataLineage(Base):
+    __tablename__ = "edp_data_lineage"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    source_asset_id = Column(String, nullable=False)
+    target_asset_id = Column(String, nullable=False)
+    relationship = Column(String, nullable=True)
+    metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class GlossaryTerm(Base):
+    __tablename__ = "edp_glossary_terms"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    term = Column(String, nullable=False)
+    definition = Column(String, nullable=True)
+    domain = Column(String, nullable=True)
+    synonyms = Column(JSON, nullable=True)
+    metadata = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DataDomainCreate(BaseModel):
+    tenant_id: str
+    domain_code: str
+    domain_name: str
+    description: Optional[str] = None
+    status: Optional[str] = "active"
+    metadata: Optional[dict] = None
+
+
+class DataDomainResponse(DataDomainCreate):
+    id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DataAssetCreate(BaseModel):
+    tenant_id: str
+    asset_code: str
+    asset_name: str
+    asset_type: Optional[str] = None
+    domain_code: Optional[str] = None
+    owner: Optional[str] = None
+    status: Optional[str] = "active"
+    description: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class DataAssetResponse(DataAssetCreate):
+    id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DataQualityCreate(BaseModel):
+    tenant_id: str
+    check_name: str
+    data_asset_id: str
+    status: Optional[str] = "pass"
+    score: Optional[int] = 100
+    metadata: Optional[dict] = None
+
+
+class DataQualityResponse(DataQualityCreate):
+    id: str
+    last_run_at: datetime
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DataLineageCreate(BaseModel):
+    tenant_id: str
+    source_asset_id: str
+    target_asset_id: str
+    relationship: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class DataLineageResponse(DataLineageCreate):
+    id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class GlossaryTermCreate(BaseModel):
+    tenant_id: str
+    term: str
+    definition: Optional[str] = None
+    domain: Optional[str] = None
+    synonyms: Optional[list[str]] = None
+    metadata: Optional[dict] = None
+
+
+class GlossaryResponse(GlossaryTermCreate):
+    id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EdpDashboardResponse(BaseModel):
+    tenant_id: str
+    data_assets: int
+    data_domains: int
+    lineage_edges: int
+    quality_checks: int
+    glossary_terms: int
+    health_score: int
+    status: str
+
+
+class EdpReportItem(BaseModel):
+    report_type: str
+    status: str
+    last_generated: datetime
+
+
+class EdpReportsResponse(BaseModel):
+    tenant_id: str
+    reports: list[EdpReportItem]
 
 
 app = FastAPI(title="platform-service", version="0.1.0")
@@ -688,6 +866,106 @@ async def mark_event_processed(event_id: str, tenant_id: str = Query(...), db: S
     db.commit()
     db.refresh(event)
     return event
+
+
+@app.get("/api/v1/edp/dashboard", response_model=EdpDashboardResponse)
+async def get_edp_dashboard(tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    data_assets = db.query(DataAsset).filter(DataAsset.tenant_id == tenant_id, DataAsset.status != "archived").count()
+    data_domains = db.query(DataDomain).filter(DataDomain.tenant_id == tenant_id, DataDomain.status != "archived").count()
+    lineage_edges = db.query(DataLineage).filter(DataLineage.tenant_id == tenant_id).count()
+    quality_checks = db.query(DataQualityCheck).filter(DataQualityCheck.tenant_id == tenant_id).count()
+    glossary_terms = db.query(GlossaryTerm).filter(GlossaryTerm.tenant_id == tenant_id).count()
+    health_score = max(0, min(100, int((quality_checks * 8 + data_assets * 2 + glossary_terms * 3) / (1 + data_domains))))
+    return EdpDashboardResponse(
+        tenant_id=tenant_id,
+        data_assets=data_assets,
+        data_domains=data_domains,
+        lineage_edges=lineage_edges,
+        quality_checks=quality_checks,
+        glossary_terms=glossary_terms,
+        health_score=health_score,
+        status="operational",
+    )
+
+
+@app.get("/api/v1/edp/data-assets", response_model=List[DataAssetResponse])
+async def list_data_assets(
+    tenant_id: str = Query(...),
+    q: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(DataAsset).filter(DataAsset.tenant_id == tenant_id)
+    if q:
+        q_filter = f"%{q}%"
+        query = query.filter(or_(
+            DataAsset.asset_code.ilike(q_filter),
+            DataAsset.asset_name.ilike(q_filter),
+            DataAsset.owner.ilike(q_filter),
+            DataAsset.asset_type.ilike(q_filter),
+        ))
+    return query.order_by(DataAsset.asset_name.asc()).all()
+
+
+@app.get("/api/v1/edp/data-domains", response_model=List[DataDomainResponse])
+async def list_data_domains(
+    tenant_id: str = Query(...),
+    q: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(DataDomain).filter(DataDomain.tenant_id == tenant_id)
+    if q:
+        q_filter = f"%{q}%"
+        query = query.filter(or_(
+            DataDomain.domain_code.ilike(q_filter),
+            DataDomain.domain_name.ilike(q_filter),
+            DataDomain.description.ilike(q_filter),
+        ))
+    return query.order_by(DataDomain.domain_name.asc()).all()
+
+
+@app.get("/api/v1/edp/lineage", response_model=List[DataLineageResponse])
+async def list_data_lineage(
+    tenant_id: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    return db.query(DataLineage).filter(DataLineage.tenant_id == tenant_id).order_by(DataLineage.created_at.desc()).all()
+
+
+@app.get("/api/v1/edp/quality-checks", response_model=List[DataQualityResponse])
+async def list_quality_checks(
+    tenant_id: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    return db.query(DataQualityCheck).filter(DataQualityCheck.tenant_id == tenant_id).order_by(DataQualityCheck.last_run_at.desc()).all()
+
+
+@app.get("/api/v1/edp/glossary", response_model=List[GlossaryResponse])
+async def list_glossary_terms(
+    tenant_id: str = Query(...),
+    q: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    query = db.query(GlossaryTerm).filter(GlossaryTerm.tenant_id == tenant_id)
+    if q:
+        q_filter = f"%{q}%"
+        query = query.filter(or_(
+            GlossaryTerm.term.ilike(q_filter),
+            GlossaryTerm.definition.ilike(q_filter),
+            GlossaryTerm.domain.ilike(q_filter),
+        ))
+    return query.order_by(GlossaryTerm.term.asc()).all()
+
+
+@app.get("/api/v1/edp/reports", response_model=EdpReportsResponse)
+async def get_edp_reports(tenant_id: str = Query(...)):
+    return EdpReportsResponse(
+        tenant_id=tenant_id,
+        reports=[
+            EdpReportItem(report_type="Data Catalog Health", status="completed", last_generated=datetime.utcnow()),
+            EdpReportItem(report_type="Quality Coverage", status="completed", last_generated=datetime.utcnow()),
+            EdpReportItem(report_type="Lineage Completeness", status="pending", last_generated=datetime.utcnow()),
+        ],
+    )
 
 
 @app.get("/")
