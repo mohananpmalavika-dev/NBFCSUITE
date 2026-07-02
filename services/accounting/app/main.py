@@ -1788,12 +1788,16 @@ from app.accounts_receivable.routes import router as ar_router
 from app.budgeting.routes import router as budgeting_router
 from app.cash_bank.routes import router as cash_bank_router
 from app.cost_accounting.routes import router as cost_accounting_router
+from app.financial_close.routes import router as financial_close_router
 from app.fixed_assets.routes import router as fixed_assets_router
+from app.tax_engine.routes import router as tax_engine_router
 
 app = FastAPI(title="accounting-service", version="0.1.0")
 app.include_router(ar_router, prefix="/api/v1/ar")
 app.include_router(cash_bank_router, prefix="/api/v1")
 app.include_router(cost_accounting_router)
+app.include_router(tax_engine_router)
+app.include_router(financial_close_router)
 app.include_router(fixed_assets_router)
 app.include_router(budgeting_router)
 

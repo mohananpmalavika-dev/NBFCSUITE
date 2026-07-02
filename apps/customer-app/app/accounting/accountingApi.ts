@@ -847,6 +847,310 @@ export interface APDashboardResponse {
   payments_recorded: number;
 }
 
+export interface TaxRateResponse {
+  id: string;
+  tenant_id: string;
+  tax_type: string;
+  rate: number;
+  effective_date: string;
+  expiry_date?: string | null;
+  status: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface TaxCalculationRequest {
+  tenant_id: string;
+  tax_type: string;
+  jurisdiction?: string | null;
+  base_amount: number;
+  invoice_type?: string | null;
+  inclusive?: boolean;
+}
+
+export interface TaxCalculationResponse {
+  tenant_id: string;
+  tax_type: string;
+  base_amount: number;
+  tax_rate: number;
+  tax_amount: number;
+  total_amount: number;
+  jurisdiction?: string | null;
+}
+
+export interface TaxDashboardResponse {
+  tenant_id: string;
+  total_gst_transactions: number;
+  total_tds_transactions: number;
+  total_einvoices: number;
+  total_ewaybills: number;
+  net_tax_liability: number;
+}
+
+export interface TaxReturnPayload {
+  tenant_id: string;
+  return_type: string;
+  period: string;
+  details?: Record<string, unknown> | null;
+}
+
+export interface TaxReturnResponse {
+  id: string;
+  tenant_id: string;
+  return_type: string;
+  period: string;
+  status: string;
+  details?: Record<string, unknown> | null;
+  filed_at?: string | null;
+}
+
+export interface TaxLedgerItem {
+  id: string;
+  tenant_id: string;
+  reference_id?: string | null;
+  entry_type: string;
+  amount: number;
+  tax_type?: string | null;
+  entry_date: string;
+  status: string;
+}
+
+export interface TaxLedgerResponse {
+  tenant_id: string;
+  entries: TaxLedgerItem[];
+}
+
+export interface TaxReconciliationRequest {
+  tenant_id: string;
+  reference_id?: string | null;
+  reported_amount: number;
+  recorded_amount: number;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface TaxReconciliationResponse {
+  id: string;
+  tenant_id: string;
+  reference_id?: string | null;
+  difference_amount: number;
+  status: string;
+}
+
+export interface EInvoiceCreate {
+  tenant_id: string;
+  invoice_id: string;
+  invoice_date: string;
+  amount: number;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface EInvoiceResponse {
+  id: string;
+  tenant_id: string;
+  invoice_id: string;
+  irn: string;
+  qr_code?: string | null;
+  status: string;
+}
+
+export interface EWayBillCreate {
+  tenant_id: string;
+  invoice_id: string;
+  vehicle_number?: string | null;
+  transporter_name?: string | null;
+  from_place?: string | null;
+  to_place?: string | null;
+  distance_km?: number | null;
+}
+
+export interface EWayBillResponse {
+  id: string;
+  tenant_id: string;
+  ewaybill_number: string;
+  vehicle_number?: string | null;
+  status: string;
+}
+
+export interface TaxComplianceResponse {
+  tenant_id: string;
+  gst_compliance: string;
+  tds_compliance: string;
+  itc_utilization: number;
+  outstanding_returns: number;
+  compliance_health: string;
+}
+
+export interface CloseDashboardResponse {
+  tenant_id: string;
+  close_readiness: number;
+  open_tasks: number;
+  blocked_tasks: number;
+  reconciliation_issues: number;
+  consolidation_progress: number;
+  board_pack_status: string;
+  rbi_status: string;
+  audit_ready: boolean;
+  health_score: number;
+}
+
+export interface CloseStartPayload {
+  tenant_id: string;
+  cycle_name: string;
+  period: string;
+  initiated_by?: string;
+  close_type?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CloseStartResponse {
+  id: string;
+  tenant_id: string;
+  cycle_name: string;
+  period: string;
+  stage: string;
+  status: string;
+  started_at: string;
+}
+
+export interface CloseTaskCreate {
+  tenant_id: string;
+  cycle_id?: string;
+  name: string;
+  owner?: string;
+  due_date?: string;
+  dependency?: string;
+  priority?: string;
+  status?: string;
+  evidence?: string;
+  approval_required?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CloseTaskResponse {
+  id: string;
+  tenant_id: string;
+  cycle_id?: string | null;
+  name: string;
+  owner?: string | null;
+  due_date?: string | null;
+  dependency?: string | null;
+  priority?: string | null;
+  status: string;
+  evidence?: string | null;
+  approval_status?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface CloseTaskListResponse {
+  tenant_id: string;
+  total: number;
+  items: CloseTaskResponse[];
+}
+
+export interface CloseReconciliationRequest {
+  tenant_id: string;
+  cycle_id?: string;
+  source: string;
+  target: string;
+  difference_amount: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CloseReconciliationResponse {
+  id: string;
+  tenant_id: string;
+  cycle_id?: string | null;
+  source: string;
+  target: string;
+  difference_amount: number;
+  status: string;
+}
+
+export interface CloseConsolidationRequest {
+  tenant_id: string;
+  cycle_id?: string;
+  entity_from: string;
+  entity_to: string;
+  result_summary?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CloseConsolidationResponse {
+  id: string;
+  tenant_id: string;
+  cycle_id?: string | null;
+  entity_from: string;
+  entity_to: string;
+  result_summary?: string | null;
+  status: string;
+}
+
+export interface CloseEliminationRequest {
+  tenant_id: string;
+  cycle_id?: string;
+  description: string;
+  amount: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CloseEliminationResponse {
+  id: string;
+  tenant_id: string;
+  cycle_id?: string | null;
+  description: string;
+  amount: number;
+  status: string;
+}
+
+export interface BoardPackRequest {
+  tenant_id: string;
+  cycle_id?: string;
+  report_type?: string;
+}
+
+export interface BoardPackResponse {
+  id: string;
+  tenant_id: string;
+  cycle_id?: string | null;
+  report_type: string;
+  status: string;
+}
+
+export interface RbiReportRequest {
+  tenant_id: string;
+  cycle_id?: string;
+  return_type?: string;
+}
+
+export interface RbiReportResponse {
+  id: string;
+  tenant_id: string;
+  cycle_id?: string | null;
+  return_type: string;
+  status: string;
+}
+
+export interface CloseCompleteRequest {
+  tenant_id: string;
+  cycle_id: string;
+  completed_by?: string;
+  final_notes?: Record<string, unknown>;
+}
+
+export interface CloseCompleteResponse {
+  id: string;
+  tenant_id: string;
+  cycle_id: string;
+  status: string;
+  completed_at: string;
+  final_notes?: Record<string, unknown> | null;
+}
+
+export interface CloseStatusResponse {
+  message: string;
+  status: string;
+}
+
 function tenantParam(tenantId = DEFAULT_ACCOUNTING_TENANT) {
   return `tenant_id=${encodeURIComponent(tenantId)}`;
 }
@@ -1007,4 +1311,31 @@ export const accountingApi = {
     getJson<APVendorLedgerResponse>(`/api/v1/ap/vendors/${vendorId}/ledger?${tenantParam(tenantId)}`),
   getAPDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
     getJson<APDashboardResponse>(`/api/v1/ap/dashboard?${tenantParam(tenantId)}`),
+  getTaxDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<TaxDashboardResponse>(`/api/v1/tax/dashboard?${tenantParam(tenantId)}`),
+  listTaxRates: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<TaxRateResponse[]>(`/api/v1/tax/rates?${tenantParam(tenantId)}`),
+  calculateTax: (payload: TaxCalculationRequest) => postJson<TaxCalculationResponse>('/api/v1/tax/calculate', payload),
+  createGSTReturn: (payload: TaxReturnPayload) => postJson<TaxReturnResponse>('/api/v1/tax/gst/returns', payload),
+  createTDSReturn: (payload: TaxReturnPayload) => postJson<TaxReturnResponse>('/api/v1/tax/tds/returns', payload),
+  getTaxLedger: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<TaxLedgerResponse>(`/api/v1/tax/ledger?${tenantParam(tenantId)}`),
+  reconcileTax: (payload: TaxReconciliationRequest) => postJson<TaxReconciliationResponse>('/api/v1/tax/reconciliation', payload),
+  createEInvoice: (payload: EInvoiceCreate) => postJson<EInvoiceResponse>('/api/v1/tax/einvoice', payload),
+  createEWayBill: (payload: EWayBillCreate) => postJson<EWayBillResponse>('/api/v1/tax/ewaybill', payload),
+  getTaxCompliance: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<TaxComplianceResponse>(`/api/v1/tax/compliance?${tenantParam(tenantId)}`),
+  getCloseDashboard: (tenantId = DEFAULT_ACCOUNTING_TENANT) =>
+    getJson<CloseDashboardResponse>(`/api/v1/close/dashboard?${tenantParam(tenantId)}`),
+  startCloseCycle: (payload: CloseStartPayload) => postJson<CloseStartResponse>('/api/v1/close/start', payload),
+  createCloseTask: (payload: CloseTaskCreate) => postJson<CloseTaskResponse>('/api/v1/close/tasks', payload),
+  listCloseTasks: (tenantId = DEFAULT_ACCOUNTING_TENANT, params = '') =>
+    getJson<CloseTaskListResponse>(`/api/v1/close/tasks?${tenantParam(tenantId)}${params ? `&${params}` : ''}`),
+  recordReconciliation: (payload: CloseReconciliationRequest) => postJson<CloseReconciliationResponse>('/api/v1/close/reconciliation', payload),
+  runConsolidation: (payload: CloseConsolidationRequest) => postJson<CloseConsolidationResponse>('/api/v1/close/consolidate', payload),
+  runElimination: (payload: CloseEliminationRequest) => postJson<CloseEliminationResponse>('/api/v1/close/eliminate', payload),
+  generateBoardPack: (payload: BoardPackRequest) => postJson<BoardPackResponse>('/api/v1/close/generate-board-pack', payload),
+  generateRbiReport: (payload: RbiReportRequest) => postJson<RbiReportResponse>('/api/v1/close/generate-rbi-report', payload),
+  completeCloseCycle: (payload: CloseCompleteRequest) => postJson<CloseCompleteResponse>('/api/v1/close/complete', payload),
+  getCloseStatus: (payload: CloseCompleteRequest) => postJson<CloseStatusResponse>('/api/v1/close/status', payload),
 };

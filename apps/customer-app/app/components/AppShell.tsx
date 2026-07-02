@@ -108,6 +108,8 @@ const navItems = [
   { label: 'Event Engine', icon: Layers, href: '/accounting/event-engine' },
   { label: 'Posting Rules', icon: Settings2, href: '/accounting/posting-rules' },
   { label: 'Journal Engine', icon: FileText, href: '/accounting/journal-engine' },
+  { label: 'Tax Engine', icon: FileText, href: '/accounting/tax-engine' },
+  { label: 'Financial Close', icon: Layers, href: '/accounting/financial-close' },
   { label: 'Finance Workspace', icon: ClipboardList, href: '/eom/finance' },
   { label: 'HRMS', icon: ShieldCheck, href: '/eom' },
   { label: 'CRM', icon: Users2 },
