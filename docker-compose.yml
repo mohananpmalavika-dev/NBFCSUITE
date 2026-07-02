@@ -403,6 +403,27 @@ services:
       timeout: 5s
       retries: 5
 
+  # Enterprise Risk Management Service
+  risk-service:
+    build:
+      context: ./services/risk
+      dockerfile: Dockerfile
+    container_name: nbfcsuite-risk
+    environment:
+      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+    ports:
+      - "8019:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - nbfcsuite-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # Frontend Web App
   web-app:
     build:
@@ -411,10 +432,12 @@ services:
     container_name: nbfcsuite-web
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8001
+      NEXT_PUBLIC_RISK_API_URL: http://localhost:8019
     ports:
       - "3000:3000"
     depends_on:
       - auth-service
+      - risk-service
     networks:
       - nbfcsuite-network
 

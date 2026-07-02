@@ -110,6 +110,7 @@ const navItems = [
   { label: 'Journal Engine', icon: FileText, href: '/accounting/journal-engine' },
   { label: 'Tax Engine', icon: FileText, href: '/accounting/tax-engine' },
   { label: 'Financial Close', icon: Layers, href: '/accounting/financial-close' },
+  { label: 'Risk', icon: ShieldAlert, href: '/risk' },
   { label: 'Finance Workspace', icon: ClipboardList, href: '/eom/finance' },
   { label: 'HRMS', icon: ShieldCheck, href: '/eom' },
   { label: 'CRM', icon: Users2 },
