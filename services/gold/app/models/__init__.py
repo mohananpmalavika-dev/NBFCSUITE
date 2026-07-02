@@ -56,6 +56,18 @@ from .vault import (
     GoldVaultAccessLog,
     GoldSecuritySeal
 )
+from .loan import (
+    LoanApplication,
+    ApplicationOrnament,
+    CreditEvaluation,
+    LoanApproval,
+    LoanAccount,
+    Disbursement,
+    LoanDocument,
+    LoanCharge,
+    LoanStatusHistory,
+    LMSIntegrationLog
+)
 
 __all__ = [
     # Product models
@@ -110,4 +122,15 @@ __all__ = [
     "GoldAuditFinding",
     "GoldVaultAccessLog",
     "GoldSecuritySeal",
+    # Loan models
+    "LoanApplication",
+    "ApplicationOrnament",
+    "CreditEvaluation",
+    "LoanApproval",
+    "LoanAccount",
+    "Disbursement",
+    "LoanDocument",
+    "LoanCharge",
+    "LoanStatusHistory",
+    "LMSIntegrationLog",
 ]

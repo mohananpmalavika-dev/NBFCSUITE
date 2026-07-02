@@ -405,3 +405,132 @@ export const goldApi = {
     return getJson<any>(`/api/v1/gold/vault/seals/available-count${params}`);
   },
 };
+
+  // ========================================================================
+  // LOAN ORIGINATION & DISBURSEMENT (Phase 6)
+  // ========================================================================
+
+  // Loan Applications
+  createLoanApplication: (data: any) =>
+    postJson<any>('/api/v1/gold/applications', data),
+  
+  getLoanApplications: (filters?: {
+    status?: string;
+    stage?: string;
+    branch_id?: string;
+    customer_id?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.stage) params.append('stage', filters.stage);
+    if (filters?.branch_id) params.append('branch_id', filters.branch_id);
+    if (filters?.customer_id) params.append('customer_id', filters.customer_id);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/applications${query}`);
+  },
+
+  getLoanApplication: (applicationId: string) =>
+    getJson<any>(`/api/v1/gold/applications/${applicationId}`),
+
+  updateLoanApplication: (applicationId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/applications/${applicationId}`, data),
+
+  submitLoanApplication: (applicationId: string, submittedBy: string) =>
+    postJson<any>(`/api/v1/gold/applications/${applicationId}/submit`, {
+      submitted_by: submittedBy,
+    }),
+
+  getApplicationOrnaments: (applicationId: string) =>
+    getJson<any[]>(`/api/v1/gold/applications/${applicationId}/ornaments`),
+
+  deleteLoanApplication: (applicationId: string) =>
+    deleteJson(`/api/v1/gold/applications/${applicationId}`),
+
+  // Credit Evaluation
+  createCreditEvaluation: (data: any) =>
+    postJson<any>('/api/v1/gold/credit-evaluations', data),
+
+  getCreditEvaluation: (evaluationId: string) =>
+    getJson<any>(`/api/v1/gold/credit-evaluations/${evaluationId}`),
+
+  getApplicationCreditEvaluation: (applicationId: string) =>
+    getJson<any>(`/api/v1/gold/applications/${applicationId}/credit-evaluation`),
+
+  // Approval Workflow
+  createLoanApproval: (data: any) =>
+    postJson<any>('/api/v1/gold/approvals', data),
+
+  submitApprovalDecision: (approvalId: string, decision: any) =>
+    postJson<any>(`/api/v1/gold/approvals/${approvalId}/decision`, decision),
+
+  getApplicationApprovals: (applicationId: string) =>
+    getJson<any[]>(`/api/v1/gold/applications/${applicationId}/approvals`),
+
+  // Loan Accounts
+  createLoanAccount: (data: any) =>
+    postJson<any>('/api/v1/gold/loan-accounts', data),
+
+  getLoanAccounts: (filters?: {
+    status?: string;
+    customer_id?: string;
+    branch_id?: string;
+    is_npa?: boolean;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.customer_id) params.append('customer_id', filters.customer_id);
+    if (filters?.branch_id) params.append('branch_id', filters.branch_id);
+    if (filters?.is_npa !== undefined) params.append('is_npa', filters.is_npa.toString());
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/loan-accounts${query}`);
+  },
+
+  getLoanAccount: (loanId: string) =>
+    getJson<any>(`/api/v1/gold/loan-accounts/${loanId}`),
+
+  // Disbursements
+  createDisbursement: (data: any) =>
+    postJson<any>('/api/v1/gold/disbursements', data),
+
+  verifyDisbursement: (disbursementId: string, data: any) =>
+    postJson<any>(`/api/v1/gold/disbursements/${disbursementId}/verify`, data),
+
+  getDisbursement: (disbursementId: string) =>
+    getJson<any>(`/api/v1/gold/disbursements/${disbursementId}`),
+
+  getApplicationDisbursements: (applicationId: string) =>
+    getJson<any[]>(`/api/v1/gold/applications/${applicationId}/disbursements`),
+
+  // Summary & Stats
+  getApplicationsSummary: (filters?: {
+    branch_id?: string;
+    from_date?: string;
+    to_date?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.branch_id) params.append('branch_id', filters.branch_id);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any>(`/api/v1/gold/applications/summary${query}`);
+  },
+
+  getLoanPortfolio: (filters?: { branch_id?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.branch_id) params.append('branch_id', filters.branch_id);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any>(`/api/v1/gold/loan-accounts/portfolio${query}`);
+  },
+};
