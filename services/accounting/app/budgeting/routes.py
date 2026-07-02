@@ -5,15 +5,19 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.budgeting.models import Budget, BudgetForecast, BudgetVersion
+from app.budgeting.models import Budget, BudgetCommitment, BudgetForecast, BudgetLine, BudgetVersion
 from app.budgeting.schemas import (
     BudgetApproveRequest,
     BudgetAvailabilityRequest,
     BudgetAvailabilityResponse,
+    BudgetCommitmentCreate,
+    BudgetCommitmentResponse,
     BudgetCreate,
     BudgetDashboardResponse,
     BudgetForecastCreate,
     BudgetForecastResponse,
+    BudgetLineCreate,
+    BudgetLineResponse,
     BudgetResponse,
     BudgetRevisionCreate,
     BudgetVersionResponse,
@@ -42,6 +46,8 @@ def _budget_response(budget: Budget) -> BudgetResponse:
         updated_at=budget.updated_at,
         versions=[_version_response(version) for version in budget.versions],
         forecasts=[_forecast_response(forecast) for forecast in budget.forecasts],
+        lines=[_line_response(line) for line in budget.lines],
+        commitments=[_commitment_response(commitment) for commitment in budget.commitments],
     )
 
 
@@ -66,6 +72,35 @@ def _forecast_response(forecast: BudgetForecast) -> BudgetForecastResponse:
         status=forecast.status,
         metadata=forecast.metadata_json,
         created_at=forecast.created_at,
+    )
+
+
+def _line_response(line: BudgetLine) -> BudgetLineResponse:
+    return BudgetLineResponse(
+        id=line.id,
+        tenant_id=line.tenant_id,
+        budget_id=line.budget_id,
+        line_code=line.line_code,
+        description=line.description,
+        amount=line.amount,
+        gl_account_code=line.gl_account_code,
+        cost_center=line.cost_center,
+        metadata=line.metadata_json,
+        created_at=line.created_at,
+    )
+
+
+def _commitment_response(commitment: BudgetCommitment) -> BudgetCommitmentResponse:
+    return BudgetCommitmentResponse(
+        id=commitment.id,
+        tenant_id=commitment.tenant_id,
+        budget_id=commitment.budget_id,
+        reference_type=commitment.reference_type,
+        reference_id=commitment.reference_id,
+        amount=commitment.amount,
+        status=commitment.status,
+        metadata=commitment.metadata_json,
+        created_at=commitment.created_at,
     )
 
 
@@ -131,38 +166,61 @@ async def list_budgets(
     return {"total": total, "items": [_budget_response(item) for item in items]}
 
 
-@router.get("/{budget_id}", response_model=BudgetResponse)
-async def get_budget(budget_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
-    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.tenant_id == tenant_id).first()
+@router.post("/{budget_id}/lines", response_model=BudgetLineResponse)
+async def create_budget_line(
+    budget_id: str,
+    payload: BudgetLineCreate,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    resolved_tenant_id = tenant_id or payload.tenant_id
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.tenant_id == resolved_tenant_id).first()
     if not budget:
         raise HTTPException(status_code=404, detail="Budget not found")
-    return _budget_response(budget)
-
-
-@router.put("/{budget_id}", response_model=BudgetResponse)
-async def update_budget(budget_id: str, payload: BudgetUpdate, tenant_id: str = Query(...), db: Session = Depends(get_db)):
-    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.tenant_id == tenant_id).first()
-    if not budget:
-        raise HTTPException(status_code=404, detail="Budget not found")
-    if payload.budget_name:
-        budget.budget_name = payload.budget_name
-    if payload.description is not None:
-        budget.description = payload.description
-    if payload.status:
-        budget.status = payload.status
-    if payload.currency:
-        budget.currency = payload.currency
-    if payload.scope_level is not None:
-        budget.scope_level = payload.scope_level
-    if payload.scope_id is not None:
-        budget.scope_id = payload.scope_id
-    if payload.metadata is not None:
-        budget.metadata_json = payload.metadata
-    budget.updated_at = datetime.utcnow()
-    db.add(budget)
+    line = BudgetLine(
+        id=str(uuid4()),
+        tenant_id=resolved_tenant_id,
+        budget_id=budget.id,
+        line_code=payload.line_code,
+        description=payload.description,
+        amount=payload.amount,
+        gl_account_code=payload.gl_account_code,
+        cost_center=payload.cost_center,
+        metadata_json=payload.metadata,
+        created_at=datetime.utcnow(),
+    )
+    db.add(line)
     db.commit()
-    db.refresh(budget)
-    return _budget_response(budget)
+    db.refresh(line)
+    return _line_response(line)
+
+
+@router.post("/{budget_id}/commitments", response_model=BudgetCommitmentResponse)
+async def create_budget_commitment(
+    budget_id: str,
+    payload: BudgetCommitmentCreate,
+    tenant_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    resolved_tenant_id = tenant_id or payload.tenant_id
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.tenant_id == resolved_tenant_id).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    commitment = BudgetCommitment(
+        id=str(uuid4()),
+        tenant_id=resolved_tenant_id,
+        budget_id=budget.id,
+        reference_type=payload.reference_type,
+        reference_id=payload.reference_id,
+        amount=payload.amount,
+        status=payload.status or "active",
+        metadata_json=payload.metadata,
+        created_at=datetime.utcnow(),
+    )
+    db.add(commitment)
+    db.commit()
+    db.refresh(commitment)
+    return _commitment_response(commitment)
 
 
 @router.post("/{budget_id}/approve", response_model=BudgetResponse)
@@ -231,7 +289,10 @@ async def check_budget_availability(payload: BudgetAvailabilityRequest, db: Sess
         query = query.filter(Budget.scope_id == payload.scope_id)
     approved_budgets = query.all()
     total_budget = round(sum(item.versions[0].amount if item.versions else 0.0 for item in approved_budgets), 2)
-    total_committed = 0.0
+    total_committed = round(
+        sum(commitment.amount for budget in approved_budgets for commitment in budget.commitments if commitment.status == "active"),
+        2,
+    )
     available_amount = round(total_budget - total_committed - payload.requested_amount, 2)
     status = "available" if available_amount >= 0 else "exceeded"
     return BudgetAvailabilityResponse(
@@ -249,6 +310,7 @@ async def budget_dashboard(tenant_id: str = Query(...), db: Session = Depends(ge
     total_budgets = len(budgets)
     total_budget_amount = round(sum((budget.versions[0].amount if budget.versions else 0.0) for budget in budgets), 2)
     total_forecast_amount = round(sum((forecast.forecast_amount or 0.0) for budget in budgets for forecast in budget.forecasts), 2)
+    total_commitments = round(sum((commitment.amount or 0.0) for budget in budgets for commitment in budget.commitments if commitment.status == "active"), 2)
     budgets_by_status: Dict[str, int] = {}
     for budget in budgets:
         budgets_by_status[budget.status] = budgets_by_status.get(budget.status, 0) + 1
@@ -257,5 +319,40 @@ async def budget_dashboard(tenant_id: str = Query(...), db: Session = Depends(ge
         total_budgets=total_budgets,
         total_budget_amount=total_budget_amount,
         total_forecast_amount=total_forecast_amount,
+        total_commitments=total_commitments,
         budgets_by_status=budgets_by_status,
     )
+
+
+@router.get("/{budget_id}", response_model=BudgetResponse)
+async def get_budget(budget_id: str, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.tenant_id == tenant_id).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    return _budget_response(budget)
+
+
+@router.put("/{budget_id}", response_model=BudgetResponse)
+async def update_budget(budget_id: str, payload: BudgetUpdate, tenant_id: str = Query(...), db: Session = Depends(get_db)):
+    budget = db.query(Budget).filter(Budget.id == budget_id, Budget.tenant_id == tenant_id).first()
+    if not budget:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    if payload.budget_name:
+        budget.budget_name = payload.budget_name
+    if payload.description is not None:
+        budget.description = payload.description
+    if payload.status:
+        budget.status = payload.status
+    if payload.currency:
+        budget.currency = payload.currency
+    if payload.scope_level is not None:
+        budget.scope_level = payload.scope_level
+    if payload.scope_id is not None:
+        budget.scope_id = payload.scope_id
+    if payload.metadata is not None:
+        budget.metadata_json = payload.metadata
+    budget.updated_at = datetime.utcnow()
+    db.add(budget)
+    db.commit()
+    db.refresh(budget)
+    return _budget_response(budget)

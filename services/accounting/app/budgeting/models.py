@@ -1,6 +1,8 @@
 from datetime import datetime
-from sqlalchemy import Column, String, Float, DateTime, ForeignKey, JSON, UniqueConstraint
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, JSON, String, UniqueConstraint
 from sqlalchemy.orm import relationship
+
 from app.db import Base
 
 
@@ -29,6 +31,8 @@ class Budget(Base):
 
     versions = relationship("BudgetVersion", back_populates="budget", cascade="all, delete-orphan")
     forecasts = relationship("BudgetForecast", back_populates="budget", cascade="all, delete-orphan")
+    lines = relationship("BudgetLine", back_populates="budget", cascade="all, delete-orphan")
+    commitments = relationship("BudgetCommitment", back_populates="budget", cascade="all, delete-orphan")
 
 
 class BudgetVersion(Base):
@@ -61,3 +65,36 @@ class BudgetForecast(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     budget = relationship("Budget", back_populates="forecasts")
+
+
+class BudgetLine(Base):
+    __tablename__ = "budget_lines"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    budget_id = Column(String, ForeignKey("budgets.id"), nullable=False, index=True)
+    line_code = Column(String, nullable=False, index=True)
+    description = Column(String, nullable=True)
+    amount = Column(Float, nullable=False)
+    gl_account_code = Column(String, nullable=True)
+    cost_center = Column(String, nullable=True, index=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    budget = relationship("Budget", back_populates="lines")
+
+
+class BudgetCommitment(Base):
+    __tablename__ = "budget_commitments"
+
+    id = Column(String, primary_key=True)
+    tenant_id = Column(String, index=True, nullable=False)
+    budget_id = Column(String, ForeignKey("budgets.id"), nullable=False, index=True)
+    reference_type = Column(String, nullable=False, index=True)
+    reference_id = Column(String, nullable=False, index=True)
+    amount = Column(Float, nullable=False)
+    status = Column(String, default="active", index=True)
+    metadata_json = Column("metadata", JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    budget = relationship("Budget", back_populates="commitments")

@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
 
 
@@ -29,6 +30,37 @@ class BudgetForecastResponse(BaseModel):
         from_attributes = True
 
 
+class BudgetLineResponse(BaseModel):
+    id: str
+    tenant_id: str
+    budget_id: str
+    line_code: str
+    description: Optional[str] = None
+    amount: float
+    gl_account_code: Optional[str] = None
+    cost_center: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BudgetCommitmentResponse(BaseModel):
+    id: str
+    tenant_id: str
+    budget_id: str
+    reference_type: str
+    reference_id: str
+    amount: float
+    status: str
+    metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class BudgetResponse(BaseModel):
     id: str
     tenant_id: str
@@ -45,6 +77,8 @@ class BudgetResponse(BaseModel):
     updated_at: datetime
     versions: List[BudgetVersionResponse] = []
     forecasts: List[BudgetForecastResponse] = []
+    lines: List[BudgetLineResponse] = []
+    commitments: List[BudgetCommitmentResponse] = []
 
     class Config:
         from_attributes = True
@@ -97,6 +131,25 @@ class BudgetRevisionCreate(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
 
 
+class BudgetLineCreate(BaseModel):
+    tenant_id: str
+    line_code: str
+    description: Optional[str] = None
+    amount: float
+    gl_account_code: Optional[str] = None
+    cost_center: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class BudgetCommitmentCreate(BaseModel):
+    tenant_id: str
+    reference_type: str
+    reference_id: str
+    amount: float
+    status: Optional[str] = "active"
+    metadata: Optional[Dict[str, Any]] = None
+
+
 class BudgetAvailabilityRequest(BaseModel):
     tenant_id: str
     scope_level: Optional[str] = None
@@ -117,6 +170,7 @@ class BudgetDashboardResponse(BaseModel):
     total_budgets: int
     total_budget_amount: float
     total_forecast_amount: float
+    total_commitments: float
     budgets_by_status: Dict[str, int]
 
     class Config:
