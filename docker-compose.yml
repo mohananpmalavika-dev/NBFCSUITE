@@ -477,6 +477,7 @@ services:
       NEXT_PUBLIC_GRC_API_URL: http://localhost:8020
       NEXT_PUBLIC_PLATFORM_API_URL: http://localhost:8018
       NEXT_PUBLIC_AI_API_URL: http://localhost:8030
+      NEXT_PUBLIC_GOLD_API_URL: http://localhost:8013
     ports:
       - "3000:3000"
     depends_on:

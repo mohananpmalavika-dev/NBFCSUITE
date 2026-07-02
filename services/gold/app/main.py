@@ -1,3 +1,65 @@
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List
+import os
+
+app = FastAPI(
+    title="Gold Lending Service",
+    description="AI-powered Gold Lending Operating System - Phase 1: Product Configuration",
+    version="1.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class Product(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    max_ltv: float | None = None
+    min_weight: float | None = None
+    max_weight: float | None = None
+
+
+# In-memory product store for initial scaffolding
+_PRODUCTS: List[Product] = [
+    Product(id="gold-001", name="Gold Jewel Loan", description="Standard branch gold loan", max_ltv=0.75, min_weight=5.0, max_weight=1000.0),
+]
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/api/v1/gold/products", response_model=List[Product])
+def list_products():
+    return _PRODUCTS
+
+
+@app.post("/api/v1/gold/products", response_model=Product)
+def create_product(p: Product):
+    # simple uniqueness check
+    if any(x.id == p.id for x in _PRODUCTS):
+        raise HTTPException(status_code=400, detail="product id exists")
+    _PRODUCTS.append(p)
+    return p
+
+
+@app.get("/api/v1/gold/products/{product_id}", response_model=Product)
+def get_product(product_id: str):
+    for p in _PRODUCTS:
+        if p.id == product_id:
+            return p
+    raise HTTPException(status_code=404, detail="not found")
 from datetime import datetime
 from typing import List, Optional
 from uuid import uuid4
@@ -10,9 +72,18 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://nbfc_user:nbfc_pass@localhost:5432/nbfcsuite")
-engine = create_engine(DATABASE_URL, echo=True)
+engine = create_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+
+def get_db():
+    """Database session dependency"""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 class GoldLoanApplication(Base):
@@ -180,6 +251,29 @@ async def startup():
     Base.metadata.create_all(bind=engine)
 
 
+# Import and include routers
+from .routers import products, journey, appraisal, catalog, vault
+from .models import product as product_models
+from .models import journey as journey_models
+from .models import appraisal as appraisal_models
+from .models import catalog as catalog_models
+from .models import vault as vault_models
+
+# Override the get_db dependency in routers
+products.get_db = get_db
+journey.get_db = get_db
+appraisal.get_db = get_db
+catalog.get_db = get_db
+vault.get_db = get_db
+
+# Include routers
+app.include_router(products.router, prefix="/api/v1/gold")
+app.include_router(journey.router, prefix="/api/v1/gold")
+app.include_router(appraisal.router, prefix="/api/v1/gold")
+app.include_router(catalog.router, prefix="/api/v1/gold")
+app.include_router(vault.router, prefix="/api/v1/gold")
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "gold"}
@@ -343,3 +437,42 @@ async def create_auction_case(application_id: str, auction: AuctionCreate, db: S
 @app.get("/")
 async def root():
     return {"service": "gold", "version": "0.1.0"}
+
+
+# Backwards-compatible product endpoints (in-memory stub)
+from typing import List as _List
+
+
+class Product(BaseModel):
+    id: str
+    name: str
+    description: str | None = None
+    max_ltv: float | None = None
+    min_weight: float | None = None
+    max_weight: float | None = None
+
+
+_PRODUCTS: _List[Product] = [
+    Product(id="gold-001", name="Gold Jewel Loan", description="Standard branch gold loan", max_ltv=0.75, min_weight=5.0, max_weight=1000.0),
+]
+
+
+@app.get("/api/v1/gold/products", response_model=_List[Product])
+async def list_products_stub():
+    return _PRODUCTS
+
+
+@app.post("/api/v1/gold/products", response_model=Product)
+async def create_product_stub(p: Product):
+    if any(x.id == p.id for x in _PRODUCTS):
+        raise HTTPException(status_code=400, detail="product id exists")
+    _PRODUCTS.append(p)
+    return p
+
+
+@app.get("/api/v1/gold/products/{product_id}", response_model=Product)
+async def get_product_stub(product_id: str):
+    for p in _PRODUCTS:
+        if p.id == product_id:
+            return p
+    raise HTTPException(status_code=404, detail="not found")

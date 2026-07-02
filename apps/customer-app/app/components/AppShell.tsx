@@ -97,7 +97,7 @@ const navItems = [
   { label: 'Customers', icon: Users2 },
   { label: 'Lending', icon: DollarSign },
   { label: 'Deposits', icon: Banknote },
-  { label: 'Gold Loans', icon: FileText },
+  { label: 'Gold Loans', icon: FileText, href: '/gold-lending' },
   { label: 'Treasury', icon: Compass },
   { label: 'Accounting', icon: FileText, href: '/accounting/chart-of-accounts' },
   { label: 'General Ledger', icon: FileText, href: '/accounting/general-ledger' },
