@@ -144,6 +144,45 @@ from .audit_compliance import (
     PolicyAcknowledgement,
     DataRetentionLog
 )
+from .integration import (
+    IntegrationProvider,
+    IntegrationConfiguration,
+    IntegrationEndpoint,
+    IntegrationLog,
+    APIKey,
+    Webhook,
+    WebhookDelivery,
+    MessageQueue
+)
+from .analytics import (
+    DataWarehouse,
+    DataSource,
+    Report,
+    ReportExecution,
+    Dashboard,
+    Widget,
+    MLModel,
+    Prediction,
+    DataStream,
+    AnalyticsAlert,
+    AlertNotification,
+    DataQualityRule
+)
+from .admin import (
+    SystemSetting,
+    Role,
+    UserRole,
+    Permission,
+    AuditLog,
+    SystemHealth,
+    SystemMetric,
+    NotificationTemplate,
+    ScheduledJob,
+    JobExecution,
+    FeatureFlag,
+    APIKeyAdmin,
+    LoginHistory
+)
 
 __all__ = [
     # Product models
@@ -279,4 +318,40 @@ __all__ = [
     "ComplianceCertification",
     "PolicyAcknowledgement",
     "DataRetentionLog",
+    # Integration hub models
+    "IntegrationProvider",
+    "IntegrationConfiguration",
+    "IntegrationEndpoint",
+    "IntegrationLog",
+    "APIKey",
+    "Webhook",
+    "WebhookDelivery",
+    "MessageQueue",
+    # Analytics & BI models
+    "DataWarehouse",
+    "DataSource",
+    "Report",
+    "ReportExecution",
+    "Dashboard",
+    "Widget",
+    "MLModel",
+    "Prediction",
+    "DataStream",
+    "AnalyticsAlert",
+    "AlertNotification",
+    "DataQualityRule",
+    # Platform administration models
+    "SystemSetting",
+    "Role",
+    "UserRole",
+    "Permission",
+    "AuditLog",
+    "SystemHealth",
+    "SystemMetric",
+    "NotificationTemplate",
+    "ScheduledJob",
+    "JobExecution",
+    "FeatureFlag",
+    "APIKeyAdmin",
+    "LoginHistory",
 ]
