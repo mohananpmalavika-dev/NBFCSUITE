@@ -1,4 +1,4 @@
 """Gold service routers"""
-from . import products, journey, appraisal, catalog, vault, loan
+from . import products, journey, appraisal, catalog, vault, loan, repayment
 
-__all__ = ["products", "journey", "appraisal", "catalog", "vault", "loan"]
+__all__ = ["products", "journey", "appraisal", "catalog", "vault", "loan", "repayment"]

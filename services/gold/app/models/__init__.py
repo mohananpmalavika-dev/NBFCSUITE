@@ -68,6 +68,18 @@ from .loan import (
     LoanStatusHistory,
     LMSIntegrationLog
 )
+from .repayment import (
+    EMISchedule,
+    RepaymentTransaction,
+    InterestAccrual,
+    LoanAdjustment,
+    LoanPrepayment,
+    LoanStatement,
+    AutoDebitMandate,
+    LoanPenalty,
+    LoanRenewal,
+    RepaymentAllocationRule
+)
 
 __all__ = [
     # Product models
@@ -133,4 +145,15 @@ __all__ = [
     "LoanCharge",
     "LoanStatusHistory",
     "LMSIntegrationLog",
+    # Repayment models
+    "EMISchedule",
+    "RepaymentTransaction",
+    "InterestAccrual",
+    "LoanAdjustment",
+    "LoanPrepayment",
+    "LoanStatement",
+    "AutoDebitMandate",
+    "LoanPenalty",
+    "LoanRenewal",
+    "RepaymentAllocationRule",
 ]

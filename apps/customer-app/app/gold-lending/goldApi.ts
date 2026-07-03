@@ -534,3 +534,254 @@ export const goldApi = {
     return getJson<any>(`/api/v1/gold/loan-accounts/portfolio${query}`);
   },
 };
+
+  // ========================================================================
+  // LOAN SERVICING & REPAYMENT (Phase 7)
+  // ========================================================================
+
+  // EMI Schedule
+  generateEMISchedule: (loanAccountId: string) =>
+    postJson<any[]>(`/api/v1/gold/emi-schedule?loan_account_id=${loanAccountId}`, {}),
+
+  getEMISchedule: (loanAccountId: string, paymentStatus?: string) => {
+    const params = paymentStatus ? `?payment_status=${paymentStatus}` : '';
+    return getJson<any[]>(`/api/v1/gold/emi-schedule/${loanAccountId}${params}`);
+  },
+
+  getOverdueEMIs: (loanAccountId: string) =>
+    getJson<any[]>(`/api/v1/gold/emi-schedule/${loanAccountId}/overdue`),
+
+  updateEMISchedule: (scheduleId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/emi-schedule/${scheduleId}`, data),
+
+  getEMISummary: (loanAccountId: string) =>
+    getJson<any>(`/api/v1/gold/emi-schedule/${loanAccountId}/summary`),
+
+  // Repayment Transactions
+  createRepayment: (data: any) =>
+    postJson<any>('/api/v1/gold/repayments', data),
+
+  getRepayments: (filters?: {
+    loan_account_id?: string;
+    payment_mode?: string;
+    transaction_status?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.loan_account_id) params.append('loan_account_id', filters.loan_account_id);
+    if (filters?.payment_mode) params.append('payment_mode', filters.payment_mode);
+    if (filters?.transaction_status) params.append('transaction_status', filters.transaction_status);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/repayments${query}`);
+  },
+
+  getRepayment: (transactionId: string) =>
+    getJson<any>(`/api/v1/gold/repayments/${transactionId}`),
+
+  verifyRepayment: (transactionId: string, verifiedByUserId: string) =>
+    postJson<any>(`/api/v1/gold/repayments/${transactionId}/verify`, { verified_by_user_id: verifiedByUserId }),
+
+  reverseRepayment: (transactionId: string, reversedByUserId: string, reason: string) =>
+    postJson<any>(`/api/v1/gold/repayments/${transactionId}/reverse`, {
+      reversed_by_user_id: reversedByUserId,
+      reversal_reason: reason
+    }),
+
+  getRepaymentSummary: (loanAccountId: string) =>
+    getJson<any>(`/api/v1/gold/repayments/${loanAccountId}/summary`),
+
+  // Interest Accrual
+  createInterestAccrual: (data: any) =>
+    postJson<any>('/api/v1/gold/interest-accrual', data),
+
+  getInterestAccruals: (loanAccountId: string, fromDate?: string, toDate?: string) => {
+    const params = new URLSearchParams();
+    if (fromDate) params.append('from_date', fromDate);
+    if (toDate) params.append('to_date', toDate);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/interest-accrual/${loanAccountId}${query}`);
+  },
+
+  bulkInterestAccrual: (loanAccountIds: string[], accrualDate: string) =>
+    postJson<any>('/api/v1/gold/interest-accrual/bulk', {
+      loan_account_ids: loanAccountIds,
+      accrual_date: accrualDate
+    }),
+
+  // Loan Adjustments
+  createAdjustment: (data: any) =>
+    postJson<any>('/api/v1/gold/adjustments', data),
+
+  getAdjustments: (filters?: {
+    loan_account_id?: string;
+    adjustment_type?: string;
+    approval_status?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.loan_account_id) params.append('loan_account_id', filters.loan_account_id);
+    if (filters?.adjustment_type) params.append('adjustment_type', filters.adjustment_type);
+    if (filters?.approval_status) params.append('approval_status', filters.approval_status);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/adjustments${query}`);
+  },
+
+  approveAdjustment: (adjustmentId: string, approvedByUserId: string, approvalStatus: string) =>
+    postJson<any>(`/api/v1/gold/adjustments/${adjustmentId}/approve`, {
+      approved_by_user_id: approvedByUserId,
+      approval_status: approvalStatus
+    }),
+
+  // Prepayments
+  createPrepayment: (data: any) =>
+    postJson<any>('/api/v1/gold/prepayments', data),
+
+  getPrepayments: (filters?: {
+    loan_account_id?: string;
+    prepayment_type?: string;
+    prepayment_status?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.loan_account_id) params.append('loan_account_id', filters.loan_account_id);
+    if (filters?.prepayment_type) params.append('prepayment_type', filters.prepayment_type);
+    if (filters?.prepayment_status) params.append('prepayment_status', filters.prepayment_status);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/prepayments${query}`);
+  },
+
+  approvePrepayment: (prepaymentId: string, approvedByUserId: string) =>
+    postJson<any>(`/api/v1/gold/prepayments/${prepaymentId}/approve`, { approved_by_user_id: approvedByUserId }),
+
+  // Statements
+  createStatement: (data: any) =>
+    postJson<any>('/api/v1/gold/statements', data),
+
+  getStatements: (loanAccountId: string, statementType?: string) => {
+    const params = statementType ? `?statement_type=${statementType}` : '';
+    return getJson<any[]>(`/api/v1/gold/statements/${loanAccountId}${params}`);
+  },
+
+  bulkGenerateStatements: (loanAccountIds: string[], periodStart: string, periodEnd: string, statementType: string) =>
+    postJson<any>('/api/v1/gold/statements/bulk', {
+      loan_account_ids: loanAccountIds,
+      period_start: periodStart,
+      period_end: periodEnd,
+      statement_type: statementType
+    }),
+
+  // Auto Debit Mandates
+  createMandate: (data: any) =>
+    postJson<any>('/api/v1/gold/mandates', data),
+
+  getMandates: (filters?: {
+    loan_account_id?: string;
+    mandate_status?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.loan_account_id) params.append('loan_account_id', filters.loan_account_id);
+    if (filters?.mandate_status) params.append('mandate_status', filters.mandate_status);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/mandates${query}`);
+  },
+
+  updateMandate: (mandateId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/mandates/${mandateId}`, data),
+
+  // Penalties
+  createPenalty: (data: any) =>
+    postJson<any>('/api/v1/gold/penalties', data),
+
+  getPenalties: (filters?: {
+    loan_account_id?: string;
+    penalty_type?: string;
+    penalty_status?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.loan_account_id) params.append('loan_account_id', filters.loan_account_id);
+    if (filters?.penalty_type) params.append('penalty_type', filters.penalty_type);
+    if (filters?.penalty_status) params.append('penalty_status', filters.penalty_status);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/penalties${query}`);
+  },
+
+  waivePenalty: (penaltyId: string, data: any) =>
+    postJson<any>(`/api/v1/gold/penalties/${penaltyId}/waive`, data),
+
+  // Renewals
+  createRenewal: (data: any) =>
+    postJson<any>('/api/v1/gold/renewals', data),
+
+  getRenewals: (filters?: {
+    original_loan_account_id?: string;
+    renewal_type?: string;
+    renewal_status?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.original_loan_account_id) params.append('original_loan_account_id', filters.original_loan_account_id);
+    if (filters?.renewal_type) params.append('renewal_type', filters.renewal_type);
+    if (filters?.renewal_status) params.append('renewal_status', filters.renewal_status);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/renewals${query}`);
+  },
+
+  approveRenewal: (renewalId: string, approvedByUserId: string) =>
+    postJson<any>(`/api/v1/gold/renewals/${renewalId}/approve`, { approved_by_user_id: approvedByUserId }),
+
+  // Allocation Rules
+  createAllocationRule: (data: any) =>
+    postJson<any>('/api/v1/gold/allocation-rules', data),
+
+  getAllocationRules: (isActive?: boolean, isDefault?: boolean) => {
+    const params = new URLSearchParams();
+    if (isActive !== undefined) params.append('is_active', isActive.toString());
+    if (isDefault !== undefined) params.append('is_default', isDefault.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/allocation-rules${query}`);
+  },
+
+  // Summary & Analytics
+  getLoanAccountSummary: (loanAccountId: string) =>
+    getJson<any>(`/api/v1/gold/loan-accounts/${loanAccountId}/summary`),
+
+  getOverdueSummary: (branchId?: string, minDaysOverdue?: number) => {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branch_id', branchId);
+    if (minDaysOverdue) params.append('min_days_overdue', minDaysOverdue.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/overdue-summary${query}`);
+  },
+
+  getPortfolioHealth: (branchId?: string, productId?: string) => {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branch_id', branchId);
+    if (productId) params.append('product_id', productId);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/portfolio-health${query}`);
+  },
+};
