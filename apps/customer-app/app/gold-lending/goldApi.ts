@@ -1820,3 +1820,317 @@ export const goldApi = {
     getJson<any>(`/api/v1/gold/documents/statistics/category/${categoryId}`),
   getUserDocumentStatistics: (userId: string) => 
     getJson<any>(`/api/v1/gold/documents/statistics/user/${userId}`),
+
+  // ============================================================================
+  // RISK MANAGEMENT - Phase 11
+  // ============================================================================
+  
+  // Risk Parameters
+  createRiskParameter: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/parameters', payload),
+  listRiskParameters: (params?: { risk_category?: string; parameter_type?: string; is_active?: boolean; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.risk_category) query.append('risk_category', params.risk_category);
+    if (params?.parameter_type) query.append('parameter_type', params.parameter_type);
+    if (params?.is_active !== undefined) query.append('is_active', String(params.is_active));
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/parameters?${query.toString()}`);
+  },
+  getRiskParameter: (parameterId: string) => 
+    getJson<any>(`/api/v1/gold/risk/parameters/${parameterId}`),
+  updateRiskParameter: (parameterId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/risk/parameters/${parameterId}`, payload),
+  deleteRiskParameter: (parameterId: string) => 
+    deleteJson(`/api/v1/gold/risk/parameters/${parameterId}`),
+  
+  // Credit Risk Assessments
+  createCreditRiskAssessment: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/credit-assessments', payload),
+  listCreditRiskAssessments: (params?: { 
+    loan_id?: string; 
+    customer_id?: string; 
+    assessment_type?: string; 
+    risk_category?: string; 
+    approval_status?: string;
+    date_from?: string;
+    date_to?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.loan_id) query.append('loan_id', params.loan_id);
+    if (params?.customer_id) query.append('customer_id', params.customer_id);
+    if (params?.assessment_type) query.append('assessment_type', params.assessment_type);
+    if (params?.risk_category) query.append('risk_category', params.risk_category);
+    if (params?.approval_status) query.append('approval_status', params.approval_status);
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/credit-assessments?${query.toString()}`);
+  },
+  getCreditRiskAssessment: (assessmentId: string) => 
+    getJson<any>(`/api/v1/gold/risk/credit-assessments/${assessmentId}`),
+  updateCreditRiskAssessment: (assessmentId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/risk/credit-assessments/${assessmentId}`, payload),
+  approveCreditRiskAssessment: (assessmentId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/risk/credit-assessments/${assessmentId}/approve`, payload),
+  deleteCreditRiskAssessment: (assessmentId: string) => 
+    deleteJson(`/api/v1/gold/risk/credit-assessments/${assessmentId}`),
+
+  // Operational Risk Events
+  createOperationalRiskEvent: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/operational-events', payload),
+  listOperationalRiskEvents: (params?: { 
+    event_category?: string; 
+    severity_level?: string; 
+    event_status?: string;
+    date_from?: string;
+    date_to?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.event_category) query.append('event_category', params.event_category);
+    if (params?.severity_level) query.append('severity_level', params.severity_level);
+    if (params?.event_status) query.append('event_status', params.event_status);
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/operational-events?${query.toString()}`);
+  },
+  getOperationalRiskEvent: (eventId: string) => 
+    getJson<any>(`/api/v1/gold/risk/operational-events/${eventId}`),
+  updateOperationalRiskEvent: (eventId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/risk/operational-events/${eventId}`, payload),
+  deleteOperationalRiskEvent: (eventId: string) => 
+    deleteJson(`/api/v1/gold/risk/operational-events/${eventId}`),
+  
+  // Market Risk Exposures
+  createMarketRiskExposure: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/market-exposures', payload),
+  listMarketRiskExposures: (params?: { 
+    exposure_type?: string; 
+    currency?: string;
+    date_from?: string;
+    date_to?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.exposure_type) query.append('exposure_type', params.exposure_type);
+    if (params?.currency) query.append('currency', params.currency);
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/market-exposures?${query.toString()}`);
+  },
+  getMarketRiskExposure: (exposureId: string) => 
+    getJson<any>(`/api/v1/gold/risk/market-exposures/${exposureId}`),
+  deleteMarketRiskExposure: (exposureId: string) => 
+    deleteJson(`/api/v1/gold/risk/market-exposures/${exposureId}`),
+
+  // Concentration Risk Limits
+  createConcentrationRiskLimit: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/concentration-limits', payload),
+  listConcentrationRiskLimits: (params?: { concentration_type?: string; is_active?: boolean; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.concentration_type) query.append('concentration_type', params.concentration_type);
+    if (params?.is_active !== undefined) query.append('is_active', String(params.is_active));
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/concentration-limits?${query.toString()}`);
+  },
+  getConcentrationRiskLimit: (limitId: string) => 
+    getJson<any>(`/api/v1/gold/risk/concentration-limits/${limitId}`),
+  updateConcentrationRiskLimit: (limitId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/risk/concentration-limits/${limitId}`, payload),
+  monitorConcentrationRisks: () => 
+    getJson<any[]>('/api/v1/gold/risk/concentration-limits/monitor'),
+  deleteConcentrationRiskLimit: (limitId: string) => 
+    deleteJson(`/api/v1/gold/risk/concentration-limits/${limitId}`),
+  
+  // Risk Alerts
+  createRiskAlert: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/alerts', payload),
+  listRiskAlerts: (params?: { 
+    alert_type?: string; 
+    risk_category?: string; 
+    severity_level?: string; 
+    alert_status?: string;
+    date_from?: string;
+    date_to?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.alert_type) query.append('alert_type', params.alert_type);
+    if (params?.risk_category) query.append('risk_category', params.risk_category);
+    if (params?.severity_level) query.append('severity_level', params.severity_level);
+    if (params?.alert_status) query.append('alert_status', params.alert_status);
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/alerts?${query.toString()}`);
+  },
+  getRiskAlert: (alertId: string) => 
+    getJson<any>(`/api/v1/gold/risk/alerts/${alertId}`),
+  updateRiskAlert: (alertId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/risk/alerts/${alertId}`, payload),
+  resolveRiskAlert: (alertId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/risk/alerts/${alertId}/resolve`, payload),
+  deleteRiskAlert: (alertId: string) => 
+    deleteJson(`/api/v1/gold/risk/alerts/${alertId}`),
+
+  // Risk Mitigations
+  createRiskMitigation: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/mitigations', payload),
+  listRiskMitigations: (params?: { 
+    risk_category?: string; 
+    mitigation_type?: string; 
+    mitigation_status?: string; 
+    approval_status?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.risk_category) query.append('risk_category', params.risk_category);
+    if (params?.mitigation_type) query.append('mitigation_type', params.mitigation_type);
+    if (params?.mitigation_status) query.append('mitigation_status', params.mitigation_status);
+    if (params?.approval_status) query.append('approval_status', params.approval_status);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/mitigations?${query.toString()}`);
+  },
+  getRiskMitigation: (mitigationId: string) => 
+    getJson<any>(`/api/v1/gold/risk/mitigations/${mitigationId}`),
+  updateRiskMitigation: (mitigationId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/risk/mitigations/${mitigationId}`, payload),
+  approveRiskMitigation: (mitigationId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/risk/mitigations/${mitigationId}/approve`, payload),
+  deleteRiskMitigation: (mitigationId: string) => 
+    deleteJson(`/api/v1/gold/risk/mitigations/${mitigationId}`),
+  
+  // Risk Reports
+  createRiskReport: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/reports', payload),
+  listRiskReports: (params?: { 
+    report_type?: string; 
+    report_category?: string; 
+    report_status?: string; 
+    approval_status?: string;
+    date_from?: string;
+    date_to?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.report_type) query.append('report_type', params.report_type);
+    if (params?.report_category) query.append('report_category', params.report_category);
+    if (params?.report_status) query.append('report_status', params.report_status);
+    if (params?.approval_status) query.append('approval_status', params.approval_status);
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/reports?${query.toString()}`);
+  },
+  getRiskReport: (reportId: string) => 
+    getJson<any>(`/api/v1/gold/risk/reports/${reportId}`),
+  updateRiskReport: (reportId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/risk/reports/${reportId}`, payload),
+  approveRiskReport: (reportId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/risk/reports/${reportId}/approve`, payload),
+  publishRiskReport: (reportId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/risk/reports/${reportId}/publish`, payload),
+  deleteRiskReport: (reportId: string) => 
+    deleteJson(`/api/v1/gold/risk/reports/${reportId}`),
+
+  // Risk Dashboards
+  createRiskDashboard: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/dashboards', payload),
+  listRiskDashboards: (params?: { dashboard_type?: string; is_active?: boolean; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.dashboard_type) query.append('dashboard_type', params.dashboard_type);
+    if (params?.is_active !== undefined) query.append('is_active', String(params.is_active));
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/dashboards?${query.toString()}`);
+  },
+  getRiskDashboard: (dashboardId: string) => 
+    getJson<any>(`/api/v1/gold/risk/dashboards/${dashboardId}`),
+  updateRiskDashboard: (dashboardId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/risk/dashboards/${dashboardId}`, payload),
+  deleteRiskDashboard: (dashboardId: string) => 
+    deleteJson(`/api/v1/gold/risk/dashboards/${dashboardId}`),
+  
+  // Compliance Checks
+  createComplianceCheck: (payload: unknown) => 
+    postJson('/api/v1/gold/risk/compliance-checks', payload),
+  listComplianceChecks: (params?: { 
+    check_type?: string; 
+    compliance_area?: string; 
+    check_status?: string; 
+    compliance_status?: string; 
+    review_status?: string;
+    date_from?: string;
+    date_to?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.check_type) query.append('check_type', params.check_type);
+    if (params?.compliance_area) query.append('compliance_area', params.compliance_area);
+    if (params?.check_status) query.append('check_status', params.check_status);
+    if (params?.compliance_status) query.append('compliance_status', params.compliance_status);
+    if (params?.review_status) query.append('review_status', params.review_status);
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/risk/compliance-checks?${query.toString()}`);
+  },
+  getComplianceCheck: (checkId: string) => 
+    getJson<any>(`/api/v1/gold/risk/compliance-checks/${checkId}`),
+  updateComplianceCheck: (checkId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/risk/compliance-checks/${checkId}`, payload),
+  reviewComplianceCheck: (checkId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/risk/compliance-checks/${checkId}/review`, payload),
+  approveComplianceCheck: (checkId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/risk/compliance-checks/${checkId}/approve`, payload),
+  deleteComplianceCheck: (checkId: string) => 
+    deleteJson(`/api/v1/gold/risk/compliance-checks/${checkId}`),
+  
+  // Risk Statistics
+  getCreditRiskStatistics: (params?: { date_from?: string; date_to?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    return getJson<any>(`/api/v1/gold/risk/statistics/credit-risk?${query.toString()}`);
+  },
+  getOperationalRiskStatistics: (params?: { date_from?: string; date_to?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    return getJson<any>(`/api/v1/gold/risk/statistics/operational-risk?${query.toString()}`);
+  },
+  getMarketRiskStatistics: (params?: { date_from?: string; date_to?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    return getJson<any>(`/api/v1/gold/risk/statistics/market-risk?${query.toString()}`);
+  },
+  getConcentrationRiskStatistics: () => 
+    getJson<any>('/api/v1/gold/risk/statistics/concentration-risk'),
+  getComplianceStatistics: (params?: { date_from?: string; date_to?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.date_from) query.append('date_from', params.date_from);
+    if (params?.date_to) query.append('date_to', params.date_to);
+    return getJson<any>(`/api/v1/gold/risk/statistics/compliance?${query.toString()}`);
+  },
+
+};

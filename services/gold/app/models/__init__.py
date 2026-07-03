@@ -120,6 +120,18 @@ from .documents import (
     DocumentRetentionPolicy,
     DocumentShare
 )
+from .risk import (
+    RiskParameter,
+    CreditRiskAssessment,
+    OperationalRiskEvent,
+    MarketRiskExposure,
+    ConcentrationRiskLimit,
+    RiskAlert,
+    RiskMitigation,
+    RiskReport,
+    RiskDashboard,
+    ComplianceCheck
+)
 
 __all__ = [
     # Product models
@@ -233,4 +245,15 @@ __all__ = [
     "DocumentAccessLog",
     "DocumentRetentionPolicy",
     "DocumentShare",
+    # Risk management models
+    "RiskParameter",
+    "CreditRiskAssessment",
+    "OperationalRiskEvent",
+    "MarketRiskExposure",
+    "ConcentrationRiskLimit",
+    "RiskAlert",
+    "RiskMitigation",
+    "RiskReport",
+    "RiskDashboard",
+    "ComplianceCheck",
 ]
