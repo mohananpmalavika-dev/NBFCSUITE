@@ -1541,3 +1541,282 @@ export const goldApi = {
   getDashboardAnalytics: (dashboardCode: string, data: any) =>
     postJson<any>(`/api/v1/gold/reporting/dashboards/${dashboardCode}/analytics`, data),
 };
+
+  // ============================================================================
+  // DOCUMENT MANAGEMENT API
+  // ============================================================================
+  
+  // Document Categories
+  createDocumentCategory: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/categories', payload),
+  listDocumentCategories: (params?: { is_active?: boolean; parent_category_id?: string; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.is_active !== undefined) query.append('is_active', String(params.is_active));
+    if (params?.parent_category_id) query.append('parent_category_id', params.parent_category_id);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/documents/categories?${query.toString()}`);
+  },
+  getDocumentCategory: (categoryId: string) => 
+    getJson<any>(`/api/v1/gold/documents/categories/${categoryId}`),
+  updateDocumentCategory: (categoryId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/documents/categories/${categoryId}`, payload),
+  deleteDocumentCategory: (categoryId: string) => 
+    deleteJson(`/api/v1/gold/documents/categories/${categoryId}`),
+  
+  // Documents
+  createDocument: (payload: unknown) => 
+    postJson('/api/v1/gold/documents', payload),
+  listDocuments: (params?: { 
+    category_id?: string; 
+    document_type?: string; 
+    entity_type?: string; 
+    entity_id?: string; 
+    storage_status?: string; 
+    is_deleted?: boolean; 
+    search?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.category_id) query.append('category_id', params.category_id);
+    if (params?.document_type) query.append('document_type', params.document_type);
+    if (params?.entity_type) query.append('entity_type', params.entity_type);
+    if (params?.entity_id) query.append('entity_id', params.entity_id);
+    if (params?.storage_status) query.append('storage_status', params.storage_status);
+    if (params?.is_deleted !== undefined) query.append('is_deleted', String(params.is_deleted));
+    if (params?.search) query.append('search', params.search);
+    if (params?.from_date) query.append('from_date', params.from_date);
+    if (params?.to_date) query.append('to_date', params.to_date);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/documents?${query.toString()}`);
+  },
+  getDocument: (documentId: string) => 
+    getJson<any>(`/api/v1/gold/documents/${documentId}`),
+  updateDocument: (documentId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/documents/${documentId}`, payload),
+  deleteDocument: (documentId: string, deletedBy: string) => 
+    deleteJson(`/api/v1/gold/documents/${documentId}?deleted_by=${deletedBy}`),
+  restoreDocument: (documentId: string) => 
+    postJson(`/api/v1/gold/documents/${documentId}/restore`, {}),
+  
+  // Document Versions
+  listDocumentVersions: (documentId: string) => 
+    getJson<any[]>(`/api/v1/gold/documents/${documentId}/versions`),
+  getDocumentVersion: (documentId: string, versionNumber: number) => 
+    getJson<any>(`/api/v1/gold/documents/${documentId}/versions/${versionNumber}`),
+  restoreDocumentVersion: (documentId: string, versionNumber: number, restoredBy: string) => 
+    postJson(`/api/v1/gold/documents/${documentId}/versions/${versionNumber}/restore?restored_by=${restoredBy}`, {}),
+  
+  // Document Metadata
+  addDocumentMetadata: (documentId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/documents/${documentId}/metadata`, payload),
+  listDocumentMetadata: (documentId: string) => 
+    getJson<any[]>(`/api/v1/gold/documents/${documentId}/metadata`),
+  updateDocumentMetadata: (documentId: string, metadataId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/documents/${documentId}/metadata/${metadataId}`, payload),
+  deleteDocumentMetadata: (documentId: string, metadataId: string) => 
+    deleteJson(`/api/v1/gold/documents/${documentId}/metadata/${metadataId}`),
+  
+  // Document Templates
+  createDocumentTemplate: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/templates', payload),
+  listDocumentTemplates: (params?: { category_id?: string; template_type?: string; is_active?: boolean; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.category_id) query.append('category_id', params.category_id);
+    if (params?.template_type) query.append('template_type', params.template_type);
+    if (params?.is_active !== undefined) query.append('is_active', String(params.is_active));
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/documents/templates?${query.toString()}`);
+  },
+  getDocumentTemplate: (templateId: string) => 
+    getJson<any>(`/api/v1/gold/documents/templates/${templateId}`),
+  updateDocumentTemplate: (templateId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/documents/templates/${templateId}`, payload),
+  deleteDocumentTemplate: (templateId: string) => 
+    deleteJson(`/api/v1/gold/documents/templates/${templateId}`),
+  
+  // Document Workflows
+  createDocumentWorkflow: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/workflows', payload),
+  listDocumentWorkflows: (params?: { category_id?: string; workflow_type?: string; is_active?: boolean; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.category_id) query.append('category_id', params.category_id);
+    if (params?.workflow_type) query.append('workflow_type', params.workflow_type);
+    if (params?.is_active !== undefined) query.append('is_active', String(params.is_active));
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/documents/workflows?${query.toString()}`);
+  },
+  getDocumentWorkflow: (workflowId: string) => 
+    getJson<any>(`/api/v1/gold/documents/workflows/${workflowId}`),
+  updateDocumentWorkflow: (workflowId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/documents/workflows/${workflowId}`, payload),
+  deleteDocumentWorkflow: (workflowId: string) => 
+    deleteJson(`/api/v1/gold/documents/workflows/${workflowId}`),
+  
+  // Document Approvals
+  createDocumentApproval: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/approvals', payload),
+  listDocumentApprovals: (params?: { 
+    workflow_id?: string; 
+    approval_status?: string; 
+    assigned_to?: string; 
+    initiated_by?: string; 
+    priority?: string; 
+    is_escalated?: boolean;
+    from_date?: string;
+    to_date?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.workflow_id) query.append('workflow_id', params.workflow_id);
+    if (params?.approval_status) query.append('approval_status', params.approval_status);
+    if (params?.assigned_to) query.append('assigned_to', params.assigned_to);
+    if (params?.initiated_by) query.append('initiated_by', params.initiated_by);
+    if (params?.priority) query.append('priority', params.priority);
+    if (params?.is_escalated !== undefined) query.append('is_escalated', String(params.is_escalated));
+    if (params?.from_date) query.append('from_date', params.from_date);
+    if (params?.to_date) query.append('to_date', params.to_date);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/documents/approvals?${query.toString()}`);
+  },
+  getDocumentApproval: (approvalId: string) => 
+    getJson<any>(`/api/v1/gold/documents/approvals/${approvalId}`),
+  takeApprovalAction: (approvalId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/documents/approvals/${approvalId}/action`, payload),
+  updateDocumentApproval: (approvalId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/documents/approvals/${approvalId}`, payload),
+  
+  // Document Tags
+  createDocumentTag: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/tags', payload),
+  listDocumentTags: (params?: { tag_category?: string; is_active?: boolean; search?: string; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.tag_category) query.append('tag_category', params.tag_category);
+    if (params?.is_active !== undefined) query.append('is_active', String(params.is_active));
+    if (params?.search) query.append('search', params.search);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/documents/tags?${query.toString()}`);
+  },
+  getDocumentTag: (tagId: string) => 
+    getJson<any>(`/api/v1/gold/documents/tags/${tagId}`),
+  updateDocumentTag: (tagId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/documents/tags/${tagId}`, payload),
+  deleteDocumentTag: (tagId: string) => 
+    deleteJson(`/api/v1/gold/documents/tags/${tagId}`),
+  
+  // Document-Tag Mappings
+  addTagToDocument: (documentId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/documents/${documentId}/tags`, payload),
+  listDocumentTagsForDocument: (documentId: string) => 
+    getJson<any[]>(`/api/v1/gold/documents/${documentId}/tags`),
+  removeTagFromDocument: (documentId: string, tagId: string) => 
+    deleteJson(`/api/v1/gold/documents/${documentId}/tags/${tagId}`),
+  
+  // Document Access Logs
+  createDocumentAccessLog: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/access-logs', payload),
+  listDocumentAccessLogs: (params?: { 
+    document_id?: string; 
+    user_id?: string; 
+    action_type?: string; 
+    access_result?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number; 
+    limit?: number;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.document_id) query.append('document_id', params.document_id);
+    if (params?.user_id) query.append('user_id', params.user_id);
+    if (params?.action_type) query.append('action_type', params.action_type);
+    if (params?.access_result) query.append('access_result', params.access_result);
+    if (params?.from_date) query.append('from_date', params.from_date);
+    if (params?.to_date) query.append('to_date', params.to_date);
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/documents/access-logs?${query.toString()}`);
+  },
+  getDocumentAccessLogs: (documentId: string, skip?: number, limit?: number) => {
+    const query = new URLSearchParams();
+    if (skip !== undefined) query.append('skip', String(skip));
+    if (limit !== undefined) query.append('limit', String(limit));
+    return getJson<any[]>(`/api/v1/gold/documents/${documentId}/access-logs?${query.toString()}`);
+  },
+  
+  // Document Retention Policies
+  createRetentionPolicy: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/retention-policies', payload),
+  listRetentionPolicies: (params?: { category_id?: string; document_type?: string; is_active?: boolean; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.category_id) query.append('category_id', params.category_id);
+    if (params?.document_type) query.append('document_type', params.document_type);
+    if (params?.is_active !== undefined) query.append('is_active', String(params.is_active));
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/documents/retention-policies?${query.toString()}`);
+  },
+  getRetentionPolicy: (policyId: string) => 
+    getJson<any>(`/api/v1/gold/documents/retention-policies/${policyId}`),
+  updateRetentionPolicy: (policyId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/documents/retention-policies/${policyId}`, payload),
+  deleteRetentionPolicy: (policyId: string) => 
+    deleteJson(`/api/v1/gold/documents/retention-policies/${policyId}`),
+  
+  // Document Shares
+  createDocumentShare: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/shares', payload),
+  listDocumentShares: (params?: { document_id?: string; shared_by?: string; is_revoked?: boolean; skip?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.document_id) query.append('document_id', params.document_id);
+    if (params?.shared_by) query.append('shared_by', params.shared_by);
+    if (params?.is_revoked !== undefined) query.append('is_revoked', String(params.is_revoked));
+    if (params?.skip !== undefined) query.append('skip', String(params.skip));
+    if (params?.limit !== undefined) query.append('limit', String(params.limit));
+    return getJson<any[]>(`/api/v1/gold/documents/shares?${query.toString()}`);
+  },
+  getDocumentShare: (shareId: string) => 
+    getJson<any>(`/api/v1/gold/documents/shares/${shareId}`),
+  getDocumentShareByToken: (shareToken: string) => 
+    getJson<any>(`/api/v1/gold/documents/shares/token/${shareToken}`),
+  updateDocumentShare: (shareId: string, payload: unknown) => 
+    patchJson(`/api/v1/gold/documents/shares/${shareId}`, payload),
+  revokeDocumentShare: (shareId: string, payload: unknown) => 
+    postJson(`/api/v1/gold/documents/shares/${shareId}/revoke`, payload),
+  listSharesForDocument: (documentId: string) => 
+    getJson<any[]>(`/api/v1/gold/documents/${documentId}/shares`),
+  
+  // Bulk Operations
+  bulkTagDocuments: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/bulk/tag', payload),
+  bulkDeleteDocuments: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/bulk/delete', payload),
+  bulkMoveDocuments: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/bulk/move', payload),
+  
+  // OCR Operations
+  extractDocumentTextOCR: (payload: unknown) => 
+    postJson('/api/v1/gold/documents/ocr/extract', payload),
+  reprocessDocumentOCR: (documentId: string, ocrLanguage?: string) => {
+    const query = new URLSearchParams();
+    if (ocrLanguage) query.append('ocr_language', ocrLanguage);
+    return postJson(`/api/v1/gold/documents/${documentId}/ocr/reprocess?${query.toString()}`, {});
+  },
+  
+  // Statistics
+  getDocumentStatistics: () => 
+    getJson<any>('/api/v1/gold/documents/statistics/overview'),
+  getWorkflowStatistics: () => 
+    getJson<any>('/api/v1/gold/documents/statistics/workflows'),
+  getCategoryStatistics: (categoryId: string) => 
+    getJson<any>(`/api/v1/gold/documents/statistics/category/${categoryId}`),
+  getUserDocumentStatistics: (userId: string) => 
+    getJson<any>(`/api/v1/gold/documents/statistics/user/${userId}`),

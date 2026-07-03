@@ -106,6 +106,20 @@ from .reporting import (
     DataSnapshot,
     AnalyticsMetric
 )
+from .documents import (
+    DocumentCategory,
+    Document,
+    DocumentVersion,
+    DocumentMetadata,
+    DocumentTemplate,
+    DocumentWorkflow,
+    DocumentApproval,
+    DocumentTag,
+    DocumentTagMapping,
+    DocumentAccessLog,
+    DocumentRetentionPolicy,
+    DocumentShare
+)
 
 __all__ = [
     # Product models
@@ -206,4 +220,17 @@ __all__ = [
     "DashboardWidget",
     "DataSnapshot",
     "AnalyticsMetric",
+    # Document management models
+    "DocumentCategory",
+    "Document",
+    "DocumentVersion",
+    "DocumentMetadata",
+    "DocumentTemplate",
+    "DocumentWorkflow",
+    "DocumentApproval",
+    "DocumentTag",
+    "DocumentTagMapping",
+    "DocumentAccessLog",
+    "DocumentRetentionPolicy",
+    "DocumentShare",
 ]

@@ -678,3 +678,45 @@ INSERT INTO gold_document_tags (tag_name, tag_category, tag_color, description, 
 ('operations', 'department', '#00FFFF', 'Operations department documents', FALSE, '00000000-0000-0000-0000-000000000000'),
 ('finance', 'department', '#FFFF00', 'Finance department documents', FALSE, '00000000-0000-0000-0000-000000000000');
 
+-- Document Templates
+INSERT INTO gold_document_templates (template_code, template_name, description, category_id, template_type, file_format, storage_path, template_variables, is_system_template, version, created_by) VALUES
+('TMPL_LOAN_AGREEMENT', 'Loan Agreement Template', 'Standard gold loan agreement template', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_LOAN'), 'loan_agreement', 'docx', '/templates/loan_agreement_v1.docx', '{"fields": [{"name": "customer_name", "type": "string", "required": true}, {"name": "loan_amount", "type": "number", "required": true}, {"name": "interest_rate", "type": "number", "required": true}, {"name": "tenure_months", "type": "number", "required": true}]}', TRUE, '1.0', '00000000-0000-0000-0000-000000000000'),
+('TMPL_PLEDGE_RECEIPT', 'Pledge Receipt Template', 'Gold pledge receipt template', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_PLEDGE'), 'receipt', 'pdf', '/templates/pledge_receipt_v1.pdf', '{"fields": [{"name": "pledge_id", "type": "string", "required": true}, {"name": "items", "type": "array", "required": true}, {"name": "total_weight", "type": "number", "required": true}]}', TRUE, '1.0', '00000000-0000-0000-0000-000000000000'),
+('TMPL_VALUATION_REPORT', 'Valuation Report Template', 'Gold valuation report template', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_VALUATION'), 'report', 'pdf', '/templates/valuation_report_v1.pdf', '{"fields": [{"name": "valuation_id", "type": "string", "required": true}, {"name": "appraiser_name", "type": "string", "required": true}, {"name": "purity", "type": "number", "required": true}]}', TRUE, '1.0', '00000000-0000-0000-0000-000000000000'),
+('TMPL_REPAYMENT_RECEIPT', 'Repayment Receipt Template', 'Loan repayment receipt template', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_REPAYMENT'), 'receipt', 'pdf', '/templates/repayment_receipt_v1.pdf', '{"fields": [{"name": "receipt_number", "type": "string", "required": true}, {"name": "amount_paid", "type": "number", "required": true}, {"name": "payment_mode", "type": "string", "required": true}]}', TRUE, '1.0', '00000000-0000-0000-0000-000000000000'),
+('TMPL_COLLECTION_NOTICE', 'Collection Notice Template', 'Standard collection notice template', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_COLLECTION'), 'notice', 'docx', '/templates/collection_notice_v1.docx', '{"fields": [{"name": "customer_name", "type": "string", "required": true}, {"name": "overdue_amount", "type": "number", "required": true}, {"name": "due_date", "type": "date", "required": true}]}', TRUE, '1.0', '00000000-0000-0000-0000-000000000000');
+
+-- Document Workflows
+INSERT INTO gold_document_workflows (workflow_code, workflow_name, description, category_id, workflow_type, workflow_steps, escalation_rules, sla_hours, is_mandatory, created_by) VALUES
+('WF_LOAN_APPROVAL', 'Loan Document Approval', 'Standard loan document approval workflow', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_LOAN'), 'approval', '[{"step": 1, "role": "loan_officer", "action": "review", "sequence": 1, "is_parallel": false}, {"step": 2, "role": "branch_manager", "action": "approve", "sequence": 2, "is_parallel": false}]', '{"delay_hours": 24, "escalate_to_role": "regional_manager"}', 48, TRUE, '00000000-0000-0000-0000-000000000000'),
+('WF_VALUATION_VERIFICATION', 'Valuation Verification', 'Gold valuation report verification workflow', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_VALUATION'), 'verification', '[{"step": 1, "role": "senior_appraiser", "action": "verify", "sequence": 1, "is_parallel": false}]', '{"delay_hours": 12, "escalate_to_role": "chief_appraiser"}', 24, TRUE, '00000000-0000-0000-0000-000000000000'),
+('WF_COLLECTION_LEGAL', 'Legal Action Approval', 'Legal collection document approval workflow', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_COLLECTION'), 'approval', '[{"step": 1, "role": "collection_manager", "action": "review", "sequence": 1, "is_parallel": false}, {"step": 2, "role": "legal_head", "action": "approve", "sequence": 2, "is_parallel": false}]', '{"delay_hours": 48, "escalate_to_role": "ceo"}', 72, TRUE, '00000000-0000-0000-0000-000000000000'),
+('WF_COMPLIANCE_REVIEW', 'Compliance Review', 'Regulatory compliance document review workflow', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_COMPLIANCE'), 'review', '[{"step": 1, "role": "compliance_officer", "action": "review", "sequence": 1, "is_parallel": false}, {"step": 2, "role": "compliance_head", "action": "approve", "sequence": 2, "is_parallel": false}]', '{"delay_hours": 24, "escalate_to_role": "cfo"}', 48, TRUE, '00000000-0000-0000-0000-000000000000');
+
+-- Document Retention Policies
+INSERT INTO gold_document_retention_policies (policy_code, policy_name, description, category_id, retention_period_days, retention_trigger, archive_after_days, delete_after_retention, compliance_regulation, auto_apply, priority, effective_from, created_by) VALUES
+('RET_KYC', 'KYC Document Retention', 'Retain KYC documents as per RBI guidelines', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_KYC'), 2555, 'from_creation', 1825, FALSE, 'RBI', TRUE, 100, '2024-01-01', '00000000-0000-0000-0000-000000000000'),
+('RET_LOAN', 'Loan Document Retention', 'Retain loan documents for 7 years', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_LOAN'), 2555, 'from_loan_closure', 1825, FALSE, 'RBI', TRUE, 100, '2024-01-01', '00000000-0000-0000-0000-000000000000'),
+('RET_AUDIT', 'Audit Document Retention', 'Retain audit documents for 7 years', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_AUDIT'), 2555, 'from_creation', 1825, FALSE, 'RBI', TRUE, 100, '2024-01-01', '00000000-0000-0000-0000-000000000000'),
+('RET_COMPLIANCE', 'Compliance Document Retention', 'Retain compliance documents for 10 years', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_COMPLIANCE'), 3650, 'from_creation', 2555, FALSE, 'RBI', TRUE, 100, '2024-01-01', '00000000-0000-0000-0000-000000000000'),
+('RET_COLLECTION', 'Collection Document Retention', 'Retain collection documents for 10 years', (SELECT category_id FROM gold_document_categories WHERE category_code = 'DOC_COLLECTION'), 3650, 'from_creation', 2555, FALSE, 'RBI', TRUE, 90, '2024-01-01', '00000000-0000-0000-0000-000000000000');
+
+-- ============================================================================
+-- COMMENTS
+-- ============================================================================
+
+COMMENT ON TABLE gold_document_categories IS 'Document categories and classification hierarchy';
+COMMENT ON TABLE gold_documents IS 'Core documents table with metadata and storage information';
+COMMENT ON TABLE gold_document_versions IS 'Document version history and change tracking';
+COMMENT ON TABLE gold_document_metadata IS 'Flexible document metadata storage';
+COMMENT ON TABLE gold_document_templates IS 'Document templates for generation';
+COMMENT ON TABLE gold_document_workflows IS 'Document approval and review workflows';
+COMMENT ON TABLE gold_document_approvals IS 'Document approval tracking and status';
+COMMENT ON TABLE gold_document_tags IS 'Document tags and labels';
+COMMENT ON TABLE gold_document_access_logs IS 'Document access audit trail';
+COMMENT ON TABLE gold_document_retention_policies IS 'Document retention and compliance policies';
+COMMENT ON TABLE gold_document_shares IS 'Document sharing and external access control';
+
+-- ============================================================================
+-- END OF MIGRATION
+-- ============================================================================
