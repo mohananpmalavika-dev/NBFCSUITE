@@ -374,3 +374,434 @@ class LegalNoticeResponse(LegalNoticeBase):
 
     class Config:
         from_attributes = True
+
+
+
+# ============================================================================
+# AUCTION LOT SCHEMAS
+# ============================================================================
+
+class AuctionLotBase(BaseModel):
+    """Base schema for auction lot"""
+    auction_date: date
+    auction_location: str = Field(..., max_length=200)
+    lot_status: str = Field(default="planned", pattern="^(planned|approved|advertised|open|closed|sold|unsold|cancelled)$")
+    lot_description: str
+    total_gold_weight: Decimal = Field(..., ge=0, decimal_places=3)
+    total_items: int = Field(..., ge=0)
+    reserve_price: Decimal = Field(..., ge=0, decimal_places=2)
+    starting_bid: Decimal = Field(..., ge=0, decimal_places=2)
+    bid_increment: Decimal = Field(..., ge=0, decimal_places=2)
+    registration_deadline: date
+    auction_start_time: Optional[time] = None
+    auction_end_time: Optional[time] = None
+    auction_type: str = Field(..., pattern="^(public|private|online|sealed_bid|spot_sale)$")
+    auctioneer_name: Optional[str] = Field(None, max_length=100)
+    auctioneer_license: Optional[str] = Field(None, max_length=50)
+    winning_bid_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    winning_bidder_id: Optional[UUID] = None
+    payment_deadline: Optional[date] = None
+    payment_received: bool = False
+    payment_date: Optional[date] = None
+    handover_date: Optional[date] = None
+    handover_completed: bool = False
+    auction_expenses: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    net_realization: Optional[Decimal] = Field(None, decimal_places=2)
+    created_by_user_id: UUID
+    approved_by_user_id: Optional[UUID] = None
+    approval_date: Optional[date] = None
+
+
+class AuctionLotCreate(AuctionLotBase):
+    """Schema for creating an auction lot"""
+    pass
+
+
+class AuctionLotUpdate(BaseModel):
+    """Schema for updating an auction lot"""
+    lot_status: Optional[str] = Field(None, pattern="^(planned|approved|advertised|open|closed|sold|unsold|cancelled)$")
+    auction_date: Optional[date] = None
+    auction_location: Optional[str] = Field(None, max_length=200)
+    lot_description: Optional[str] = None
+    auction_start_time: Optional[time] = None
+    auction_end_time: Optional[time] = None
+    auctioneer_name: Optional[str] = Field(None, max_length=100)
+    auctioneer_license: Optional[str] = Field(None, max_length=50)
+    winning_bid_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    winning_bidder_id: Optional[UUID] = None
+    payment_deadline: Optional[date] = None
+    payment_received: Optional[bool] = None
+    payment_date: Optional[date] = None
+    handover_date: Optional[date] = None
+    handover_completed: Optional[bool] = None
+    auction_expenses: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    net_realization: Optional[Decimal] = Field(None, decimal_places=2)
+    approved_by_user_id: Optional[UUID] = None
+    approval_date: Optional[date] = None
+
+
+class AuctionLotResponse(AuctionLotBase):
+    """Schema for auction lot response"""
+    id: UUID
+    lot_number: str
+    bid_count: int = 0
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AuctionLotDetail(AuctionLotResponse):
+    """Detailed auction lot with items and bids"""
+    items_count: int = 0
+    bids_count: int = 0
+    highest_bid: Optional[Decimal] = None
+    lowest_bid: Optional[Decimal] = None
+
+
+# ============================================================================
+# AUCTION LOT ITEM SCHEMAS
+# ============================================================================
+
+class AuctionLotItemBase(BaseModel):
+    """Base schema for auction lot item"""
+    auction_lot_id: UUID
+    collection_case_id: UUID
+    loan_account_id: UUID
+    item_number: int = Field(..., ge=1)
+    item_description: Optional[str] = None
+    gold_weight: Decimal = Field(..., ge=0, decimal_places=3)
+    gold_purity: Decimal = Field(..., ge=0, le=100, decimal_places=2)
+    estimated_value: Decimal = Field(..., ge=0, decimal_places=2)
+    customer_notified: bool = False
+    notification_date: Optional[date] = None
+    customer_objection: Optional[str] = None
+
+
+class AuctionLotItemCreate(AuctionLotItemBase):
+    """Schema for creating an auction lot item"""
+    pass
+
+
+class AuctionLotItemUpdate(BaseModel):
+    """Schema for updating an auction lot item"""
+    item_description: Optional[str] = None
+    customer_notified: Optional[bool] = None
+    notification_date: Optional[date] = None
+    customer_objection: Optional[str] = None
+
+
+class AuctionLotItemResponse(AuctionLotItemBase):
+    """Schema for auction lot item response"""
+    id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# AUCTION BID SCHEMAS
+# ============================================================================
+
+class AuctionBidBase(BaseModel):
+    """Base schema for auction bid"""
+    auction_lot_id: UUID
+    bidder_id: UUID
+    bidder_name: str = Field(..., max_length=100)
+    bidder_contact: Optional[str] = Field(None, max_length=20)
+    bid_amount: Decimal = Field(..., ge=0, decimal_places=2)
+    bid_status: str = Field(default="active", pattern="^(active|accepted|rejected|withdrawn|expired)$")
+    bid_type: str = Field(..., pattern="^(online|physical|sealed|proxy)$")
+    earnest_money_deposit: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    emd_status: Optional[str] = Field(None, pattern="^(pending|received|verified|refunded|forfeited)$")
+    emd_receipt_no: Optional[str] = Field(None, max_length=50)
+    bid_rank: Optional[int] = Field(None, ge=1)
+    is_winning_bid: bool = False
+    rejection_reason: Optional[str] = None
+
+
+class AuctionBidCreate(AuctionBidBase):
+    """Schema for creating an auction bid"""
+    pass
+
+
+class AuctionBidUpdate(BaseModel):
+    """Schema for updating an auction bid"""
+    bid_status: Optional[str] = Field(None, pattern="^(active|accepted|rejected|withdrawn|expired)$")
+    earnest_money_deposit: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    emd_status: Optional[str] = Field(None, pattern="^(pending|received|verified|refunded|forfeited)$")
+    emd_receipt_no: Optional[str] = Field(None, max_length=50)
+    bid_rank: Optional[int] = Field(None, ge=1)
+    is_winning_bid: Optional[bool] = None
+    rejection_reason: Optional[str] = None
+
+
+class AuctionBidResponse(AuctionBidBase):
+    """Schema for auction bid response"""
+    id: UUID
+    bid_number: str
+    bid_time: datetime
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# COMMUNICATION LOG SCHEMAS
+# ============================================================================
+
+class CommunicationLogBase(BaseModel):
+    """Base schema for communication log"""
+    collection_case_id: UUID
+    communication_type: str = Field(..., pattern="^(call|sms|email|whatsapp|letter|telegram)$")
+    communication_date: datetime = Field(default_factory=datetime.utcnow)
+    direction: str = Field(..., pattern="^(inbound|outbound)$")
+    from_party: Optional[str] = Field(None, max_length=100)
+    to_party: Optional[str] = Field(None, max_length=100)
+    contact_number: Optional[str] = Field(None, max_length=20)
+    email_address: Optional[str] = Field(None, max_length=100)
+    subject: Optional[str] = Field(None, max_length=200)
+    message_content: Optional[str] = None
+    communication_status: str = Field(default="sent", pattern="^(draft|sent|delivered|failed|bounced)$")
+    delivery_status: Optional[str] = Field(None, pattern="^(pending|delivered|read|failed|undelivered)$")
+    response_received: bool = False
+    response_content: Optional[str] = None
+    response_date: Optional[datetime] = None
+    template_used: Optional[str] = Field(None, max_length=100)
+    campaign_id: Optional[str] = Field(None, max_length=50)
+    initiated_by_user_id: UUID
+    cost: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    attachments_count: int = Field(default=0, ge=0)
+
+
+class CommunicationLogCreate(CommunicationLogBase):
+    """Schema for creating a communication log"""
+    pass
+
+
+class CommunicationLogUpdate(BaseModel):
+    """Schema for updating a communication log"""
+    communication_status: Optional[str] = Field(None, pattern="^(draft|sent|delivered|failed|bounced)$")
+    delivery_status: Optional[str] = Field(None, pattern="^(pending|delivered|read|failed|undelivered)$")
+    response_received: Optional[bool] = None
+    response_content: Optional[str] = None
+    response_date: Optional[datetime] = None
+
+
+class CommunicationLogResponse(CommunicationLogBase):
+    """Schema for communication log response"""
+    id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# SETTLEMENT OFFER SCHEMAS
+# ============================================================================
+
+class SettlementOfferBase(BaseModel):
+    """Base schema for settlement offer"""
+    collection_case_id: UUID
+    offer_date: date
+    offered_by: str = Field(..., pattern="^(customer|company|negotiated)$")
+    offer_type: str = Field(..., pattern="^(one_time|installment|partial_waiver|full_waiver|restructure)$")
+    total_outstanding: Decimal = Field(..., ge=0, decimal_places=2)
+    settlement_amount: Decimal = Field(..., ge=0, decimal_places=2)
+    waiver_amount: Decimal = Field(..., ge=0, decimal_places=2)
+    waiver_percentage: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    payment_terms: Optional[str] = None
+    payment_schedule: Optional[str] = None
+    validity_date: date
+    offer_status: str = Field(default="pending", pattern="^(pending|approved|rejected|accepted|expired|completed|breached)$")
+    approved_by_user_id: Optional[UUID] = None
+    approval_level: Optional[str] = Field(None, pattern="^(manager|senior_manager|head|ceo|board)$")
+    approval_date: Optional[date] = None
+    rejection_reason: Optional[str] = None
+    acceptance_date: Optional[date] = None
+    agreement_signed: bool = False
+    agreement_date: Optional[date] = None
+    payment_received: Decimal = Field(default=0, ge=0, decimal_places=2)
+    payment_status: str = Field(default="pending", pattern="^(pending|partial|completed|defaulted)$")
+    completion_date: Optional[date] = None
+    created_by_user_id: UUID
+
+
+class SettlementOfferCreate(SettlementOfferBase):
+    """Schema for creating a settlement offer"""
+    pass
+
+
+class SettlementOfferUpdate(BaseModel):
+    """Schema for updating a settlement offer"""
+    offer_status: Optional[str] = Field(None, pattern="^(pending|approved|rejected|accepted|expired|completed|breached)$")
+    approved_by_user_id: Optional[UUID] = None
+    approval_level: Optional[str] = Field(None, pattern="^(manager|senior_manager|head|ceo|board)$")
+    approval_date: Optional[date] = None
+    rejection_reason: Optional[str] = None
+    acceptance_date: Optional[date] = None
+    agreement_signed: Optional[bool] = None
+    agreement_date: Optional[date] = None
+    payment_received: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    payment_status: Optional[str] = Field(None, pattern="^(pending|partial|completed|defaulted)$")
+    completion_date: Optional[date] = None
+
+
+class SettlementOfferResponse(SettlementOfferBase):
+    """Schema for settlement offer response"""
+    id: UUID
+    offer_number: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# COLLECTION PERFORMANCE SCHEMAS
+# ============================================================================
+
+class CollectionPerformanceBase(BaseModel):
+    """Base schema for collection performance"""
+    period_start: date
+    period_end: date
+    user_id: UUID
+    user_name: str = Field(..., max_length=100)
+    team_name: Optional[str] = Field(None, max_length=100)
+    region: Optional[str] = Field(None, max_length=50)
+    total_cases_assigned: int = Field(default=0, ge=0)
+    total_cases_resolved: int = Field(default=0, ge=0)
+    total_cases_escalated: int = Field(default=0, ge=0)
+    total_overdue_amount: Decimal = Field(default=0, ge=0, decimal_places=2)
+    total_collected_amount: Decimal = Field(default=0, ge=0, decimal_places=2)
+    collection_percentage: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    total_field_visits: int = Field(default=0, ge=0)
+    successful_field_visits: int = Field(default=0, ge=0)
+    total_calls_made: int = Field(default=0, ge=0)
+    contactable_rate: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    promise_kept_rate: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    total_promises_obtained: int = Field(default=0, ge=0)
+    promises_kept: int = Field(default=0, ge=0)
+    promises_broken: int = Field(default=0, ge=0)
+    legal_notices_sent: int = Field(default=0, ge=0)
+    recovery_actions_taken: int = Field(default=0, ge=0)
+    average_resolution_days: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    bucket_0_30_resolved: int = Field(default=0, ge=0)
+    bucket_31_60_resolved: int = Field(default=0, ge=0)
+    bucket_61_90_resolved: int = Field(default=0, ge=0)
+    bucket_90_plus_resolved: int = Field(default=0, ge=0)
+    performance_rating: Optional[str] = Field(None, pattern="^(poor|below_average|average|good|excellent|outstanding)$")
+    incentive_earned: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+
+
+class CollectionPerformanceCreate(CollectionPerformanceBase):
+    """Schema for creating collection performance record"""
+    pass
+
+
+class CollectionPerformanceUpdate(BaseModel):
+    """Schema for updating collection performance"""
+    total_cases_assigned: Optional[int] = Field(None, ge=0)
+    total_cases_resolved: Optional[int] = Field(None, ge=0)
+    total_cases_escalated: Optional[int] = Field(None, ge=0)
+    total_overdue_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    total_collected_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    collection_percentage: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    total_field_visits: Optional[int] = Field(None, ge=0)
+    successful_field_visits: Optional[int] = Field(None, ge=0)
+    total_calls_made: Optional[int] = Field(None, ge=0)
+    contactable_rate: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    promise_kept_rate: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    total_promises_obtained: Optional[int] = Field(None, ge=0)
+    promises_kept: Optional[int] = Field(None, ge=0)
+    promises_broken: Optional[int] = Field(None, ge=0)
+    legal_notices_sent: Optional[int] = Field(None, ge=0)
+    recovery_actions_taken: Optional[int] = Field(None, ge=0)
+    average_resolution_days: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    bucket_0_30_resolved: Optional[int] = Field(None, ge=0)
+    bucket_31_60_resolved: Optional[int] = Field(None, ge=0)
+    bucket_61_90_resolved: Optional[int] = Field(None, ge=0)
+    bucket_90_plus_resolved: Optional[int] = Field(None, ge=0)
+    performance_rating: Optional[str] = Field(None, pattern="^(poor|below_average|average|good|excellent|outstanding)$")
+    incentive_earned: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+
+
+class CollectionPerformanceResponse(CollectionPerformanceBase):
+    """Schema for collection performance response"""
+    id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# LIST RESPONSE SCHEMAS
+# ============================================================================
+
+class CollectionCaseList(BaseModel):
+    """Paginated list of collection cases"""
+    items: List[CollectionCaseResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class FieldVisitList(BaseModel):
+    """Paginated list of field visits"""
+    items: List[FieldVisitResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class AuctionLotList(BaseModel):
+    """Paginated list of auction lots"""
+    items: List[AuctionLotResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+# ============================================================================
+# DASHBOARD & STATISTICS SCHEMAS
+# ============================================================================
+
+class CollectionDashboard(BaseModel):
+    """Collection dashboard statistics"""
+    total_cases: int
+    open_cases: int
+    in_progress_cases: int
+    legal_cases: int
+    closed_cases: int
+    total_outstanding: Decimal
+    total_overdue: Decimal
+    total_collected: Decimal
+    collection_rate: Decimal
+    bucket_0_30: int
+    bucket_31_60: int
+    bucket_61_90: int
+    bucket_90_plus: int
+    npa_cases: int
+
+
+class CaseStatistics(BaseModel):
+    """Individual case statistics"""
+    case_id: UUID
+    total_activities: int
+    total_field_visits: int
+    total_promises: int
+    promises_kept: int
+    promises_broken: int
+    total_legal_notices: int
+    total_recovery_actions: int
+    days_in_collection: int
+    last_activity_date: Optional[date] = None

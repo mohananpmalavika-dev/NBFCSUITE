@@ -784,4 +784,415 @@ export const goldApi = {
     const query = params.toString() ? `?${params.toString()}` : '';
     return getJson<any[]>(`/api/v1/gold/portfolio-health${query}`);
   },
+
+  // ========================================================================
+  // COLLECTIONS & RECOVERY (Phase 8)
+  // ========================================================================
+
+  // Collection Cases
+  createCollectionCase: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/cases', data),
+
+  getCollectionCases: (filters?: {
+    case_status?: string;
+    bucket_type?: string;
+    priority?: string;
+    assigned_to_user_id?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.case_status) params.append('case_status', filters.case_status);
+    if (filters?.bucket_type) params.append('bucket_type', filters.bucket_type);
+    if (filters?.priority) params.append('priority', filters.priority);
+    if (filters?.assigned_to_user_id) params.append('assigned_to_user_id', filters.assigned_to_user_id);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any>(`/api/v1/gold/collections/cases${query}`);
+  },
+
+  getCollectionCase: (caseId: string) =>
+    getJson<any>(`/api/v1/gold/collections/cases/${caseId}`),
+
+  updateCollectionCase: (caseId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/cases/${caseId}`, data),
+
+  deleteCollectionCase: (caseId: string) =>
+    deleteJson(`/api/v1/gold/collections/cases/${caseId}`),
+
+  getCaseStatistics: (caseId: string) =>
+    getJson<any>(`/api/v1/gold/collections/cases/${caseId}/statistics`),
+
+  getCaseTimeline: (caseId: string) =>
+    getJson<any[]>(`/api/v1/gold/collections/cases/${caseId}/timeline`),
+
+  // Collection Activities
+  createCollectionActivity: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/activities', data),
+
+  getCollectionActivities: (filters?: {
+    collection_case_id?: string;
+    activity_type?: string;
+    disposition?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.collection_case_id) params.append('collection_case_id', filters.collection_case_id);
+    if (filters?.activity_type) params.append('activity_type', filters.activity_type);
+    if (filters?.disposition) params.append('disposition', filters.disposition);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/collections/activities${query}`);
+  },
+
+  getCollectionActivity: (activityId: string) =>
+    getJson<any>(`/api/v1/gold/collections/activities/${activityId}`),
+
+  deleteCollectionActivity: (activityId: string) =>
+    deleteJson(`/api/v1/gold/collections/activities/${activityId}`),
+
+  // Field Visits
+  createFieldVisit: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/field-visits', data),
+
+  getFieldVisits: (filters?: {
+    collection_case_id?: string;
+    visit_status?: string;
+    field_officer_id?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.collection_case_id) params.append('collection_case_id', filters.collection_case_id);
+    if (filters?.visit_status) params.append('visit_status', filters.visit_status);
+    if (filters?.field_officer_id) params.append('field_officer_id', filters.field_officer_id);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any>(`/api/v1/gold/collections/field-visits${query}`);
+  },
+
+  getFieldVisit: (visitId: string) =>
+    getJson<any>(`/api/v1/gold/collections/field-visits/${visitId}`),
+
+  updateFieldVisit: (visitId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/field-visits/${visitId}`, data),
+
+  deleteFieldVisit: (visitId: string) =>
+    deleteJson(`/api/v1/gold/collections/field-visits/${visitId}`),
+
+  // Payment Promises
+  createPaymentPromise: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/payment-promises', data),
+
+  getPaymentPromises: (filters?: {
+    collection_case_id?: string;
+    promise_status?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.collection_case_id) params.append('collection_case_id', filters.collection_case_id);
+    if (filters?.promise_status) params.append('promise_status', filters.promise_status);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/collections/payment-promises${query}`);
+  },
+
+  getPaymentPromise: (promiseId: string) =>
+    getJson<any>(`/api/v1/gold/collections/payment-promises/${promiseId}`),
+
+  updatePaymentPromise: (promiseId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/payment-promises/${promiseId}`, data),
+
+  deletePaymentPromise: (promiseId: string) =>
+    deleteJson(`/api/v1/gold/collections/payment-promises/${promiseId}`),
+
+  // Recovery Actions
+  createRecoveryAction: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/recovery-actions', data),
+
+  getRecoveryActions: (filters?: {
+    collection_case_id?: string;
+    action_type?: string;
+    action_status?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.collection_case_id) params.append('collection_case_id', filters.collection_case_id);
+    if (filters?.action_type) params.append('action_type', filters.action_type);
+    if (filters?.action_status) params.append('action_status', filters.action_status);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/collections/recovery-actions${query}`);
+  },
+
+  getRecoveryAction: (actionId: string) =>
+    getJson<any>(`/api/v1/gold/collections/recovery-actions/${actionId}`),
+
+  updateRecoveryAction: (actionId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/recovery-actions/${actionId}`, data),
+
+  deleteRecoveryAction: (actionId: string) =>
+    deleteJson(`/api/v1/gold/collections/recovery-actions/${actionId}`),
+
+  // Legal Notices
+  createLegalNotice: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/legal-notices', data),
+
+  getLegalNotices: (filters?: {
+    collection_case_id?: string;
+    notice_type?: string;
+    notice_status?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.collection_case_id) params.append('collection_case_id', filters.collection_case_id);
+    if (filters?.notice_type) params.append('notice_type', filters.notice_type);
+    if (filters?.notice_status) params.append('notice_status', filters.notice_status);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/collections/legal-notices${query}`);
+  },
+
+  getLegalNotice: (noticeId: string) =>
+    getJson<any>(`/api/v1/gold/collections/legal-notices/${noticeId}`),
+
+  updateLegalNotice: (noticeId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/legal-notices/${noticeId}`, data),
+
+  deleteLegalNotice: (noticeId: string) =>
+    deleteJson(`/api/v1/gold/collections/legal-notices/${noticeId}`),
+
+  // Auction Lots
+  createAuctionLot: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/auction-lots', data),
+
+  getAuctionLots: (filters?: {
+    lot_status?: string;
+    auction_type?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.lot_status) params.append('lot_status', filters.lot_status);
+    if (filters?.auction_type) params.append('auction_type', filters.auction_type);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any>(`/api/v1/gold/collections/auction-lots${query}`);
+  },
+
+  getAuctionLot: (lotId: string) =>
+    getJson<any>(`/api/v1/gold/collections/auction-lots/${lotId}`),
+
+  updateAuctionLot: (lotId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/auction-lots/${lotId}`, data),
+
+  deleteAuctionLot: (lotId: string) =>
+    deleteJson(`/api/v1/gold/collections/auction-lots/${lotId}`),
+
+  // Auction Lot Items
+  createAuctionLotItem: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/auction-lot-items', data),
+
+  getAuctionLotItems: (filters?: {
+    auction_lot_id?: string;
+    collection_case_id?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.auction_lot_id) params.append('auction_lot_id', filters.auction_lot_id);
+    if (filters?.collection_case_id) params.append('collection_case_id', filters.collection_case_id);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/collections/auction-lot-items${query}`);
+  },
+
+  getAuctionLotItem: (itemId: string) =>
+    getJson<any>(`/api/v1/gold/collections/auction-lot-items/${itemId}`),
+
+  updateAuctionLotItem: (itemId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/auction-lot-items/${itemId}`, data),
+
+  deleteAuctionLotItem: (itemId: string) =>
+    deleteJson(`/api/v1/gold/collections/auction-lot-items/${itemId}`),
+
+  // Auction Bids
+  createAuctionBid: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/auction-bids', data),
+
+  getAuctionBids: (filters?: {
+    auction_lot_id?: string;
+    bidder_id?: string;
+    bid_status?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.auction_lot_id) params.append('auction_lot_id', filters.auction_lot_id);
+    if (filters?.bidder_id) params.append('bidder_id', filters.bidder_id);
+    if (filters?.bid_status) params.append('bid_status', filters.bid_status);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/collections/auction-bids${query}`);
+  },
+
+  getAuctionBid: (bidId: string) =>
+    getJson<any>(`/api/v1/gold/collections/auction-bids/${bidId}`),
+
+  updateAuctionBid: (bidId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/auction-bids/${bidId}`, data),
+
+  deleteAuctionBid: (bidId: string) =>
+    deleteJson(`/api/v1/gold/collections/auction-bids/${bidId}`),
+
+  // Communication Logs
+  createCommunicationLog: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/communication-logs', data),
+
+  getCommunicationLogs: (filters?: {
+    collection_case_id?: string;
+    communication_type?: string;
+    direction?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.collection_case_id) params.append('collection_case_id', filters.collection_case_id);
+    if (filters?.communication_type) params.append('communication_type', filters.communication_type);
+    if (filters?.direction) params.append('direction', filters.direction);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/collections/communication-logs${query}`);
+  },
+
+  getCommunicationLog: (logId: string) =>
+    getJson<any>(`/api/v1/gold/collections/communication-logs/${logId}`),
+
+  updateCommunicationLog: (logId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/communication-logs/${logId}`, data),
+
+  deleteCommunicationLog: (logId: string) =>
+    deleteJson(`/api/v1/gold/collections/communication-logs/${logId}`),
+
+  // Settlement Offers
+  createSettlementOffer: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/settlement-offers', data),
+
+  getSettlementOffers: (filters?: {
+    collection_case_id?: string;
+    offer_status?: string;
+    offered_by?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.collection_case_id) params.append('collection_case_id', filters.collection_case_id);
+    if (filters?.offer_status) params.append('offer_status', filters.offer_status);
+    if (filters?.offered_by) params.append('offered_by', filters.offered_by);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/collections/settlement-offers${query}`);
+  },
+
+  getSettlementOffer: (offerId: string) =>
+    getJson<any>(`/api/v1/gold/collections/settlement-offers/${offerId}`),
+
+  updateSettlementOffer: (offerId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/settlement-offers/${offerId}`, data),
+
+  deleteSettlementOffer: (offerId: string) =>
+    deleteJson(`/api/v1/gold/collections/settlement-offers/${offerId}`),
+
+  // Collection Performance
+  createPerformanceRecord: (data: any) =>
+    postJson<any>('/api/v1/gold/collections/performance', data),
+
+  getPerformanceRecords: (filters?: {
+    user_id?: string;
+    team_name?: string;
+    region?: string;
+    from_date?: string;
+    to_date?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.user_id) params.append('user_id', filters.user_id);
+    if (filters?.team_name) params.append('team_name', filters.team_name);
+    if (filters?.region) params.append('region', filters.region);
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/collections/performance${query}`);
+  },
+
+  getPerformanceRecord: (performanceId: string) =>
+    getJson<any>(`/api/v1/gold/collections/performance/${performanceId}`),
+
+  updatePerformanceRecord: (performanceId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/collections/performance/${performanceId}`, data),
+
+  deletePerformanceRecord: (performanceId: string) =>
+    deleteJson(`/api/v1/gold/collections/performance/${performanceId}`),
+
+  // Dashboard & Analytics
+  getCollectionDashboard: (filters?: {
+    from_date?: string;
+    to_date?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.from_date) params.append('from_date', filters.from_date);
+    if (filters?.to_date) params.append('to_date', filters.to_date);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any>(`/api/v1/gold/collections/dashboard${query}`);
+  },
 };

@@ -80,6 +80,32 @@ from .repayment import (
     LoanRenewal,
     RepaymentAllocationRule
 )
+from .collections import (
+    CollectionCase,
+    CollectionActivity,
+    FieldVisit,
+    PaymentPromise,
+    RecoveryAction,
+    LegalNotice,
+    AuctionLot,
+    AuctionLotItem,
+    AuctionBid,
+    CommunicationLog,
+    SettlementOffer,
+    CollectionPerformance
+)
+from .reporting import (
+    ReportDefinition,
+    ReportTemplate,
+    ReportSchedule,
+    ReportExecution,
+    ReportParameter,
+    ReportExport,
+    DashboardDefinition,
+    DashboardWidget,
+    DataSnapshot,
+    AnalyticsMetric
+)
 
 __all__ = [
     # Product models
@@ -156,4 +182,28 @@ __all__ = [
     "LoanPenalty",
     "LoanRenewal",
     "RepaymentAllocationRule",
+    # Collections models
+    "CollectionCase",
+    "CollectionActivity",
+    "FieldVisit",
+    "PaymentPromise",
+    "RecoveryAction",
+    "LegalNotice",
+    "AuctionLot",
+    "AuctionLotItem",
+    "AuctionBid",
+    "CommunicationLog",
+    "SettlementOffer",
+    "CollectionPerformance",
+    # Reporting models
+    "ReportDefinition",
+    "ReportTemplate",
+    "ReportSchedule",
+    "ReportExecution",
+    "ReportParameter",
+    "ReportExport",
+    "DashboardDefinition",
+    "DashboardWidget",
+    "DataSnapshot",
+    "AnalyticsMetric",
 ]

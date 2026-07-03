@@ -252,13 +252,15 @@ async def startup():
 
 
 # Import and include routers
-from .routers import products, journey, appraisal, catalog, vault, loan
+from .routers import products, journey, appraisal, catalog, vault, loan, repayment, collections
 from .models import product as product_models
 from .models import journey as journey_models
 from .models import appraisal as appraisal_models
 from .models import catalog as catalog_models
 from .models import vault as vault_models
 from .models import loan as loan_models
+from .models import repayment as repayment_models
+from .models import collections as collections_models
 
 # Override the get_db dependency in routers
 products.get_db = get_db
@@ -267,6 +269,8 @@ appraisal.get_db = get_db
 catalog.get_db = get_db
 vault.get_db = get_db
 loan.get_db = get_db
+repayment.get_db = get_db
+collections.get_db = get_db
 
 # Include routers
 app.include_router(products.router, prefix="/api/v1/gold")
@@ -275,6 +279,8 @@ app.include_router(appraisal.router, prefix="/api/v1/gold")
 app.include_router(catalog.router, prefix="/api/v1/gold")
 app.include_router(vault.router, prefix="/api/v1/gold")
 app.include_router(loan.router, prefix="/api/v1/gold")
+app.include_router(repayment.router, prefix="/api/v1/gold")
+app.include_router(collections.router)
 
 
 @app.get("/health")

@@ -270,6 +270,8 @@ class LoanAccount(Base):
     charges = relationship("LoanCharge", back_populates="loan_account", cascade="all, delete-orphan")
     documents = relationship("LoanDocument", back_populates="loan_account")
     status_history = relationship("LoanStatusHistory", back_populates="loan_account")
+    collection_cases = relationship("CollectionCase", back_populates="loan_account", cascade="all, delete-orphan")
+    auction_lot_items = relationship("AuctionLotItem", back_populates="loan_account", cascade="all, delete-orphan")
     
     __table_args__ = (
         CheckConstraint('principal_amount > 0', name='check_principal'),
