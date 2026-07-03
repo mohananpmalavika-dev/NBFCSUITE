@@ -310,3 +310,238 @@ export default function RDCollectionsPage() {
             </div>
           </div>
         </div>
+
+        {/* Installments Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          {filteredInstallments.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Account</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Customer</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-600 uppercase">Inst #</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Due Date</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 uppercase">Amount</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 uppercase">Penalty</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 uppercase">Total Due</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-slate-600 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredInstallments.map((inst) => {
+                    const isOverdue = inst.status === 'OVERDUE';
+                    const isDueToday = new Date(inst.due_date).toDateString() === new Date().toDateString();
+                    
+                    return (
+                      <tr 
+                        key={inst.id} 
+                        className={`hover:bg-slate-50 transition-colors ${isOverdue ? 'bg-red-50/50' : ''}`}
+                      >
+                        <td className="px-4 py-4">
+                          <div>
+                            <p className="text-sm font-medium text-slate-900">{inst.account_number}</p>
+                            <p className="text-xs text-slate-500">{inst.branch_code || 'HO'}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-slate-400" />
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">{inst.customer_name || 'N/A'}</p>
+                              <p className="text-xs text-slate-500">CIF: {inst.cif_number || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                            #{inst.installment_number}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div>
+                            <p className="text-sm text-slate-900">
+                              {new Date(inst.due_date).toLocaleDateString('en-IN')}
+                            </p>
+                            {isOverdue && (
+                              <p className="text-xs text-red-600 font-medium flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" />
+                                {inst.days_overdue} days overdue
+                              </p>
+                            )}
+                            {isDueToday && !isOverdue && (
+                              <p className="text-xs text-orange-600 font-medium">Due Today</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <p className="text-sm font-medium text-slate-900">
+                            ₹{inst.installment_amount.toLocaleString('en-IN')}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <p className={`text-sm font-medium ${inst.penalty_amount > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                            ₹{inst.penalty_amount.toLocaleString('en-IN')}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <p className="text-sm font-bold text-slate-900">
+                            ₹{inst.total_due.toLocaleString('en-IN')}
+                          </p>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[inst.status] || 'bg-gray-100 text-gray-800'}`}>
+                            {inst.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            {inst.status !== 'PAID' ? (
+                              <button
+                                onClick={() => handleRecordPayment(inst)}
+                                className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center gap-1"
+                              >
+                                <DollarSign className="h-3.5 w-3.5" />
+                                Collect
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => downloadReceipt(inst.id)}
+                                className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                                Receipt
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">No Installments Found</h3>
+              <p className="text-slate-600">All collections are up to date!</p>
+            </div>
+          )}
+        </div>
+
+        {/* Payment Modal */}
+        {showPaymentModal && selectedInstallment && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+              <div className="p-6 border-b border-slate-200">
+                <h3 className="text-xl font-bold text-slate-900">Record Payment</h3>
+                <p className="text-sm text-slate-600 mt-1">
+                  Account: {selectedInstallment.account_number} • Installment #{selectedInstallment.installment_number}
+                </p>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                {/* Customer Info */}
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-slate-600" />
+                    <span className="text-sm font-medium text-slate-900">{selectedInstallment.customer_name}</span>
+                  </div>
+                  <div className="text-xs text-slate-600 space-y-1">
+                    <p>CIF: {selectedInstallment.cif_number}</p>
+                    <p>Due Date: {new Date(selectedInstallment.due_date).toLocaleDateString('en-IN')}</p>
+                  </div>
+                </div>
+
+                {/* Amount Breakdown */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">Installment Amount</span>
+                    <span className="font-medium text-slate-900">₹{selectedInstallment.installment_amount.toLocaleString('en-IN')}</span>
+                  </div>
+                  {selectedInstallment.penalty_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Penalty</span>
+                      <span className="font-medium text-red-600">₹{selectedInstallment.penalty_amount.toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-base font-bold pt-2 border-t border-slate-200">
+                    <span className="text-slate-900">Total Due</span>
+                    <span className="text-slate-900">₹{selectedInstallment.total_due.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* Payment Amount */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Payment Amount
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500">₹</span>
+                    <input
+                      type="number"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      className="w-full pl-8 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                </div>
+
+                {/* Payment Mode */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Payment Mode
+                  </label>
+                  <select
+                    value={paymentMode}
+                    onChange={(e) => setPaymentMode(e.target.value)}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="CHEQUE">Cheque</option>
+                    <option value="NEFT">NEFT</option>
+                    <option value="RTGS">RTGS</option>
+                    <option value="UPI">UPI</option>
+                    <option value="CARD">Card</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-200 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setSelectedInstallment(null);
+                  }}
+                  className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitPayment}
+                  disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || processingId !== null}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {processingId ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      Record Payment
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

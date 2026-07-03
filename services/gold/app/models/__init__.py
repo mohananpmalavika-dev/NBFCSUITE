@@ -132,6 +132,18 @@ from .risk import (
     RiskDashboard,
     ComplianceCheck
 )
+from .audit_compliance import (
+    AuditTrail,
+    ComplianceRule,
+    ComplianceViolation,
+    AuditSchedule,
+    AuditExecution,
+    AuditFinding,
+    RegulatoryReport,
+    ComplianceCertification,
+    PolicyAcknowledgement,
+    DataRetentionLog
+)
 
 __all__ = [
     # Product models
@@ -256,4 +268,15 @@ __all__ = [
     "RiskReport",
     "RiskDashboard",
     "ComplianceCheck",
+    # Audit & compliance models
+    "AuditTrail",
+    "ComplianceRule",
+    "ComplianceViolation",
+    "AuditSchedule",
+    "AuditExecution",
+    "AuditFinding",
+    "RegulatoryReport",
+    "ComplianceCertification",
+    "PolicyAcknowledgement",
+    "DataRetentionLog",
 ]
