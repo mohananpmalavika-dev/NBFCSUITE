@@ -1195,4 +1195,349 @@ export const goldApi = {
     const query = params.toString() ? `?${params.toString()}` : '';
     return getJson<any>(`/api/v1/gold/collections/dashboard${query}`);
   },
+
+  // ========================================================================
+  // REPORTING & ANALYTICS (Phase 9)
+  // ========================================================================
+
+  // Report Definitions
+  createReportDefinition: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/definitions', data),
+
+  getReportDefinitions: (filters?: {
+    category?: string;
+    report_type?: string;
+    is_active?: boolean;
+    is_system?: boolean;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.report_type) params.append('report_type', filters.report_type);
+    if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
+    if (filters?.is_system !== undefined) params.append('is_system', filters.is_system.toString());
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/definitions${query}`);
+  },
+
+  getReportDefinition: (definitionId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/definitions/${definitionId}`),
+
+  getReportDefinitionByCode: (code: string) =>
+    getJson<any>(`/api/v1/gold/reporting/definitions/by-code/${code}`),
+
+  updateReportDefinition: (definitionId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/reporting/definitions/${definitionId}`, data),
+
+  deleteReportDefinition: (definitionId: string) =>
+    deleteJson(`/api/v1/gold/reporting/definitions/${definitionId}`),
+
+  // Report Templates
+  createReportTemplate: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/templates', data),
+
+  getReportTemplates: (filters?: {
+    report_definition_id?: string;
+    template_type?: string;
+    is_active?: boolean;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.report_definition_id) params.append('report_definition_id', filters.report_definition_id);
+    if (filters?.template_type) params.append('template_type', filters.template_type);
+    if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/templates${query}`);
+  },
+
+  getReportTemplate: (templateId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/templates/${templateId}`),
+
+  updateReportTemplate: (templateId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/reporting/templates/${templateId}`, data),
+
+  deleteReportTemplate: (templateId: string) =>
+    deleteJson(`/api/v1/gold/reporting/templates/${templateId}`),
+
+  // Report Schedules
+  createReportSchedule: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/schedules', data),
+
+  getReportSchedules: (filters?: {
+    report_definition_id?: string;
+    status?: string;
+    is_active?: boolean;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.report_definition_id) params.append('report_definition_id', filters.report_definition_id);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/schedules${query}`);
+  },
+
+  getReportSchedule: (scheduleId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/schedules/${scheduleId}`),
+
+  updateReportSchedule: (scheduleId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/reporting/schedules/${scheduleId}`, data),
+
+  pauseReportSchedule: (scheduleId: string, reason?: string) =>
+    postJson<any>(`/api/v1/gold/reporting/schedules/${scheduleId}/pause`, { reason }),
+
+  resumeReportSchedule: (scheduleId: string, nextExecutionAt?: string) =>
+    postJson<any>(`/api/v1/gold/reporting/schedules/${scheduleId}/resume`, { next_execution_at: nextExecutionAt }),
+
+  executeScheduleNow: (scheduleId: string, overrideParameters?: any) =>
+    postJson<any>(`/api/v1/gold/reporting/schedules/${scheduleId}/execute`, { override_parameters: overrideParameters }),
+
+  deleteReportSchedule: (scheduleId: string) =>
+    deleteJson(`/api/v1/gold/reporting/schedules/${scheduleId}`),
+
+  // Report Executions
+  createReportExecution: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/executions', data),
+
+  getReportExecutions: (filters?: {
+    report_definition_id?: string;
+    schedule_id?: string;
+    status?: string;
+    execution_type?: string;
+    date_from?: string;
+    date_to?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.report_definition_id) params.append('report_definition_id', filters.report_definition_id);
+    if (filters?.schedule_id) params.append('schedule_id', filters.schedule_id);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.execution_type) params.append('execution_type', filters.execution_type);
+    if (filters?.date_from) params.append('date_from', filters.date_from);
+    if (filters?.date_to) params.append('date_to', filters.date_to);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/executions${query}`);
+  },
+
+  getReportExecution: (executionId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/executions/${executionId}`),
+
+  updateReportExecution: (executionId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/reporting/executions/${executionId}`, data),
+
+  cancelReportExecution: (executionId: string) =>
+    postJson<any>(`/api/v1/gold/reporting/executions/${executionId}/cancel`, {}),
+
+  // Report Parameters
+  createReportParameter: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/parameters', data),
+
+  getReportParameters: (reportDefinitionId: string, isActive?: boolean) => {
+    const params = new URLSearchParams({ report_definition_id: reportDefinitionId });
+    if (isActive !== undefined) params.append('is_active', isActive.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/parameters${query}`);
+  },
+
+  getReportParameter: (parameterId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/parameters/${parameterId}`),
+
+  updateReportParameter: (parameterId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/reporting/parameters/${parameterId}`, data),
+
+  deleteReportParameter: (parameterId: string) =>
+    deleteJson(`/api/v1/gold/reporting/parameters/${parameterId}`),
+
+  // Report Exports
+  createReportExport: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/exports', data),
+
+  getReportExports: (filters?: {
+    execution_id?: string;
+    export_format?: string;
+    status?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.execution_id) params.append('execution_id', filters.execution_id);
+    if (filters?.export_format) params.append('export_format', filters.export_format);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/exports${query}`);
+  },
+
+  getReportExport: (exportId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/exports/${exportId}`),
+
+  downloadReportExport: (exportId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/exports/${exportId}/download`),
+
+  shareReportExport: (exportId: string, data: any) =>
+    postJson<any>(`/api/v1/gold/reporting/exports/${exportId}/share`, data),
+
+  deleteReportExport: (exportId: string) =>
+    deleteJson(`/api/v1/gold/reporting/exports/${exportId}`),
+
+  // Dashboard Definitions
+  createDashboard: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/dashboards', data),
+
+  getDashboards: (filters?: {
+    dashboard_type?: string;
+    category?: string;
+    is_active?: boolean;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.dashboard_type) params.append('dashboard_type', filters.dashboard_type);
+    if (filters?.category) params.append('category', filters.category);
+    if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/dashboards${query}`);
+  },
+
+  getDashboard: (dashboardId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/dashboards/${dashboardId}`),
+
+  getDashboardByCode: (code: string) =>
+    getJson<any>(`/api/v1/gold/reporting/dashboards/by-code/${code}`),
+
+  updateDashboard: (dashboardId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/reporting/dashboards/${dashboardId}`, data),
+
+  deleteDashboard: (dashboardId: string) =>
+    deleteJson(`/api/v1/gold/reporting/dashboards/${dashboardId}`),
+
+  // Dashboard Widgets
+  createDashboardWidget: (dashboardId: string, data: any) =>
+    postJson<any>(`/api/v1/gold/reporting/dashboards/${dashboardId}/widgets`, data),
+
+  getDashboardWidgets: (dashboardId: string, isVisible?: boolean) => {
+    const params = isVisible !== undefined ? `?is_visible=${isVisible}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/dashboards/${dashboardId}/widgets${params}`);
+  },
+
+  getDashboardWidget: (widgetId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/widgets/${widgetId}`),
+
+  updateDashboardWidget: (widgetId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/reporting/widgets/${widgetId}`, data),
+
+  deleteDashboardWidget: (widgetId: string) =>
+    deleteJson(`/api/v1/gold/reporting/widgets/${widgetId}`),
+
+  getWidgetData: (widgetId: string, filters?: {
+    date_from?: string;
+    date_to?: string;
+    filters?: string;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.date_from) params.append('date_from', filters.date_from);
+    if (filters?.date_to) params.append('date_to', filters.date_to);
+    if (filters?.filters) params.append('filters', filters.filters);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any>(`/api/v1/gold/reporting/widgets/${widgetId}/data${query}`);
+  },
+
+  // Data Snapshots
+  createDataSnapshot: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/snapshots', data),
+
+  getDataSnapshots: (filters?: {
+    snapshot_type?: string;
+    entity_type?: string;
+    date_from?: string;
+    date_to?: string;
+    status?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.snapshot_type) params.append('snapshot_type', filters.snapshot_type);
+    if (filters?.entity_type) params.append('entity_type', filters.entity_type);
+    if (filters?.date_from) params.append('date_from', filters.date_from);
+    if (filters?.date_to) params.append('date_to', filters.date_to);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/snapshots${query}`);
+  },
+
+  getDataSnapshot: (snapshotId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/snapshots/${snapshotId}`),
+
+  updateDataSnapshot: (snapshotId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/reporting/snapshots/${snapshotId}`, data),
+
+  deleteDataSnapshot: (snapshotId: string) =>
+    deleteJson(`/api/v1/gold/reporting/snapshots/${snapshotId}`),
+
+  // Analytics Metrics
+  createAnalyticsMetric: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/metrics', data),
+
+  getAnalyticsMetrics: (filters?: {
+    metric_category?: string;
+    metric_type?: string;
+    is_kpi?: boolean;
+    is_active?: boolean;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (filters?.metric_category) params.append('metric_category', filters.metric_category);
+    if (filters?.metric_type) params.append('metric_type', filters.metric_type);
+    if (filters?.is_kpi !== undefined) params.append('is_kpi', filters.is_kpi.toString());
+    if (filters?.is_active !== undefined) params.append('is_active', filters.is_active.toString());
+    if (filters?.skip) params.append('skip', filters.skip.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return getJson<any[]>(`/api/v1/gold/reporting/metrics${query}`);
+  },
+
+  getAnalyticsMetric: (metricId: string) =>
+    getJson<any>(`/api/v1/gold/reporting/metrics/${metricId}`),
+
+  getAnalyticsMetricByCode: (code: string) =>
+    getJson<any>(`/api/v1/gold/reporting/metrics/by-code/${code}`),
+
+  updateAnalyticsMetric: (metricId: string, data: any) =>
+    patchJson<any>(`/api/v1/gold/reporting/metrics/${metricId}`, data),
+
+  deleteAnalyticsMetric: (metricId: string) =>
+    deleteJson(`/api/v1/gold/reporting/metrics/${metricId}`),
+
+  // Report Generation
+  generateReport: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/generate', data),
+
+  getReportCatalog: (category?: string) => {
+    const params = category ? `?category=${category}` : '';
+    return getJson<any>(`/api/v1/gold/reporting/catalog${params}`);
+  },
+
+  queryAnalytics: (data: any) =>
+    postJson<any>('/api/v1/gold/reporting/analytics/query', data),
+
+  getDashboardAnalytics: (dashboardCode: string, data: any) =>
+    postJson<any>(`/api/v1/gold/reporting/dashboards/${dashboardCode}/analytics`, data),
 };
