@@ -1,1 +1,0 @@
-# Cash & Bank management package
