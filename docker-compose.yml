@@ -1,496 +1,171 @@
 version: '3.8'
 
 services:
-  # Database
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: nbfcsuite-postgres
+    container_name: nbfc-postgres
     environment:
-      POSTGRES_USER: nbfc_user
-      POSTGRES_PASSWORD: nbfc_pass
-      POSTGRES_DB: nbfcsuite
+      POSTGRES_DB: nbfc_suite
+      POSTGRES_USER: nbfc_admin
+      POSTGRES_PASSWORD: nbfc_secure_2026
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infra/migrations:/docker-entrypoint-initdb.d:ro
+      - ./database/schema:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nbfc_user -d nbfcsuite"]
+      test: ["CMD-SHELL", "pg_isready -U nbfc_admin -d nbfc_suite"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - nbfcsuite-network
+      - nbfc-network
 
-  # Auth Service
-  auth-service:
-    build:
-      context: ./services/auth
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-auth
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-      SECRET_KEY: your-secret-key-change-in-production
-      ALGORITHM: HS256
-      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: nbfc-redis
+    command: redis-server --appendonly yes --requirepass nbfc_redis_2026
     ports:
-      - "8001:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # LOS Service
-  los-service:
-    build:
-      context: ./services/los
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-los
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8002:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
-      - nbfcsuite-network
+      - nbfc-network
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: nbfc-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: nbfc_admin
+      RABBITMQ_DEFAULT_PASS: nbfc_rabbit_2026
+      RABBITMQ_DEFAULT_VHOST: /
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
       retries: 5
-
-  # LMS Service
-  lms-service:
-    build:
-      context: ./services/lms
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-lms
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8003:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
-      - nbfcsuite-network
+      - nbfc-network
+
+  # MinIO Object Storage (S3-compatible)
+  minio:
+    image: minio/minio:latest
+    container_name: nbfc-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: nbfc_admin
+      MINIO_ROOT_PASSWORD: nbfc_minio_2026
+    ports:
+      - "9000:9000"   # API port
+      - "9001:9001"   # Console UI
+    volumes:
+      - minio_data:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Collections Service
-  collections-service:
-    build:
-      context: ./services/collections
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-collections
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8004:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
     networks:
-      - nbfcsuite-network
+      - nbfc-network
+
+  # Elasticsearch (for enterprise search)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: nbfc-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
       retries: 5
-
-  # Customer Service
-  customer-service:
-    build:
-      context: ./services/customer
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-customer
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8005:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
-      - nbfcsuite-network
+      - nbfc-network
+
+  # Kibana (Elasticsearch UI)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: nbfc-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
+      interval: 30s
+      timeout: 10s
       retries: 5
-
-  # FinDNA Service
-  findna-service:
-    build:
-      context: ./services/findna
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-findna
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8006:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
     networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - nbfc-network
 
-  # Deposits Service
-  deposits-service:
-    build:
-      context: ./services/deposits
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-deposits
+  # pgAdmin (PostgreSQL UI)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: nbfc-pgadmin
     environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+      PGADMIN_DEFAULT_EMAIL: admin@nbfcsuite.com
+      PGADMIN_DEFAULT_PASSWORD: nbfc_pgadmin_2026
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
     ports:
-      - "8007:8000"
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - nbfc-network
 
-  # Accounting Service
-  accounting-service:
-    build:
-      context: ./services/accounting
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-accounting
+  # Redis Commander (Redis UI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: nbfc-redis-commander
     environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
+      REDIS_HOSTS: local:redis:6379:0:nbfc_redis_2026
     ports:
-      - "8008:8000"
+      - "8081:8081"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - redis
     networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - nbfc-network
 
-  # CRM Service
-  crm-service:
-    build:
-      context: ./services/crm
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-crm
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8009:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Document Service
-  document-service:
-    build:
-      context: ./services/document
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-document
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8010:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Compliance Service
-  compliance-service:
-    build:
-      context: ./services/compliance
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-compliance
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8011:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # HRMS Service
-  hrms-service:
-    build:
-      context: ./services/hrms
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-hrms
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8012:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Gold Loan Service
-  gold-service:
-    build:
-      context: ./services/gold
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-gold
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8013:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Treasury & Forex Service
-  treasury-service:
-    build:
-      context: ./services/treasury
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-treasury
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8014:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Wealth Management Service
-  wealth-service:
-    build:
-      context: ./services/wealth
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-wealth
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8015:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Insurance Service
-  insurance-service:
-    build:
-      context: ./services/insurance
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-insurance
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8016:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Procurement & Vendor Management Service
-  procurement-service:
-    build:
-      context: ./services/procurement
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-procurement
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8017:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Platform Kernel Service: Product Factory, Rules, Workflow, Event Outbox
-  platform-service:
-    build:
-      context: ./services/platform
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-platform
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8018:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Enterprise AI Platform Service
-  ai-service:
-    build:
-      context: ./services/ai
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-ai
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8030:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Enterprise Risk Management Service
-  risk-service:
-    build:
-      context: ./services/risk
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-risk
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8019:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Enterprise Governance, Risk & Compliance Service
-  grc-service:
-    build:
-      context: ./services/grc
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-grc
-    environment:
-      DATABASE_URL: postgresql://nbfc_user:nbfc_pass@postgres:5432/nbfcsuite
-    ports:
-      - "8020:8000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - nbfcsuite-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Frontend Web App
-    build:
-      context: ./apps/customer-app
-      dockerfile: Dockerfile
-    container_name: nbfcsuite-web
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8001
-      NEXT_PUBLIC_RISK_API_URL: http://localhost:8019
-      NEXT_PUBLIC_GRC_API_URL: http://localhost:8020
-      NEXT_PUBLIC_PLATFORM_API_URL: http://localhost:8018
-      NEXT_PUBLIC_AI_API_URL: http://localhost:8030
-      NEXT_PUBLIC_GOLD_API_URL: http://localhost:8013
-    ports:
-      - "3000:3000"
-    depends_on:
-      - auth-service
-      - risk-service
-      - grc-service
-      - platform-service
-    networks:
-      - nbfcsuite-network
+networks:
+  nbfc-network:
+    driver: bridge
+    name: nbfc-network
 
 volumes:
   postgres_data:
-
-networks:
-  nbfcsuite-network:
-    driver: bridge
+    name: nbfc-postgres-data
+  redis_data:
+    name: nbfc-redis-data
+  rabbitmq_data:
+    name: nbfc-rabbitmq-data
+  minio_data:
+    name: nbfc-minio-data
+  elasticsearch_data:
+    name: nbfc-elasticsearch-data
+  pgadmin_data:
+    name: nbfc-pgadmin-data
