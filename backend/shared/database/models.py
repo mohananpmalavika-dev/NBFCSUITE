@@ -3,7 +3,7 @@ Base Database Models
 Includes multi-tenant support and common fields
 """
 
-from sqlalchemy import Column, String, DateTime, Boolean, Integer, func
+from sqlalchemy import Column, String, DateTime, Boolean, Integer, func, Index
 from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
@@ -110,3 +110,163 @@ class Tenant(Base, TimestampMixin):
     
     def __repr__(self):
         return f"<Tenant(id={self.id}, name={self.name})>"
+
+
+class User(BaseModel):
+    """
+    User model
+    Represents a user in the system (employees, admins, etc.)
+    """
+    __tablename__ = "users"
+    
+    # Authentication
+    email = Column(String(100), nullable=False, index=True)
+    username = Column(String(50), nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    
+    # Personal Information
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+    phone = Column(String(20), nullable=True)
+    mobile = Column(String(20), nullable=True)
+    
+    # Employee Details
+    employee_code = Column(String(50), nullable=True, index=True)
+    designation = Column(String(100), nullable=True)
+    department = Column(String(100), nullable=True)
+    
+    # Status
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    is_superuser = Column(Boolean, default=False, nullable=False)
+    is_verified = Column(Boolean, default=False, nullable=False)
+    email_verified = Column(Boolean, default=False, nullable=False)
+    phone_verified = Column(Boolean, default=False, nullable=False)
+    
+    # Session Management
+    last_login = Column(DateTime(timezone=True), nullable=True)
+    last_activity = Column(DateTime(timezone=True), nullable=True)
+    login_count = Column(Integer, default=0)
+    
+    # Security
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    password_changed_at = Column(DateTime(timezone=True), nullable=True)
+    must_change_password = Column(Boolean, default=False)
+    
+    # Preferences
+    language = Column(String(10), default="en")
+    timezone = Column(String(50), default="Asia/Kolkata")
+    
+    # Unique constraints per tenant
+    __table_args__ = (
+        # Email unique per tenant
+        Index('idx_tenant_email', 'tenant_id', 'email', unique=True),
+        # Username unique per tenant
+        Index('idx_tenant_username', 'tenant_id', 'username', unique=True),
+        # Employee code unique per tenant
+        Index('idx_tenant_employee_code', 'tenant_id', 'employee_code', unique=True),
+    )
+    
+    def __repr__(self):
+        return f"<User(id={self.id}, email={self.email})>"
+
+
+class Role(BaseModel):
+    """
+    Role model
+    Represents a role that can be assigned to users
+    """
+    __tablename__ = "roles"
+    
+    name = Column(String(100), nullable=False)
+    display_name = Column(String(200), nullable=False)
+    description = Column(String(500), nullable=True)
+    
+    # Role Type
+    role_type = Column(String(50), default="custom")  # system, custom
+    
+    # Status
+    is_active = Column(Boolean, default=True, nullable=False)
+    
+    # Unique constraint: role name per tenant
+    __table_args__ = (
+        Index('idx_tenant_role_name', 'tenant_id', 'name', unique=True),
+    )
+    
+    def __repr__(self):
+        return f"<Role(id={self.id}, name={self.name})>"
+
+
+class Permission(BaseModel):
+    """
+    Permission model
+    Represents a specific permission in the system
+    """
+    __tablename__ = "permissions"
+    
+    resource = Column(String(100), nullable=False)  # e.g., 'customers', 'loans'
+    action = Column(String(50), nullable=False)  # e.g., 'create', 'read', 'update', 'delete'
+    description = Column(String(500), nullable=True)
+    
+    # Permission Type
+    permission_type = Column(String(50), default="entity")  # entity, function, report
+    
+    # Status
+    is_active = Column(Boolean, default=True, nullable=False)
+    
+    # Unique constraint: resource + action per tenant
+    __table_args__ = (
+        Index('idx_tenant_resource_action', 'tenant_id', 'resource', 'action', unique=True),
+    )
+    
+    def __repr__(self):
+        return f"<Permission(id={self.id}, resource={self.resource}, action={self.action})>"
+
+
+class UserRole(BaseModel):
+    """
+    UserRole model
+    Many-to-many relationship between users and roles
+    """
+    __tablename__ = "user_roles"
+    
+    user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    role_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    
+    # Assignment details
+    assigned_by = Column(UUID(as_uuid=True), nullable=True)
+    assigned_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Expiry (optional)
+    expires_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Unique constraint: user + role per tenant
+    __table_args__ = (
+        Index('idx_tenant_user_role', 'tenant_id', 'user_id', 'role_id', unique=True),
+    )
+    
+    def __repr__(self):
+        return f"<UserRole(user_id={self.user_id}, role_id={self.role_id})>"
+
+
+class RolePermission(BaseModel):
+    """
+    RolePermission model
+    Many-to-many relationship between roles and permissions
+    """
+    __tablename__ = "role_permissions"
+    
+    role_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    permission_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    
+    # Assignment details
+    assigned_by = Column(UUID(as_uuid=True), nullable=True)
+    assigned_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Unique constraint: role + permission per tenant
+    __table_args__ = (
+        Index('idx_tenant_role_permission', 'tenant_id', 'role_id', 'permission_id', unique=True),
+    )
+    
+    def __repr__(self):
+        return f"<RolePermission(role_id={self.role_id}, permission_id={self.permission_id})>"
