@@ -113,9 +113,11 @@ export default function NewGoldLoanPage() {
         getPurityOptions()
       ]);
       
-      setProducts(productsData.products);
-      setOrnamentTypes(ornamentTypesData.ornament_types);
-      setPurityOptions(purityData.purity_options);
+      if (productsData && ornamentTypesData && purityData) {
+        setProducts(productsData.products);
+        setOrnamentTypes(ornamentTypesData.ornament_types);
+        setPurityOptions(purityData.purity_options);
+      }
     } catch (error) {
       console.error('Failed to load initial data:', error);
       toast({
@@ -612,7 +614,7 @@ export default function NewGoldLoanPage() {
                   
                   <div className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
                     <span className="text-sm">Calculated LTV:</span>
-                    <Badge variant={calculatedLTV <= selectedProduct.ltv_ratio ? 'success' : 'error'}>
+                    <Badge variant={calculatedLTV <= selectedProduct.ltv_ratio ? 'success' : 'destructive'}>
                       {calculatedLTV.toFixed(2)}%
                     </Badge>
                   </div>
