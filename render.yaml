@@ -5,12 +5,13 @@ services:
   # Backend API Service
   - type: web
     name: nbfc-backend
-    runtime: python
+    env: python
     region: oregon
     plan: free
     branch: main
-    buildCommand: cd backend && pip install --upgrade pip && pip install -r requirements.render.txt
-    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install -r requirements.render.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
