@@ -4,7 +4,7 @@ Pydantic models for loan products, applications, accounts
 """
 
 from pydantic import BaseModel, Field, model_validator, field_validator
-from typing import Optional, List
+from typing import Dict, Optional, List
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
