@@ -42,12 +42,16 @@ export default function GoldLoansPage() {
         search: searchTerm || undefined
       });
       
-      setLoans(loansData.loans);
-      setTotalPages(loansData.total_pages);
+      if (loansData) {
+        setLoans(loansData.loans);
+        setTotalPages(loansData.total_pages);
+      }
 
       // Load statistics
       const statsData = await getGoldLoanStatistics();
-      setStatistics(statsData);
+      if (statsData) {
+        setStatistics(statsData);
+      }
       
     } catch (error) {
       console.error('Failed to load gold loans:', error);
@@ -63,13 +67,13 @@ export default function GoldLoansPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'success' | 'warning' | 'error'> = {
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info'> = {
       'Active': 'success',
       'Overdue': 'warning',
-      'NPA': 'error',
+      'NPA': 'destructive',
       'Closed': 'default',
-      'Foreclosed': 'error',
-      'Auctioned': 'error'
+      'Foreclosed': 'destructive',
+      'Auctioned': 'destructive'
     };
     return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
   };
@@ -254,7 +258,7 @@ export default function GoldLoansPage() {
                         <td className="p-4 text-right">
                           <div className="font-medium">{formatCurrency(loan.total_outstanding)}</div>
                           {loan.is_npa && (
-                            <Badge variant="error" className="mt-1">NPA</Badge>
+                            <Badge variant="destructive" className="mt-1">NPA</Badge>
                           )}
                         </td>
                         <td className="p-4 text-right">
