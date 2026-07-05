@@ -8,6 +8,8 @@ from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 
+from backend.shared.schemas.base import BaseSchema
+
 
 class LoginRequest(BaseModel):
     """Login request schema"""
@@ -91,7 +93,7 @@ class ChangePasswordRequest(BaseModel):
         return v
 
 
-class UserResponse(BaseModel):
+class UserResponse(BaseSchema):
     """User response schema"""
     id: UUID
     tenant_id: str
@@ -108,9 +110,6 @@ class UserResponse(BaseModel):
     is_verified: bool
     last_login: Optional[datetime]
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 class UserWithRoles(UserResponse):

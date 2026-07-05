@@ -17,8 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date, datetime
 import uuid
 
-from shared.database.connection import async_session_maker
-from shared.database.master_data_models import (
+from backend.shared.database.connection import async_session_maker
+from backend.shared.database.master_data_models import (
     Country, State, City, Pincode,
     Bank, BankBranch,
     Currency, InterestRateType, LoanProductType,

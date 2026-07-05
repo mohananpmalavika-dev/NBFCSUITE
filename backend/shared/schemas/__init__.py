@@ -1,6 +1,6 @@
 """Shared schemas module"""
 
-from shared.schemas.base import (
+from backend.shared.schemas.base import (
     BaseSchema,
     TimestampSchema,
     TenantSchema,
