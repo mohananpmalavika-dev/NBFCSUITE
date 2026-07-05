@@ -14,7 +14,7 @@ from backend.shared.database.loan_models import (
     LoanApplication, LoanApplicationCoApplicant, LoanApplicationDocument,
     LoanProduct
 )
-from backend.shared.database.customer_models import Customer, CustomerFamilyMember
+from backend.shared.database.customer_models import Customer, CustomerFamily
 from .schemas import (
     LoanApplicationCreate, LoanApplicationUpdate, LoanApplicationResponse,
     LoanApplicationListResponse, LoanApplicationStats, ApplicationStatus,

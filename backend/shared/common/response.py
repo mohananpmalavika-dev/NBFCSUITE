@@ -8,6 +8,24 @@ from fastapi.responses import JSONResponse
 from fastapi import status
 
 
+class CustomException(Exception):
+    """Custom API exception for application errors"""
+    
+    def __init__(
+        self,
+        message: str,
+        code: str = "API_ERROR",
+        status_code: int = status.HTTP_400_BAD_REQUEST,
+        details: dict = None
+    ):
+        self.message = message
+        self.code = code
+        self.status_code = status_code
+        self.details = details or {}
+        super().__init__(self.message)
+
+
+
 def success_response(
     data: Any = None,
     message: str = "Success",

@@ -256,7 +256,7 @@ def generate_interest_certificate(
 @router.get("/certificate/{account_id}", response_model=dict)
 def get_interest_certificate(
     account_id: int,
-    financial_year: Optional[str] = Query(None, regex="^\\d{4}-\\d{4}$", description="FY (e.g., 2025-2026)"),
+    financial_year: Optional[str] = Query(None, pattern="^\\d{4}-\\d{4}$", description="FY (e.g., 2025-2026)"),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     tenant_id: int = Depends(get_tenant_id)
@@ -319,7 +319,7 @@ def calculate_compound_interest(
     rate: float = Query(..., ge=0, le=100, description="Annual interest rate (%)"),
     from_date: date = Query(..., description="From date"),
     to_date: date = Query(..., description="To date"),
-    frequency: str = Query("quarterly", regex="^(daily|monthly|quarterly|half_yearly|yearly)$"),
+    frequency: str = Query("quarterly", pattern="^(daily|monthly|quarterly|half_yearly|yearly)$"),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     tenant_id: int = Depends(get_tenant_id)
@@ -419,7 +419,7 @@ def calculate_monthly_average_interest(
 @router.get("/{account_id}/tds-summary", response_model=dict)
 def get_tds_summary(
     account_id: int,
-    financial_year: Optional[str] = Query(None, regex="^\\d{4}-\\d{4}$", description="FY (e.g., 2025-2026)"),
+    financial_year: Optional[str] = Query(None, pattern="^\\d{4}-\\d{4}$", description="FY (e.g., 2025-2026)"),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     tenant_id: int = Depends(get_tenant_id)

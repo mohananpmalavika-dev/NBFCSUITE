@@ -9,7 +9,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from .base import Base
+from .connection import Base
 
 
 class LoanProduct(Base):
@@ -184,7 +184,7 @@ class LoanApplicationCoApplicant(Base):
     
     co_applicant_type = Column(String(50), nullable=False)  # co_applicant, guarantor
     is_primary = Column(Boolean, default=False)
-    relationship = Column(String(100))
+    family_relationship = Column(String(100))
     monthly_income = Column(Numeric(15, 2))
     occupation = Column(String(200))
     

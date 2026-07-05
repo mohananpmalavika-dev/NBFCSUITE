@@ -277,7 +277,7 @@ def calculate_interest(
     principal: float = Query(..., gt=0, description="Principal amount"),
     rate: float = Query(..., ge=0, le=100, description="Interest rate (annual %)"),
     days: int = Query(..., ge=1, description="Number of days"),
-    method: str = Query("simple", regex="^(simple|compound)$", description="Calculation method"),
+    method: str = Query("simple", pattern="^(simple|compound)$", description="Calculation method"),
     frequency: str = Query("quarterly", description="Compounding frequency"),
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),

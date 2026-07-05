@@ -3,7 +3,7 @@ Loan Management Schemas
 Pydantic models for loan products, applications, accounts
 """
 
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, model_validator, field_validator
 from typing import Optional, List
 from datetime import date, datetime
 from decimal import Decimal
@@ -147,27 +147,31 @@ class LoanProductBase(BaseModel):
     is_featured: bool = False
     display_order: int = 0
     
-    @validator('max_interest_rate')
-    def validate_interest_rates(cls, v, values):
-        if 'min_interest_rate' in values and v < values['min_interest_rate']:
+    @field_validator('max_interest_rate', mode='after')
+    @classmethod
+    def validate_interest_rates(cls, v, info):
+        if 'min_interest_rate' in info.data and v < info.data['min_interest_rate']:
             raise ValueError('max_interest_rate must be >= min_interest_rate')
         return v
     
-    @validator('max_loan_amount')
-    def validate_loan_amounts(cls, v, values):
-        if 'min_loan_amount' in values and v < values['min_loan_amount']:
+    @field_validator('max_loan_amount', mode='after')
+    @classmethod
+    def validate_loan_amounts(cls, v, info):
+        if 'min_loan_amount' in info.data and v < info.data['min_loan_amount']:
             raise ValueError('max_loan_amount must be >= min_loan_amount')
         return v
     
-    @validator('max_tenure_months')
-    def validate_tenures(cls, v, values):
-        if 'min_tenure_months' in values and v < values['min_tenure_months']:
+    @field_validator('max_tenure_months', mode='after')
+    @classmethod
+    def validate_tenures(cls, v, info):
+        if 'min_tenure_months' in info.data and v < info.data['min_tenure_months']:
             raise ValueError('max_tenure_months must be >= min_tenure_months')
         return v
     
-    @validator('max_age')
-    def validate_ages(cls, v, values):
-        if 'min_age' in values and v < values['min_age']:
+    @field_validator('max_age', mode='after')
+    @classmethod
+    def validate_ages(cls, v, info):
+        if 'min_age' in info.data and v < info.data['min_age']:
             raise ValueError('max_age must be >= min_age')
         return v
 
@@ -504,7 +508,8 @@ class DisbursementApprovalRequest(BaseModel):
     emi_start_day: int = Field(default=5, ge=1, le=28, description="Day of month for EMI deduction")
     remarks: Optional[str] = Field(None, max_length=500, description="Optional remarks")
     
-    @validator('disbursement_date')
+    @field_validator('disbursement_date', mode='after')
+    @classmethod
     def validate_disbursement_date(cls, v):
         if v > date.today():
             # Future disbursement allowed up to 7 days
@@ -689,11 +694,11 @@ class PaymentRecordRequest(BaseModel):
     remarks: Optional[str] = Field(None, max_length=500, description="Optional remarks")
     collected_by: Optional[int] = Field(None, description="User ID who collected payment")
     
-    @root_validator
-    def validate_account_identifier(cls, values):
-        if not values.get('account_id') and not values.get('account_number'):
+    @model_validator(mode='after')
+    def validate_account_identifier(self):
+        if not self.account_id and not self.account_number:
             raise ValueError('Either account_id or account_number must be provided')
-        return values
+        return self
 
 
 class PaymentAllocation(BaseModel):
@@ -888,11 +893,11 @@ class PartialPrepaymentRequest(BaseModel):
     prepayment_amount: Decimal = Field(..., gt=0, description="Amount to prepay")
     reduce_emi: bool = Field(True, description="True = reduce EMI, False = reduce tenure")
     
-    @root_validator
-    def validate_account_identifier(cls, values):
-        if not values.get('account_id') and not values.get('account_number'):
+    @model_validator(mode='after')
+    def validate_account_identifier(self):
+        if not self.account_id and not self.account_number:
             raise ValueError('Either account_id or account_number must be provided')
-        return values
+        return self
 
 
 class CurrentValues(BaseModel):
@@ -939,11 +944,11 @@ class ForeclosureRequest(BaseModel):
     reference_number: Optional[str] = Field(None, max_length=100, description="Payment reference")
     remarks: Optional[str] = Field(None, max_length=500, description="Optional remarks")
     
-    @root_validator
-    def validate_account_identifier(cls, values):
-        if not values.get('account_id') and not values.get('account_number'):
+    @model_validator(mode='after')
+    def validate_account_identifier(self):
+        if not self.account_id and not self.account_number:
             raise ValueError('Either account_id or account_number must be provided')
-        return values
+        return self
 
 
 class ForeclosureResponse(BaseModel):

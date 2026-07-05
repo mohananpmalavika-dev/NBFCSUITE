@@ -54,7 +54,7 @@ async def update_overdue_status(
 async def get_overdue_accounts(
     dpd_bucket: Optional[str] = Query(
         None,
-        regex="^(current|bucket_1_30|bucket_31_60|bucket_61_90|bucket_91_180|bucket_180_plus)$"
+        pattern="^(current|bucket_1_30|bucket_31_60|bucket_61_90|bucket_91_180|bucket_180_plus)$"
     ),
     min_overdue_amount: Optional[Decimal] = None,
     customer_id: Optional[int] = None,
@@ -80,7 +80,7 @@ async def get_overdue_accounts(
 
 @router.get("/collection-queue", response_model=dict)
 async def get_collection_queue(
-    priority: Optional[str] = Query(None, regex="^(high|medium|low)$"),
+    priority: Optional[str] = Query(None, pattern="^(high|medium|low)$"),
     service: LoanCollectionService = Depends(get_collection_service)
 ):
     """

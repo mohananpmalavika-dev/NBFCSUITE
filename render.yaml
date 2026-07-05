@@ -1,0 +1,60 @@
+# Render Blueprint Configuration
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Backend API Service
+  - type: web
+    name: nbfc-backend
+    runtime: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: cd backend && pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nbfc-postgres
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: CORS_ORIGINS
+        value: https://nbfc-frontend.onrender.com,http://localhost:3000
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ENABLE_SWAGGER
+        value: true
+
+  # Frontend Service
+  - type: web
+    name: nbfc-frontend
+    runtime: node
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: cd frontend/apps/admin-portal && npm install --legacy-peer-deps && npm run build
+    startCommand: cd frontend/apps/admin-portal && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://nbfc-backend.onrender.com/api/v1
+
+# Database
+databases:
+  - name: nbfc-postgres
+    region: oregon
+    plan: free
+    databaseName: nbfc_suite
+    user: nbfc_user

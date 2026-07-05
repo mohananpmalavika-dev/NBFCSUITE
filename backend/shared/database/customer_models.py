@@ -12,7 +12,7 @@ from datetime import datetime, date
 from decimal import Decimal
 import enum
 
-from .base import BaseModel
+from .models import BaseModel
 
 
 # ============================================================================

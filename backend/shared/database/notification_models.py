@@ -198,7 +198,7 @@ class NotificationLog(Base):
 
     # Event Details
     message = Column(Text, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    event_metadata = Column(JSON, nullable=True)
     # Additional context like provider response, error details, etc.
 
     # Multi-tenant

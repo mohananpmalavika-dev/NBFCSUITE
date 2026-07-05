@@ -101,7 +101,7 @@ class DepositProductBase(BaseModel):
     # Tenure Configuration
     min_tenure_days: Optional[int] = Field(None, ge=1)
     max_tenure_days: Optional[int] = Field(None, ge=1)
-    tenure_unit: Optional[str] = Field(None, regex="^(days|months|years)$")
+    tenure_unit: Optional[str] = Field(None, pattern="^(days|months|years)$")
     
     # Amount Configuration
     min_deposit_amount: Decimal = Field(..., gt=0, decimal_places=2)
@@ -113,7 +113,7 @@ class DepositProductBase(BaseModel):
     
     # RD Specific
     installment_amount: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
-    installment_frequency: Optional[str] = Field(None, regex="^(monthly|quarterly)$")
+    installment_frequency: Optional[str] = Field(None, pattern="^(monthly|quarterly)$")
     missed_installment_penalty: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
     
     # Withdrawal Rules
@@ -456,7 +456,7 @@ class BatchInterestResponse(BaseModel):
 class InterestCertificateRequest(BaseModel):
     """Request for interest certificate"""
     account_id: int = Field(..., gt=0)
-    financial_year: Optional[str] = Field(None, regex="^\\d{4}-\\d{4}$")
+    financial_year: Optional[str] = Field(None, pattern="^\\d{4}-\\d{4}$")
 
 
 class InterestCertificateResponse(BaseModel):

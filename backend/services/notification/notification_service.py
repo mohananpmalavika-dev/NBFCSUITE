@@ -314,7 +314,7 @@ class NotificationService:
             notification_id=notification_id,
             event_type=event_type,
             message=message,
-            metadata=metadata,
+            event_metadata=metadata,
             tenant_id=self.tenant_id
         )
         

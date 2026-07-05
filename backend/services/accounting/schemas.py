@@ -6,7 +6,7 @@ Pydantic models for API request/response validation
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, model_validator, field_validator
 
 from backend.shared.database.accounting_models import (
     AccountType,
@@ -105,25 +105,26 @@ class JournalEntryLineCreate(BaseModel):
     cost_center: Optional[str] = Field(None, max_length=50)
     department: Optional[str] = Field(None, max_length=50)
     
-    @validator("debit_amount", "credit_amount")
+    @field_validator("debit_amount", "credit_amount", mode="before")
+    @classmethod
     def validate_amounts(cls, v):
         """Validate decimal places"""
         if v < 0:
             raise ValueError("Amount cannot be negative")
         return round(v, 2)
     
-    @root_validator
-    def validate_debit_or_credit(cls, values):
+    @model_validator(mode='after')
+    def validate_debit_or_credit(self):
         """Ensure either debit or credit is provided, not both"""
-        debit = values.get("debit_amount", Decimal("0.00"))
-        credit = values.get("credit_amount", Decimal("0.00"))
+        debit = self.debit_amount or Decimal("0.00")
+        credit = self.credit_amount or Decimal("0.00")
         
         if debit > 0 and credit > 0:
             raise ValueError("Cannot have both debit and credit in same line")
         if debit == 0 and credit == 0:
             raise ValueError("Either debit or credit must be greater than zero")
         
-        return values
+        return self
 
 
 class JournalEntryLineResponse(BaseModel):
@@ -159,10 +160,10 @@ class JournalEntryCreate(JournalEntryBase):
     """Schema for creating journal entry"""
     line_items: List[JournalEntryLineCreate] = Field(..., min_items=2, description="At least 2 line items required")
     
-    @root_validator
-    def validate_balanced_entry(cls, values):
+    @model_validator(mode='after')
+    def validate_balanced_entry(self):
         """Ensure total debits equal total credits"""
-        line_items = values.get("line_items", [])
+        line_items = self.line_items or []
         
         total_debit = sum(item.debit_amount for item in line_items)
         total_credit = sum(item.credit_amount for item in line_items)
@@ -170,7 +171,7 @@ class JournalEntryCreate(JournalEntryBase):
         if abs(total_debit - total_credit) > Decimal("0.01"):  # Allow small rounding difference
             raise ValueError(f"Total debits ({total_debit}) must equal total credits ({total_credit})")
         
-        return values
+        return self
 
 
 class JournalEntryUpdate(BaseModel):

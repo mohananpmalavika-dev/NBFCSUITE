@@ -36,7 +36,7 @@ async def record_payment(
     account_number: Optional[str] = None,
     payment_amount: Decimal = Query(..., gt=0),
     payment_date: Optional[date] = None,
-    payment_mode: str = Query("cash", regex="^(cash|cheque|neft|rtgs|upi|imps)$"),
+    payment_mode: str = Query("cash", pattern="^(cash|cheque|neft|rtgs|upi|imps)$"),
     reference_number: Optional[str] = None,
     bank_name: Optional[str] = None,
     transaction_date: Optional[date] = None,

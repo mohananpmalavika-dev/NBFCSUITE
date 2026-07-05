@@ -30,7 +30,7 @@ class TenantSchema(BaseSchema):
     tenant_id: str
 
 
-class BaseDBSchema(BaseSchema, TimestampSchema, TenantSchema):
+class BaseDBSchema(TimestampSchema, TenantSchema):
     """Base schema for database models"""
     id: UUID
     is_deleted: bool = False

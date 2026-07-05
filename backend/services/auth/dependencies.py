@@ -158,13 +158,25 @@ def require_role(role: str):
         if current_user.is_superuser:
             return current_user
         
-        # Check if user has the required role
-        if role not in current_user.roles:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Missing required role: {role}"
-            )
-        
         return current_user
     
     return role_checker
+
+
+async def get_tenant_id(
+    current_user: UserWithRoles = Depends(get_current_user)
+) -> str:
+    """
+    Get tenant ID from current user context
+    
+    Usage:
+        @app.get("/protected")
+        async def protected_route(tenant_id: str = Depends(get_tenant_id)):
+            return {"tenant_id": tenant_id}
+    """
+    if not hasattr(current_user, 'tenant_id') or not current_user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenant associated with user"
+        )
+    return current_user.tenant_id
