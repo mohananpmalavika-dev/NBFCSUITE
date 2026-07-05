@@ -50,9 +50,8 @@ opentelemetry-instrumentation-fastapi==0.42b0
 opentelemetry-instrumentation-sqlalchemy==0.42b0
 
 # File Processing
-# python-magic-bin==0.4.14  # Windows only - use python-magic on Linux
-python-magic==0.4.27  # Cross-platform (requires libmagic)
-pillow==10.4.0  # Compatible with Python 3.11-3.13
+# python-magic requires libmagic system library - skip for cloud deployment
+# pillow==10.4.0  # Temporarily disabled - build issues
 openpyxl==3.1.2
 # pandas==2.1.4  # Commented out - requires C compiler on Windows
 # numpy==1.26.4  # Commented out - requires C compiler on Windows
@@ -95,8 +94,4 @@ slowapi==0.1.9
 # Database Connection Pooling
 sqlalchemy-utils==0.41.1
 
-# UUID
-uuid==1.30
-
-# Timezone
-python-tz==0.1.1
+# Timezone utilities already covered by pytz==2023.3
