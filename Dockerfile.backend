@@ -5,11 +5,13 @@ FROM python:3.11.9-slim as builder
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (includes libmagic for python-magic)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     g++ \
     libpq-dev \
+    libmagic1 \
+    file \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements
@@ -27,9 +29,11 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000
 
-# Install runtime dependencies only
+# Install runtime dependencies (includes libmagic for python-magic)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    libmagic1 \
+    file \
     curl \
     && rm -rf /var/lib/apt/lists/*
 

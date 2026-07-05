@@ -1,0 +1,8 @@
+# Linux-specific requirements
+# Include all base requirements plus Linux-specific packages
+
+-r requirements.txt
+
+# Linux-specific file type detection
+# python-magic is already in requirements.txt
+# System package needed: libmagic1 (installed via apt in Dockerfile)

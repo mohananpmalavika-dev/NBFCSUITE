@@ -50,7 +50,8 @@ opentelemetry-instrumentation-fastapi==0.42b0
 opentelemetry-instrumentation-sqlalchemy==0.42b0
 
 # File Processing
-python-magic-bin==0.4.14
+# python-magic-bin==0.4.14  # Windows only - use python-magic on Linux
+python-magic==0.4.27  # Cross-platform (requires libmagic)
 pillow==10.4.0  # Compatible with Python 3.11-3.13
 openpyxl==3.1.2
 # pandas==2.1.4  # Commented out - requires C compiler on Windows

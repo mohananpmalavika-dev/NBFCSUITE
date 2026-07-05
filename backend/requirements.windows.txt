@@ -1,0 +1,7 @@
+# Windows-specific requirements
+# Include all base requirements plus Windows-specific packages
+
+-r requirements.txt
+
+# Windows-specific file type detection (includes bundled libmagic DLL)
+python-magic-bin==0.4.14
