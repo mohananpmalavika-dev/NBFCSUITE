@@ -49,6 +49,31 @@ class ApplicationStatus(str, Enum):
     APPROVED = "approved"
     REJECTED = "rejected"
     DISBURSED = "disbursed"
+
+
+class DisbursementMode(str, Enum):
+    NEFT = "neft"
+    RTGS = "rtgs"
+    IMPS = "imps"
+    CHEQUE = "cheque"
+    UPI = "upi"
+
+
+class LoanAccountStatus(str, Enum):
+    ACTIVE = "active"
+    OVERDUE = "overdue"
+    NPA = "npa"
+    CLOSED = "closed"
+    SETTLED = "settled"
+    WRITTEN_OFF = "written_off"
+
+
+class EMIStatus(str, Enum):
+    PENDING = "pending"
+    PAID = "paid"
+    PARTIALLY_PAID = "partially_paid"
+    OVERDUE = "overdue"
+    WAIVED = "waived"
     CANCELLED = "cancelled"
 
 
@@ -439,3 +464,199 @@ class LoanAccountSummary(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+# ============================================================================
+# DISBURSEMENT SCHEMAS
+# ============================================================================
+
+class SanctionLetterResponse(BaseModel):
+    """Sanction letter details"""
+    sanction_number: str
+    sanction_date: str
+    application_number: str
+    customer_name: str
+    customer_id: str
+    product_name: str
+    sanctioned_amount: float
+    tenure_months: int
+    interest_rate: float
+    emi_amount: float
+    processing_fee: float
+    documentation_charges: float
+    insurance_amount: float
+    total_deductions: float
+    net_disbursement: float
+    first_emi_date: Optional[str] = None
+    last_emi_date: Optional[str] = None
+    total_interest: float
+    total_repayment: float
+    terms_and_conditions: Optional[str] = None
+    validity_days: int
+    expiry_date: str
+
+
+class DisbursementApprovalRequest(BaseModel):
+    """Request schema for disbursement approval"""
+    bank_account_id: int = Field(..., description="Customer's bank account ID for disbursement")
+    disbursement_date: date = Field(..., description="Date of fund transfer")
+    disbursement_mode: DisbursementMode = Field(..., description="Mode of disbursement")
+    emi_start_day: int = Field(default=5, ge=1, le=28, description="Day of month for EMI deduction")
+    remarks: Optional[str] = Field(None, max_length=500, description="Optional remarks")
+    
+    @validator('disbursement_date')
+    def validate_disbursement_date(cls, v):
+        if v > date.today():
+            # Future disbursement allowed up to 7 days
+            if (v - date.today()).days > 7:
+                raise ValueError('Disbursement date cannot be more than 7 days in future')
+        return v
+
+
+class BankAccountInfo(BaseModel):
+    """Bank account information for disbursement"""
+    account_number: str
+    bank_name: str
+    ifsc_code: str
+    account_holder_name: str
+
+
+class EMIDetailsInfo(BaseModel):
+    """EMI details information"""
+    emi_amount: float
+    first_emi_date: str
+    last_emi_date: str
+    emi_day: int
+    total_emis: int
+
+
+class DisbursementResponse(BaseModel):
+    """Response after successful disbursement"""
+    loan_account_number: str
+    application_number: str
+    customer_id: int
+    disbursement_amount: float
+    disbursement_date: str
+    disbursement_mode: str
+    disbursement_reference: str
+    bank_account: BankAccountInfo
+    emi_details: EMIDetailsInfo
+    status: str
+    message: str
+
+
+class EMIScheduleItemResponse(BaseModel):
+    """Single EMI schedule item"""
+    installment_number: int
+    due_date: str
+    emi_amount: float
+    principal_component: float
+    interest_component: float
+    opening_principal: float
+    closing_principal: float
+    status: str
+    paid_amount: float
+    paid_principal: float
+    paid_interest: float
+    payment_date: Optional[str] = None
+    overdue_days: int
+    penal_interest: float
+
+
+class LoanAccountResponse(BaseModel):
+    """Basic loan account response"""
+    id: int
+    loan_account_number: str
+    customer_id: int
+    sanctioned_amount: float
+    disbursed_amount: float
+    total_outstanding: float
+    outstanding_principal: float
+    outstanding_interest: float
+    emi_amount: float
+    tenure_months: int
+    interest_rate: float
+    disbursement_date: str
+    next_due_date: Optional[str] = None
+    status: str
+    overdue_days: int
+    dpd: int
+    created_at: str
+
+
+class LoanAccountDetailResponse(BaseModel):
+    """Detailed loan account response"""
+    id: int
+    loan_account_number: str
+    customer_id: int
+    loan_product_id: int
+    loan_application_id: int
+    sanctioned_amount: float
+    disbursed_amount: float
+    outstanding_principal: float
+    outstanding_interest: float
+    outstanding_charges: float
+    total_outstanding: float
+    tenure_months: int
+    interest_rate: float
+    emi_amount: float
+    emi_day: int
+    disbursement_date: str
+    first_emi_date: str
+    last_emi_date: str
+    maturity_date: str
+    closure_date: Optional[str] = None
+    status: str
+    overdue_days: int
+    dpd: int
+    last_payment_date: Optional[str] = None
+    last_payment_amount: Optional[float] = None
+    next_due_date: Optional[str] = None
+    next_due_amount: Optional[float] = None
+    npa_status: Optional[str] = None
+    npa_date: Optional[str] = None
+    prepayment_allowed: bool
+    prepayment_charges_percentage: Optional[float] = None
+    penal_interest_outstanding: float
+    interest_accrued: float
+    interest_received: float
+    principal_received: float
+    internal_notes: Optional[str] = None
+    created_at: str
+    updated_at: str
+    emi_schedule: Optional[List[EMIScheduleItemResponse]] = None
+
+
+class LoanAccountListItem(BaseModel):
+    """Loan account list item"""
+    id: int
+    loan_account_number: str
+    customer_id: int
+    sanctioned_amount: float
+    disbursed_amount: float
+    total_outstanding: float
+    outstanding_principal: float
+    outstanding_interest: float
+    emi_amount: float
+    tenure_months: int
+    interest_rate: float
+    disbursement_date: str
+    next_due_date: Optional[str] = None
+    status: str
+    overdue_days: int
+    dpd: int
+    created_at: str
+
+
+class PaginationInfo(BaseModel):
+    """Pagination metadata"""
+    total: int
+    skip: int
+    limit: int
+    pages: int
+
+
+class LoanAccountListResponse(BaseModel):
+    """Loan account list with pagination"""
+    accounts: List[LoanAccountListItem]
+    pagination: PaginationInfo

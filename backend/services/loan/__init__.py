@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from .product_router import router as product_router
 from .application_router import router as application_router
 from .approval_router import router as approval_router
+from .disbursement_router import router as disbursement_router
 
 # Main loan router
 router = APIRouter(prefix="/loans", tags=["Loans"])
@@ -15,5 +16,6 @@ router = APIRouter(prefix="/loans", tags=["Loans"])
 router.include_router(product_router)
 router.include_router(application_router)
 router.include_router(approval_router)
+router.include_router(disbursement_router)
 
 __all__ = ["router"]
