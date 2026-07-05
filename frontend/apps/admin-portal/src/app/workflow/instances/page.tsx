@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import Link from 'next/link'
-import { Plus, Search, Filter, Eye, MoreVertical, FileText, CheckCircle, XCircle } from 'lucide-react'
+import { Search, Filter, Eye, MoreVertical, GitBranch, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,66 +25,37 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { accountingService } from '@/services/accounting.service'
-import { formatCurrency, formatDate, getStatusColor } from '@/lib/utils'
-import { useToast } from '@/hooks/use-toast'
-import type { JournalEntry } from '@/types'
+import { workflowService } from '@/services/workflow.service'
+import { formatDate, formatDateTime, getStatusColor } from '@/lib/utils'
+import type { WorkflowInstance } from '@/types'
 
-export default function JournalEntriesPage() {
+export default function WorkflowInstancesPage() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('')
-  const [typeFilter, setTypeFilter] = useState<string>('')
-
-  const queryClient = useQueryClient()
-  const { toast } = useToast()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['journal-entries', page, search, statusFilter, typeFilter],
-    queryFn: () => accountingService.getJournalEntries({ 
+    queryKey: ['workflow-instances', page, search, statusFilter],
+    queryFn: () => workflowService.getInstances({ 
       page, 
       page_size: 20,
-      status: statusFilter || undefined,
-      entry_type: typeFilter || undefined
+      status: statusFilter || undefined
     }),
   })
 
-  const postMutation = useMutation({
-    mutationFn: (entryId: string) => accountingService.postJournalEntry(entryId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
-      toast({
-        title: 'Entry posted',
-        description: 'Journal entry has been posted to general ledger',
-      })
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to post journal entry',
-        variant: 'destructive',
-      })
-    },
-  })
-
-  const handlePost = (entryId: string) => {
-    postMutation.mutate(entryId)
-  }
-
   // Calculate stats
   const stats = data?.data?.items?.reduce(
-    (acc, entry: JournalEntry) => {
-      if (entry.entry_status === 'draft') acc.draft++
-      else if (entry.entry_status === 'posted') acc.posted++
-      else if (entry.entry_status === 'reversed') acc.reversed++
-      
-      acc.totalDebit += entry.total_debit
-      acc.totalCredit += entry.total_credit
+    (acc, instance: WorkflowInstance) => {
+      if (instance.instance_status === 'pending') acc.pending++
+      else if (instance.instance_status === 'in_progress') acc.inProgress++
+      else if (instance.instance_status === 'completed') acc.completed++
+      else if (instance.instance_status === 'cancelled') acc.cancelled++
+      else if (instance.instance_status === 'failed') acc.failed++
       
       return acc
     },
-    { draft: 0, posted: 0, reversed: 0, totalDebit: 0, totalCredit: 0 }
-  ) || { draft: 0, posted: 0, reversed: 0, totalDebit: 0, totalCredit: 0 }
+    { pending: 0, inProgress: 0, completed: 0, cancelled: 0, failed: 0 }
+  ) || { pending: 0, inProgress: 0, completed: 0, cancelled: 0, failed: 0 }
 
   return (
     <DashboardLayout>
@@ -92,48 +63,48 @@ export default function JournalEntriesPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Journal Entries</h1>
-            <p className="text-gray-600 mt-1">Record and manage accounting journal entries</p>
+            <h1 className="text-3xl font-bold text-gray-900">Workflow Instances</h1>
+            <p className="text-gray-600 mt-1">Monitor and manage workflow execution instances</p>
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Entry
-          </Button>
+          <Link href="/workflow/templates">
+            <Button variant="outline">
+              <GitBranch className="h-4 w-4 mr-2" />
+              View Templates
+            </Button>
+          </Link>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <StatCard
-            label="Draft"
-            value={stats.draft}
-            icon={FileText}
+            label="Pending"
+            value={stats.pending}
+            icon={Clock}
             color="blue"
           />
           <StatCard
-            label="Posted"
-            value={stats.posted}
+            label="In Progress"
+            value={stats.inProgress}
+            icon={GitBranch}
+            color="purple"
+          />
+          <StatCard
+            label="Completed"
+            value={stats.completed}
             icon={CheckCircle}
             color="green"
           />
           <StatCard
-            label="Reversed"
-            value={stats.reversed}
+            label="Cancelled"
+            value={stats.cancelled}
+            icon={XCircle}
+            color="yellow"
+          />
+          <StatCard
+            label="Failed"
+            value={stats.failed}
             icon={XCircle}
             color="red"
-          />
-          <StatCard
-            label="Total Debit"
-            value={formatCurrency(stats.totalDebit)}
-            icon={FileText}
-            color="purple"
-            isAmount
-          />
-          <StatCard
-            label="Total Credit"
-            value={formatCurrency(stats.totalCredit)}
-            icon={FileText}
-            color="orange"
-            isAmount
           />
         </div>
 
@@ -143,34 +114,26 @@ export default function JournalEntriesPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               type="search"
-              placeholder="Search by entry number, narration..."
+              placeholder="Search by instance number, template..."
               className="pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-          >
-            <option value="">All Types</option>
-            <option value="Manual">Manual</option>
-            <option value="System">System</option>
-          </select>
           <Button variant="outline">
             <Filter className="h-4 w-4 mr-2" />
             More Filters
           </Button>
         </div>
 
-        {/* Entries Tabs */}
+        {/* Instances Tabs */}
         <Tabs value={statusFilter} onValueChange={setStatusFilter}>
           <TabsList>
-            <TabsTrigger value="">All Entries</TabsTrigger>
-            <TabsTrigger value="draft">Draft</TabsTrigger>
-            <TabsTrigger value="posted">Posted</TabsTrigger>
-            <TabsTrigger value="reversed">Reversed</TabsTrigger>
+            <TabsTrigger value="">All Instances</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="in_progress">In Progress</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+            <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
           </TabsList>
 
           <TabsContent value={statusFilter} className="space-y-4">
@@ -179,13 +142,13 @@ export default function JournalEntriesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Entry Number</TableHead>
-                    <TableHead>Entry Date</TableHead>
-                    <TableHead>Narration</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Debit</TableHead>
-                    <TableHead>Credit</TableHead>
+                    <TableHead>Instance Number</TableHead>
+                    <TableHead>Template</TableHead>
+                    <TableHead>Entity</TableHead>
+                    <TableHead>Current Step</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Started At</TableHead>
+                    <TableHead>Completed At</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -193,41 +156,61 @@ export default function JournalEntriesPage() {
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
                       <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                         <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                       </TableRow>
                     ))
                   ) : data?.data?.items && data.data.items.length > 0 ? (
-                    data.data.items.map((entry: JournalEntry) => (
-                      <TableRow key={entry.id}>
+                    data.data.items.map((instance: WorkflowInstance) => (
+                      <TableRow key={instance.id}>
                         <TableCell className="font-mono text-sm font-medium">
-                          {entry.entry_number}
+                          {instance.instance_number}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{instance.template_name || 'N/A'}</p>
+                            <p className="text-sm text-gray-500">
+                              ID: {instance.template_id.slice(0, 8)}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {instance.entity_type ? (
+                            <div>
+                              <Badge variant="outline">{instance.entity_type}</Badge>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {instance.entity_id?.slice(0, 8)}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {instance.current_step ? (
+                            <Badge variant="outline">{instance.current_step}</Badge>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(instance.instance_status)}>
+                            {instance.instance_status}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-gray-600">
-                          {formatDate(entry.entry_date)}
+                          {formatDateTime(instance.started_at)}
                         </TableCell>
-                        <TableCell>
-                          <p className="line-clamp-2">{entry.description}</p>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{entry.entry_type}</Badge>
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {formatCurrency(entry.total_debit)}
-                        </TableCell>
-                        <TableCell className="font-semibold">
-                          {formatCurrency(entry.total_credit)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(entry.entry_status)}>
-                            {entry.entry_status}
-                          </Badge>
+                        <TableCell className="text-sm text-gray-600">
+                          {instance.completed_at 
+                            ? formatDateTime(instance.completed_at)
+                            : '-'}
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
@@ -237,23 +220,16 @@ export default function JournalEntriesPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              {entry.entry_status === 'draft' && (
-                                <DropdownMenuItem 
-                                  onClick={() => handlePost(entry.id)}
-                                  disabled={postMutation.isPending}
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Post Entry
+                              <Link href={`/workflow/instances/${instance.id}`}>
+                                <DropdownMenuItem>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
                                 </DropdownMenuItem>
-                              )}
-                              {entry.entry_status === 'posted' && (
+                              </Link>
+                              {['pending', 'in_progress'].includes(instance.instance_status) && (
                                 <DropdownMenuItem className="text-red-600">
                                   <XCircle className="h-4 w-4 mr-2" />
-                                  Reverse Entry
+                                  Cancel Instance
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -264,11 +240,8 @@ export default function JournalEntriesPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                        <FileText className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                        <p>No journal entries found</p>
-                        <Button variant="link" className="mt-2">
-                          Create your first entry
-                        </Button>
+                        <GitBranch className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                        <p>No workflow instances found</p>
                       </TableCell>
                     </TableRow>
                   )}
@@ -279,7 +252,7 @@ export default function JournalEntriesPage() {
               {data?.data && data.data.items.length > 0 && (
                 <div className="flex items-center justify-between px-6 py-4 border-t">
                   <p className="text-sm text-gray-600">
-                    Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.metadata?.total || 0)} of {data.metadata?.total || 0} entries
+                    Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.metadata?.total || 0)} of {data.metadata?.total || 0} instances
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -313,14 +286,12 @@ function StatCard({
   label, 
   value, 
   icon: Icon,
-  color = 'blue',
-  isAmount = false
+  color = 'blue'
 }: { 
   label: string
-  value: number | string
+  value: number
   icon: any
-  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'orange'
-  isAmount?: boolean
+  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple'
 }) {
   const colors = {
     blue: 'bg-blue-100 text-blue-600',
@@ -328,7 +299,6 @@ function StatCard({
     yellow: 'bg-yellow-100 text-yellow-600',
     red: 'bg-red-100 text-red-600',
     purple: 'bg-purple-100 text-purple-600',
-    orange: 'bg-orange-100 text-orange-600',
   }
 
   return (
@@ -337,9 +307,7 @@ function StatCard({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-600 mb-1">{label}</p>
-            <p className={`${isAmount ? 'text-xl' : 'text-2xl'} font-bold text-gray-900`}>
-              {value}
-            </p>
+            <p className="text-2xl font-bold text-gray-900">{value}</p>
           </div>
           <div className={`h-12 w-12 rounded-lg ${colors[color]} flex items-center justify-center`}>
             <Icon className="h-6 w-6" />
