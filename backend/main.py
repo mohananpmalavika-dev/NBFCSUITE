@@ -203,9 +203,11 @@ async def liveness_check() -> Dict[str, Any]:
 
 # Import routers
 from services.auth.router import router as auth_router
+from services.masterdata.router import router as masterdata_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(masterdata_router, prefix="/api/v1/masterdata", tags=["Master Data"])
 
 # Additional routers (to be created)
 # from services.customer.router import router as customer_router
