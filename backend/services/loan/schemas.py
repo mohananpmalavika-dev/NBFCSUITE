@@ -660,3 +660,323 @@ class LoanAccountListResponse(BaseModel):
     """Loan account list with pagination"""
     accounts: List[LoanAccountListItem]
     pagination: PaginationInfo
+
+
+# ============================================================================
+# REPAYMENT & COLLECTION SCHEMAS
+# ============================================================================
+
+class PaymentMode(str, Enum):
+    """Payment mode options"""
+    CASH = "cash"
+    CHEQUE = "cheque"
+    NEFT = "neft"
+    RTGS = "rtgs"
+    UPI = "upi"
+    IMPS = "imps"
+
+
+class PaymentRecordRequest(BaseModel):
+    """Request schema for recording a payment"""
+    account_id: Optional[int] = Field(None, description="Loan account ID")
+    account_number: Optional[str] = Field(None, description="Loan account number")
+    payment_amount: Decimal = Field(..., gt=0, description="Payment amount")
+    payment_date: Optional[date] = Field(None, description="Payment date (default: today)")
+    payment_mode: PaymentMode = Field(..., description="Mode of payment")
+    reference_number: Optional[str] = Field(None, max_length=100, description="Transaction reference")
+    bank_name: Optional[str] = Field(None, max_length=200, description="Bank name")
+    transaction_date: Optional[date] = Field(None, description="Transaction date")
+    remarks: Optional[str] = Field(None, max_length=500, description="Optional remarks")
+    collected_by: Optional[int] = Field(None, description="User ID who collected payment")
+    
+    @root_validator
+    def validate_account_identifier(cls, values):
+        if not values.get('account_id') and not values.get('account_number'):
+            raise ValueError('Either account_id or account_number must be provided')
+        return values
+
+
+class PaymentAllocation(BaseModel):
+    """Payment allocation breakdown"""
+    penal_interest: float
+    interest: float
+    principal: float
+    charges: float
+    total: float
+
+
+class PaymentRecordResponse(BaseModel):
+    """Response after recording payment"""
+    payment_id: int
+    receipt_number: str
+    loan_account_number: str
+    payment_amount: float
+    payment_date: str
+    payment_mode: str
+    allocation: PaymentAllocation
+    remaining_amount: float
+    emis_updated: int
+    status: str
+    message: str
+
+
+class PaymentHistoryItem(BaseModel):
+    """Single payment history item"""
+    id: int
+    receipt_number: str
+    payment_date: str
+    payment_amount: float
+    payment_mode: str
+    allocated_to_principal: float
+    allocated_to_interest: float
+    allocated_to_penal_interest: float
+    allocated_to_charges: float
+    reference_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    status: str
+    receipt_generated: bool
+    remarks: Optional[str] = None
+    created_at: str
+
+
+class PaymentHistoryResponse(BaseModel):
+    """Payment history with pagination"""
+    loan_account_number: str
+    payments: List[PaymentHistoryItem]
+    pagination: PaginationInfo
+
+
+class ReceiptAllocation(BaseModel):
+    """Receipt allocation details"""
+    principal: float
+    interest: float
+    penal_interest: float
+    charges: float
+    total: float
+
+
+class ReceiptResponse(BaseModel):
+    """Payment receipt details"""
+    receipt_number: str
+    receipt_date: str
+    loan_account_number: Optional[str] = None
+    payment_date: str
+    payment_amount: float
+    payment_mode: str
+    reference_number: Optional[str] = None
+    bank_name: Optional[str] = None
+    transaction_date: Optional[str] = None
+    allocation: ReceiptAllocation
+    status: str
+    remarks: Optional[str] = None
+
+
+class OverdueAccountItem(BaseModel):
+    """Single overdue account item"""
+    loan_account_id: int
+    loan_account_number: str
+    customer_id: int
+    sanctioned_amount: float
+    total_outstanding: float
+    outstanding_principal: float
+    outstanding_interest: float
+    penal_interest_outstanding: float
+    overdue_days: int
+    dpd: int
+    dpd_bucket: str
+    npa_status: Optional[str] = None
+    overdue_emis_count: int
+    overdue_emi_amount: float
+    last_payment_date: Optional[str] = None
+    last_payment_amount: Optional[float] = None
+    status: str
+    disbursement_date: str
+
+
+class OverdueAccountsResponse(BaseModel):
+    """Overdue accounts list with pagination"""
+    overdue_accounts: List[OverdueAccountItem]
+    pagination: PaginationInfo
+
+
+class CollectionQueueItem(BaseModel):
+    """Single collection queue item"""
+    loan_account_id: int
+    loan_account_number: str
+    customer_id: int
+    dpd: int
+    dpd_bucket: str
+    npa_status: Optional[str] = None
+    total_outstanding: float
+    overdue_amount: float
+    overdue_emis_count: int
+    penal_interest: float
+    last_payment_date: Optional[str] = None
+    priority: str
+
+
+class CollectionQueueSummary(BaseModel):
+    """Collection queue summary"""
+    total_accounts: int
+    high_priority: int
+    medium_priority: int
+    low_priority: int
+    total_overdue_amount: float
+    total_penal_interest: float
+
+
+class CollectionQueueResponse(BaseModel):
+    """Collection queue with summary"""
+    queue: List[CollectionQueueItem]
+    summary: CollectionQueueSummary
+
+
+class DPDBucketDistribution(BaseModel):
+    """DPD bucket distribution"""
+    current: int
+    bucket_1_30: int
+    bucket_31_60: int
+    bucket_61_90: int
+    bucket_91_180: int
+    bucket_180_plus: int
+
+
+class NPADistribution(BaseModel):
+    """NPA classification distribution"""
+    standard: int
+    sub_standard: int
+    doubtful: int
+    loss: int
+
+
+class CollectionStatisticsResponse(BaseModel):
+    """Collection statistics and metrics"""
+    total_accounts: int
+    overdue_accounts: int
+    overdue_percentage: float
+    total_portfolio: float
+    overdue_portfolio: float
+    overdue_portfolio_percentage: float
+    total_penal_interest: float
+    collection_efficiency: float
+    dpd_bucket_distribution: Dict[str, int]
+    npa_distribution: Dict[str, int]
+
+
+class PrepaymentCalculationResponse(BaseModel):
+    """Prepayment calculation response"""
+    loan_account_number: str
+    prepayment_date: str
+    outstanding_principal: float
+    outstanding_interest: float
+    outstanding_penal_interest: float
+    outstanding_charges: float
+    prepayment_charges: float
+    prepayment_charges_percentage: float
+    total_prepayment_amount: float
+    interest_savings: float
+    pending_emis_count: int
+    tenure_remaining: int
+    prepayment_allowed: bool
+    message: str
+
+
+class PartialPrepaymentRequest(BaseModel):
+    """Request for partial prepayment calculation"""
+    account_id: Optional[int] = Field(None, description="Loan account ID")
+    account_number: Optional[str] = Field(None, description="Loan account number")
+    prepayment_amount: Decimal = Field(..., gt=0, description="Amount to prepay")
+    reduce_emi: bool = Field(True, description="True = reduce EMI, False = reduce tenure")
+    
+    @root_validator
+    def validate_account_identifier(cls, values):
+        if not values.get('account_id') and not values.get('account_number'):
+            raise ValueError('Either account_id or account_number must be provided')
+        return values
+
+
+class CurrentValues(BaseModel):
+    """Current loan values"""
+    outstanding_principal: float
+    emi_amount: float
+    tenure_remaining: int
+
+
+class NewValues(BaseModel):
+    """New loan values after prepayment"""
+    outstanding_principal: float
+    emi_amount: float
+    tenure_remaining: int
+
+
+class PrepaymentImpact(BaseModel):
+    """Impact of prepayment"""
+    emi_reduction: float
+    tenure_reduction_months: int
+    interest_savings: float
+
+
+class PartialPrepaymentResponse(BaseModel):
+    """Partial prepayment calculation response"""
+    loan_account_number: str
+    prepayment_amount: float
+    prepayment_charges: float
+    net_prepayment_towards_principal: float
+    current_values: CurrentValues
+    new_values: NewValues
+    impact: PrepaymentImpact
+    option_selected: str
+    recommendation: str
+
+
+class ForeclosureRequest(BaseModel):
+    """Request for loan foreclosure"""
+    account_id: Optional[int] = Field(None, description="Loan account ID")
+    account_number: Optional[str] = Field(None, description="Loan account number")
+    foreclosure_amount: Decimal = Field(..., gt=0, description="Foreclosure payment amount")
+    foreclosure_date: Optional[date] = Field(None, description="Date of foreclosure (default: today)")
+    payment_mode: PaymentMode = Field(..., description="Mode of payment")
+    reference_number: Optional[str] = Field(None, max_length=100, description="Payment reference")
+    remarks: Optional[str] = Field(None, max_length=500, description="Optional remarks")
+    
+    @root_validator
+    def validate_account_identifier(cls, values):
+        if not values.get('account_id') and not values.get('account_number'):
+            raise ValueError('Either account_id or account_number must be provided')
+        return values
+
+
+class ForeclosureResponse(BaseModel):
+    """Foreclosure confirmation response"""
+    loan_account_number: str
+    customer_id: int
+    foreclosure_date: str
+    foreclosure_amount: float
+    payment_mode: str
+    reference_number: Optional[str] = None
+    original_loan_amount: float
+    disbursement_date: str
+    total_emis_paid: int
+    emis_cancelled: int
+    interest_savings: float
+    status: str
+    noc_generated: bool
+    message: str
+
+
+class NOCResponse(BaseModel):
+    """No Objection Certificate response"""
+    noc_number: str
+    noc_date: str
+    loan_account_number: str
+    customer_id: int
+    loan_amount: float
+    disbursement_date: str
+    closure_date: Optional[str] = None
+    total_amount_paid: float
+    principal_paid: float
+    interest_paid: float
+    status: str
+    outstanding_amount: float
+    declaration: str
+    generated_date: str
