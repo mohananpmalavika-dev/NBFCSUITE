@@ -35,11 +35,34 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.APP_ENV}")
     logger.info(f"Multi-tenant: {settings.TENANT_ISOLATION_ENABLED}")
     
-    # Skip automatic table creation in production - use Alembic migrations instead
-    # async with engine.begin() as conn:
-    #     await conn.run_sync(Base.metadata.create_all)
+    # Run Alembic migrations on startup
+    try:
+        import subprocess
+        import os
+        
+        logger.info("🔄 Running database migrations...")
+        # Change to backend directory where alembic.ini is located
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        result = subprocess.run(
+            ["alembic", "upgrade", "head"],
+            cwd=backend_dir,
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        
+        if result.returncode == 0:
+            logger.info("✅ Database migrations completed successfully")
+            logger.info(result.stdout)
+        else:
+            logger.warning(f"⚠️  Migration warning: {result.stderr}")
+            # Don't fail startup if migrations have issues
+            
+    except Exception as e:
+        logger.warning(f"⚠️  Could not run migrations: {e}")
+        # Continue startup anyway
     
-    logger.info("✅ Database connection ready (use Alembic for migrations)")
+    logger.info("✅ Database connection ready")
     logger.info("✅ Application startup complete")
     
     yield
