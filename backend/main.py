@@ -207,6 +207,7 @@ from services.masterdata.router import router as masterdata_router
 from services.customer.router import router as customer_router
 from services.loan import router as loan_router
 from services.accounting.router import router as accounting_router
+from services.deposit import product_router, account_router, interest_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -214,6 +215,11 @@ app.include_router(masterdata_router, prefix="/api/v1/masterdata", tags=["Master
 app.include_router(customer_router, prefix="/api/v1/customers", tags=["Customers"])
 app.include_router(loan_router, prefix="/api/v1", tags=["Loans"])
 app.include_router(accounting_router, prefix="/api/v1", tags=["Accounting"])
+
+# Deposit Management Routers
+app.include_router(product_router, prefix="/api/v1", tags=["Deposit Products"])
+app.include_router(account_router, prefix="/api/v1", tags=["Deposit Accounts"])
+app.include_router(interest_router, prefix="/api/v1", tags=["Deposit Interest"])
 
 # Additional routers (to be created)
 # from services.workflow.router import router as workflow_router
