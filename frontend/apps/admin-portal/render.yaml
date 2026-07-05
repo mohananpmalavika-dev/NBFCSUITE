@@ -1,0 +1,14 @@
+# Render configuration for NBFC Suite Frontend
+services:
+  - type: web
+    name: nbfc-frontend
+    env: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: .next
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_ENV
+        value: production
