@@ -35,11 +35,11 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.APP_ENV}")
     logger.info(f"Multi-tenant: {settings.TENANT_ISOLATION_ENABLED}")
     
-    # Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Skip automatic table creation in production - use Alembic migrations instead
+    # async with engine.begin() as conn:
+    #     await conn.run_sync(Base.metadata.create_all)
     
-    logger.info("✅ Database tables created/verified")
+    logger.info("✅ Database connection ready (use Alembic for migrations)")
     logger.info("✅ Application startup complete")
     
     yield
