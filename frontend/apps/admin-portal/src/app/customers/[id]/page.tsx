@@ -1,498 +1,273 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useQuery } from '@tanstack/react-query'
+import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { 
   ArrowLeft, 
   Edit, 
-  Ban, 
-  CheckCircle,
-  User,
-  Phone,
-  Mail,
-  MapPin,
-  Briefcase,
+  Phone, 
+  Mail, 
+  MapPin, 
+  Calendar,
   FileText,
-  Users,
-  Building2,
-  AlertTriangle,
-  TrendingUp
-} from "lucide-react";
-
-interface Customer {
-  id: number;
-  customer_code: string;
-  customer_type: string;
-  full_name: string;
-  first_name?: string;
-  middle_name?: string;
-  last_name?: string;
-  email?: string;
-  mobile: string;
-  alternate_mobile?: string;
-  pan_number?: string;
-  aadhaar_number?: string;
-  date_of_birth?: string;
-  age?: number;
-  gender?: string;
-  marital_status?: string;
-  father_name?: string;
-  mother_name?: string;
-  occupation_name?: string;
-  industry_name?: string;
-  monthly_income?: number;
-  current_address_line1?: string;
-  current_city_name?: string;
-  current_state_name?: string;
-  current_pincode?: string;
-  kyc_status: string;
-  risk_rating: string;
-  cibil_score?: number;
-  is_active: boolean;
-  is_blacklisted: boolean;
-  blacklist_reason?: string;
-  created_at: string;
-}
+  CreditCard,
+  User
+} from 'lucide-react'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { customerService } from '@/services/customer.service'
+import { formatDate, formatPhone, getStatusColor, maskString } from '@/lib/utils'
 
 export default function CustomerDetailPage() {
-  const router = useRouter();
-  const params = useParams();
-  const customerId = params?.id as string;
-  
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const params = useParams()
+  const customerId = params.id as string
 
-  useEffect(() => {
-    if (customerId) {
-      fetchCustomer();
-    }
-  }, [customerId]);
+  const { data: customer, isLoading } = useQuery({
+    queryKey: ['customer', customerId],
+    queryFn: () => customerService.getCustomer(customerId),
+  })
 
-  const fetchCustomer = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/v1/customers/${customerId}`, {
-        headers: { "Content-Type": "application/json" }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCustomer(data);
-      }
-    } catch (error) {
-      console.error("Error fetching customer:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleBlacklist = async () => {
-    const reason = prompt("Enter reason for blacklisting:");
-    if (!reason) return;
-
-    try {
-      const response = await fetch(`/api/v1/customers/${customerId}/blacklist?reason=${encodeURIComponent(reason)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
-
-      if (response.ok) {
-        alert("Customer blacklisted successfully");
-        fetchCustomer();
-      }
-    } catch (error) {
-      console.error("Error blacklisting customer:", error);
-      alert("Failed to blacklist customer");
-    }
-  };
-
-  const handleUnblacklist = async () => {
-    if (!confirm("Remove customer from blacklist?")) return;
-
-    try {
-      const response = await fetch(`/api/v1/customers/${customerId}/unblacklist`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }
-      });
-
-      if (response.ok) {
-        alert("Customer removed from blacklist");
-        fetchCustomer();
-      }
-    } catch (error) {
-      console.error("Error unblacklisting customer:", error);
-      alert("Failed to remove from blacklist");
-    }
-  };
-
-  const getKYCBadge = (status: string) => {
-    const badges = {
-      pending: { bg: "bg-yellow-100", text: "text-yellow-800", label: "Pending" },
-      in_progress: { bg: "bg-blue-100", text: "text-blue-800", label: "In Progress" },
-      completed: { bg: "bg-green-100", text: "text-green-800", label: "Completed" },
-      rejected: { bg: "bg-red-100", text: "text-red-800", label: "Rejected" }
-    };
-    const badge = badges[status as keyof typeof badges] || badges.pending;
+  if (isLoading) {
     return (
-      <span className={`px-3 py-1 text-sm font-medium rounded-full ${badge.bg} ${badge.text}`}>
-        {badge.label}
-      </span>
-    );
-  };
-
-  const getRiskBadge = (rating: string) => {
-    const badges = {
-      low: { bg: "bg-green-100", text: "text-green-800", label: "Low Risk" },
-      medium: { bg: "bg-yellow-100", text: "text-yellow-800", label: "Medium Risk" },
-      high: { bg: "bg-orange-100", text: "text-orange-800", label: "High Risk" },
-      very_high: { bg: "bg-red-100", text: "text-red-800", label: "Very High Risk" }
-    };
-    const badge = badges[rating as keyof typeof badges] || badges.medium;
-    return (
-      <span className={`px-3 py-1 text-sm font-medium rounded-full ${badge.bg} ${badge.text}`}>
-        {badge.label}
-      </span>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!customer) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Customer Not Found</h2>
-          <p className="text-gray-600 mb-4">The customer you're looking for doesn't exist.</p>
-          <button
-            onClick={() => router.push("/customers")}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Back to Customers
-          </button>
+      <DashboardLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-48 w-full" />
         </div>
-      </div>
-    );
+      </DashboardLayout>
+    )
   }
+
+  if (!customer?.data) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <p className="text-gray-600">Customer not found</p>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  const customerData = customer.data
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.back()}
-                className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{customer.full_name}</h1>
-                <p className="text-sm text-gray-600 font-mono">{customer.customer_code}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {customer.is_blacklisted ? (
-                <button
-                  onClick={handleUnblacklist}
-                  className="flex items-center gap-2 px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Remove Blacklist
-                </button>
-              ) : (
-                <button
-                  onClick={handleBlacklist}
-                  className="flex items-center gap-2 px-4 py-2 border border-red-600 text-red-600 rounded-lg hover:bg-red-50"
-                >
-                  <Ban className="w-4 h-4" />
-                  Blacklist
-                </button>
-              )}
-              <button
-                onClick={() => router.push(`/customers/${customerId}/edit`)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Edit className="w-4 h-4" />
-                Edit
-              </button>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/customers">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {customerData.full_name}
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Customer Code: {customerData.customer_code}
+              </p>
             </div>
           </div>
+          <Link href={`/customers/${customerId}/edit`}>
+            <Button>
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Customer
+            </Button>
+          </Link>
         </div>
-      </div>
 
-      {/* Status Bar */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">KYC Status:</span>
-              {getKYCBadge(customer.kyc_status)}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Risk Rating:</span>
-              {getRiskBadge(customer.risk_rating)}
-            </div>
-            {customer.cibil_score && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">CIBIL:</span>
-                <span className={`text-lg font-bold ${
-                  customer.cibil_score >= 750 ? 'text-green-600' :
-                  customer.cibil_score >= 650 ? 'text-yellow-600' :
-                  'text-red-600'
-                }`}>
-                  {customer.cibil_score}
-                </span>
+        {/* Status Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Customer Status</p>
+                  <Badge className={`mt-2 ${getStatusColor(customerData.customer_status)}`}>
+                    {customerData.customer_status}
+                  </Badge>
+                </div>
+                <User className="h-8 w-8 text-gray-400" />
               </div>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Status:</span>
-              {customer.is_active ? (
-                <span className="flex items-center gap-1 text-sm font-medium text-green-700">
-                  <CheckCircle className="w-4 h-4" />
-                  Active
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-sm font-medium text-red-700">
-                  <Ban className="w-4 h-4" />
-                  Inactive
-                </span>
-              )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">KYC Status</p>
+                  <Badge className={`mt-2 ${getStatusColor(customerData.kyc_status)}`}>
+                    {customerData.kyc_status}
+                  </Badge>
+                </div>
+                <FileText className="h-8 w-8 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Registered On</p>
+                  <p className="text-lg font-semibold mt-1">
+                    {formatDate(customerData.created_at)}
+                  </p>
+                </div>
+                <Calendar className="h-8 w-8 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-8">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'overview'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('kyc')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'kyc'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              KYC
-            </button>
-            <button
-              onClick={() => router.push(`/customers/${customerId}/documents`)}
-              className="py-4 px-2 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
-            >
-              Documents
-            </button>
-            <button
-              onClick={() => router.push(`/customers/${customerId}/family`)}
-              className="py-4 px-2 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
-            >
-              Family
-            </button>
-            <button
-              onClick={() => router.push(`/customers/${customerId}/accounts`)}
-              className="py-4 px-2 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
-            >
-              Accounts
-            </button>
-          </div>
-        </div>
-      </div>
+        {/* Tabs */}
+        <Tabs defaultValue="personal" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="personal">Personal Information</TabsTrigger>
+            <TabsTrigger value="contact">Contact Details</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="accounts">Accounts</TabsTrigger>
+          </TabsList>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Personal Information */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <User className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Personal Information</h2>
-              </div>
-              <dl className="space-y-3">
-                <div className="flex justify-between">
-                  <dt className="text-sm text-gray-600">Full Name</dt>
-                  <dd className="text-sm font-medium text-gray-900">{customer.full_name}</dd>
+          {/* Personal Information */}
+          <TabsContent value="personal" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InfoItem label="Full Name" value={customerData.full_name} />
+                  <InfoItem label="First Name" value={customerData.first_name} />
+                  <InfoItem label="Middle Name" value={customerData.middle_name || '-'} />
+                  <InfoItem label="Last Name" value={customerData.last_name} />
+                  <InfoItem label="Date of Birth" value={formatDate(customerData.date_of_birth)} />
+                  <InfoItem label="Gender" value={customerData.gender} />
+                  <InfoItem label="Marital Status" value={customerData.marital_status} />
                 </div>
-                {customer.date_of_birth && (
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-gray-600">Date of Birth</dt>
-                    <dd className="text-sm font-medium text-gray-900">
-                      {new Date(customer.date_of_birth).toLocaleDateString('en-IN')}
-                      {customer.age && ` (${customer.age} years)`}
-                    </dd>
-                  </div>
-                )}
-                {customer.gender && (
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-gray-600">Gender</dt>
-                    <dd className="text-sm font-medium text-gray-900 capitalize">{customer.gender}</dd>
-                  </div>
-                )}
-                {customer.marital_status && (
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-gray-600">Marital Status</dt>
-                    <dd className="text-sm font-medium text-gray-900 capitalize">{customer.marital_status}</dd>
-                  </div>
-                )}
-                {customer.father_name && (
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-gray-600">Father's Name</dt>
-                    <dd className="text-sm font-medium text-gray-900">{customer.father_name}</dd>
-                  </div>
-                )}
-                {customer.mother_name && (
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-gray-600">Mother's Name</dt>
-                    <dd className="text-sm font-medium text-gray-900">{customer.mother_name}</dd>
-                  </div>
-                )}
-              </dl>
-            </div>
+              </CardContent>
+            </Card>
 
-            {/* Contact Information */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Phone className="w-5 h-5 text-green-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Contact Information</h2>
-              </div>
-              <dl className="space-y-3">
-                <div className="flex justify-between">
-                  <dt className="text-sm text-gray-600">Mobile</dt>
-                  <dd className="text-sm font-medium text-gray-900">{customer.mobile}</dd>
+            <Card>
+              <CardHeader>
+                <CardTitle>Identity Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InfoItem 
+                    label="PAN Number" 
+                    value={customerData.pan_number ? maskString(customerData.pan_number, 4) : '-'}
+                    icon={CreditCard}
+                  />
+                  <InfoItem 
+                    label="Aadhaar Number" 
+                    value={customerData.aadhaar_number ? maskString(customerData.aadhaar_number, 4) : '-'}
+                    icon={CreditCard}
+                  />
                 </div>
-                {customer.alternate_mobile && (
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-gray-600">Alternate Mobile</dt>
-                    <dd className="text-sm font-medium text-gray-900">{customer.alternate_mobile}</dd>
-                  </div>
-                )}
-                {customer.email && (
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-gray-600">Email</dt>
-                    <dd className="text-sm font-medium text-gray-900">{customer.email}</dd>
-                  </div>
-                )}
-              </dl>
-            </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            {/* Identity Information */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="w-5 h-5 text-purple-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Identity Information</h2>
-              </div>
-              <dl className="space-y-3">
-                {customer.pan_number && (
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-gray-600">PAN Number</dt>
-                    <dd className="text-sm font-medium text-gray-900 font-mono">{customer.pan_number}</dd>
-                  </div>
-                )}
-                {customer.aadhaar_number && (
-                  <div className="flex justify-between">
-                    <dt className="text-sm text-gray-600">Aadhaar Number</dt>
-                    <dd className="text-sm font-medium text-gray-900 font-mono">
-                      {customer.aadhaar_number.replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3')}
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-
-            {/* Occupation & Income */}
-            {(customer.occupation_name || customer.monthly_income) && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Briefcase className="w-5 h-5 text-orange-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Occupation & Income</h2>
+          {/* Contact Details */}
+          <TabsContent value="contact" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Contact Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <InfoItem 
+                    label="Mobile Number" 
+                    value={formatPhone(customerData.mobile_number)}
+                    icon={Phone}
+                  />
+                  <InfoItem 
+                    label="Email Address" 
+                    value={customerData.email || '-'}
+                    icon={Mail}
+                  />
                 </div>
-                <dl className="space-y-3">
-                  {customer.occupation_name && (
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Occupation</dt>
-                      <dd className="text-sm font-medium text-gray-900">{customer.occupation_name}</dd>
-                    </div>
-                  )}
-                  {customer.industry_name && (
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Industry</dt>
-                      <dd className="text-sm font-medium text-gray-900">{customer.industry_name}</dd>
-                    </div>
-                  )}
-                  {customer.monthly_income && (
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Monthly Income</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        ₹{customer.monthly_income.toLocaleString('en-IN')}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </div>
-            )}
+              </CardContent>
+            </Card>
 
-            {/* Address */}
-            {customer.current_address_line1 && (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:col-span-2">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin className="w-5 h-5 text-red-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Current Address</h2>
-                </div>
-                <p className="text-sm text-gray-900">
-                  {customer.current_address_line1}
-                  {customer.current_city_name && `, ${customer.current_city_name}`}
-                  {customer.current_state_name && `, ${customer.current_state_name}`}
-                  {customer.current_pincode && ` - ${customer.current_pincode}`}
-                </p>
-              </div>
-            )}
-
-            {/* Blacklist Warning */}
-            {customer.is_blacklisted && customer.blacklist_reason && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 lg:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Address</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <MapPin className="h-5 w-5 text-gray-400 mt-1" />
                   <div>
-                    <h3 className="text-sm font-semibold text-red-900 mb-1">Customer Blacklisted</h3>
-                    <p className="text-sm text-red-700">{customer.blacklist_reason}</p>
+                    <p className="text-gray-900">No address information available</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Add address details in customer profile
+                    </p>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* KYC Tab Content (placeholder) */}
-        {activeTab === 'kyc' && (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              KYC Section
-            </h3>
-            <p className="text-sm text-gray-600">
-              KYC management features coming soon. This will include PAN verification, Aadhaar validation, and more.
-            </p>
-          </div>
-        )}
+          {/* Documents */}
+          <TabsContent value="documents">
+            <Card>
+              <CardHeader>
+                <CardTitle>Uploaded Documents</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-gray-500">
+                  <FileText className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                  <p>No documents uploaded</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Accounts */}
+          <TabsContent value="accounts">
+            <Card>
+              <CardHeader>
+                <CardTitle>Loan & Deposit Accounts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8 text-gray-500">
+                  <CreditCard className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                  <p>No accounts found</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </DashboardLayout>
+  )
+}
+
+function InfoItem({ 
+  label, 
+  value, 
+  icon: Icon 
+}: { 
+  label: string
+  value: string
+  icon?: any 
+}) {
+  return (
+    <div>
+      <p className="text-sm text-gray-600 mb-1">{label}</p>
+      <div className="flex items-center gap-2">
+        {Icon && <Icon className="h-4 w-4 text-gray-400" />}
+        <p className="text-gray-900 font-medium">{value}</p>
       </div>
     </div>
-  );
+  )
 }

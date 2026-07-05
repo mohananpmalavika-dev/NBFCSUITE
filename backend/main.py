@@ -69,6 +69,7 @@ app = FastAPI(
         {"name": "Workflow", "description": "Enterprise workflow engine"},
         {"name": "Rules", "description": "Business rules engine"},
         {"name": "Decision", "description": "Instant decision engine"},
+        {"name": "Notifications", "description": "Multi-channel notifications"},
         {"name": "Compliance", "description": "RBI compliance and reporting"},
     ]
 )
@@ -211,6 +212,7 @@ from backend.services.deposit import product_router, account_router, interest_ro
 from backend.services.workflow import template_router, instance_router, task_router
 from backend.services.rules import category_router, evaluation_router, decision_router as rules_decision_router
 from backend.services.decision import router as decision_router
+from backend.services.notification import router as notification_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -236,6 +238,9 @@ app.include_router(rules_decision_router, prefix="/api/v1", tags=["Rule Decision
 
 # Decision Engine Router
 app.include_router(decision_router, prefix="/api/v1", tags=["Decision Engine"])
+
+# Notification Service Router
+app.include_router(notification_router, prefix="/api/v1", tags=["Notifications"])
 
 # ============================================
 # STARTUP MESSAGE

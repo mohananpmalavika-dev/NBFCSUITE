@@ -1,402 +1,283 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, User, Phone, Mail, MapPin, Briefcase } from "lucide-react";
+import { useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft, Loader2 } from 'lucide-react'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useToast } from '@/hooks/use-toast'
+import { customerService } from '@/services/customer.service'
+import { GENDER_OPTIONS, MARITAL_STATUS_OPTIONS } from '@/lib/constants'
 
 export default function NewCustomerPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const router = useRouter()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
-    customer_type: "individual",
-    first_name: "",
-    middle_name: "",
-    last_name: "",
-    business_name: "",
-    email: "",
-    mobile: "",
-    alternate_mobile: "",
-    pan_number: "",
-    aadhaar_number: "",
-    date_of_birth: "",
-    gender: "",
-    marital_status: "",
-    father_name: "",
-    mother_name: "",
-  });
+    first_name: '',
+    middle_name: '',
+    last_name: '',
+    date_of_birth: '',
+    gender: '',
+    marital_status: '',
+    mobile_number: '',
+    email: '',
+    pan_number: '',
+    aadhaar_number: '',
+  })
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const createMutation = useMutation({
+    mutationFn: (data: any) => customerService.createCustomer(data),
+    onSuccess: (response) => {
+      toast({
+        title: 'Success',
+        description: 'Customer created successfully',
+      })
+      router.push(`/customers/${response.data?.id}`)
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create customer',
+        variant: 'destructive',
+      })
+    },
+  })
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }
 
-    try {
-      const response = await fetch("/api/v1/customers", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Add auth token from localStorage/cookie
-          // "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to create customer");
-      }
-
-      const customer = await response.json();
-      
-      // Show success message (you can add toast notification here)
-      alert("Customer created successfully!");
-      
-      // Redirect to customer detail page
-      router.push(`/customers/${customer.id}`);
-    } catch (error) {
-      console.error("Error creating customer:", error);
-      alert(error instanceof Error ? error.message : "Failed to create customer");
-    } finally {
-      setLoading(false);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // Basic validation
+    if (!formData.first_name || !formData.last_name || !formData.mobile_number) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      })
+      return
     }
-  };
 
-  const isIndividual = formData.customer_type === "individual";
+    createMutation.mutate(formData)
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <DashboardLayout>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.back()}
-              className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
+            <Link href="/customers">
+              <Button type="button" variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Add New Customer</h1>
-              <p className="text-sm text-gray-600">Enter customer details to create a new profile</p>
+              <h1 className="text-3xl font-bold text-gray-900">Add New Customer</h1>
+              <p className="text-gray-600 mt-1">Create a new customer profile</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Form */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Customer Type */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Customer Type</h2>
-            <select
-              name="customer_type"
-              value={formData.customer_type}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="individual">Individual</option>
-              <option value="proprietorship">Proprietorship</option>
-              <option value="partnership">Partnership</option>
-              <option value="private_limited">Private Limited</option>
-            </select>
-          </div>
-
-          {/* Basic Information */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <User className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Basic Information</h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {isIndividual ? (
+          <div className="flex gap-2">
+            <Link href="/customers">
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </Link>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? (
                 <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      First Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="first_name"
-                      value={formData.first_name}
-                      onChange={handleChange}
-                      required={isIndividual}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter first name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Middle Name
-                    </label>
-                    <input
-                      type="text"
-                      name="middle_name"
-                      value={formData.middle_name}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter middle name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Last Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="last_name"
-                      value={formData.last_name}
-                      onChange={handleChange}
-                      required={isIndividual}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter last name"
-                    />
-                  </div>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
                 </>
               ) : (
-                <div className="md:col-span-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Business Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="business_name"
-                    value={formData.business_name}
-                    onChange={handleChange}
-                    required={!isIndividual}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter business name"
-                  />
-                </div>
+                'Create Customer'
               )}
-
-              {isIndividual && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date of Birth
-                    </label>
-                    <input
-                      type="date"
-                      name="date_of_birth"
-                      value={formData.date_of_birth}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Gender
-                    </label>
-                    <select
-                      name="gender"
-                      value={formData.gender}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Marital Status
-                    </label>
-                    <select
-                      name="marital_status"
-                      value={formData.marital_status}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Select Status</option>
-                      <option value="single">Single</option>
-                      <option value="married">Married</option>
-                      <option value="divorced">Divorced</option>
-                      <option value="widowed">Widowed</option>
-                    </select>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {isIndividual && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Father's Name
-                  </label>
-                  <input
-                    type="text"
-                    name="father_name"
-                    value={formData.father_name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter father's name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mother's Name
-                  </label>
-                  <input
-                    type="text"
-                    name="mother_name"
-                    value={formData.mother_name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter mother's name"
-                  />
-                </div>
-              </div>
-            )}
+            </Button>
           </div>
+        </div>
 
-          {/* Contact Information */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Phone className="w-5 h-5 text-green-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Contact Information</h2>
+        {/* Personal Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Personal Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="first_name">
+                  First Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="first_name"
+                  value={formData.first_name}
+                  onChange={(e) => handleChange('first_name', e.target.value)}
+                  placeholder="Enter first name"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="middle_name">Middle Name</Label>
+                <Input
+                  id="middle_name"
+                  value={formData.middle_name}
+                  onChange={(e) => handleChange('middle_name', e.target.value)}
+                  placeholder="Enter middle name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="last_name">
+                  Last Name <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="last_name"
+                  value={formData.last_name}
+                  onChange={(e) => handleChange('last_name', e.target.value)}
+                  placeholder="Enter last name"
+                  required
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mobile Number <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  name="mobile"
-                  value={formData.mobile}
-                  onChange={handleChange}
+              <div className="space-y-2">
+                <Label htmlFor="date_of_birth">
+                  Date of Birth <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="date_of_birth"
+                  type="date"
+                  value={formData.date_of_birth}
+                  onChange={(e) => handleChange('date_of_birth', e.target.value)}
                   required
-                  maxLength={10}
-                  pattern="[0-9]{10}"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="10-digit mobile"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Alternate Mobile
-                </label>
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="gender">
+                  Gender <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  id="gender"
+                  value={formData.gender}
+                  onChange={(e) => handleChange('gender', e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Select gender</option>
+                  {GENDER_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="marital_status">
+                  Marital Status <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  id="marital_status"
+                  value={formData.marital_status}
+                  onChange={(e) => handleChange('marital_status', e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Select status</option>
+                  {MARITAL_STATUS_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Contact Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="mobile_number">
+                  Mobile Number <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="mobile_number"
                   type="tel"
-                  name="alternate_mobile"
-                  value={formData.alternate_mobile}
-                  onChange={handleChange}
+                  value={formData.mobile_number}
+                  onChange={(e) => handleChange('mobile_number', e.target.value)}
+                  placeholder="10-digit mobile number"
                   maxLength={10}
-                  pattern="[0-9]{10}"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="10-digit mobile"
+                  required
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
-                </label>
-                <input
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
                   type="email"
-                  name="email"
                   value={formData.email}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={(e) => handleChange('email', e.target.value)}
                   placeholder="email@example.com"
                 />
               </div>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Identity Information */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Briefcase className="w-5 h-5 text-purple-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Identity Information</h2>
-            </div>
-
+        {/* Identity Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Identity Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  PAN Number
-                </label>
-                <input
-                  type="text"
-                  name="pan_number"
+              <div className="space-y-2">
+                <Label htmlFor="pan_number">PAN Number</Label>
+                <Input
+                  id="pan_number"
                   value={formData.pan_number}
-                  onChange={(e) => {
-                    const value = e.target.value.toUpperCase();
-                    setFormData(prev => ({ ...prev, pan_number: value }));
-                  }}
-                  maxLength={10}
-                  pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                  onChange={(e) => handleChange('pan_number', e.target.value.toUpperCase())}
                   placeholder="ABCDE1234F"
+                  maxLength={10}
                 />
-                <p className="text-xs text-gray-500 mt-1">Format: ABCDE1234F</p>
+                <p className="text-xs text-gray-500">
+                  Format: ABCDE1234F (10 characters)
+                </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Aadhaar Number
-                </label>
-                <input
-                  type="text"
-                  name="aadhaar_number"
+              <div className="space-y-2">
+                <Label htmlFor="aadhaar_number">Aadhaar Number</Label>
+                <Input
+                  id="aadhaar_number"
                   value={formData.aadhaar_number}
-                  onChange={handleChange}
+                  onChange={(e) => handleChange('aadhaar_number', e.target.value)}
+                  placeholder="12-digit Aadhaar number"
                   maxLength={12}
-                  pattern="[0-9]{12}"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
-                  placeholder="123456789012"
                 />
-                <p className="text-xs text-gray-500 mt-1">12-digit Aadhaar number</p>
+                <p className="text-xs text-gray-500">
+                  Format: 12-digit number
+                </p>
               </div>
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Create Customer
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+          </CardContent>
+        </Card>
+      </form>
+    </DashboardLayout>
+  )
 }

@@ -1,222 +1,303 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Sparkles, Users, DollarSign, TrendingUp, Activity, LogOut } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { 
+  TrendingUp, 
+  TrendingDown,
+  Users, 
+  Wallet, 
+  PiggyBank, 
+  AlertCircle,
+  Clock,
+  CheckCircle
+} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Badge } from '@/components/ui/badge'
+import { dashboardService } from '@/services/dashboard.service'
+import { formatCurrency, formatNumber, formatRelativeTime } from '@/lib/utils'
+import { DashboardLayout } from '@/components/layout/dashboard-layout'
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: () => dashboardService.getStats(),
+  })
 
-  useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('access_token')
-    const userData = localStorage.getItem('user')
-
-    if (!token || !userData) {
-      router.push('/login')
-      return
-    }
-
-    setUser(JSON.parse(userData))
-    setIsLoading(false)
-  }, [router])
-
-  const handleLogout = () => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('user')
-    router.push('/login')
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
+  const { data: activities, isLoading: activitiesLoading } = useQuery({
+    queryKey: ['dashboard-activities'],
+    queryFn: () => dashboardService.getRecentActivities(10),
+  })
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">NBFC Suite</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">
-                  {user?.first_name} {user?.last_name}
-                </p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Banner */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            Welcome back, {user?.first_name}! 👋
-          </h1>
-          <p className="text-blue-100">
-            Here's what's happening with your NBFC operations today
-          </p>
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Welcome Section */}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-1">Welcome to NBFC Suite Admin Portal</p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
-            icon={<Users className="h-6 w-6" />}
             title="Total Customers"
-            value="2,543"
-            change="+12.5%"
-            positive={true}
+            value={stats?.data?.total_customers || 0}
+            icon={Users}
+            trend={{ value: 12, isPositive: true }}
+            loading={statsLoading}
           />
           <StatCard
-            icon={<DollarSign className="h-6 w-6" />}
-            title="Total Loans"
-            value="₹45.2 Cr"
-            change="+8.2%"
-            positive={true}
+            title="Active Loans"
+            value={stats?.data?.active_loans || 0}
+            icon={Wallet}
+            trend={{ value: 8, isPositive: true }}
+            loading={statsLoading}
           />
           <StatCard
-            icon={<TrendingUp className="h-6 w-6" />}
-            title="Collections"
-            value="₹12.8 Cr"
-            change="+15.3%"
-            positive={true}
+            title="Total Outstanding"
+            value={formatCurrency(stats?.data?.total_outstanding || 0)}
+            icon={TrendingUp}
+            trend={{ value: 5, isPositive: true }}
+            loading={statsLoading}
+            valueClassName="text-2xl"
           />
           <StatCard
-            icon={<Activity className="h-6 w-6" />}
-            title="NPA Ratio"
-            value="2.4%"
-            change="-0.5%"
-            positive={true}
+            title="Overdue Amount"
+            value={formatCurrency(stats?.data?.overdue_amount || 0)}
+            icon={AlertCircle}
+            trend={{ value: 3, isPositive: false }}
+            loading={statsLoading}
+            valueClassName="text-2xl"
+            iconClassName="text-red-600"
           />
         </div>
 
-        {/* User Info Card */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Account Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InfoRow label="User ID" value={user?.id} />
-            <InfoRow label="Username" value={user?.username} />
-            <InfoRow label="Email" value={user?.email} />
-            <InfoRow label="Phone" value={user?.phone || 'Not provided'} />
-            <InfoRow label="Tenant" value={user?.tenant_id} />
-            <InfoRow label="Employee Code" value={user?.employee_code || 'N/A'} />
-            <InfoRow label="Department" value={user?.department || 'N/A'} />
-            <InfoRow label="Designation" value={user?.designation || 'N/A'} />
-            <InfoRow 
-              label="Status" 
-              value={
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  user?.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {user?.is_active ? 'Active' : 'Inactive'}
-                </span>
-              } 
-            />
-            <InfoRow 
-              label="Roles" 
-              value={user?.roles?.join(', ') || 'No roles assigned'} 
-            />
-          </div>
+        {/* Secondary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Collection Efficiency
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {stats?.data?.collection_efficiency || 0}%
+                  </span>
+                  <Badge variant="success" className="text-xs">
+                    Target: 95%
+                  </Badge>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Total Deposits
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-32" />
+              ) : (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {formatCurrency(stats?.data?.total_deposits || 0)}
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-gray-600">
+                Overdue Accounts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-red-600">
+                    {formatNumber(stats?.data?.overdue_accounts || 0)}
+                  </span>
+                  <span className="text-sm text-gray-600">accounts</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Permissions */}
-        {user?.permissions && user.permissions.length > 0 && (
-          <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Permissions</h2>
-            <div className="flex flex-wrap gap-2">
-              {user.permissions.map((permission: string, index: number) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                >
-                  {permission}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Recent Activities */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activities</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activitiesLoading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-start gap-4">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : activities?.data && activities.data.length > 0 ? (
+              <div className="space-y-4">
+                {activities.data.map((activity: any) => (
+                  <ActivityItem key={activity.id} activity={activity} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <Clock className="h-12 w-12 mx-auto text-gray-400 mb-2" />
+                <p>No recent activities</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <ActionCard
-            title="Customer Management"
-            description="View and manage customer accounts"
-            href="/customers"
-          />
-          <ActionCard
-            title="Loan Processing"
-            description="Process loan applications"
-            href="/loans"
-          />
-          <ActionCard
-            title="Reports"
-            description="View analytics and reports"
-            href="/reports"
-          />
-        </div>
-      </main>
-    </div>
-  )
-}
-
-function StatCard({ icon, title, value, change, positive }: any) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-          {icon}
-        </div>
-        <span className={`text-sm font-medium ${positive ? 'text-green-600' : 'text-red-600'}`}>
-          {change}
-        </span>
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <QuickActionButton
+                icon={Users}
+                label="Add Customer"
+                href="/customers/new"
+              />
+              <QuickActionButton
+                icon={Wallet}
+                label="New Loan"
+                href="/loans/applications/new"
+              />
+              <QuickActionButton
+                icon={PiggyBank}
+                label="Open Deposit"
+                href="/deposits/accounts/new"
+              />
+              <QuickActionButton
+                icon={CheckCircle}
+                label="My Tasks"
+                href="/workflows/tasks"
+              />
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <h3 className="text-sm font-medium text-gray-600 mb-1">{title}</h3>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-    </div>
+    </DashboardLayout>
   )
 }
 
-function InfoRow({ label, value }: any) {
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  trend,
+  loading,
+  valueClassName = 'text-3xl',
+  iconClassName = 'text-blue-600',
+}: {
+  title: string
+  value: string | number
+  icon: any
+  trend?: { value: number; isPositive: boolean }
+  loading?: boolean
+  valueClassName?: string
+  iconClassName?: string
+}) {
   return (
-    <div>
-      <dt className="text-sm font-medium text-gray-500">{label}</dt>
-      <dd className="mt-1 text-sm text-gray-900">{value}</dd>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium text-gray-600">
+          {title}
+        </CardTitle>
+        <Icon className={`h-5 w-5 ${iconClassName}`} />
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-8 w-24" />
+        ) : (
+          <div>
+            <div className={`font-bold text-gray-900 ${valueClassName}`}>
+              {value}
+            </div>
+            {trend && (
+              <div className="flex items-center mt-2 text-sm">
+                {trend.isPositive ? (
+                  <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
+                )}
+                <span className={trend.isPositive ? 'text-green-600' : 'text-red-600'}>
+                  {trend.value}%
+                </span>
+                <span className="text-gray-600 ml-1">vs last month</span>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function ActivityItem({ activity }: { activity: any }) {
+  return (
+    <div className="flex items-start gap-4">
+      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+        <CheckCircle className="h-5 w-5 text-blue-600" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900">{activity.description}</p>
+        <p className="text-xs text-gray-600 mt-1">
+          {activity.user && `by ${activity.user} • `}
+          {formatRelativeTime(activity.timestamp)}
+        </p>
+      </div>
+      {activity.status && (
+        <Badge variant={activity.status === 'completed' ? 'success' : 'default'}>
+          {activity.status}
+        </Badge>
+      )}
     </div>
   )
 }
 
-function ActionCard({ title, description, href }: any) {
+function QuickActionButton({ 
+  icon: Icon, 
+  label, 
+  href 
+}: { 
+  icon: any
+  label: string
+  href: string 
+}) {
   return (
     <a
       href={href}
-      className="block bg-white rounded-xl border border-gray-200 p-6 hover:border-blue-300 hover:shadow-lg transition"
+      className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors group"
     >
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-sm text-gray-600">{description}</p>
+      <Icon className="h-8 w-8 text-gray-400 group-hover:text-blue-600 mb-2" />
+      <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 text-center">
+        {label}
+      </span>
     </a>
   )
 }
