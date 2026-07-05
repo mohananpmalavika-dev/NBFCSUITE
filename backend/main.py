@@ -208,6 +208,7 @@ from services.customer.router import router as customer_router
 from services.loan import router as loan_router
 from services.accounting.router import router as accounting_router
 from services.deposit import product_router, account_router, interest_router
+from services.workflow import template_router, instance_router, task_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -221,9 +222,10 @@ app.include_router(product_router, prefix="/api/v1", tags=["Deposit Products"])
 app.include_router(account_router, prefix="/api/v1", tags=["Deposit Accounts"])
 app.include_router(interest_router, prefix="/api/v1", tags=["Deposit Interest"])
 
-# Additional routers (to be created)
-# from services.workflow.router import router as workflow_router
-# app.include_router(workflow_router, prefix="/api/v1/workflows", tags=["Workflow"])
+# Workflow Engine Routers
+app.include_router(template_router, prefix="/api/v1", tags=["Workflow Templates"])
+app.include_router(instance_router, prefix="/api/v1", tags=["Workflow Instances"])
+app.include_router(task_router, prefix="/api/v1", tags=["Workflow Tasks"])
 
 # ============================================
 # STARTUP MESSAGE
