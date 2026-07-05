@@ -170,12 +170,13 @@ export interface DepositProduct {
   product_code: string
   product_name: string
   deposit_type: 'Savings' | 'Fixed' | 'Recurring' | 'MIS'
-  min_amount: number
-  max_amount?: number
+  min_deposit_amount: number
+  max_deposit_amount?: number
   interest_rate: number
-  interest_calculation_method: string
+  interest_calculation_type: string
   min_tenure_months?: number
   max_tenure_months?: number
+  status: string
   is_active: boolean
 }
 
