@@ -260,7 +260,11 @@ export default function NewGoldLoanPage() {
         description: 'Gold loan created successfully'
       });
 
-      router.push(`/gold-loans/${result.loan.id}`);
+      if (result && result.loan && result.loan.id) {
+        router.push(`/gold-loans/${result.loan.id}`);
+      } else {
+        router.push('/gold-loans');
+      }
       
     } catch (error: any) {
       toast({
