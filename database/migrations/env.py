@@ -16,9 +16,9 @@ backend_path = Path(__file__).parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
 # Import models
-from shared.database.connection import Base
-from shared.database.models import Tenant
-from shared.config import settings
+from backend.shared.database.connection import Base
+from backend.shared.database.models import Tenant
+from backend.shared.config import settings
 
 # this is the Alembic Config object
 config = context.config

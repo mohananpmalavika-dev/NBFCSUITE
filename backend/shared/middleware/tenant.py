@@ -9,7 +9,7 @@ from starlette.responses import Response
 from typing import Optional
 import logging
 
-from shared.config import settings
+from backend.shared.config import settings
 
 logger = logging.getLogger(__name__)
 

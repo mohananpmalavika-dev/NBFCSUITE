@@ -9,7 +9,7 @@ from sqlalchemy.pool import NullPool
 from typing import AsyncGenerator
 import logging
 
-from shared.config import settings
+from backend.shared.config import settings
 
 logger = logging.getLogger(__name__)
 

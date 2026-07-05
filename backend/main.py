@@ -13,11 +13,11 @@ import time
 import logging
 from typing import Dict, Any
 
-from shared.config import settings
-from shared.database.connection import engine, Base
-from shared.middleware.tenant import TenantMiddleware
-from shared.middleware.logging import LoggingMiddleware
-from shared.middleware.error_handler import ErrorHandlerMiddleware
+from backend.shared.config import settings
+from backend.shared.database.connection import engine, Base
+from backend.shared.middleware.tenant import TenantMiddleware
+from backend.shared.middleware.logging import LoggingMiddleware
+from backend.shared.middleware.error_handler import ErrorHandlerMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -202,13 +202,13 @@ async def liveness_check() -> Dict[str, Any]:
 # ============================================
 
 # Import routers
-from services.auth.router import router as auth_router
-from services.masterdata.router import router as masterdata_router
-from services.customer.router import router as customer_router
-from services.loan import router as loan_router
-from services.accounting.router import router as accounting_router
-from services.deposit import product_router, account_router, interest_router
-from services.workflow import template_router, instance_router, task_router
+from backend.services.auth.router import router as auth_router
+from backend.services.masterdata.router import router as masterdata_router
+from backend.services.customer.router import router as customer_router
+from backend.services.loan import router as loan_router
+from backend.services.accounting.router import router as accounting_router
+from backend.services.deposit import product_router, account_router, interest_router
+from backend.services.workflow import template_router, instance_router, task_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])

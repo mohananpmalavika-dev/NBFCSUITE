@@ -9,7 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import logging
 import traceback
 
-from shared.config import settings
+from backend.shared.config import settings
 
 logger = logging.getLogger(__name__)
 

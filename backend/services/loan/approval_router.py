@@ -9,7 +9,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 from decimal import Decimal
 
-from shared.database.base import get_db
+from backend.shared.database.connection import get_db
 from .approval_service import ApprovalService
 
 router = APIRouter(prefix="/approvals", tags=["Loan Approvals"])

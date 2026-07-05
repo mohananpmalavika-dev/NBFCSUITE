@@ -9,16 +9,16 @@ from typing import Optional
 from uuid import UUID
 import math
 
-from shared.database.connection import get_db
-from shared.common.response import success_response
-from shared.database.master_data_models import (
+from backend.shared.database.connection import get_db
+from backend.shared.common.response import success_response
+from backend.shared.database.master_data_models import (
     Country, State, City, Pincode,
     Bank, BankBranch,
     Currency, DocumentType, Occupation, Industry
 )
-from services.masterdata.service import MasterDataService
-from services.masterdata.schemas import *
-from services.auth.dependencies import get_current_active_user
+from backend.services.masterdata.service import MasterDataService
+from backend.services.masterdata.schemas import *
+from backend.services.auth.dependencies import get_current_active_user
 
 
 router = APIRouter()

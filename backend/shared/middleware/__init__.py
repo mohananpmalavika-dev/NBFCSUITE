@@ -1,8 +1,8 @@
 """Middleware module"""
 
-from shared.middleware.tenant import TenantMiddleware, get_tenant_id
-from shared.middleware.logging import LoggingMiddleware
-from shared.middleware.error_handler import (
+from backend.shared.middleware.tenant import TenantMiddleware, get_tenant_id
+from backend.shared.middleware.logging import LoggingMiddleware
+from backend.shared.middleware.error_handler import (
     ErrorHandlerMiddleware,
     APIError,
     NotFoundError,

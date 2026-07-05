@@ -9,21 +9,21 @@ from typing import Optional, Tuple
 from datetime import datetime, timedelta
 import uuid
 
-from shared.database.models import User, Role, Permission, UserRole, RolePermission
-from shared.common.security import (
+from backend.shared.database.models import User, Role, Permission, UserRole, RolePermission
+from backend.shared.common.security import (
     verify_password,
     hash_password,
     create_access_token,
     create_refresh_token,
     decode_token
 )
-from shared.middleware.error_handler import (
+from backend.shared.middleware.error_handler import (
     UnauthorizedError,
     ValidationError,
     NotFoundError,
     ConflictError
 )
-from services.auth.schemas import (
+from backend.services.auth.schemas import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,

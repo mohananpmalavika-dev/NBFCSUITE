@@ -8,7 +8,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from datetime import datetime
 import uuid
 
-from shared.database.connection import Base
+from backend.shared.database.connection import Base
 
 
 class TenantMixin:

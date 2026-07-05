@@ -8,8 +8,6 @@ from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
 
-from shared.schemas.base import BaseSchema
-
 
 class LoginRequest(BaseModel):
     """Login request schema"""
@@ -93,7 +91,7 @@ class ChangePasswordRequest(BaseModel):
         return v
 
 
-class UserResponse(BaseSchema):
+class UserResponse(BaseModel):
     """User response schema"""
     id: UUID
     tenant_id: str

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import date
 
-from shared.database.base import get_db
+from backend.shared.database.connection import get_db
 from .application_service import LoanApplicationService
 from .schemas import (
     LoanApplicationCreate, LoanApplicationUpdate, LoanApplicationResponse,

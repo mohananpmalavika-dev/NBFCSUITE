@@ -9,14 +9,14 @@ from typing import Optional, List, Type, TypeVar
 from uuid import UUID
 import uuid
 
-from shared.database.master_data_models import (
+from backend.shared.database.master_data_models import (
     Country, State, City, Pincode,
     Bank, BankBranch,
     Currency, InterestRateType, LoanProductType,
     DocumentType, Occupation, Industry, LoanPurpose,
     RelationshipType, Holiday, FinancialYear
 )
-from shared.middleware.error_handler import NotFoundError, ConflictError
+from backend.shared.middleware.error_handler import NotFoundError, ConflictError
 
 
 T = TypeVar('T')

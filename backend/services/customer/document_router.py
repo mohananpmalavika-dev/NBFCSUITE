@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
-from backend.core.database import get_db
-from backend.core.security import get_current_user
+from backend.shared.database.connection import get_db
+from backend.services.auth.dependencies import get_current_user
 from backend.shared.database.customer_models import DocumentStatus
 from .document_service import CustomerDocumentService
 from .schemas import CustomerDocumentCreate, CustomerDocumentResponse

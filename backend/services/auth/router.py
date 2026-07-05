@@ -6,9 +6,9 @@ API endpoints for authentication
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from shared.database.connection import get_db
-from shared.common.response import success_response
-from services.auth.schemas import (
+from backend.shared.database.connection import get_db
+from backend.shared.common.response import success_response
+from backend.services.auth.schemas import (
     LoginRequest,
     RegisterRequest,
     TokenResponse,
@@ -17,8 +17,8 @@ from services.auth.schemas import (
     UserResponse,
     UserWithRoles
 )
-from services.auth.service import AuthService
-from services.auth.dependencies import get_current_active_user
+from backend.services.auth.service import AuthService
+from backend.services.auth.dependencies import get_current_active_user
 
 router = APIRouter()
 

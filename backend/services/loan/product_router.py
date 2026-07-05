@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
 
-from shared.database.base import get_db
+from backend.shared.database.connection import get_db
 from .product_service import LoanProductService
 from .schemas import (
     LoanProductCreate, LoanProductUpdate, LoanProductResponse,

@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 
-from backend.core.database import get_db
-from backend.core.security import get_current_user
+from backend.shared.database.connection import get_db
+from backend.services.auth.dependencies import get_current_user
 from .family_service import CustomerFamilyService
 from .schemas import (
     CustomerFamilyCreate, CustomerFamilyUpdate,

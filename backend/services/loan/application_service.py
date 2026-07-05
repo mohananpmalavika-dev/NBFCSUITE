@@ -10,11 +10,11 @@ from datetime import datetime, date
 from decimal import Decimal
 import math
 
-from shared.database.loan_models import (
+from backend.shared.database.loan_models import (
     LoanApplication, LoanApplicationCoApplicant, LoanApplicationDocument,
     LoanProduct
 )
-from shared.database.customer_models import Customer, CustomerFamilyMember
+from backend.shared.database.customer_models import Customer, CustomerFamilyMember
 from .schemas import (
     LoanApplicationCreate, LoanApplicationUpdate, LoanApplicationResponse,
     LoanApplicationListResponse, LoanApplicationStats, ApplicationStatus,

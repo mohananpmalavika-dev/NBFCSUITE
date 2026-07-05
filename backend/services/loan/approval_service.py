@@ -9,10 +9,10 @@ from typing import List, Optional, Dict
 from datetime import datetime, date
 from decimal import Decimal
 
-from shared.database.loan_models import (
+from backend.shared.database.loan_models import (
     LoanApplication, LoanApprovalWorkflow, LoanProduct
 )
-from shared.database.customer_models import Customer
+from backend.shared.database.customer_models import Customer
 from .schemas import ApplicationStatus
 from .credit_scoring_service import CreditScoringService
 

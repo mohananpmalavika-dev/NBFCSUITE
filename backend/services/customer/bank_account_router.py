@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from decimal import Decimal
 
-from backend.core.database import get_db
-from backend.core.security import get_current_user
+from backend.shared.database.connection import get_db
+from backend.services.auth.dependencies import get_current_user
 from .bank_account_service import CustomerBankAccountService
 from .schemas import (
     CustomerBankAccountCreate, CustomerBankAccountUpdate,

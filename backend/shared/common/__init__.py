@@ -1,7 +1,7 @@
 """Common utilities module"""
 
-from shared.common.response import success_response, error_response, paginated_response
-from shared.common.security import (
+from backend.shared.common.response import success_response, error_response, paginated_response
+from backend.shared.common.security import (
     hash_password,
     verify_password,
     create_access_token,

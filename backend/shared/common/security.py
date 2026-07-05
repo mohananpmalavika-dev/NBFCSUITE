@@ -9,7 +9,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 import secrets
 
-from shared.config import settings
+from backend.shared.config import settings
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

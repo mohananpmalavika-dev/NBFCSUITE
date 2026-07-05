@@ -7,7 +7,7 @@ from sqlalchemy import Column, String, Boolean, Integer, Float, Date, Index
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
-from shared.database.models import BaseModel
+from backend.shared.database.models import BaseModel
 
 
 # ============================================

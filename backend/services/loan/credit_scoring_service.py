@@ -9,8 +9,8 @@ from decimal import Decimal
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 
-from shared.database.loan_models import LoanApplication, LoanProduct
-from shared.database.customer_models import Customer
+from backend.shared.database.loan_models import LoanApplication, LoanProduct
+from backend.shared.database.customer_models import Customer
 from .schemas import RiskRating
 
 

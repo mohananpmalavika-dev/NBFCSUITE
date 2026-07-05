@@ -10,7 +10,7 @@ from datetime import datetime
 from decimal import Decimal
 import math
 
-from shared.database.loan_models import LoanProduct
+from backend.shared.database.loan_models import LoanProduct
 from .schemas import (
     LoanProductCreate, LoanProductUpdate, LoanProductResponse,
     LoanProductListResponse, EMICalculationRequest, EMICalculationResponse,
@@ -164,7 +164,7 @@ class LoanProductService:
             return False
         
         # Check if product has active applications
-        from shared.database.loan_models import LoanApplication
+        from backend.shared.database.loan_models import LoanApplication
         active_applications = self.db.query(LoanApplication).filter(
             and_(
                 LoanApplication.loan_product_id == product_id,

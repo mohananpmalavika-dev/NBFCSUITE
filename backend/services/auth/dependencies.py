@@ -8,10 +8,10 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-from shared.database.connection import get_db
-from shared.common.security import decode_token
-from services.auth.service import AuthService
-from services.auth.schemas import UserWithRoles
+from backend.shared.database.connection import get_db
+from backend.shared.common.security import decode_token
+from backend.services.auth.service import AuthService
+from backend.services.auth.schemas import UserWithRoles
 
 # HTTP Bearer token security scheme
 security = HTTPBearer()

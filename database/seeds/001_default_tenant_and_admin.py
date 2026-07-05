@@ -15,9 +15,9 @@ backend_path = Path(__file__).parent.parent.parent / "backend"
 sys.path.insert(0, str(backend_path))
 
 from sqlalchemy import select
-from shared.database.connection import AsyncSessionLocal
-from shared.database.models import Tenant, User, Role, Permission, UserRole, RolePermission
-from shared.common.security import hash_password
+from backend.shared.database.connection import AsyncSessionLocal
+from backend.shared.database.models import Tenant, User, Role, Permission, UserRole, RolePermission
+from backend.shared.common.security import hash_password
 import uuid
 from datetime import datetime
 
