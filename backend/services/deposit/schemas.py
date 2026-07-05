@@ -1,4 +1,4 @@
-"""
+﻿"""
 Deposit Management Pydantic Schemas
 
 Comprehensive schemas for all deposit operations including:
@@ -93,7 +93,7 @@ class DepositProductBase(BaseModel):
     description: Optional[str] = None
     
     # Interest Configuration
-    interest_rate: Decimal = Field(..., ge=0, le=100, decimal_places=2)
+    interest_rate: Decimal = Field(..., ge=0, le=100)
     interest_calculation_method: InterestCalculationMethod
     interest_calculation_frequency: InterestCalculationFrequency
     interest_payout_frequency: Optional[InterestPayoutFrequency] = None
@@ -104,31 +104,31 @@ class DepositProductBase(BaseModel):
     tenure_unit: Optional[str] = Field(None, pattern="^(days|months|years)$")
     
     # Amount Configuration
-    min_deposit_amount: Decimal = Field(..., gt=0, decimal_places=2)
-    max_deposit_amount: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
+    min_deposit_amount: Decimal = Field(..., gt=0)
+    max_deposit_amount: Optional[Decimal] = Field(None, gt=0)
     
     # Savings Specific
-    min_balance: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
-    min_balance_penalty: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    min_balance: Optional[Decimal] = Field(None, ge=0)
+    min_balance_penalty: Optional[Decimal] = Field(None, ge=0)
     
     # RD Specific
-    installment_amount: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
+    installment_amount: Optional[Decimal] = Field(None, gt=0)
     installment_frequency: Optional[str] = Field(None, pattern="^(monthly|quarterly)$")
-    missed_installment_penalty: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    missed_installment_penalty: Optional[Decimal] = Field(None, ge=0, le=100)
     
     # Withdrawal Rules
     premature_withdrawal_allowed: bool = False
-    premature_withdrawal_penalty: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    premature_withdrawal_penalty: Optional[Decimal] = Field(None, ge=0, le=100)
     max_withdrawals_per_month: Optional[int] = Field(None, ge=1)
-    withdrawal_charge: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    withdrawal_charge: Optional[Decimal] = Field(None, ge=0)
     
     # Renewal
     auto_renewal_allowed: bool = False
     
     # Tax
     tds_applicable: bool = True
-    tds_rate: Decimal = Field(10.0, ge=0, le=100, decimal_places=2)
-    tds_threshold: Decimal = Field(40000.0, ge=0, decimal_places=2)
+    tds_rate: Decimal = Field(10.0, ge=0, le=100)
+    tds_threshold: Decimal = Field(40000.0, ge=0)
     
     # Status
     is_active: bool = True
@@ -143,14 +143,14 @@ class DepositProductUpdate(BaseModel):
     """Schema for updating deposit product"""
     product_name: Optional[str] = Field(None, min_length=3, max_length=200)
     description: Optional[str] = None
-    interest_rate: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    interest_rate: Optional[Decimal] = Field(None, ge=0, le=100)
     interest_calculation_method: Optional[InterestCalculationMethod] = None
     interest_calculation_frequency: Optional[InterestCalculationFrequency] = None
     interest_payout_frequency: Optional[InterestPayoutFrequency] = None
-    min_deposit_amount: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
-    max_deposit_amount: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
+    min_deposit_amount: Optional[Decimal] = Field(None, gt=0)
+    max_deposit_amount: Optional[Decimal] = Field(None, gt=0)
     premature_withdrawal_allowed: Optional[bool] = None
-    premature_withdrawal_penalty: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    premature_withdrawal_penalty: Optional[Decimal] = Field(None, ge=0, le=100)
     auto_renewal_allowed: Optional[bool] = None
     is_active: Optional[bool] = None
 
@@ -172,9 +172,9 @@ class DepositProductResponse(DepositProductBase):
 class MaturityCalculationRequest(BaseModel):
     """Request for maturity calculation"""
     product_id: int
-    principal_amount: Decimal = Field(..., gt=0, decimal_places=2)
+    principal_amount: Decimal = Field(..., gt=0)
     tenure_days: Optional[int] = Field(None, ge=1)
-    installment_amount: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
+    installment_amount: Optional[Decimal] = Field(None, gt=0)
     total_installments: Optional[int] = Field(None, ge=1)
 
 
@@ -194,7 +194,7 @@ class MaturityCalculationResponse(BaseModel):
 class EligibilityCheckRequest(BaseModel):
     """Request for eligibility check"""
     product_id: int
-    amount: Decimal = Field(..., gt=0, decimal_places=2)
+    amount: Decimal = Field(..., gt=0)
     tenure_days: Optional[int] = Field(None, ge=1)
 
 
@@ -209,9 +209,9 @@ class EligibilityCheckResponse(BaseModel):
 class PrematureClosureRequest(BaseModel):
     """Request for premature closure calculation"""
     product_id: int
-    principal_amount: Decimal = Field(..., gt=0, decimal_places=2)
+    principal_amount: Decimal = Field(..., gt=0)
     days_held: int = Field(..., ge=1)
-    interest_rate: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    interest_rate: Optional[Decimal] = Field(None, ge=0, le=100)
 
 
 class PrematureClosureResponse(BaseModel):
@@ -234,7 +234,7 @@ class NomineeDetails(BaseModel):
     nominee_name: str = Field(..., min_length=2, max_length=200)
     nominee_relationship: str = Field(..., min_length=2, max_length=100)
     nominee_dob: date
-    nominee_percentage: Decimal = Field(100.0, ge=0, le=100, decimal_places=2)
+    nominee_percentage: Decimal = Field(100.0, ge=0, le=100)
     nominee_address: Optional[str] = None
     nominee_id_proof: Optional[str] = None
 
@@ -243,12 +243,12 @@ class DepositAccountCreate(BaseModel):
     """Schema for creating deposit account"""
     customer_id: int = Field(..., gt=0)
     deposit_product_id: int = Field(..., gt=0)
-    principal_amount: Decimal = Field(..., gt=0, decimal_places=2)
+    principal_amount: Decimal = Field(..., gt=0)
     tenure_days: Optional[int] = Field(None, ge=1)
     opening_date: Optional[date] = None
     
     # RD Specific
-    installment_amount: Optional[Decimal] = Field(None, gt=0, decimal_places=2)
+    installment_amount: Optional[Decimal] = Field(None, gt=0)
     total_installments: Optional[int] = Field(None, ge=1)
     next_installment_date: Optional[date] = None
     
@@ -259,7 +259,7 @@ class DepositAccountCreate(BaseModel):
     nominee_name: Optional[str] = Field(None, max_length=200)
     nominee_relationship: Optional[str] = Field(None, max_length=100)
     nominee_dob: Optional[date] = None
-    nominee_percentage: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    nominee_percentage: Optional[Decimal] = Field(None, ge=0, le=100)
     nominee_address: Optional[str] = None
     nominee_id_proof: Optional[str] = None
     
@@ -277,7 +277,7 @@ class DepositAccountUpdate(BaseModel):
     nominee_name: Optional[str] = Field(None, max_length=200)
     nominee_relationship: Optional[str] = Field(None, max_length=100)
     nominee_dob: Optional[date] = None
-    nominee_percentage: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    nominee_percentage: Optional[Decimal] = Field(None, ge=0, le=100)
     nominee_address: Optional[str] = None
     nominee_id_proof: Optional[str] = None
     linked_account_number: Optional[str] = Field(None, max_length=50)
@@ -329,7 +329,7 @@ class AccountSummaryResponse(BaseModel):
 class DepositRequest(BaseModel):
     """Request for making deposit"""
     account_id: int = Field(..., gt=0)
-    amount: Decimal = Field(..., gt=0, decimal_places=2)
+    amount: Decimal = Field(..., gt=0)
     payment_mode: PaymentMode = PaymentMode.CASH
     reference_number: Optional[str] = Field(None, max_length=100)
     remarks: Optional[str] = None
@@ -338,7 +338,7 @@ class DepositRequest(BaseModel):
 class WithdrawalRequest(BaseModel):
     """Request for making withdrawal"""
     account_id: int = Field(..., gt=0)
-    amount: Decimal = Field(..., gt=0, decimal_places=2)
+    amount: Decimal = Field(..., gt=0)
     payment_mode: PaymentMode = PaymentMode.CASH
     reference_number: Optional[str] = Field(None, max_length=100)
     remarks: Optional[str] = None
@@ -347,7 +347,7 @@ class WithdrawalRequest(BaseModel):
 class RDInstallmentRequest(BaseModel):
     """Request for RD installment payment"""
     account_id: int = Field(..., gt=0)
-    amount: Decimal = Field(..., gt=0, decimal_places=2)
+    amount: Decimal = Field(..., gt=0)
     payment_mode: PaymentMode = PaymentMode.CASH
     reference_number: Optional[str] = Field(None, max_length=100)
 

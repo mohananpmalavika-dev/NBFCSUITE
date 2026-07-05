@@ -1,4 +1,4 @@
-"""
+﻿"""
 Master Data Schemas
 Pydantic models for request/response
 """
