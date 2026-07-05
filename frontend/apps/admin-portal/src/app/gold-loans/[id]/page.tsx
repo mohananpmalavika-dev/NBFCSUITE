@@ -45,8 +45,10 @@ export default function GoldLoanDetailPage() {
     try {
       setLoading(true);
       const data = await getGoldLoan(loanId);
-      setLoan(data.loan);
-      setOrnaments(data.ornaments);
+      if (data) {
+        setLoan(data.loan);
+        setOrnaments(data.ornaments);
+      }
     } catch (error) {
       console.error('Failed to load gold loan:', error);
       toast({
