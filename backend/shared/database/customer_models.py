@@ -194,6 +194,10 @@ class Customer(BaseModel):
     references = relationship("CustomerReference", back_populates="customer", cascade="all, delete-orphan")
     kyc_details = relationship("CustomerKYC", back_populates="customer", cascade="all, delete-orphan")
     
+    # Loan relationships
+    loan_applications = relationship("LoanApplication", back_populates="customer")
+    loan_accounts = relationship("LoanAccount", back_populates="customer")
+    
     # Indexes
     __table_args__ = (
         Index('idx_customer_tenant_code', 'tenant_id', 'customer_code'),
