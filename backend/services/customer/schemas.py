@@ -334,3 +334,40 @@ class CustomerDashboardStats(BaseModel):
     blacklisted_customers: int
     new_this_month: int
     avg_cibil_score: Optional[int] = None
+
+
+
+# ============================================================================
+# CUSTOMER FAMILY UPDATE SCHEMA
+# ============================================================================
+
+class CustomerFamilyUpdate(BaseModel):
+    """Update family member (all fields optional)"""
+    relationship_type_id: Optional[int] = None
+    name: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    gender: Optional[GenderEnum] = None
+    mobile: Optional[str] = None
+    occupation: Optional[str] = None
+    monthly_income: Optional[Decimal] = None
+    is_dependent: Optional[bool] = None
+    is_emergency_contact: Optional[bool] = None
+    is_nominee: Optional[bool] = None
+    nominee_percentage: Optional[Decimal] = None
+
+
+# ============================================================================
+# CUSTOMER BANK ACCOUNT UPDATE SCHEMA
+# ============================================================================
+
+class CustomerBankAccountUpdate(BaseModel):
+    """Update bank account (all fields optional)"""
+    bank_id: Optional[int] = None
+    account_number: Optional[str] = None
+    account_holder_name: Optional[str] = None
+    account_type: Optional[AccountTypeEnum] = None
+    ifsc_code: Optional[str] = None
+    is_primary: Optional[bool] = None
+    use_for_disbursement: Optional[bool] = None
+    use_for_collection: Optional[bool] = None
+    is_active: Optional[bool] = None

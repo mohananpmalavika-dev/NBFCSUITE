@@ -275,19 +275,44 @@ export default function CustomerDetailPage() {
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex gap-8">
-            {['overview', 'kyc', 'documents', 'family', 'accounts'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'overview'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('kyc')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'kyc'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              KYC
+            </button>
+            <button
+              onClick={() => router.push(`/customers/${customerId}/documents`)}
+              className="py-4 px-2 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
+            >
+              Documents
+            </button>
+            <button
+              onClick={() => router.push(`/customers/${customerId}/family`)}
+              className="py-4 px-2 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
+            >
+              Family
+            </button>
+            <button
+              onClick={() => router.push(`/customers/${customerId}/accounts`)}
+              className="py-4 px-2 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
+            >
+              Accounts
+            </button>
           </div>
         </div>
       </div>
@@ -456,14 +481,14 @@ export default function CustomerDetailPage() {
           </div>
         )}
 
-        {/* Other tabs content (placeholder) */}
-        {activeTab !== 'overview' && (
+        {/* KYC Tab Content (placeholder) */}
+        {activeTab === 'kyc' && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Section
+              KYC Section
             </h3>
             <p className="text-sm text-gray-600">
-              This section is under development. Will include {activeTab} management features.
+              KYC management features coming soon. This will include PAN verification, Aadhaar validation, and more.
             </p>
           </div>
         )}
