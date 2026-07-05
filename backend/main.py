@@ -65,6 +65,7 @@ app = FastAPI(
         {"name": "Loans", "description": "Loan origination and management"},
         {"name": "Collections", "description": "Collection management"},
         {"name": "Deposits", "description": "Deposit management (Nidhi)"},
+        {"name": "Gold Loans", "description": "Gold loan management with ornament tracking"},
         {"name": "Accounting", "description": "Accounting and finance"},
         {"name": "Workflow", "description": "Enterprise workflow engine"},
         {"name": "Rules", "description": "Business rules engine"},
@@ -215,6 +216,7 @@ from backend.services.rules import category_router, evaluation_router, decision_
 from backend.services.decision import router as decision_router
 from backend.services.notification import router as notification_router
 from backend.services.file_upload.router import router as file_upload_router
+from backend.services.gold.router import router as gold_loan_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -246,6 +248,9 @@ app.include_router(notification_router, prefix="/api/v1", tags=["Notifications"]
 
 # File Upload Router
 app.include_router(file_upload_router, prefix="/api/v1", tags=["File Upload"])
+
+# Gold Loan Router
+app.include_router(gold_loan_router, prefix="/api/v1", tags=["Gold Loans"])
 
 # ============================================
 # STARTUP MESSAGE

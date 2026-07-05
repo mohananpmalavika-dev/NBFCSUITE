@@ -14,7 +14,8 @@ import {
   BarChart3,
   Settings,
   ChevronDown,
-  Sparkles
+  Sparkles,
+  Coins
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -47,6 +48,16 @@ const navigationItems = [
     children: [
       { title: 'Accounts', href: '/deposits/accounts' },
       { title: 'Products', href: '/deposits/products' },
+    ],
+  },
+  {
+    title: 'Gold Loans',
+    href: '/gold-loans',
+    icon: Coins,
+    children: [
+      { title: 'Accounts', href: '/gold-loans' },
+      { title: 'Products', href: '/gold-loans/products' },
+      { title: 'Releases', href: '/gold-loans/releases' },
     ],
   },
   {

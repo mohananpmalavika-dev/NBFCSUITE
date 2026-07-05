@@ -1,598 +1,539 @@
-# 🚀 QUICK START GUIDE
-## Accounting & Collections Modules
+# NBFC Financial Suite - Quick Start Guide 🚀
 
-**Last Updated**: January 5, 2026  
-**Version**: 2.0  
-**Time to Deploy**: ~10 minutes  
+## Get Started in 5 Minutes
+
+This guide will help you get the NBFC Financial Suite running on your local machine.
 
 ---
 
-## ⚡ SUPER QUICK START (5 Steps)
+## 📋 Prerequisites
 
-### 1. Run Database Migration (2 minutes)
+### Required Software
+- **Python**: 3.11 or higher
+- **Node.js**: 20 or higher
+- **PostgreSQL**: 15 or higher
+- **Redis**: 7 or higher (optional for development)
+- **Git**: Latest version
+
+### Check Installations
 ```bash
-cd c:\NBFCSUITE
-psql -U postgres -d nbfc_db -f database/migrations/add_accounting_tables_migration.sql
+python --version    # Should be 3.11+
+node --version      # Should be 20+
+npm --version
+psql --version      # Should be 15+
+git --version
 ```
 
-### 2. Start Backend (1 minute)
+---
+
+## ⚡ Quick Start (Development Mode)
+
+### Step 1: Clone Repository
+```bash
+git clone <repository-url>
+cd NBFCSUITE
+```
+
+### Step 2: Setup Database
+```bash
+# Create PostgreSQL database
+createdb nbfc_dev
+
+# Or using psql
+psql -U postgres
+CREATE DATABASE nbfc_dev;
+\q
+```
+
+### Step 3: Setup Backend
+```bash
+# Navigate to backend
+cd backend
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+cp .env.example .env
+
+# Edit .env file with your database credentials
+# DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/nbfc_dev
+
+# Run database migrations
+alembic upgrade head
+
+# Start backend server
+uvicorn backend.main:app --reload
+```
+
+Backend should now be running at: **http://localhost:8000**
+
+### Step 4: Setup Frontend
+```bash
+# Open new terminal
+cd frontend/apps/admin-portal
+
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Create .env.local file
+cp .env.example .env.local
+
+# Edit .env.local
+# NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+
+# Start frontend development server
+npm run dev
+```
+
+Frontend should now be running at: **http://localhost:3000**
+
+### Step 5: Access Application
+
+1. Open browser: **http://localhost:3000**
+2. Login with demo credentials:
+   - Username: `admin`
+   - Password: `admin123`
+3. Explore the application!
+
+---
+
+## 📚 API Documentation
+
+Once backend is running, access API documentation:
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/health
+
+---
+
+## 🗂️ Project Structure
+
+```
+NBFCSUITE/
+├── backend/                      # Backend (FastAPI)
+│   ├── services/                 # Business logic modules
+│   │   ├── auth/                 # Authentication
+│   │   ├── customer/             # Customer management
+│   │   ├── loan/                 # Loan management
+│   │   ├── deposit/              # Deposit management
+│   │   ├── gold/                 # Gold loan management
+│   │   ├── accounting/           # Accounting module
+│   │   ├── workflow/             # Workflow engine
+│   │   ├── notification/         # Notifications
+│   │   └── file_upload/          # File uploads
+│   ├── shared/                   # Shared utilities
+│   │   ├── database/             # Database models
+│   │   ├── common/               # Common utilities
+│   │   └── middleware/           # Middleware
+│   ├── main.py                   # Application entry point
+│   └── requirements.txt          # Python dependencies
+│
+├── frontend/apps/admin-portal/   # Frontend (Next.js)
+│   ├── src/
+│   │   ├── app/                  # Pages (App Router)
+│   │   │   ├── dashboard/        # Dashboard
+│   │   │   ├── customers/        # Customer pages
+│   │   │   ├── loans/            # Loan pages
+│   │   │   ├── deposits/         # Deposit pages
+│   │   │   ├── gold-loans/       # Gold loan pages
+│   │   │   ├── accounting/       # Accounting pages
+│   │   │   └── workflow/         # Workflow pages
+│   │   ├── components/           # React components
+│   │   │   ├── ui/               # UI components
+│   │   │   ├── layout/           # Layout components
+│   │   │   └── charts/           # Chart components
+│   │   ├── services/             # API services
+│   │   ├── lib/                  # Utilities
+│   │   └── types/                # TypeScript types
+│   └── package.json              # Node dependencies
+│
+├── uploads/                      # File upload storage
+├── logs/                         # Application logs
+├── nginx/                        # Nginx configuration
+├── .github/workflows/            # CI/CD pipelines
+└── *.md                          # Documentation files
+```
+
+---
+
+## 🔧 Environment Variables
+
+### Backend (.env)
+```env
+# Application
+APP_NAME=NBFC Financial Suite
+APP_ENV=development
+APP_DEBUG=true
+
+# Database
+DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/nbfc_dev
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=nbfc_dev
+DB_USER=postgres
+DB_PASSWORD=your_password
+
+# Security
+SECRET_KEY=your-secret-key-minimum-32-characters
+JWT_SECRET_KEY=your-jwt-secret-key-minimum-32-characters
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# CORS
+CORS_ORIGINS=http://localhost:3000
+CORS_ALLOW_CREDENTIALS=true
+
+# Multi-tenancy
+TENANT_ISOLATION_ENABLED=true
+DEFAULT_TENANT=default
+
+# File Upload
+UPLOAD_DIR=uploads
+MAX_FILE_SIZE=10485760
+MAX_FILES_PER_UPLOAD=10
+```
+
+### Frontend (.env.local)
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+```
+
+---
+
+## 🎯 Common Tasks
+
+### Create Database Migration
 ```bash
 cd backend
-python main.py
+alembic revision --autogenerate -m "Description of changes"
+alembic upgrade head
 ```
 
-### 3. Start Frontend (1 minute)
+### Run Backend Tests
+```bash
+cd backend
+pytest tests/ -v --cov=.
+```
+
+### Build Frontend for Production
 ```bash
 cd frontend/apps/admin-portal
-npm run dev
+npm run build
+npm run start
 ```
 
-### 4. Open Browser (30 seconds)
-```
-Backend API:  http://localhost:8000/docs
-Accounting:   http://localhost:3000/accounting
-Collections:  http://localhost:3000/collections
-```
-
-### 5. Test It! (5 minutes)
-- ✅ View Accounting Dashboard
-- ✅ Browse Chart of Accounts
-- ✅ Check Collection Dashboard
-- ✅ View Overdue Accounts
-
-**Done! You're ready to use the system!** 🎉
-
----
-
-## 📖 DETAILED SETUP
-
-### Prerequisites
-- ✅ PostgreSQL installed and running
-- ✅ Python 3.11+ installed
-- ✅ Node.js 18+ installed
-- ✅ Backend dependencies installed
-- ✅ Frontend dependencies installed
-
-### Step-by-Step Setup
-
-#### Step 1: Database Setup
-
-##### 1.1 Connect to PostgreSQL
+### View Backend Logs
 ```bash
-psql -U postgres
+cd backend
+tail -f logs/app.log
 ```
 
-##### 1.2 Verify Database
-```sql
--- Check if database exists
-\l nbfc_db
-
--- Connect to database
-\c nbfc_db
-
--- List tables
-\dt
-```
-
-##### 1.3 Run Migration
+### Clear Database and Start Fresh
 ```bash
-# Exit psql first (type \q)
-cd c:\NBFCSUITE
-psql -U postgres -d nbfc_db -f database/migrations/add_accounting_tables_migration.sql
-```
+# Drop and recreate database
+dropdb nbfc_dev
+createdb nbfc_dev
 
-##### 1.4 Verify Tables Created
-```sql
--- Reconnect to database
-psql -U postgres -d nbfc_db
-
--- Check new tables
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
-AND table_name IN (
-    'chart_of_accounts',
-    'journal_entries',
-    'journal_entry_lines',
-    'general_ledger',
-    'trial_balances',
-    'accounting_periods'
-);
-
--- Should show 6 tables
-```
-
-##### 1.5 Check Default Accounts
-```sql
--- View default system accounts
-SELECT account_code, account_name, account_type 
-FROM chart_of_accounts 
-WHERE tenant_id = 1 
-ORDER BY account_code;
-
--- Should show 15 default accounts
-```
-
-#### Step 2: Backend Setup
-
-##### 2.1 Check Environment
-```bash
-cd c:\NBFCSUITE\backend
-
-# Verify .env file exists
-dir .env
-
-# Check Python version
-python --version
-
-# Should be 3.11 or higher
-```
-
-##### 2.2 Start Backend Server
-```bash
-# Make sure you're in backend directory
-cd c:\NBFCSUITE\backend
-
-# Start server
-python main.py
-```
-
-##### 2.3 Verify Backend Running
-```
-Expected Output:
-INFO:     Started server process
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000
-```
-
-##### 2.4 Test API Endpoints
-Open browser and visit:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-- Health Check: http://localhost:8000/health
-
-##### 2.5 Test Accounting Statistics
-```bash
-# In new terminal
-curl http://localhost:8000/api/v1/accounting/statistics
-```
-
-Expected Response:
-```json
-{
-  "success": true,
-  "data": {
-    "total_accounts": 15,
-    "active_accounts": 15,
-    "total_journal_entries": 0,
-    ...
-  }
-}
-```
-
-#### Step 3: Frontend Setup
-
-##### 3.1 Navigate to Frontend
-```bash
-cd c:\NBFCSUITE\frontend\apps\admin-portal
-```
-
-##### 3.2 Install Dependencies (if not done)
-```bash
-npm install
-```
-
-##### 3.3 Start Development Server
-```bash
-npm run dev
-```
-
-Expected Output:
-```
-  ▲ Next.js 14.x.x
-  - Local:        http://localhost:3000
-  - Ready in 2.5s
-```
-
-##### 3.4 Open in Browser
-```
-http://localhost:3000/accounting
-http://localhost:3000/collections
+# Run migrations
+cd backend
+alembic upgrade head
 ```
 
 ---
 
-## 🧪 TESTING GUIDE
+## 🧪 Testing the Application
 
-### Test 1: Accounting Dashboard
-**URL**: http://localhost:3000/accounting
-
-**What to Check**:
-- ✅ Dashboard loads
-- ✅ 6 metric cards display
-- ✅ Recent transactions show (mock data)
-- ✅ Quick actions clickable
-- ✅ Responsive on mobile
-
-**Expected**: Professional dashboard with financial metrics
-
----
-
-### Test 2: Chart of Accounts
-**URL**: http://localhost:3000/accounting/accounts
-
-**What to Check**:
-- ✅ Account tree displays
-- ✅ Hierarchical structure visible
-- ✅ Expand/collapse works
-- ✅ Color coding by type
-- ✅ Balances show
-- ✅ Search works
-- ✅ Filter by type works
-
-**Expected**: Hierarchical account list with 8 sample accounts
-
----
-
-### Test 3: Journal Entries
-**URL**: http://localhost:3000/accounting/journal-entries
-
-**What to Check**:
-- ✅ Entry list displays
-- ✅ Status badges show correctly
-- ✅ Filter by status works
-- ✅ Filter by type works
-- ✅ Search works
-- ✅ Summary cards show counts
-- ✅ View entry button works
-
-**Expected**: List of 5 sample journal entries
-
----
-
-### Test 4: Financial Reports
-**URL**: http://localhost:3000/accounting/reports
-
-**What to Check**:
-- ✅ 3 report cards display
-- ✅ Click trial balance card
-- ✅ Date picker works
-- ✅ Generate button works
-- ✅ Report displays with data
-- ✅ Export button appears
-- ✅ Back button works
-
-**Expected**: Report selection and generation workflow
-
----
-
-### Test 5: Collection Dashboard
-**URL**: http://localhost:3000/collections
-
-**What to Check**:
-- ✅ Dashboard loads
-- ✅ 4 metric cards show
-- ✅ DPD buckets display (5 buckets)
-- ✅ Top overdue table shows
-- ✅ Quick actions work
-- ✅ Priority alerts visible
-
-**Expected**: Collection metrics and DPD bucket analysis
-
----
-
-### Test 6: Overdue Accounts
-**URL**: http://localhost:3000/collections/overdue
-
-**What to Check**:
-- ✅ Summary cards display
-- ✅ Account table loads
-- ✅ Search by name works
-- ✅ Filter by bucket works
-- ✅ Contact info shows
-- ✅ DPD badges display
-- ✅ Action buttons visible
-
-**Expected**: List of 5 overdue accounts with full details
-
----
-
-### Test 7: Collection Queue
-**URL**: http://localhost:3000/collections/queue
-
-**What to Check**:
-- ✅ Priority tabs work
-- ✅ Summary cards show
-- ✅ Queue items display
-- ✅ Tab switching works
-- ✅ Action buttons visible
-- ✅ Notes section shows
-
-**Expected**: Priority-based queue with 6 items
-
----
-
-### Test 8: API Endpoints
-
-#### Test Accounting APIs
+### Test Backend API
 ```bash
-# Get statistics
-curl http://localhost:8000/api/v1/accounting/statistics
+# Using curl
+curl http://localhost:8000/health
 
-# Get accounts
-curl http://localhost:8000/api/v1/accounting/accounts
-
-# Get journal entries
-curl http://localhost:8000/api/v1/accounting/journal-entries
+# Or open in browser
+# http://localhost:8000/docs
 ```
 
-#### Test Collection APIs
-```bash
-# Get collection statistics
-curl http://localhost:8000/api/v1/loans/collection/statistics
+### Test Gold Loan Module
+1. Create a gold loan product:
+   - Go to Gold Loans → Products
+   - Click "New Product"
+   - Fill in details (LTV: 75%, Interest: 12%)
 
-# Get overdue accounts
-curl http://localhost:8000/api/v1/loans/collection/overdue-accounts
+2. Create a gold loan:
+   - Go to Gold Loans → New Gold Loan
+   - Enter customer ID
+   - Add ornaments (Chain, Bangle, etc.)
+   - System calculates LTV automatically
+   - Submit to create loan
+
+3. View loan details:
+   - Click on loan account number
+   - View 4 tabs: Details, Ornaments, Payments, Releases
+
+### Test File Upload
+```python
+# Using Python test script
+python test_file_upload_api.py
 ```
 
 ---
 
-## 🐛 TROUBLESHOOTING
+## 🐛 Troubleshooting
 
 ### Backend Issues
 
-#### Issue: "ModuleNotFoundError"
+**Issue**: Database connection error
 ```bash
-# Solution: Install dependencies
-cd backend
+# Check PostgreSQL is running
+# Windows:
+pg_ctl status
+
+# macOS:
+brew services list
+
+# Fix: Start PostgreSQL
+# Windows: Start PostgreSQL service
+# macOS: brew services start postgresql@15
+```
+
+**Issue**: Module not found
+```bash
+# Reinstall dependencies
 pip install -r requirements.txt
 ```
 
-#### Issue: "Database connection failed"
+**Issue**: Alembic migration error
 ```bash
-# Solution: Check PostgreSQL is running
-# Windows:
-services.msc
-# Look for PostgreSQL service
-
-# Check connection
-psql -U postgres -d nbfc_db
-```
-
-#### Issue: "Port 8000 already in use"
-```bash
-# Solution: Kill existing process
-# Windows:
-netstat -ano | findstr :8000
-taskkill /PID <PID> /F
+# Reset alembic
+alembic downgrade base
+alembic upgrade head
 ```
 
 ### Frontend Issues
 
-#### Issue: "Module not found"
+**Issue**: Module not found
 ```bash
-# Solution: Install dependencies
-cd frontend/apps/admin-portal
-npm install
+# Clear node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install --legacy-peer-deps
 ```
 
-#### Issue: "Port 3000 already in use"
+**Issue**: Port already in use
 ```bash
-# Solution: Use different port
-npm run dev -- -p 3001
+# Kill process on port 3000
+# Windows:
+netstat -ano | findstr :3000
+taskkill /PID <PID> /F
+
+# macOS/Linux:
+lsof -ti:3000 | xargs kill -9
 ```
 
-#### Issue: "Cannot connect to API"
+**Issue**: API connection error
 ```bash
-# Solution: Check backend is running
-curl http://localhost:8000/health
-
-# If not working, restart backend
-cd backend
-python main.py
+# Check backend is running on port 8000
+# Check NEXT_PUBLIC_API_URL in .env.local
 ```
 
-### Database Issues
+---
 
-#### Issue: "Table does not exist"
+## 📖 Learning Resources
+
+### For Backend Developers
+- FastAPI Documentation: https://fastapi.tiangolo.com/
+- SQLAlchemy Documentation: https://docs.sqlalchemy.org/
+- Pydantic Documentation: https://docs.pydantic.dev/
+
+### For Frontend Developers
+- Next.js 14 Documentation: https://nextjs.org/docs
+- React Documentation: https://react.dev/
+- Tailwind CSS: https://tailwindcss.com/docs
+- Recharts: https://recharts.org/
+
+### Project Documentation
+- API Documentation: http://localhost:8000/docs
+- Module Documentation: See `*_COMPLETE.md` files
+- Deployment Guide: `STAGING_DEPLOYMENT_GUIDE.md`
+- Final Status: `FINAL_PROJECT_STATUS.md`
+
+---
+
+## 🚀 Next Steps
+
+After getting the application running:
+
+1. **Explore the UI**
+   - Dashboard with statistics
+   - Customer management
+   - Loan applications
+   - Gold loan module
+   - Accounting operations
+
+2. **Test API Endpoints**
+   - Open Swagger UI
+   - Try different endpoints
+   - Test authentication
+   - Test gold loan creation
+
+3. **Review Code**
+   - Backend service layer
+   - Frontend components
+   - Database models
+   - API routing
+
+4. **Customize**
+   - Modify products
+   - Add new features
+   - Customize UI theme
+   - Add validations
+
+5. **Deploy to Staging**
+   - Follow `STAGING_DEPLOYMENT_GUIDE.md`
+   - Set up Docker Compose
+   - Configure Nginx
+   - Test deployment
+
+---
+
+## 💡 Development Tips
+
+### Backend Development
 ```bash
-# Solution: Run migration again
-cd c:\NBFCSUITE
-psql -U postgres -d nbfc_db -f database/migrations/add_accounting_tables_migration.sql
+# Auto-reload is enabled with --reload flag
+uvicorn backend.main:app --reload
+
+# View SQL queries (add to config.py)
+ECHO_SQL=True
+
+# Use IPython for REPL
+pip install ipython
+ipython
+>>> from backend.shared.database.connection import get_db
 ```
 
-#### Issue: "Permission denied"
-```sql
--- Solution: Grant permissions
-GRANT ALL PRIVILEGES ON DATABASE nbfc_db TO your_user;
-GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO your_user;
-```
-
----
-
-## 📋 VERIFICATION CHECKLIST
-
-### Database
-- [ ] PostgreSQL running
-- [ ] Database `nbfc_db` exists
-- [ ] 6 new tables created
-- [ ] 15 default accounts inserted
-- [ ] No migration errors
-
-### Backend
-- [ ] Server starts without errors
-- [ ] Swagger UI accessible at /docs
-- [ ] Health check passes
-- [ ] Accounting stats API works
-- [ ] Collection stats API works
-
-### Frontend
-- [ ] Dev server starts
-- [ ] No compilation errors
-- [ ] Accounting dashboard loads
-- [ ] Collections dashboard loads
-- [ ] All 9 pages accessible
-- [ ] Mock data displays
-- [ ] Responsive on mobile
-
-### Integration
-- [ ] Frontend can reach backend
-- [ ] API calls work (mock data)
-- [ ] No CORS errors
-- [ ] No console errors
-
----
-
-## 🔧 CONFIGURATION
-
-### Backend Configuration
-File: `backend/.env`
-
-```env
-# Database
-DATABASE_URL=postgresql://postgres:password@localhost:5432/nbfc_db
-
-# Application
-APP_NAME="NBFC Financial Suite"
-APP_ENV=development
-APP_DEBUG=True
-
-# Server
-HOST=0.0.0.0
-PORT=8000
-
-# CORS
-CORS_ORIGINS=http://localhost:3000,http://localhost:3001
-```
-
-### Frontend Configuration
-File: `frontend/apps/admin-portal/.env.local`
-
-```env
-# API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
-NEXT_PUBLIC_APP_NAME="NBFC Admin Portal"
-```
-
----
-
-## 📚 QUICK REFERENCE
-
-### Important URLs
-| Service | URL | Purpose |
-|---------|-----|---------|
-| Backend API | http://localhost:8000 | Main API |
-| Swagger UI | http://localhost:8000/docs | API Documentation |
-| ReDoc | http://localhost:8000/redoc | Alternative API Docs |
-| Frontend | http://localhost:3000 | Main Application |
-| Accounting | http://localhost:3000/accounting | Accounting Module |
-| Collections | http://localhost:3000/collections | Collections Module |
-
-### Key Commands
+### Frontend Development
 ```bash
-# Start Backend
-cd backend && python main.py
+# Type checking
+npm run type-check
 
-# Start Frontend
-cd frontend/apps/admin-portal && npm run dev
+# Linting
+npm run lint
 
-# Run Migration
-psql -U postgres -d nbfc_db -f database/migrations/add_accounting_tables_migration.sql
+# Format code
+npm run format
 
-# Check Database
-psql -U postgres -d nbfc_db
-
-# View Logs
-# Backend logs in terminal
-# Frontend logs in browser console (F12)
+# Build and analyze bundle
+npm run build
+npm run analyze
 ```
 
-### Default Credentials
+### Database Operations
+```bash
+# Connect to database
+psql -U postgres -d nbfc_dev
+
+# View tables
+\dt
+
+# View table schema
+\d table_name
+
+# Query data
+SELECT * FROM gold_loan_accounts LIMIT 10;
 ```
-# Update these based on your setup
-Database User: postgres
-Database Password: your_password
-Database Name: nbfc_db
-
-# Application
-Tenant ID: 1 (default)
-User ID: 1 (default for testing)
-```
 
 ---
 
-## 🎯 NEXT STEPS AFTER SETUP
+## 🎓 Key Modules Overview
 
-### 1. Connect Real APIs
-Replace mock data in frontend with actual API calls:
-- Update `fetchAccounts()` functions
-- Add error handling
-- Add loading states
+### 1. Gold Loan Module (New!)
+- **Location**: `backend/services/gold/`
+- **Features**: Ornament tracking, LTV calculation, payments, releases
+- **API**: `/api/v1/gold-loans/`
+- **Frontend**: `/gold-loans/`
 
-### 2. Test with Real Data
-- Create actual accounts via API
-- Create journal entries
-- Generate real reports
-- Test collection workflow
+### 2. Customer Management
+- **Location**: `backend/services/customer/`
+- **Features**: CIF, KYC, family members, documents
+- **API**: `/api/v1/customers/`
+- **Frontend**: `/customers/`
 
-### 3. Customize
-- Update branding
-- Modify color schemes
-- Add company logo
-- Adjust layouts
+### 3. Loan Management
+- **Location**: `backend/services/loan/`
+- **Features**: Applications, approvals, disbursement, repayment
+- **API**: `/api/v1/loans/`
+- **Frontend**: `/loans/applications/`
 
-### 4. Deploy
-- Set up production database
-- Configure production environment
-- Deploy backend to server
-- Deploy frontend to hosting
+### 4. Deposit Management
+- **Location**: `backend/services/deposit/`
+- **Features**: Accounts, products, interest calculation
+- **API**: `/api/v1/deposits/`
+- **Frontend**: `/deposits/`
 
----
-
-## 📞 SUPPORT
-
-### Documentation
-- `ACCOUNTING_MODULE_COMPLETE.md` - Backend details
-- `FRONTEND_UI_COMPLETE.md` - Frontend details
-- `COMPLETE_IMPLEMENTATION_SUMMARY.md` - Full overview
-
-### API Documentation
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-### Common Issues
-Check the Troubleshooting section above for solutions to common problems.
+### 5. Accounting
+- **Location**: `backend/services/accounting/`
+- **Features**: Chart of accounts, journal entries, reports
+- **API**: `/api/v1/accounting/`
+- **Frontend**: `/accounting/`
 
 ---
 
-## ✅ SUCCESS INDICATORS
+## 📞 Support & Resources
 
-You'll know setup is successful when:
-- ✅ Backend server running without errors
-- ✅ Frontend loads in browser
-- ✅ Swagger UI shows 133+ endpoints
-- ✅ Accounting dashboard displays metrics
-- ✅ Collections dashboard shows DPD buckets
-- ✅ All 9 pages are accessible
-- ✅ Mock data displays correctly
-- ✅ No errors in browser console
-- ✅ API calls return data
+### Documentation Files
+- `FINAL_PROJECT_STATUS.md` - Complete project overview
+- `GOLD_LOAN_MODULE_COMPLETE.md` - Gold loan documentation
+- `FILE_UPLOAD_API_COMPLETE.md` - File upload guide
+- `STAGING_DEPLOYMENT_GUIDE.md` - Deployment instructions
 
-**When all checked, you're ready to go!** 🚀
-
----
-
-## 🎉 YOU'RE ALL SET!
-
-Your NBFC Accounting & Collections system is now:
-- ✅ Installed
-- ✅ Running
-- ✅ Tested
-- ✅ Ready for use
-
-**Enjoy your new enterprise-grade financial system!**
+### Need Help?
+1. Check API documentation: http://localhost:8000/docs
+2. Review module documentation files
+3. Check troubleshooting section above
+4. Review code comments in source files
 
 ---
 
-**End of Quick Start Guide**
+## ✅ Checklist for New Developers
+
+- [ ] Clone repository
+- [ ] Install prerequisites (Python, Node.js, PostgreSQL)
+- [ ] Create database
+- [ ] Setup backend virtual environment
+- [ ] Install backend dependencies
+- [ ] Configure backend .env file
+- [ ] Run database migrations
+- [ ] Start backend server
+- [ ] Install frontend dependencies
+- [ ] Configure frontend .env.local
+- [ ] Start frontend server
+- [ ] Access application at http://localhost:3000
+- [ ] Login with demo credentials
+- [ ] Explore dashboard and modules
+- [ ] Test gold loan creation
+- [ ] Review API documentation
+- [ ] Read module documentation files
+
+---
+
+## 🎉 You're Ready!
+
+Congratulations! You now have a fully functional NBFC Financial Suite running locally.
+
+**Start building amazing financial solutions!** 🚀
+
+---
+
+**Last Updated**: July 5, 2026  
+**Version**: 2.0.0  
+**Status**: Production Ready ✅
