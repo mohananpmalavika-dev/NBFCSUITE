@@ -209,7 +209,8 @@ from backend.services.loan import router as loan_router
 from backend.services.accounting.router import router as accounting_router
 from backend.services.deposit import product_router, account_router, interest_router
 from backend.services.workflow import template_router, instance_router, task_router
-from backend.services.rules import category_router, evaluation_router, decision_router
+from backend.services.rules import category_router, evaluation_router, decision_router as rules_decision_router
+from backend.services.decision import router as decision_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -231,7 +232,10 @@ app.include_router(task_router, prefix="/api/v1", tags=["Workflow Tasks"])
 # Business Rules Engine Routers
 app.include_router(category_router, prefix="/api/v1", tags=["Business Rules"])
 app.include_router(evaluation_router, prefix="/api/v1", tags=["Rule Evaluation"])
-app.include_router(decision_router, prefix="/api/v1", tags=["Rule Decisions"])
+app.include_router(rules_decision_router, prefix="/api/v1", tags=["Rule Decisions"])
+
+# Decision Engine Router
+app.include_router(decision_router, prefix="/api/v1", tags=["Decision Engine"])
 
 # ============================================
 # STARTUP MESSAGE
