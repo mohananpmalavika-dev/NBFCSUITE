@@ -270,3 +270,48 @@ class RolePermission(BaseModel):
     
     def __repr__(self):
         return f"<RolePermission(role_id={self.role_id}, permission_id={self.permission_id})>"
+
+
+class FileUpload(Base, TenantMixin, TimestampMixin):
+    """
+    FileUpload model
+    Stores metadata for uploaded files
+    """
+    __tablename__ = "file_uploads"
+    
+    id = Column(String(50), primary_key=True, index=True)
+    
+    # File information
+    filename = Column(String(255), nullable=False)  # Unique filename (stored)
+    original_filename = Column(String(255), nullable=False)  # Original filename
+    file_path = Column(String(500), nullable=False)  # Full file path
+    file_size = Column(Integer, nullable=False)  # File size in bytes
+    mime_type = Column(String(100), nullable=False)  # MIME type
+    
+    # Document metadata
+    document_type = Column(String(100), nullable=False, index=True)  # Type of document
+    document_number = Column(String(100), nullable=True)  # Document reference number
+    
+    # Entity relationship
+    entity_type = Column(String(50), nullable=True, index=True)  # customer, loan, deposit, etc.
+    entity_id = Column(String(50), nullable=True, index=True)  # ID of related entity
+    
+    # Upload information
+    uploaded_by = Column(String(50), nullable=False)  # User ID who uploaded
+    uploaded_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    # Additional info
+    remarks = Column(String(500), nullable=True)
+    
+    # Status
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    
+    # Indexes for common queries
+    __table_args__ = (
+        Index('idx_file_entity', 'tenant_id', 'entity_type', 'entity_id'),
+        Index('idx_file_uploaded_by', 'tenant_id', 'uploaded_by'),
+        Index('idx_file_document_type', 'tenant_id', 'document_type'),
+    )
+    
+    def __repr__(self):
+        return f"<FileUpload(id={self.id}, filename={self.filename}, document_type={self.document_type})>"

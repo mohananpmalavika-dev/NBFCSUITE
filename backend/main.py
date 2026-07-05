@@ -71,6 +71,7 @@ app = FastAPI(
         {"name": "Decision", "description": "Instant decision engine"},
         {"name": "Notifications", "description": "Multi-channel notifications"},
         {"name": "Compliance", "description": "RBI compliance and reporting"},
+        {"name": "File Upload", "description": "Document and file management"},
     ]
 )
 
@@ -213,6 +214,7 @@ from backend.services.workflow import template_router, instance_router, task_rou
 from backend.services.rules import category_router, evaluation_router, decision_router as rules_decision_router
 from backend.services.decision import router as decision_router
 from backend.services.notification import router as notification_router
+from backend.services.file_upload.router import router as file_upload_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -241,6 +243,9 @@ app.include_router(decision_router, prefix="/api/v1", tags=["Decision Engine"])
 
 # Notification Service Router
 app.include_router(notification_router, prefix="/api/v1", tags=["Notifications"])
+
+# File Upload Router
+app.include_router(file_upload_router, prefix="/api/v1", tags=["File Upload"])
 
 # ============================================
 # STARTUP MESSAGE
