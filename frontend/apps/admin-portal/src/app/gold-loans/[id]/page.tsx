@@ -104,12 +104,12 @@ export default function GoldLoanDetailPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'success' | 'warning' | 'error'> = {
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info'> = {
       'Active': 'success',
       'Overdue': 'warning',
-      'NPA': 'error',
+      'NPA': 'destructive',
       'Closed': 'default',
-      'Foreclosed': 'error'
+      'Foreclosed': 'destructive'
     };
     return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
   };
@@ -144,7 +144,7 @@ export default function GoldLoanDetailPage() {
             </Link>
             <h1 className="text-3xl font-bold">{loan.loan_account_number}</h1>
             {getStatusBadge(loan.status)}
-            {loan.is_npa && <Badge variant="error">NPA</Badge>}
+            {loan.is_npa && <Badge variant="destructive">NPA</Badge>}
           </div>
           <p className="text-muted-foreground">
             Created on {formatDate(loan.application_date)}
