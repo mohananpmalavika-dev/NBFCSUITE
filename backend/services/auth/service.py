@@ -32,6 +32,47 @@ from backend.services.auth.schemas import (
 )
 
 
+def user_to_dict(user: User) -> dict:
+    """
+    Safely convert User model to dictionary without triggering lazy loading.
+    This avoids the MissingGreenlet error in async contexts.
+    """
+    return {
+        "id": user.id,
+        "tenant_id": user.tenant_id,
+        "email": user.email,
+        "username": user.username,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "phone": user.phone,
+        "mobile": user.mobile,
+        "employee_code": user.employee_code,
+        "designation": user.designation,
+        "department": user.department,
+        "is_active": user.is_active,
+        "is_superuser": user.is_superuser,
+        "is_verified": user.is_verified,
+        "email_verified": user.email_verified,
+        "phone_verified": user.phone_verified,
+        "last_login": user.last_login,
+        "last_activity": user.last_activity,
+        "login_count": user.login_count,
+        "failed_login_attempts": user.failed_login_attempts,
+        "locked_until": user.locked_until,
+        "password_changed_at": user.password_changed_at,
+        "must_change_password": user.must_change_password,
+        "language": user.language,
+        "timezone": user.timezone,
+        "created_at": user.created_at,
+        "updated_at": user.updated_at,
+        "created_by": user.created_by,
+        "updated_by": user.updated_by,
+        "is_deleted": user.is_deleted,
+        "deleted_at": user.deleted_at,
+        "deleted_by": user.deleted_by,
+    }
+
+
 class AuthService:
     """Authentication service"""
     
@@ -120,7 +161,7 @@ class AuthService:
         )
         
         user_response = UserWithRoles(
-            **user.dict(),
+            **user_to_dict(user),
             roles=roles,
             permissions=permissions
         )
@@ -189,7 +230,7 @@ class AuthService:
         await self.db.commit()
         await self.db.refresh(user)
         
-        return UserResponse(**user.dict())
+        return UserResponse(**user_to_dict(user))
     
     async def refresh_token(self, refresh_token: str) -> TokenResponse:
         """
@@ -282,7 +323,7 @@ class AuthService:
         roles, permissions = await self._get_user_roles_and_permissions(user.id, user.tenant_id)
         
         return UserWithRoles(
-            **user.dict(),
+            **user_to_dict(user),
             roles=roles,
             permissions=permissions
         )
