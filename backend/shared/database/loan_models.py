@@ -76,8 +76,8 @@ class LoanProduct(Base):
     # Audit
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by = Column(Integer)
-    updated_by = Column(Integer)
+    created_by = Column(UUID(as_uuid=True))
+    updated_by = Column(UUID(as_uuid=True))
     is_deleted = Column(Boolean, default=False)
     
     # Relationships
@@ -161,8 +161,8 @@ class LoanApplication(Base):
     # Audit
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by = Column(Integer)
-    updated_by = Column(Integer)
+    created_by = Column(UUID(as_uuid=True))
+    updated_by = Column(UUID(as_uuid=True))
     is_deleted = Column(Boolean, default=False)
     
     # Relationships
@@ -325,8 +325,8 @@ class LoanAccount(Base):
     # Audit
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by = Column(Integer)
-    updated_by = Column(Integer)
+    created_by = Column(UUID(as_uuid=True))
+    updated_by = Column(UUID(as_uuid=True))
     is_deleted = Column(Boolean, default=False)
     
     # Relationships
@@ -430,7 +430,7 @@ class LoanRepayment(Base):
     # Audit
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by = Column(Integer)
+    created_by = Column(UUID(as_uuid=True))
     
     # Relationships
     loan_account = relationship("LoanAccount", back_populates="repayments")

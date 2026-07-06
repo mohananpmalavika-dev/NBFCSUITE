@@ -15,6 +15,7 @@ All models follow multi-tenant architecture with soft delete pattern.
 from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Text, ForeignKey, JSON
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .models import Base
@@ -63,8 +64,8 @@ class WorkflowTemplate(Base):
     # Audit Fields
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by = Column(Integer, ForeignKey("users.id"))
-    updated_by = Column(Integer, ForeignKey("users.id"))
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     is_deleted = Column(Boolean, default=False, index=True)
     
     # Relationships
@@ -95,7 +96,7 @@ class WorkflowInstance(Base):
     # Context (what entity is this workflow for)
     entity_type = Column(String(50), index=True)  # loan_application, deposit_account, customer, etc.
     entity_id = Column(Integer, index=True)  # Related entity ID
-    initiated_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    initiated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     
     # Status
     status = Column(String(50), default='pending', index=True)
@@ -117,7 +118,7 @@ class WorkflowInstance(Base):
     # Escalation
     is_escalated = Column(Boolean, default=False, index=True)
     escalated_at = Column(DateTime)
-    escalated_to = Column(Integer, ForeignKey("users.id"))
+    escalated_to = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     
     # Result
     result = Column(String(50))  # approved, rejected, completed, error
@@ -166,7 +167,7 @@ class WorkflowStep(Base):
     # Status: pending, in_progress, completed, failed, skipped
     
     # Assignment (for human tasks)
-    assigned_to = Column(Integer, ForeignKey("users.id"), index=True)  # Specific user
+    assigned_to = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)  # Specific user
     assigned_role = Column(String(100), index=True)  # Or role-based assignment
     
     # Timing
@@ -191,7 +192,7 @@ class WorkflowStep(Base):
     # Audit Fields
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    completed_by = Column(Integer, ForeignKey("users.id"))
+    completed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     
     # Relationships
     instance = relationship("WorkflowInstance", back_populates="steps", 
@@ -225,7 +226,7 @@ class WorkflowHistory(Base):
     event_timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     
     # Actor (who/what triggered this event)
-    actor_id = Column(Integer, ForeignKey("users.id"), index=True)
+    actor_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
     actor_type = Column(String(50))  # user, system
     
     # Transition Details
@@ -270,7 +271,7 @@ class WorkflowTask(Base):
     # Task types: approval, review, data_entry, document_upload
     
     # Assignment
-    assigned_to = Column(Integer, ForeignKey("users.id"), index=True)  # Direct assignment
+    assigned_to = Column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)  # Direct assignment
     assigned_role = Column(String(100), index=True)  # Role-based assignment
     assignment_type = Column(String(50))  # direct, role_based, pool
     
@@ -278,7 +279,7 @@ class WorkflowTask(Base):
     status = Column(String(50), default='pending', index=True)
     # Status: pending, claimed, in_progress, completed, cancelled
     claimed_at = Column(DateTime)
-    claimed_by = Column(Integer, ForeignKey("users.id"))
+    claimed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     
     # Priority
     priority = Column(String(20), default='normal', index=True)  # low, normal, high, urgent
@@ -342,7 +343,7 @@ class WorkflowSLATracking(Base):
     
     # Escalation
     escalation_level = Column(Integer, default=0)  # 0 = no escalation, 1+ = escalation levels
-    escalated_to = Column(Integer, ForeignKey("users.id"))
+    escalated_to = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     escalation_time = Column(DateTime)
     
     # Audit Fields

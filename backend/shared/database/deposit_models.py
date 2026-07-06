@@ -13,6 +13,7 @@ All models follow multi-tenant architecture with soft delete pattern.
 from sqlalchemy import (
     Column, Integer, String, Numeric, Boolean, DateTime, Date, Text, ForeignKey
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .models import Base
@@ -80,8 +81,8 @@ class DepositProduct(Base):
     # Audit Fields
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by = Column(Integer, ForeignKey("users.id"))
-    updated_by = Column(Integer, ForeignKey("users.id"))
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     is_deleted = Column(Boolean, default=False, index=True)
     
     # Relationships
@@ -169,8 +170,8 @@ class DepositAccount(Base):
     # Audit Fields
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by = Column(Integer, ForeignKey("users.id"))
-    updated_by = Column(Integer, ForeignKey("users.id"))
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    updated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     is_deleted = Column(Boolean, default=False, index=True)
     
     # Relationships
@@ -233,12 +234,12 @@ class DepositTransaction(Base):
     reversed_transaction_id = Column(Integer, ForeignKey("deposit_transactions.id"))  # Link to reversed transaction
     
     # Processed By
-    processed_by = Column(Integer, ForeignKey("users.id"))  # User who processed the transaction
-    approved_by = Column(Integer, ForeignKey("users.id"))  # For high-value transactions
+    processed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))  # User who processed the transaction
+    approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))  # For high-value transactions
     
     # Audit Fields
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    created_by = Column(Integer, ForeignKey("users.id"))
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     
     # Relationships
     account = relationship("DepositAccount", back_populates="transactions")
@@ -292,7 +293,7 @@ class DepositInterestCalculation(Base):
     
     # Calculation Metadata
     calculation_date = Column(DateTime, default=datetime.utcnow)
-    calculated_by = Column(Integer, ForeignKey("users.id"))  # System or user who triggered calculation
+    calculated_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))  # System or user who triggered calculation
     
     # Audit Fields
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -339,7 +340,7 @@ class DepositMaturityQueue(Base):
     
     # Processing Details
     processed_date = Column(DateTime)
-    processed_by = Column(Integer, ForeignKey("users.id"))
+    processed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     processing_remarks = Column(Text)
     error_message = Column(Text)
     
