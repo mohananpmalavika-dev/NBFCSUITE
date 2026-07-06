@@ -19,6 +19,67 @@ from backend.shared.middleware.tenant import TenantMiddleware
 from backend.shared.middleware.logging import LoggingMiddleware
 from backend.shared.middleware.error_handler import ErrorHandlerMiddleware
 
+
+def import_all_models():
+    """Import all models to register them with SQLAlchemy Base"""
+    try:
+        # Core models
+        from backend.shared.database.models import (
+            Tenant, User, Role, UserRole, Permission, RolePermission,
+            Branch, AuditLog, SystemConfig
+        )
+        # Customer models
+        from backend.shared.database.customer_models import (
+            Customer, CustomerDocument, FamilyMember, BankAccount
+        )
+        # Loan models
+        from backend.shared.database.loan_models import (
+            LoanProduct, LoanApplication, LoanAccount, Repayment, 
+            CollateralType, Collateral, LoanPurpose
+        )
+        # Deposit models
+        from backend.shared.database.deposit_models import (
+            DepositProduct, DepositAccount, DepositTransaction, MaturitySchedule
+        )
+        # Accounting models
+        from backend.shared.database.accounting_models import (
+            ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
+            TrialBalance, AccountingPeriod
+        )
+        # Workflow models
+        from backend.shared.database.workflow_models import (
+            WorkflowTemplate, WorkflowInstance, WorkflowStep, 
+            WorkflowHistory, WorkflowTask, WorkflowSLATracking
+        )
+        # Rules models
+        from backend.shared.database.rules_models import (
+            RuleSet, Rule, RuleCondition, RuleAction, RuleExecution
+        )
+        # Decision models
+        from backend.shared.database.decision_models import (
+            DecisionStrategy, OfferTemplate, OfferInstance, DecisionHistory
+        )
+        # Notification models
+        from backend.shared.database.notification_models import (
+            NotificationTemplate, Notification, NotificationLog
+        )
+        # Gold loan models
+        from backend.shared.database.gold_loan_models import (
+            GoldLoanScheme, GoldLoan, Ornament, OrnamentAppraisal, 
+            OrnamentRelease, GoldRateHistory
+        )
+        # Master data models
+        from backend.shared.database.master_data_models import (
+            Country, State, District, City, Pincode,
+            Bank, BankBranch, DocumentType, OccupationType,
+            IncomeSource, Religion, Caste, Education, MaritalStatus
+        )
+        logger.info("✅ All models imported successfully")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error importing models: {e}")
+        return False
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -58,13 +119,7 @@ async def lifespan(app: FastAPI):
             logger.warning(f"⚠️  Migration warning: {result.stderr}")
             # If migrations fail, try creating tables directly
             logger.info("🔄 Attempting to create tables directly...")
-            from backend.shared.database.connection import engine
-            from backend.shared.database.models import Base
-            from backend.shared.database import (
-                customer_models, loan_models, deposit_models, 
-                accounting_models, workflow_models, rules_models,
-                decision_models, notification_models, gold_loan_models, master_data_models
-            )
+            import_all_models()  # Import all models first
             
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -75,13 +130,7 @@ async def lifespan(app: FastAPI):
         # Try direct table creation as fallback
         try:
             logger.info("🔄 Fallback: Creating tables directly...")
-            from backend.shared.database.connection import engine
-            from backend.shared.database.models import Base
-            from backend.shared.database import (
-                customer_models, loan_models, deposit_models, 
-                accounting_models, workflow_models, rules_models,
-                decision_models, notification_models, gold_loan_models, master_data_models
-            )
+            import_all_models()  # Import all models first
             
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -265,6 +314,60 @@ async def health_check() -> Dict[str, Any]:
             }
         }
     }
+
+
+@app.post("/init-db", tags=["Health"])
+async def initialize_database() -> Dict[str, Any]:
+    """Initialize database tables (for first-time setup)"""
+    try:
+        logger.info("🔄 Creating database tables...")
+        import_all_models()  # Import all models first
+        
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        
+        logger.info("✅ Database tables created successfully")
+        
+        # Create default tenant
+        from backend.shared.database.connection import AsyncSessionLocal
+        from backend.shared.database.models import Tenant
+        from sqlalchemy import select
+        
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(Tenant).where(Tenant.id == "default"))
+            tenant = result.scalar_one_or_none()
+            
+            if not tenant:
+                tenant = Tenant(
+                    id="default",
+                    name="Default Organization",
+                    display_name="Default Organization",
+                    email="admin@nbfc.com",
+                    is_active=True,
+                    subscription_plan="enterprise",
+                    subscription_status="active"
+                )
+                session.add(tenant)
+                await session.commit()
+                logger.info("✅ Default tenant created")
+        
+        return {
+            "success": True,
+            "data": {
+                "message": "Database initialized successfully",
+                "tables_created": True,
+                "default_tenant_created": True
+            }
+        }
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize database: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": {
+                "code": "INIT_ERROR",
+                "message": str(e)
+            }
+        }
 
 
 @app.get("/health/ready", tags=["Health"])
