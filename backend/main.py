@@ -90,6 +90,24 @@ from backend.shared.database.integration_models import (
     DocumentOCRResult, EKYCRecord, DigiLockerDocument
 )
 
+# 7. Vehicle Loan models (NEW - LOS Vehicle Extension)
+from backend.shared.database.vehicle_loan_models import (
+    VehicleLoanDetails, VehicleDealer, VehicleRTOTracking,
+    VehicleInsurance, VehicleInsuranceClaim, VehicleManufacturerModel
+)
+
+# 8. Property Loan models (NEW - LOS Property Extension)
+from backend.shared.database.property_loan_models import (
+    PropertyLoanDetails, PropertyLegalVerification, PropertyTechnicalVerification,
+    PropertyDocument, PropertyMortgage
+)
+
+# 9. LMS Extended models (NEW - LMS Extensions)
+from backend.shared.database.lms_extended_models import (
+    NACHMandate, NACHDebitTransaction, LoanRestructuring,
+    LoanInsurancePolicy, InsurancePremiumPayment, InsuranceClaim
+)
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -478,6 +496,9 @@ from backend.services.integration.ocr_router import router as ocr_router
 from backend.services.integration.ekyc_router import router as ekyc_integration_router
 from backend.services.integration.digilocker_router import router as digilocker_integration_router
 
+# NEW: LOS Extensions Routers (Vehicle & Property Loans)
+from backend.services.loan.extensions import vehicle_loan_router, property_loan_router
+
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["Dashboard"])
@@ -527,6 +548,17 @@ app.include_router(gold_loan_router, prefix="/api/v1", tags=["Gold Loans"])
 
 # Bureau Integration (CIBIL, Equifax, Experian, CRIF)
 app.include_router(bureau_integration_router, tags=["Bureau Integration"])
+
+# ============================================
+# NEW: LOS EXTENSIONS ROUTERS
+# Vehicle & Property Loan Support
+# ============================================
+
+# Vehicle Loan Extension
+app.include_router(vehicle_loan_router, prefix="/api/v1", tags=["Vehicle Loans"])
+
+# Property Loan Extension (LAP/Home Loan)
+app.include_router(property_loan_router, prefix="/api/v1", tags=["Property Loans"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

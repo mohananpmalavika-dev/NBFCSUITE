@@ -629,3 +629,344 @@ def validate_date_range(cls, v, values):
         if v <= values['from_date']:
             raise ValueError('to_date must be after from_date')
     return v
+
+
+# ==================== NEW SCHEMAS FOR ADVANCED FEATURES ====================
+
+# Notification Schemas
+class NotificationRequest(BaseModel):
+    """Request to send custom notification"""
+    account_ids: List[int] = Field(..., min_items=1)
+    subject: str = Field(..., min_length=1, max_length=200)
+    message: str = Field(..., min_length=1, max_length=1000)
+    channels: List[str] = Field(['email', 'sms'], min_items=1)
+
+
+class NotificationResponse(BaseModel):
+    """Notification response"""
+    notification_type: str
+    accounts_notified: int
+    notifications: List[Dict[str, Any]]
+
+
+# Standing Instruction Schemas
+class StandingInstructionCreate(BaseModel):
+    """Create standing instruction"""
+    account_id: int = Field(..., gt=0)
+    instruction_type: str = Field(..., pattern="^(auto_debit|sweep_in|sweep_out)$")
+    debit_account_number: Optional[str] = Field(None, max_length=50)
+    debit_amount: Optional[Decimal] = Field(None, gt=0)
+    frequency: Optional[str] = Field(None, pattern="^(daily|weekly|monthly|quarterly)$")
+    start_date: date
+    end_date: Optional[date] = None
+    threshold_amount: Optional[Decimal] = Field(None, ge=0)
+    sweep_to_account: Optional[str] = Field(None, max_length=50)
+
+
+class StandingInstructionResponse(BaseModel):
+    """Standing instruction response"""
+    instruction_id: int
+    account_number: str
+    instruction_type: str
+    status: str
+    debit_amount: Optional[float]
+    frequency: Optional[str]
+    threshold_amount: Optional[float]
+    next_execution: Optional[date]
+
+
+# Account Freeze Schemas
+class AccountFreezeRequest(BaseModel):
+    """Request to freeze account"""
+    account_id: int = Field(..., gt=0)
+    freeze_type: str = Field(..., pattern="^(debit|credit|full)$")
+    reason: str = Field(..., min_length=5, max_length=500)
+
+
+class AccountFreezeResponse(BaseModel):
+    """Account freeze response"""
+    freeze_id: int
+    account_number: str
+    freeze_type: str
+    freeze_date: date
+    reason: str
+    status: str
+
+
+class AccountUnfreezeRequest(BaseModel):
+    """Request to unfreeze account"""
+    freeze_id: int = Field(..., gt=0)
+    reason: str = Field(..., min_length=5, max_length=500)
+
+
+# Account Lien Schemas
+class AccountLienRequest(BaseModel):
+    """Request to mark lien"""
+    account_id: int = Field(..., gt=0)
+    lien_amount: Decimal = Field(..., gt=0)
+    reason: str = Field(..., min_length=5, max_length=500)
+    reference: Optional[str] = Field(None, max_length=100)
+
+
+class AccountLienResponse(BaseModel):
+    """Account lien response"""
+    lien_id: int
+    account_number: str
+    lien_amount: float
+    total_lien: float
+    current_balance: float
+    available_balance: float
+    marked_date: date
+
+
+class LienReleaseRequest(BaseModel):
+    """Request to release lien"""
+    lien_id: int = Field(..., gt=0)
+    reason: str = Field(..., min_length=5, max_length=500)
+
+
+# Account Transfer Schemas
+class AccountTransferRequest(BaseModel):
+    """Request to transfer account"""
+    account_id: int = Field(..., gt=0)
+    new_customer_id: int = Field(..., gt=0)
+    reason: str = Field(..., min_length=5, max_length=500)
+    transfer_date: Optional[date] = None
+
+
+class AccountTransferResponse(BaseModel):
+    """Account transfer response"""
+    account_number: str
+    old_customer_id: int
+    new_customer_id: int
+    transfer_date: date
+    reason: str
+    status: str
+
+
+# Joint Account Schemas
+class JointHolderRequest(BaseModel):
+    """Request to add joint holder"""
+    account_id: int = Field(..., gt=0)
+    customer_id: int = Field(..., gt=0)
+    holder_type: str = Field(..., pattern="^(primary|joint|either_or_survivor)$")
+    operation_mode: str = Field("joint", pattern="^(single|joint|either_or)$")
+
+
+class JointHolderResponse(BaseModel):
+    """Joint holder response"""
+    holder_id: int
+    account_number: str
+    customer_id: int
+    holder_type: str
+    operation_mode: str
+    added_date: date
+
+
+# Batch Operation Schemas
+class BatchMaturityRequest(BaseModel):
+    """Request for batch maturity processing"""
+    maturity_date: Optional[date] = None
+    days_ahead: int = Field(0, ge=0, le=30)
+
+
+class BatchTDSRequest(BaseModel):
+    """Request for batch TDS calculation"""
+    financial_year: str = Field(..., pattern="^\\d{4}-\\d{4}$")
+    quarter: int = Field(..., ge=1, le=4)
+
+
+class BatchDormancyRequest(BaseModel):
+    """Request for dormancy check"""
+    inactive_months: int = Field(24, ge=12, le=60)
+
+
+class BatchPenaltyRequest(BaseModel):
+    """Request for penalty application"""
+    penalty_type: str = Field(..., pattern="^(rd_missed|min_balance|late_payment)$")
+
+
+class BatchOperationResponse(BaseModel):
+    """Batch operation response"""
+    total_count: int
+    processed: int
+    success_count: int
+    failed_count: int
+    errors: List[Dict[str, str]]
+
+
+# Report Schemas
+class DashboardResponse(BaseModel):
+    """Dashboard response"""
+    summary: Dict[str, Any]
+    by_type: List[Dict[str, Any]]
+    maturity_alerts: Dict[str, int]
+    today_transactions: Dict[str, Any]
+    as_of_date: date
+
+
+class DepositSummaryRequest(BaseModel):
+    """Request for deposit summary"""
+    from_date: Optional[date] = None
+    to_date: Optional[date] = None
+    account_type: Optional[str] = None
+
+
+class MaturityCalendarRequest(BaseModel):
+    """Request for maturity calendar"""
+    from_date: date
+    to_date: date
+
+
+class MaturityCalendarResponse(BaseModel):
+    """Maturity calendar response"""
+    period: Dict[str, str]
+    total_accounts: int
+    total_maturity_amount: float
+    accounts: List[Dict[str, Any]]
+
+
+class InterestAccrualRequest(BaseModel):
+    """Request for interest accrual report"""
+    from_date: date
+    to_date: date
+    account_type: Optional[str] = None
+
+
+class InterestAccrualResponse(BaseModel):
+    """Interest accrual response"""
+    period: Dict[str, str]
+    summary: Dict[str, float]
+    by_type: List[Dict[str, Any]]
+
+
+class AgingAnalysisResponse(BaseModel):
+    """Aging analysis response"""
+    as_of_date: date
+    buckets: Dict[str, Dict[str, Any]]
+
+
+class ProductPerformanceRequest(BaseModel):
+    """Request for product performance"""
+    from_date: Optional[date] = None
+    to_date: Optional[date] = None
+
+
+class ProductPerformanceResponse(BaseModel):
+    """Product performance response"""
+    period: Dict[str, str]
+    products: List[Dict[str, Any]]
+
+
+class DormancyReportResponse(BaseModel):
+    """Dormancy report response"""
+    dormant_accounts: Dict[str, Any]
+    near_dormant_accounts: Dict[str, Any]
+
+
+class TDSSummaryRequest(BaseModel):
+    """Request for TDS summary"""
+    financial_year: str = Field(..., pattern="^\\d{4}-\\d{4}$")
+    quarter: Optional[int] = Field(None, ge=1, le=4)
+
+
+class TDSSummaryResponse(BaseModel):
+    """TDS summary response"""
+    financial_year: str
+    quarter: Optional[int]
+    period: Dict[str, str]
+    total_interest: float
+    total_tds: float
+    calculation_count: int
+
+
+class TransactionVolumeRequest(BaseModel):
+    """Request for transaction volume report"""
+    from_date: date
+    to_date: date
+    group_by: str = Field("day", pattern="^(day|week|month)$")
+
+
+class TransactionVolumeResponse(BaseModel):
+    """Transaction volume response"""
+    period: Dict[str, str]
+    group_by: str
+    data: List[Dict[str, Any]]
+
+
+# Regulatory Compliance Schemas
+class RBIReturnRequest(BaseModel):
+    """Request for RBI return"""
+    return_date: date
+    return_type: str = Field("quarterly", pattern="^(monthly|quarterly|annual)$")
+
+
+class RBIReturnResponse(BaseModel):
+    """RBI return response"""
+    return_type: str
+    return_date: date
+    reporting_entity: Dict[str, str]
+    summary: Dict[str, Any]
+    by_deposit_type: List[Dict[str, Any]]
+    maturity_profile: Dict[str, float]
+    rate_wise_classification: List[Dict[str, Any]]
+    top_depositors: List[Dict[str, Any]]
+
+
+class DICGCReportRequest(BaseModel):
+    """Request for DICGC report"""
+    reporting_date: date
+
+
+class DICGCReportResponse(BaseModel):
+    """DICGC report response"""
+    reporting_date: date
+    insurance_limit: float
+    summary: Dict[str, Any]
+    depositor_classification: Dict[str, int]
+
+
+class ConcentrationReportRequest(BaseModel):
+    """Request for concentration report"""
+    as_of_date: Optional[date] = None
+
+
+class ConcentrationReportResponse(BaseModel):
+    """Concentration report response"""
+    as_of_date: date
+    total_deposits: float
+    concentration_metrics: Dict[str, Any]
+    risk_assessment: Dict[str, str]
+
+
+class KYCComplianceResponse(BaseModel):
+    """KYC compliance response"""
+    as_of_date: date
+    summary: Dict[str, Any]
+    pending_kyc: List[Dict[str, Any]]
+
+
+class ComplianceDashboardResponse(BaseModel):
+    """Compliance dashboard response"""
+    as_of_date: date
+    overall_metrics: Dict[str, Any]
+    risk_indicators: Dict[str, Any]
+    compliance_areas: Dict[str, Any]
+
+
+# Scheduled Job Schemas
+class ScheduledJobResponse(BaseModel):
+    """Scheduled job response"""
+    job_date: date
+    tenant_id: int
+    jobs: List[Dict[str, Any]]
+
+
+class JobStatusResponse(BaseModel):
+    """Job status response"""
+    job_id: str
+    status: str
+    message: str
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    result: Optional[Dict[str, Any]] = None

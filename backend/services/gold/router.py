@@ -13,8 +13,22 @@ from backend.services.auth.dependencies import get_current_user
 from backend.services.gold.gold_loan_service import GoldLoanService
 from backend.services.gold import schemas
 
+# Import new feature routers
+from backend.services.gold.gold_rate_router import router as gold_rate_router
+from backend.services.gold.vault_router import router as vault_router
+from backend.services.gold.purity_router import router as purity_router
+from backend.services.gold.appraisal_router import router as appraisal_router
+from backend.services.gold.auction_router import router as auction_router
+
 
 router = APIRouter(prefix="/gold-loans", tags=["Gold Loans"])
+
+# Include new feature routers
+router.include_router(gold_rate_router)
+router.include_router(vault_router)
+router.include_router(purity_router)
+router.include_router(appraisal_router)
+router.include_router(auction_router)
 
 
 def get_gold_loan_service(

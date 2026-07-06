@@ -2,6 +2,9 @@
  * TypeScript types for NBFC Suite Admin Portal
  */
 
+// Export customer types
+export * from './customer.types'
+
 // ============================================
 // Common Types
 // ============================================
