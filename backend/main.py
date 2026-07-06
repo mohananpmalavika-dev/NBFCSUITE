@@ -25,18 +25,34 @@ from backend.shared.middleware.error_handler import ErrorHandlerMiddleware
 
 # Import all models at module level to register them with SQLAlchemy
 # This must happen before any database operations
+# IMPORTANT: Import order matters for foreign key resolution!
+
+# 1. Core models (Tenant, User, etc.)
 from backend.shared.database.models import (
     Tenant, User, Role, UserRole, Permission, RolePermission, FileUpload
 )
+
+# 2. Master data models (must come before models that reference them)
+from backend.shared.database.master_data_models import (
+    Country, State, City, Pincode, Bank, BankBranch, Currency,
+    InterestRateType, LoanProductType, DocumentType, Occupation,
+    Industry, LoanPurpose, RelationshipType, Holiday, FinancialYear
+)
+
+# 3. Customer models (references master data)
 from backend.shared.database.customer_models import (
     Customer, CustomerKYC, CustomerDocument, CustomerFamily, 
     CustomerBankAccount, CustomerReference
 )
+
+# 4. Loan models (references customer models)
 from backend.shared.database.loan_models import (
     LoanProduct, LoanApplication, LoanApplicationCoApplicant,
     LoanApplicationDocument, LoanApprovalWorkflow, LoanAccount,
     LoanEMISchedule, LoanRepayment
 )
+
+# 5. Other business models
 from backend.shared.database.deposit_models import (
     DepositProduct, DepositAccount, DepositTransaction,
     DepositInterestCalculation, DepositMaturityQueue, DepositPassbookEntry
@@ -64,11 +80,6 @@ from backend.shared.database.notification_models import (
 from backend.shared.database.gold_loan_models import (
     GoldLoanProduct, GoldOrnament, GoldLoanAccount,
     GoldLoanTransaction, GoldReleaseRequest, GoldAuction
-)
-from backend.shared.database.master_data_models import (
-    Country, State, City, Pincode, Bank, BankBranch, Currency,
-    InterestRateType, LoanProductType, DocumentType, Occupation,
-    Industry, LoanPurpose, RelationshipType, Holiday, FinancialYear
 )
 
 # Configure logging
