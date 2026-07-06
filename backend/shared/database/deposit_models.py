@@ -28,7 +28,7 @@ class DepositProduct(Base):
     __tablename__ = "deposit_products"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     
     # Product Details
     product_code = Column(String(50), unique=True, nullable=False, index=True)
@@ -101,7 +101,7 @@ class DepositAccount(Base):
     __tablename__ = "deposit_accounts"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     account_number = Column(String(50), unique=True, nullable=False, index=True)  # DEP-YYYYMM-XXXX
     
     # Links
@@ -198,7 +198,7 @@ class DepositTransaction(Base):
     __tablename__ = "deposit_transactions"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     deposit_account_id = Column(Integer, ForeignKey("deposit_accounts.id"), nullable=False, index=True)
     
     # Transaction Identification
@@ -258,7 +258,7 @@ class DepositInterestCalculation(Base):
     __tablename__ = "deposit_interest_calculations"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     deposit_account_id = Column(Integer, ForeignKey("deposit_accounts.id"), nullable=False, index=True)
     
     # Calculation Period
@@ -315,7 +315,7 @@ class DepositMaturityQueue(Base):
     __tablename__ = "deposit_maturity_queue"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     deposit_account_id = Column(Integer, ForeignKey("deposit_accounts.id"), nullable=False, index=True)
     
     # Maturity Details
@@ -370,7 +370,7 @@ class DepositPassbookEntry(Base):
     __tablename__ = "deposit_passbook_entries"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     deposit_account_id = Column(Integer, ForeignKey("deposit_accounts.id"), nullable=False, index=True)
     
     # Entry Details

@@ -18,7 +18,7 @@ class LoanProduct(Base):
     __tablename__ = "loan_products"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     
     # Product Identification
     product_code = Column(String(50), unique=True, nullable=False, index=True)
@@ -89,7 +89,7 @@ class LoanApplication(Base):
     __tablename__ = "loan_applications"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
     application_number = Column(String(50), unique=True, nullable=False, index=True)
     
     # Customer & Product
@@ -179,7 +179,7 @@ class LoanApplicationCoApplicant(Base):
     __tablename__ = "loan_application_co_applicants"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
     loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
     family_member_id = Column(UUID(as_uuid=True), ForeignKey("customer_family.id"), nullable=False)  # UUID because CustomerFamily uses BaseModel
     
@@ -205,7 +205,7 @@ class LoanApplicationDocument(Base):
     __tablename__ = "loan_application_documents"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
     loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
     document_type_id = Column(Integer, ForeignKey("document_types.id"), nullable=False)
     customer_document_id = Column(Integer, ForeignKey("customer_documents.id"))
@@ -232,7 +232,7 @@ class LoanApprovalWorkflow(Base):
     __tablename__ = "loan_approval_workflows"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
     loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
     
     approval_level = Column(Integer, nullable=False)
@@ -262,7 +262,7 @@ class LoanAccount(Base):
     __tablename__ = "loan_accounts"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
     loan_account_number = Column(String(50), unique=True, nullable=False, index=True)
     
     # Application Link
@@ -342,7 +342,7 @@ class LoanEMISchedule(Base):
     __tablename__ = "loan_emi_schedules"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
     loan_account_id = Column(Integer, ForeignKey("loan_accounts.id"), nullable=False, index=True)
     
     # EMI Details
@@ -388,7 +388,7 @@ class LoanRepayment(Base):
     __tablename__ = "loan_repayments"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
     loan_account_id = Column(Integer, ForeignKey("loan_accounts.id"), nullable=False, index=True)
     
     receipt_number = Column(String(50), unique=True, nullable=False, index=True)

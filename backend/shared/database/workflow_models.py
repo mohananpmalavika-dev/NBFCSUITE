@@ -30,7 +30,7 @@ class WorkflowTemplate(Base):
     __tablename__ = "workflow_templates"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     
     # Template Details
     template_code = Column(String(50), unique=True, nullable=False, index=True)
@@ -85,7 +85,7 @@ class WorkflowInstance(Base):
     __tablename__ = "workflow_instances"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     workflow_template_id = Column(Integer, ForeignKey("workflow_templates.id"), nullable=False, index=True)
     
     # Instance Identification
@@ -152,7 +152,7 @@ class WorkflowStep(Base):
     __tablename__ = "workflow_steps"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     workflow_instance_id = Column(Integer, ForeignKey("workflow_instances.id"), nullable=False, index=True)
     
     # Step Definition
@@ -215,7 +215,7 @@ class WorkflowHistory(Base):
     __tablename__ = "workflow_history"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     workflow_instance_id = Column(Integer, ForeignKey("workflow_instances.id"), nullable=False, index=True)
     workflow_step_id = Column(Integer, ForeignKey("workflow_steps.id"), index=True)
     
@@ -259,7 +259,7 @@ class WorkflowTask(Base):
     __tablename__ = "workflow_tasks"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     workflow_instance_id = Column(Integer, ForeignKey("workflow_instances.id"), nullable=False, index=True)
     workflow_step_id = Column(Integer, ForeignKey("workflow_steps.id"), nullable=False, index=True)
     
@@ -321,7 +321,7 @@ class WorkflowSLATracking(Base):
     __tablename__ = "workflow_sla_tracking"
     
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
     workflow_instance_id = Column(Integer, ForeignKey("workflow_instances.id"), nullable=False, index=True)
     workflow_step_id = Column(Integer, ForeignKey("workflow_steps.id"), index=True)
     
