@@ -64,12 +64,11 @@ async def lifespan(app: FastAPI):
     
     # Create default tenant if it doesn't exist
     try:
-        from sqlalchemy.ext.asyncio import AsyncSession
-        from backend.shared.database.connection import async_session
+        from backend.shared.database.connection import AsyncSessionLocal
         from backend.shared.database.models import Tenant
         from sqlalchemy import select
         
-        async with async_session() as session:
+        async with AsyncSessionLocal() as session:
             result = await session.execute(select(Tenant).where(Tenant.id == "default"))
             tenant = result.scalar_one_or_none()
             
