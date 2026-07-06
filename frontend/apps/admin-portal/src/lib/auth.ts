@@ -77,6 +77,10 @@ export class AuthService {
   setToken(token: string): void {
     if (typeof window === 'undefined') return
     localStorage.setItem(AUTH_TOKEN_KEY, token)
+    
+    // Also set as cookie for middleware
+    document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`
+    
     apiClient.setToken(token)
   }
 
@@ -112,6 +116,9 @@ export class AuthService {
     localStorage.removeItem(AUTH_TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
     localStorage.removeItem(TENANT_ID_KEY)
+    
+    // Also clear cookie
+    document.cookie = 'auth_token=; path=/; max-age=0'
   }
 
   /**
