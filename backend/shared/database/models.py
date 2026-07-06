@@ -57,11 +57,19 @@ class BaseModel(Base, TenantMixin, TimestampMixin, SoftDeleteMixin, AuditMixin):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     
     def dict(self):
-        """Convert model to dictionary"""
-        return {
-            column.name: getattr(self, column.name)
-            for column in self.__table__.columns
-        }
+        """Convert model to dictionary - only includes column values, not relationships"""
+        from sqlalchemy import inspect
+        
+        # Use the instance mapper to get column values without triggering lazy loads
+        mapper = inspect(self.__class__)
+        result = {}
+        
+        for column in mapper.columns:
+            # Use __dict__ directly to avoid lazy loading through descriptors
+            if column.key in self.__dict__:
+                result[column.key] = self.__dict__[column.key]
+        
+        return result
     
     def __repr__(self):
         return f"<{self.__class__.__name__}(id={self.id})>"
