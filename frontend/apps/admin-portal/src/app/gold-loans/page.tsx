@@ -81,9 +81,9 @@ export default function GoldLoansPage() {
 
   return (
     <DashboardLayout>
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Gold Loans</h1>
           <p className="text-muted-foreground">Manage gold loan accounts and ornaments</p>
@@ -321,6 +321,7 @@ export default function GoldLoansPage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </DashboardLayout>
   );
 }
