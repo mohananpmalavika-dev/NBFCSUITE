@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column, Integer, String, Text, Numeric, Boolean, Date, 
     DateTime, ForeignKey, ARRAY, Index
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .connection import Base
@@ -180,7 +181,7 @@ class LoanApplicationCoApplicant(Base):
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
     loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
-    family_member_id = Column(Integer, ForeignKey("customer_family.id"), nullable=False)
+    family_member_id = Column(UUID(as_uuid=True), ForeignKey("customer_family.id"), nullable=False)  # UUID because CustomerFamily uses BaseModel
     
     co_applicant_type = Column(String(50), nullable=False)  # co_applicant, guarantor
     is_primary = Column(Boolean, default=False)
