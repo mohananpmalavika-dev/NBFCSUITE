@@ -108,7 +108,7 @@ class LoanApplication(Base):
     total_repayment = Column(Numeric(15, 2))
     
     # Purpose
-    loan_purpose_id = Column(Integer, ForeignKey("loan_purposes.id"))
+    loan_purpose_id = Column(UUID(as_uuid=True), ForeignKey("loan_purposes.id"))
     purpose_description = Column(Text)
     
     # Status
@@ -149,7 +149,7 @@ class LoanApplication(Base):
     net_disbursement = Column(Numeric(15, 2))
     
     # Disbursement Details
-    disbursement_bank_account_id = Column(Integer, ForeignKey("customer_bank_accounts.id"))
+    disbursement_bank_account_id = Column(UUID(as_uuid=True), ForeignKey("customer_bank_accounts.id"))
     disbursement_mode = Column(String(50))  # neft, rtgs, imps, cheque
     disbursement_reference = Column(String(100))
     
@@ -208,7 +208,7 @@ class LoanApplicationDocument(Base):
     tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
     loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
     document_type_id = Column(Integer, ForeignKey("document_types.id"), nullable=False)
-    customer_document_id = Column(Integer, ForeignKey("customer_documents.id"))
+    customer_document_id = Column(UUID(as_uuid=True), ForeignKey("customer_documents.id"))
     
     document_number = Column(String(100))
     file_path = Column(String(500))
