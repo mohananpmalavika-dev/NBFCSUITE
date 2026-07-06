@@ -6,6 +6,7 @@ Ensures consistent response structure across all endpoints
 from typing import Any, Optional, Dict
 from fastapi.responses import JSONResponse
 from fastapi import status
+from fastapi.encoders import jsonable_encoder
 
 
 class CustomException(Exception):
@@ -65,9 +66,10 @@ def success_response(
     if meta:
         response["meta"] = meta
     
+    # Use jsonable_encoder to handle UUID and other non-JSON-serializable types
     return JSONResponse(
         status_code=status_code,
-        content=response
+        content=jsonable_encoder(response)
     )
 
 
@@ -114,9 +116,10 @@ def error_response(
     if details:
         response["error"]["details"] = details
     
+    # Use jsonable_encoder to handle UUID and other non-JSON-serializable types
     return JSONResponse(
         status_code=status_code,
-        content=response
+        content=jsonable_encoder(response)
     )
 
 
