@@ -481,7 +481,16 @@ from backend.services.customer.ekyc_router import router as customer_ekyc_router
 from backend.services.customer.digilocker_router import router as customer_digilocker_router
 from backend.services.loan import router as loan_router
 from backend.services.accounting.router import router as accounting_router
-from backend.services.deposit import product_router, account_router, interest_router
+from backend.services.deposit import (
+    product_router, 
+    account_router, 
+    interest_router,
+    passbook_router,
+    statement_router,
+    certificate_router,
+    batch_router,
+    reports_router
+)
 from backend.services.workflow import template_router, instance_router, task_router
 from backend.services.rules import category_router, evaluation_router, decision_router as rules_decision_router
 from backend.services.decision import router as decision_router
@@ -498,6 +507,11 @@ from backend.services.integration.digilocker_router import router as digilocker_
 
 # NEW: LOS Extensions Routers (Vehicle & Property Loans)
 from backend.services.loan.extensions import vehicle_loan_router, property_loan_router
+
+# NEW: LMS Extensions Routers (NACH, Restructuring, Insurance)
+from backend.services.lms.nach_router import router as nach_router
+from backend.services.lms.restructuring_router import router as restructuring_router
+from backend.services.lms.insurance_router import router as insurance_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -518,6 +532,13 @@ app.include_router(accounting_router, prefix="/api/v1", tags=["Accounting"])
 app.include_router(product_router, prefix="/api/v1", tags=["Deposit Products"])
 app.include_router(account_router, prefix="/api/v1", tags=["Deposit Accounts"])
 app.include_router(interest_router, prefix="/api/v1", tags=["Deposit Interest"])
+
+# NEW Deposit Management Routers (Complete Implementation)
+app.include_router(passbook_router, prefix="/api/v1", tags=["Deposit Passbook"])
+app.include_router(statement_router, prefix="/api/v1", tags=["Deposit Statements"])
+app.include_router(certificate_router, prefix="/api/v1", tags=["Deposit Certificates"])
+app.include_router(batch_router, prefix="/api/v1", tags=["Deposit Batch Operations"])
+app.include_router(reports_router, prefix="/api/v1", tags=["Deposit Reports"])
 
 # Workflow Engine Routers
 app.include_router(template_router, prefix="/api/v1", tags=["Workflow Templates"])
@@ -559,6 +580,20 @@ app.include_router(vehicle_loan_router, prefix="/api/v1", tags=["Vehicle Loans"]
 
 # Property Loan Extension (LAP/Home Loan)
 app.include_router(property_loan_router, prefix="/api/v1", tags=["Property Loans"])
+
+# ============================================
+# NEW: LMS EXTENSIONS ROUTERS
+# NACH, Restructuring, and Insurance Tracking
+# ============================================
+
+# NACH/eNACH Mandate Management
+app.include_router(nach_router, prefix="/api/v1", tags=["NACH Management"])
+
+# Loan Restructuring
+app.include_router(restructuring_router, prefix="/api/v1", tags=["Loan Restructuring"])
+
+# Loan Insurance Tracking
+app.include_router(insurance_router, prefix="/api/v1", tags=["Loan Insurance"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

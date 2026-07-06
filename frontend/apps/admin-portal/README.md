@@ -1,320 +1,283 @@
-# NBFC Suite - Admin Portal
+# Customer 360 / CIF Module - Frontend Implementation
 
-Modern admin portal built with Next.js 14, TypeScript, and Tailwind CSS for managing the NBFC Financial Suite.
+## Overview
 
-## 🚀 Tech Stack
+Complete frontend implementation for the Customer Information File (CIF) / Customer 360 module with comprehensive features for customer management, KYC verification, document management, and more.
 
-- **Framework**: Next.js 14 (App Router)
+## Features Implemented
+
+### 1. **Customer 360 Header**
+- Customer summary with avatar and initials
+- Quick status indicators (KYC, Risk Rating, CIBIL Score)
+- Blacklist and inactive status badges
+- Contact information display
+- Navigation back to customer list
+
+### 2. **Customer Overview**
+- Personal information display
+- Contact details and address
+- Identity information (PAN, Aadhaar)
+- Financial profile
+- System information
+
+### 3. **KYC Management**
+- **Aadhaar eKYC**
+  - OTP-based verification
+  - Biometric verification support
+  - Real-time verification status
+- **DigiLocker Integration**
+  - OAuth flow implementation
+  - Document fetching from DigiLocker
+  - Automatic document storage
+- **KYC Completion Tracking**
+  - Progress percentage
+  - Verification checklist
+  - Multiple verification methods
+
+### 4. **Document Vault**
+- Document upload with metadata
+- Document verification workflow
+- Status tracking (Pending, Verified, Rejected, Expired)
+- Document viewer
+- Expiry date tracking
+- Document type categorization
+- Delete and download functionality
+
+### 5. **Family Tree Management**
+- Add/edit family members
+- Relationship type selection
+- Nominee designation with percentage
+- Emergency contact marking
+- Dependent tracking
+- Nominee percentage validation (must total 100%)
+- Family member demographics
+
+### 6. **Bank Account Management**
+- Multiple bank accounts support
+- Primary account designation
+- Account verification methods
+  - Penny Drop (₹1 transfer)
+  - Bank statement verification
+  - Passbook verification
+- IFSC code validation
+- Disbursement and collection flags
+- Account type support (Savings, Current, Overdraft)
+
+### 7. **Credit Bureau Integration**
+- Multi-bureau support (CIBIL, Equifax, Experian, CRIF)
+- Credit report pulling
+- Credit score display with color coding
+- Bureau pull history
+- Account statistics (Total, Active, Outstanding)
+- Enquiry tracking (1M, 3M, 6M, 12M)
+- Report download functionality
+
+### 8. **Activity Timeline**
+- Chronological activity tracking
+- Activity categorization
+- Important activity flagging
+- Manual note addition
+- Activity filtering
+- Change tracking (old vs new values)
+- Activity summary dashboard
+- User attribution
+
+### 9. **Risk Profiling**
+- Risk rating display (Low, Medium, High, Very High)
+- Risk score calculation
+- Risk factor identification
+- Positive factor highlighting
+- Visual risk indicators
+- Risk metrics dashboard
+
+## Technical Stack
+
+- **Framework**: Next.js 14 with App Router
 - **Language**: TypeScript
+- **UI Components**: shadcn/ui (Radix UI primitives)
+- **State Management**: React Query (TanStack Query)
 - **Styling**: Tailwind CSS
-- **UI Components**: Radix UI + Shadcn/ui
-- **State Management**: Zustand
-- **Data Fetching**: TanStack Query (React Query)
-- **Forms**: React Hook Form + Zod
-- **HTTP Client**: Axios
-- **Charts**: Recharts
 - **Icons**: Lucide React
+- **Form Handling**: React Hook Form (via shadcn forms)
+- **API Client**: Axios with custom wrapper
 
-## 📁 Project Structure
+## File Structure
 
 ```
-src/
-├── app/                    # Next.js app directory
-│   ├── dashboard/         # Dashboard pages
-│   ├── customers/         # Customer management
-│   ├── loans/            # Loan management
-│   ├── deposits/         # Deposit management
-│   ├── workflows/        # Workflow & tasks
-│   ├── accounting/       # Accounting module
-│   ├── login/            # Authentication
-│   └── layout.tsx        # Root layout
-├── components/           # React components
-│   └── ui/              # UI components (Shadcn)
-├── contexts/            # React contexts
-│   └── auth-context.tsx # Authentication context
-├── hooks/               # Custom React hooks
-├── lib/                 # Utility libraries
-│   ├── api-client.ts   # API client
-│   ├── auth.ts         # Auth utilities
-│   ├── utils.ts        # Helper functions
-│   └── constants.ts    # App constants
-├── services/           # API service layer
-│   ├── customer.service.ts
-│   ├── loan.service.ts
-│   ├── deposit.service.ts
-│   ├── workflow.service.ts
-│   └── dashboard.service.ts
-├── types/              # TypeScript types
-│   └── index.ts
-└── middleware.ts       # Next.js middleware
+frontend/apps/admin-portal/src/
+├── components/
+│   └── customers/
+│       ├── customer-360-header.tsx       # Customer header component
+│       ├── customer-overview.tsx         # Overview tab
+│       ├── kyc-management.tsx            # KYC verification
+│       ├── document-vault.tsx            # Document management
+│       ├── family-tree.tsx               # Family members
+│       ├── bank-accounts.tsx             # Bank accounts
+│       ├── credit-bureau.tsx             # Credit reports
+│       ├── customer-timeline.tsx         # Activity timeline
+│       └── risk-profile.tsx              # Risk assessment
+├── types/
+│   ├── customer.types.ts                 # Customer type definitions
+│   └── index.ts                          # Type exports
+├── services/
+│   └── customer.service.ts               # API service layer
+└── app/
+    └── customers/
+        └── [id]/
+            └── page.tsx                  # Customer 360 page
+
 ```
 
-## 🛠️ Setup
+## Component Usage
 
-### Prerequisites
+### Customer 360 Page
 
-- Node.js 18+
-- npm 9+
-- Backend API running on http://localhost:8000
+```tsx
+import { Customer360Header } from '@/components/customers/customer-360-header'
+import { CustomerOverview } from '@/components/customers/customer-overview'
+// ... other imports
 
-### Installation
+export default function CustomerDetailPage() {
+  const { data: customer } = useQuery({
+    queryKey: ['customer', customerId],
+    queryFn: () => customerService.getCustomer(customerId),
+  })
 
-```bash
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env.local
-
-# Edit .env.local with your configuration
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-### Development
-
-```bash
-# Start development server
-npm run dev
-
-# Open browser
-# http://localhost:3000
-```
-
-### Build
-
-```bash
-# Build for production
-npm run build
-
-# Start production server
-npm start
-```
-
-## 🔐 Authentication
-
-The app uses JWT token-based authentication:
-
-1. Login at `/login`
-2. Token stored in localStorage
-3. Auto-attached to API requests
-4. Protected routes via middleware
-
-**Demo Credentials:**
-- Username: `admin`
-- Password: `admin123`
-
-## 📄 Available Pages
-
-### Public Pages
-- `/` - Landing page
-- `/login` - Login page
-
-### Protected Pages
-- `/dashboard` - Main dashboard
-- `/customers` - Customer list & management
-- `/loans/applications` - Loan applications
-- `/loans/accounts` - Active loan accounts
-- `/deposits/accounts` - Deposit accounts
-- `/workflows/tasks` - My tasks
-- `/accounting/chart-of-accounts` - Chart of accounts
-- `/reports` - Reports & analytics
-- `/settings` - System settings
-
-## 🎨 UI Components
-
-Built using Shadcn/ui components:
-
-- Button
-- Card
-- Input
-- Label
-- Badge
-- Table
-- Toast
-- Skeleton
-- And more...
-
-## 📡 API Integration
-
-All API calls go through the centralized API client (`src/lib/api-client.ts`):
-
-```typescript
-import { apiClient } from '@/lib/api-client'
-
-// GET request
-const response = await apiClient.get('/customers')
-
-// POST request
-const response = await apiClient.post('/customers', data)
-```
-
-Service layer abstracts API calls:
-
-```typescript
-import { customerService } from '@/services/customer.service'
-
-// Get customers
-const { data } = await customerService.getCustomers({ page: 1 })
-```
-
-## 🔧 Utility Functions
-
-Common utilities in `src/lib/utils.ts`:
-
-- `formatCurrency()` - Format Indian currency
-- `formatDate()` - Format dates
-- `formatPhone()` - Format phone numbers
-- `calculateEMI()` - EMI calculation
-- `isValidPAN()` - Validate PAN
-- `isValidAadhaar()` - Validate Aadhaar
-- And more...
-
-## 🎯 Features
-
-### Customer Management
-- Customer list with search & filters
-- Customer profile view
-- Create/edit customer
-- KYC management
-- Document upload
-
-### Loan Management
-- Loan application workflow
-- Application approval
-- Loan account management
-- Repayment tracking
-- EMI schedule
-
-### Deposit Management
-- Open deposit accounts
-- Manage savings/FD/RD/MIS
-- Interest calculation
-- Transactions
-
-### Workflow & Tasks
-- My tasks inbox
-- Approve/reject workflows
-- Task assignment
-- SLA tracking
-
-### Accounting
-- Chart of accounts
-- Journal entries
-- Financial reports
-- Trial balance
-
-### Reports & Analytics
-- Dashboard widgets
-- Loan portfolio analytics
-- Collection reports
-- Custom reports
-
-## 🚦 Middleware
-
-Route protection via Next.js middleware (`src/middleware.ts`):
-
-- Redirects unauthenticated users to `/login`
-- Redirects authenticated users from `/login` to `/dashboard`
-- Attaches auth token to requests
-
-## 📱 Responsive Design
-
-- Mobile-first approach
-- Responsive layouts
-- Touch-friendly UI
-- Progressive enhancement
-
-## 🔄 State Management
-
-- **Auth State**: React Context (`auth-context.tsx`)
-- **Server State**: TanStack Query
-- **Form State**: React Hook Form
-- **Local State**: React useState/useReducer
-
-## 🧪 Development Guidelines
-
-### Code Style
-- Use TypeScript for type safety
-- Follow React best practices
-- Use functional components
-- Implement proper error handling
-
-### Component Structure
-```typescript
-'use client' // if client component
-
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-
-interface Props {
-  // Props interface
-}
-
-export default function ComponentName({ }: Props) {
-  // Component logic
-  
   return (
-    // JSX
+    <div>
+      <Customer360Header customer={customer.data} />
+      <Tabs>
+        <TabsContent value="overview">
+          <CustomerOverview customer={customer.data} />
+        </TabsContent>
+        {/* Other tabs */}
+      </Tabs>
+    </div>
   )
 }
 ```
 
-### API Calls
-- Use service layer
-- Handle loading states
-- Show error messages
-- Implement retry logic
+## API Integration
 
-## 📝 Environment Variables
+All components use the centralized `customerService` for API calls:
 
-```env
-# API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_API_VERSION=v1
+```typescript
+// Fetch customer
+customerService.getCustomer(id)
 
-# App Configuration
-NEXT_PUBLIC_APP_NAME=NBFC Suite Admin Portal
-NEXT_PUBLIC_APP_VERSION=2.0.0
+// KYC operations
+customerService.initiateAadhaarOTP(customerId, aadhaarNumber)
+customerService.verifyAadhaarOTP(customerId, data)
+customerService.initiateDigiLocker(customerId, redirectUri)
+
+// Document operations
+customerService.getDocuments(customerId)
+customerService.uploadDocument(customerId, formData)
+customerService.verifyDocument(customerId, documentId, status)
+
+// Family operations
+customerService.getFamilyMembers(customerId)
+customerService.addFamilyMember(customerId, data)
+customerService.validateNominees(customerId)
+
+// Bank account operations
+customerService.getBankAccounts(customerId)
+customerService.addBankAccount(customerId, data)
+customerService.verifyAccount(customerId, accountId, method)
+
+// Bureau operations
+customerService.pullCreditReport(customerId, provider)
+customerService.getBureauHistory(customerId)
+customerService.getLatestCreditScore(customerId)
+
+// Timeline operations
+customerService.getTimeline(customerId, filters)
+customerService.logActivity(customerId, data)
 ```
 
-## 🐛 Troubleshooting
+## Key Features
 
-### API Connection Issues
-1. Check backend is running on port 8000
-2. Verify CORS settings
-3. Check .env.local configuration
+### Real-time Validation
+- Aadhaar number (12 digits)
+- PAN number (10 characters)
+- Mobile number (10 digits)
+- IFSC code (11 characters)
+- Nominee percentage (must total 100%)
 
-### Authentication Issues
-1. Clear localStorage
-2. Check token expiry
-3. Verify credentials
+### Status Indicators
+- Color-coded badges for all statuses
+- Icon-based status representation
+- Progress bars for completion tracking
 
-### Build Issues
-1. Clear .next directory
-2. Remove node_modules
-3. Run `npm install` again
+### Responsive Design
+- Mobile-first approach
+- Grid layouts for different screen sizes
+- Collapsible sections for mobile
 
-## 📚 Additional Resources
+### Error Handling
+- Toast notifications for all operations
+- Detailed error messages from backend
+- Optimistic UI updates with rollback
 
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Tailwind CSS](https://tailwindcss.com/docs)
-- [Shadcn/ui](https://ui.shadcn.com)
-- [TanStack Query](https://tanstack.com/query)
+### Loading States
+- Skeleton loaders for data fetching
+- Button loading indicators
+- Disabled states during mutations
 
-## 🤝 Contributing
+## Future Enhancements
 
-This is a private enterprise application. For changes:
+1. **Video KYC Integration**
+2. **Biometric Device Integration**
+3. **Document OCR for Auto-fill**
+4. **Advanced Risk Scoring Algorithm**
+5. **Loan Application Integration**
+6. **WhatsApp Notification Integration**
+7. **Email Campaign Management**
+8. **Customer Portal Access**
+9. **Consent Management**
+10. **Audit Trail Viewer**
 
-1. Create a feature branch
-2. Make your changes
-3. Test thoroughly
-4. Submit for review
+## Testing
 
-## 📄 License
+Components are designed to be testable with:
+- React Testing Library
+- Mock Service Worker (MSW) for API mocking
+- Jest for unit tests
 
-Proprietary - All rights reserved
+## Performance Optimizations
 
----
+- React Query caching
+- Lazy loading of heavy components
+- Optimistic updates
+- Debounced search inputs
+- Pagination for large lists
 
-**NBFC Suite Admin Portal v2.0**  
-*Tier-1 Enterprise Financial Platform*
+## Accessibility
+
+- Semantic HTML structure
+- ARIA labels where needed
+- Keyboard navigation support
+- Screen reader friendly
+- Focus management in modals
+
+## Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+
+## Contributing
+
+When adding new features:
+1. Follow existing component patterns
+2. Use TypeScript strictly
+3. Add proper error handling
+4. Include loading states
+5. Make components responsive
+6. Add toast notifications
+7. Update type definitions
+
+## License
+
+Proprietary - NBFC Suite

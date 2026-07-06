@@ -304,3 +304,313 @@ export default function PurityTestingPage() {
                       required
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Test Method *</label>
+                    <select
+                      value={testForm.test_method}
+                      onChange={(e) => setTestForm({ ...testForm, test_method: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-md"
+                      required
+                    >
+                      <option value="XRF">XRF (±1.0%)</option>
+                      <option value="Touchstone">Touchstone (±2.0%)</option>
+                      <option value="Fire Assay">Fire Assay (±0.5%)</option>
+                      <option value="Acid Test">Acid Test (±2.5%)</option>
+                      <option value="Electronic Tester">Electronic Tester (±1.5%)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Claimed Karat *</label>
+                    <select
+                      value={testForm.claimed_purity_karat}
+                      onChange={(e) => {
+                        const karat = e.target.value;
+                        const percentage = karat === '24' ? '100' : karat === '22' ? '91.67' : '75';
+                        setTestForm({ ...testForm, claimed_purity_karat: karat, claimed_purity_percentage: percentage });
+                      }}
+                      className="w-full px-3 py-2 border rounded-md"
+                      required
+                    >
+                      <option value="24">24K (100%)</option>
+                      <option value="22">22K (91.67%)</option>
+                      <option value="18">18K (75%)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Claimed Purity % *</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={testForm.claimed_purity_percentage}
+                      onChange={(e) => setTestForm({ ...testForm, claimed_purity_percentage: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tested Karat *</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={testForm.tested_purity_karat}
+                      onChange={(e) => setTestForm({ ...testForm, tested_purity_karat: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tested Purity % *</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={testForm.tested_purity_percentage}
+                      onChange={(e) => setTestForm({ ...testForm, tested_purity_percentage: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tester Name *</label>
+                    <Input
+                      value={testForm.tester_name}
+                      onChange={(e) => setTestForm({ ...testForm, tester_name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tester License</label>
+                    <Input
+                      value={testForm.tester_license}
+                      onChange={(e) => setTestForm({ ...testForm, tester_license: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Equipment ID</label>
+                    <Input
+                      value={testForm.equipment_id}
+                      onChange={(e) => setTestForm({ ...testForm, equipment_id: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Lab Name</label>
+                    <Input
+                      value={testForm.lab_name}
+                      onChange={(e) => setTestForm({ ...testForm, lab_name: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Remarks</label>
+                  <Input
+                    value={testForm.remarks}
+                    onChange={(e) => setTestForm({ ...testForm, remarks: e.target.value })}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShowTestForm(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Create Test</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Bulk Test Form */}
+        {showBulkForm && (
+          <Card className="border-2 border-green-200">
+            <CardHeader>
+              <CardTitle>Bulk Test All Ornaments in Loan</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleBulkTest} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Gold Loan ID *</label>
+                    <Input
+                      value={bulkForm.loan_id}
+                      onChange={(e) => setBulkForm({ ...bulkForm, loan_id: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Test Method *</label>
+                    <select
+                      value={bulkForm.test_method}
+                      onChange={(e) => setBulkForm({ ...bulkForm, test_method: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-md"
+                      required
+                    >
+                      <option value="XRF">XRF (±1.0%)</option>
+                      <option value="Touchstone">Touchstone (±2.0%)</option>
+                      <option value="Fire Assay">Fire Assay (±0.5%)</option>
+                      <option value="Acid Test">Acid Test (±2.5%)</option>
+                      <option value="Electronic Tester">Electronic Tester (±1.5%)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Tester Name *</label>
+                    <Input
+                      value={bulkForm.tester_name}
+                      onChange={(e) => setBulkForm({ ...bulkForm, tester_name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Equipment ID</label>
+                    <Input
+                      value={bulkForm.equipment_id}
+                      onChange={(e) => setBulkForm({ ...bulkForm, equipment_id: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setShowBulkForm(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Start Bulk Test</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Test Results Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Results</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-12">Loading...</div>
+            ) : tests.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                No purity tests found
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left p-4 font-medium">Test #</th>
+                        <th className="text-left p-4 font-medium">Loan ID</th>
+                        <th className="text-left p-4 font-medium">Method</th>
+                        <th className="text-left p-4 font-medium">Claimed</th>
+                        <th className="text-left p-4 font-medium">Tested</th>
+                        <th className="text-left p-4 font-medium">Variance</th>
+                        <th className="text-center p-4 font-medium">Result</th>
+                        <th className="text-left p-4 font-medium">Tester</th>
+                        <th className="text-center p-4 font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {tests.map((test) => (
+                        <tr key={test.id} className="hover:bg-muted/50">
+                          <td className="p-4">
+                            <div className="font-medium">{test.test_number}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {formatDate(test.test_date)}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div>{test.gold_loan_id}</div>
+                            <div className="text-xs text-muted-foreground">{test.ornament_id}</div>
+                          </td>
+                          <td className="p-4">
+                            <Badge variant="outline">{test.test_method}</Badge>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {getTestMethodInfo(test.test_method).variance}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div>{test.claimed_purity_karat}K</div>
+                            <div className="text-xs text-muted-foreground">
+                              {test.claimed_purity_percentage.toFixed(2)}%
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div>{test.tested_purity_karat.toFixed(2)}K</div>
+                            <div className="text-xs text-muted-foreground">
+                              {test.tested_purity_percentage.toFixed(2)}%
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span className={
+                              Math.abs(test.variance_percentage) <= 1 ? 'text-green-600' :
+                              Math.abs(test.variance_percentage) <= 2 ? 'text-yellow-600' :
+                              'text-red-600'
+                            }>
+                              {test.variance_percentage > 0 ? '+' : ''}{test.variance_percentage.toFixed(2)}%
+                            </span>
+                          </td>
+                          <td className="p-4 text-center">
+                            {getTestResultBadge(test.test_result)}
+                          </td>
+                          <td className="p-4">
+                            <div className="text-sm">{test.tester_name}</div>
+                            {test.lab_name && (
+                              <div className="text-xs text-muted-foreground">{test.lab_name}</div>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            <div className="flex gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleGenerateCertificate(test.id)}
+                                title="Generate Certificate"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </Button>
+                              {test.test_result !== 'Pass' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-red-300 text-red-600"
+                                  onClick={() => handleFlagDiscrepancy(test.id)}
+                                  title="Flag Discrepancy"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                                  </svg>
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 mt-6">
+                    <Button
+                      variant="outline"
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {page} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  );
+}
