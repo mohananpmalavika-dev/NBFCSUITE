@@ -137,6 +137,7 @@ class AuthService:
         user.login_count += 1
         
         await self.db.commit()
+        await self.db.refresh(user)  # Refresh to prevent attribute expiration
         
         # Get user roles and permissions
         roles, permissions = await self._get_user_roles_and_permissions(user.id, user.tenant_id)
