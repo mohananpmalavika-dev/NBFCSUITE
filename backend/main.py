@@ -389,9 +389,6 @@ async def initialize_database() -> Dict[str, Any]:
                 "traceback": traceback.format_exc()
             }
         }
-                "message": str(e)
-            }
-        }
 
 
 @app.get("/health/ready", tags=["Health"])
