@@ -180,7 +180,7 @@ class LoanApplicationCoApplicant(Base):
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, ForeignKey("tenants.id"), nullable=False)
     loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
-    family_member_id = Column(Integer, ForeignKey("customer_family_members.id"), nullable=False)
+    family_member_id = Column(Integer, ForeignKey("customer_family.id"), nullable=False)
     
     co_applicant_type = Column(String(50), nullable=False)  # co_applicant, guarantor
     is_primary = Column(Boolean, default=False)
