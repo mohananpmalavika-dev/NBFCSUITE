@@ -207,7 +207,7 @@ class LoanApplicationDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
     loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
-    document_type_id = Column(Integer, ForeignKey("document_types.id"), nullable=False)
+    document_type_id = Column(UUID(as_uuid=True), ForeignKey("document_types.id"), nullable=False)
     customer_document_id = Column(UUID(as_uuid=True), ForeignKey("customer_documents.id"))
     
     document_number = Column(String(100))
