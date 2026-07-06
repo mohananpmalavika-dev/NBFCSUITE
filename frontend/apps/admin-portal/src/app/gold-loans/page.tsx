@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import {
   getGoldLoans,
   getGoldLoanStatistics,
@@ -79,6 +80,7 @@ export default function GoldLoansPage() {
   };
 
   return (
+    <DashboardLayout>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
@@ -319,6 +321,6 @@ export default function GoldLoansPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </DashboardLayout>
   );
 }
