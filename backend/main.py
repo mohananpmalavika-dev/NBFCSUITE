@@ -56,11 +56,39 @@ async def lifespan(app: FastAPI):
             logger.info(result.stdout)
         else:
             logger.warning(f"⚠️  Migration warning: {result.stderr}")
-            # Don't fail startup if migrations have issues
+            # If migrations fail, try creating tables directly
+            logger.info("🔄 Attempting to create tables directly...")
+            from backend.shared.database.connection import engine
+            from backend.shared.database.models import Base
+            from backend.shared.database import (
+                customer_models, loan_models, deposit_models, 
+                accounting_models, workflow_models, rules_models,
+                decision_models, notification_models, gold_loan_models, master_data_models
+            )
+            
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("✅ Database tables created successfully")
             
     except Exception as e:
         logger.warning(f"⚠️  Could not run migrations: {e}")
-        # Continue startup anyway
+        # Try direct table creation as fallback
+        try:
+            logger.info("🔄 Fallback: Creating tables directly...")
+            from backend.shared.database.connection import engine
+            from backend.shared.database.models import Base
+            from backend.shared.database import (
+                customer_models, loan_models, deposit_models, 
+                accounting_models, workflow_models, rules_models,
+                decision_models, notification_models, gold_loan_models, master_data_models
+            )
+            
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("✅ Database tables created successfully (fallback)")
+        except Exception as e2:
+            logger.error(f"❌ Failed to create tables: {e2}")
+            # Continue startup anyway
     
     # Create default tenant if it doesn't exist
     try:
