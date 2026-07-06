@@ -15,6 +15,8 @@ import logging
 from pathlib import Path
 from typing import Dict, Any
 
+from sqlalchemy import inspect
+
 from backend.shared.config import settings
 from backend.shared.database.connection import engine, Base
 from backend.shared.middleware.tenant import TenantMiddleware
@@ -92,8 +94,10 @@ async def lifespan(app: FastAPI):
 
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-
-        logger.info("✅ Database tables created successfully")
+            existing_tables = await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_table_names())
+        logger.info(f"✅ Database tables created successfully. Existing tables: {existing_tables}")
+        if "users" not in existing_tables:
+            raise RuntimeError("Database created, but users table is still missing")
     except Exception as e:
         logger.error(f"❌ Failed to create tables: {e}")
         import traceback
