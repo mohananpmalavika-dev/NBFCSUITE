@@ -102,6 +102,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ Failed to create tables: {e}")
         import traceback
         logger.error(traceback.format_exc())
+        raise
 
     # Ensure Alembic migrations are applied too (fallback for schema updates)
     try:
