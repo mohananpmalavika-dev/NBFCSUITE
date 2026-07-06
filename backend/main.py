@@ -9,8 +9,10 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
+import asyncio
 import time
 import logging
+from pathlib import Path
 from typing import Dict, Any
 
 from backend.shared.config import settings
@@ -83,51 +85,45 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.APP_ENV}")
     logger.info(f"Multi-tenant: {settings.TENANT_ISOLATION_ENABLED}")
     
-    # Run Alembic migrations on startup
+    # Force create all tables on startup (simple approach for free hosting)
     try:
-        import subprocess
-        import os
-        
-        logger.info("🔄 Running database migrations...")
-        # Change to backend directory where alembic.ini is located
-        backend_dir = os.path.dirname(os.path.abspath(__file__))
-        result = subprocess.run(
-            ["alembic", "upgrade", "head"],
-            cwd=backend_dir,
-            capture_output=True,
-            text=True,
-            check=False
-        )
-        
-        if result.returncode == 0:
-            logger.info("✅ Database migrations completed successfully")
-            logger.info(result.stdout)
-        else:
-            logger.warning(f"⚠️  Migration warning: {result.stderr}")
-            # If migrations fail, try creating tables directly
-            logger.info("🔄 Attempting to create tables directly...")
-            logger.info(f"📊 Registered tables: {list(Base.metadata.tables.keys())}")
-            
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("✅ Database tables created successfully")
-            
+        logger.info("🔄 Creating database tables...")
+        logger.info(f"📊 Registered tables ({len(Base.metadata.tables)}): {list(Base.metadata.tables.keys())[:10]}...")
+
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        logger.info("✅ Database tables created successfully")
     except Exception as e:
-        logger.warning(f"⚠️  Could not run migrations: {e}")
-        # Try direct table creation as fallback
-        try:
-            logger.info("🔄 Fallback: Creating tables directly...")
-            logger.info(f"📊 Registered tables: {list(Base.metadata.tables.keys())}")
-            
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("✅ Database tables created successfully (fallback)")
-        except Exception as e2:
-            logger.error(f"❌ Failed to create tables: {e2}")
-            import traceback
-            logger.error(traceback.format_exc())
-            # Continue startup anyway
-    
+        logger.error(f"❌ Failed to create tables: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
+    # Ensure Alembic migrations are applied too (fallback for schema updates)
+    try:
+        migrations_path = Path(__file__).resolve().parent.parent / "database" / "migrations"
+        if migrations_path.exists():
+            logger.info("🔁 Applying Alembic migrations...")
+            process = await asyncio.create_subprocess_exec(
+                "alembic",
+                "upgrade",
+                "head",
+                cwd=str(Path(__file__).resolve().parent),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await process.communicate()
+            if process.returncode != 0:
+                logger.warning("⚠️ Alembic migrations failed")
+                logger.warning(stdout.decode())
+                logger.warning(stderr.decode())
+            else:
+                logger.info("✅ Alembic migrations applied successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Alembic migration check failed: {e}")
+        import traceback
+        logger.warning(traceback.format_exc())
+
     # Create default tenant if it doesn't exist
     try:
         from backend.shared.database.connection import AsyncSessionLocal
