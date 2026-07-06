@@ -106,7 +106,7 @@ class DepositAccount(Base):
     account_number = Column(String(50), unique=True, nullable=False, index=True)  # DEP-YYYYMM-XXXX
     
     # Links
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
     deposit_product_id = Column(Integer, ForeignKey("deposit_products.id"), nullable=False, index=True)
     
     # Account Details

@@ -93,7 +93,7 @@ class LoanApplication(Base):
     application_number = Column(String(50), unique=True, nullable=False, index=True)
     
     # Customer & Product
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
     loan_product_id = Column(Integer, ForeignKey("loan_products.id"), nullable=False)
     
     # Loan Details
@@ -267,7 +267,7 @@ class LoanAccount(Base):
     
     # Application Link
     loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False)
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
     loan_product_id = Column(Integer, ForeignKey("loan_products.id"), nullable=False)
     
     # Loan Details
