@@ -49,7 +49,7 @@ async def register(
     user = await auth_service.register(request)
     
     return success_response(
-        data=user.dict(),
+        data=user.model_dump(mode='json'),
         message="User registered successfully",
         status_code=status.HTTP_201_CREATED
     )
@@ -82,8 +82,8 @@ async def login(
     
     return success_response(
         data={
-            "tokens": tokens.dict(),
-            "user": user.dict()
+            "tokens": tokens.model_dump(mode='json'),
+            "user": user.model_dump(mode='json')
         },
         message="Login successful"
     )
@@ -110,7 +110,7 @@ async def refresh_token(
     tokens = await auth_service.refresh_token(request.refresh_token)
     
     return success_response(
-        data=tokens.dict(),
+        data=tokens.model_dump(mode='json'),
         message="Token refreshed successfully"
     )
 
@@ -132,7 +132,7 @@ async def get_me(
     Returns user details with roles and permissions
     """
     return success_response(
-        data=current_user.dict(),
+        data=current_user.model_dump(mode='json'),
         message="User retrieved successfully"
     )
 
