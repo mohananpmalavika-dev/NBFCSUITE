@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import MasterDataTable, { StatusBadge } from "@/components/MasterDataTable";
-import { Building2, ExternalLink } from "lucide-react";
+import { Building2, ExternalLink, Home, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { listBanks, deleteMasterData } from "@/services/masterdata.service";
 
 interface Bank {
   id: number;
@@ -30,30 +33,18 @@ export default function BanksPage() {
   const fetchBanks = async (page: number, search: string = "") => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        page_size: pageSize.toString(),
+      const result = await listBanks({
+        page,
+        page_size: pageSize,
         ...(search && { search })
       });
 
-      const response = await fetch(`/api/v1/masterdata/banks?${params}`, {
-        headers: {
-          "Content-Type": "application/json",
-          // Add auth token from localStorage/cookie
-          // "Authorization": `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch banks");
+      if (result.success && result.data) {
+        setData(result.data.items || []);
+        setTotalRecords(result.data.total || 0);
       }
-
-      const result = await response.json();
-      setData(result.items || []);
-      setTotalRecords(result.total || 0);
     } catch (error) {
       console.error("Error fetching banks:", error);
-      // Show error toast
       setData([]);
       setTotalRecords(0);
     } finally {
@@ -97,24 +88,11 @@ export default function BanksPage() {
     }
 
     try {
-      const response = await fetch(`/api/v1/masterdata/banks/${row.id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          // Add auth token
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete bank");
-      }
-
-      // Show success toast
-      // Refresh data
+      await deleteMasterData('banks', row.id);
       fetchBanks(currentPage, searchQuery);
     } catch (error) {
       console.error("Error deleting bank:", error);
-      // Show error toast
+      alert("Failed to delete bank");
     }
   };
 
@@ -188,7 +166,24 @@ export default function BanksPage() {
   ];
 
   return (
-    <div>
+    <DashboardLayout>
+      <div className="mb-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+          <Link href="/dashboard" className="hover:text-blue-600 flex items-center gap-1">
+            <Home className="w-4 h-4" />
+            Dashboard
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link href="/master-data" className="hover:text-blue-600">
+            Master Data
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 font-medium">Banks</span>
+        </div>
+      </div>
+      
+      <div>
       {/* Header with Bank Count Stats */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -223,6 +218,7 @@ export default function BanksPage() {
         onImport={handleImport}
         onExport={handleExport}
       />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

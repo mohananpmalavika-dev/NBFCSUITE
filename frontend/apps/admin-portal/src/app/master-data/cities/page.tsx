@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import MasterDataTable, { StatusBadge } from "@/components/MasterDataTable";
-import { MapPin } from "lucide-react";
+import { MapPin, Home, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { listCities, deleteMasterData } from "@/services/masterdata.service";
 
 interface City {
   id: number;
@@ -29,31 +32,19 @@ export default function CitiesPage() {
   const fetchCities = async (page: number, search: string = "", state: string = "") => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        page_size: pageSize.toString(),
+      const result = await listCities({
+        page,
+        page_size: pageSize,
         ...(search && { search }),
-        ...(state && { state_id: state })
+        ...(state && { state_id: parseInt(state) })
       });
 
-      const response = await fetch(`/api/v1/masterdata/cities?${params}`, {
-        headers: {
-          "Content-Type": "application/json",
-          // Add auth token from localStorage/cookie
-          // "Authorization": `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch cities");
+      if (result.success && result.data) {
+        setData(result.data.items || []);
+        setTotalRecords(result.data.total || 0);
       }
-
-      const result = await response.json();
-      setData(result.items || []);
-      setTotalRecords(result.total || 0);
     } catch (error) {
       console.error("Error fetching cities:", error);
-      // Show error toast
       setData([]);
       setTotalRecords(0);
     } finally {
@@ -97,24 +88,11 @@ export default function CitiesPage() {
     }
 
     try {
-      const response = await fetch(`/api/v1/masterdata/cities/${row.id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          // Add auth token
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete city");
-      }
-
-      // Show success toast
-      // Refresh data
+      await deleteMasterData('cities', row.id);
       fetchCities(currentPage, searchQuery, selectedState);
     } catch (error) {
       console.error("Error deleting city:", error);
-      // Show error toast
+      alert("Failed to delete city");
     }
   };
 
@@ -168,7 +146,23 @@ export default function CitiesPage() {
   ];
 
   return (
-    <div>
+    <DashboardLayout>
+      <div className="mb-6">
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+          <Link href="/dashboard" className="hover:text-blue-600 flex items-center gap-1">
+            <Home className="w-4 h-4" />
+            Dashboard
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link href="/master-data" className="hover:text-blue-600">
+            Master Data
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 font-medium">Cities</span>
+        </div>
+      </div>
+      
+      <div>
       {/* Header with City Stats */}
       <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -239,6 +233,7 @@ export default function CitiesPage() {
         onImport={handleImport}
         onExport={handleExport}
       />
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

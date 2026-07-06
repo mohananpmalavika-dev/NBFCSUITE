@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import MasterDataTable, { StatusBadge } from "@/components/MasterDataTable";
-import { Globe } from "lucide-react";
+import { Globe, Home, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { listStates, deleteMasterData } from "@/services/masterdata.service";
 
 interface State {
   id: number;
@@ -28,27 +31,24 @@ export default function StatesPage() {
   const fetchStates = async (page: number, search: string = "") => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        page_size: pageSize.toString(),
+      const result = await listStates({
+        page,
+        page_size: pageSize,
         ...(search && { search })
       });
 
-      const response = await fetch(`/api/v1/masterdata/states?${params}`, {
-        headers: {
-          "Content-Type": "application/json",
-          // Add auth token from localStorage/cookie
-          // "Authorization": `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch states");
+      if (result.success && result.data) {
+        setData(result.data.items || []);
+        setTotalRecords(result.data.total || 0);
       }
-
-      const result = await response.json();
-      setData(result.items || []);
-      setTotalRecords(result.total || 0);
+    } catch (error) {
+      console.error("Error fetching states:", error);
+      setData([]);
+      setTotalRecords(0);
+    } finally {
+      setLoading(false);
+    }
+  };
     } catch (error) {
       console.error("Error fetching states:", error);
       // Show error toast
@@ -95,24 +95,12 @@ export default function StatesPage() {
     }
 
     try {
-      const response = await fetch(`/api/v1/masterdata/states/${row.id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          // Add auth token
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete state");
-      }
-
-      // Show success toast
+      await deleteMasterData('states', row.id);
       // Refresh data
       fetchStates(currentPage, searchQuery);
     } catch (error) {
       console.error("Error deleting state:", error);
-      // Show error toast
+      alert("Failed to delete state");
     }
   };
 
@@ -170,22 +158,40 @@ export default function StatesPage() {
   ];
 
   return (
-    <MasterDataTable
-      title="States & Union Territories"
-      description="Manage states and union territories of India"
-      columns={columns}
-      data={data}
-      loading={loading}
-      totalRecords={totalRecords}
-      currentPage={currentPage}
-      pageSize={pageSize}
-      onPageChange={handlePageChange}
-      onSearch={handleSearch}
-      onAdd={handleAdd}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onImport={handleImport}
-      onExport={handleExport}
-    />
+    <DashboardLayout>
+      <div className="mb-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+          <Link href="/dashboard" className="hover:text-blue-600 flex items-center gap-1">
+            <Home className="w-4 h-4" />
+            Dashboard
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link href="/master-data" className="hover:text-blue-600">
+            Master Data
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 font-medium">States</span>
+        </div>
+      </div>
+      
+      <MasterDataTable
+        title="States & Union Territories"
+        description="Manage states and union territories of India"
+        columns={columns}
+        data={data}
+        loading={loading}
+        totalRecords={totalRecords}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onPageChange={handlePageChange}
+        onSearch={handleSearch}
+        onAdd={handleAdd}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onImport={handleImport}
+        onExport={handleExport}
+      />
+    </DashboardLayout>
   );
 }

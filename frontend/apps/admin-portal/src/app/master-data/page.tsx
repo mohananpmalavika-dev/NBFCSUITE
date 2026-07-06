@@ -27,7 +27,6 @@ export default function MasterDataPage() {
       count: "36+ States, 130+ Cities",
       color: "bg-blue-500",
       items: [
-        { name: "Countries", count: 1, route: "/master-data/countries" },
         { name: "States & UTs", count: 36, route: "/master-data/states" },
         { name: "Cities", count: 130, route: "/master-data/cities" },
         { name: "Pincodes", count: "Sample", route: "/master-data/pincodes" }
@@ -54,9 +53,7 @@ export default function MasterDataPage() {
       count: "10+ Loan Products",
       color: "bg-purple-500",
       items: [
-        { name: "Loan Products", count: 10, route: "/master-data/loan-products" },
-        { name: "Interest Rates", count: 5, route: "/master-data/interest-rates" },
-        { name: "Currency", count: 1, route: "/master-data/currency" }
+        { name: "Loan Products", count: 10, route: "/master-data/loan-products" }
       ]
     },
     {
@@ -105,10 +102,7 @@ export default function MasterDataPage() {
       count: "Multiple Categories",
       color: "bg-indigo-500",
       items: [
-        { name: "Loan Purposes", count: 13, route: "/master-data/loan-purposes" },
-        { name: "Relationships", count: 19, route: "/master-data/relationships" },
-        { name: "Holidays (2026)", count: 19, route: "/master-data/holidays" },
-        { name: "Financial Years", count: 4, route: "/master-data/financial-years" }
+        { name: "Holidays (2026)", count: 19, route: "/master-data/holidays" }
       ]
     }
   ];

@@ -84,6 +84,12 @@ from backend.shared.database.gold_loan_models import (
     GoldLoanTransaction, GoldReleaseRequest, GoldAuction
 )
 
+# 6. Integration models (NEW - LOS Enhancement)
+from backend.shared.database.integration_models import (
+    BureauReport, BureauConsent, BankStatementAnalysis,
+    DocumentOCRResult, EKYCRecord, DigiLockerDocument
+)
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -465,6 +471,13 @@ from backend.services.notification import router as notification_router
 from backend.services.file_upload.router import router as file_upload_router
 from backend.services.gold.router import router as gold_loan_router
 
+# NEW: Integration Services Routers (LOS Enhancement - 100% Complete)
+from backend.services.integration.bureau_router import router as bureau_integration_router
+from backend.services.integration.bank_statement_router import router as bank_statement_router
+from backend.services.integration.ocr_router import router as ocr_router
+from backend.services.integration.ekyc_router import router as ekyc_integration_router
+from backend.services.integration.digilocker_router import router as digilocker_integration_router
+
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["Dashboard"])
@@ -506,6 +519,26 @@ app.include_router(file_upload_router, prefix="/api/v1", tags=["File Upload"])
 
 # Gold Loan Router
 app.include_router(gold_loan_router, prefix="/api/v1", tags=["Gold Loans"])
+
+# ============================================
+# NEW: INTEGRATION SERVICES ROUTERS
+# LOS Enhancement - Complete Implementation
+# ============================================
+
+# Bureau Integration (CIBIL, Equifax, Experian, CRIF)
+app.include_router(bureau_integration_router, tags=["Bureau Integration"])
+
+# Bank Statement Analysis (Perfios/FinBox)
+app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])
+
+# OCR & Document Verification (AWS Textract)
+app.include_router(ocr_router, tags=["OCR & Document Verification"])
+
+# eKYC Integration (Aadhaar OTP)
+app.include_router(ekyc_integration_router, tags=["eKYC Integration"])
+
+# DigiLocker Integration (OAuth)
+app.include_router(digilocker_integration_router, tags=["DigiLocker Integration"])
 
 # ============================================
 # STARTUP MESSAGE
