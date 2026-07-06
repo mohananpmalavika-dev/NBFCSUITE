@@ -19,66 +19,48 @@ from backend.shared.middleware.tenant import TenantMiddleware
 from backend.shared.middleware.logging import LoggingMiddleware
 from backend.shared.middleware.error_handler import ErrorHandlerMiddleware
 
-
-def import_all_models():
-    """Import all models to register them with SQLAlchemy Base"""
-    try:
-        # Core models
-        from backend.shared.database.models import (
-            Tenant, User, Role, UserRole, Permission, RolePermission,
-            Branch, AuditLog, SystemConfig
-        )
-        # Customer models
-        from backend.shared.database.customer_models import (
-            Customer, CustomerDocument, FamilyMember, BankAccount
-        )
-        # Loan models
-        from backend.shared.database.loan_models import (
-            LoanProduct, LoanApplication, LoanAccount, Repayment, 
-            CollateralType, Collateral, LoanPurpose
-        )
-        # Deposit models
-        from backend.shared.database.deposit_models import (
-            DepositProduct, DepositAccount, DepositTransaction, MaturitySchedule
-        )
-        # Accounting models
-        from backend.shared.database.accounting_models import (
-            ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
-            TrialBalance, AccountingPeriod
-        )
-        # Workflow models
-        from backend.shared.database.workflow_models import (
-            WorkflowTemplate, WorkflowInstance, WorkflowStep, 
-            WorkflowHistory, WorkflowTask, WorkflowSLATracking
-        )
-        # Rules models
-        from backend.shared.database.rules_models import (
-            RuleSet, Rule, RuleCondition, RuleAction, RuleExecution
-        )
-        # Decision models
-        from backend.shared.database.decision_models import (
-            DecisionStrategy, OfferTemplate, OfferInstance, DecisionHistory
-        )
-        # Notification models
-        from backend.shared.database.notification_models import (
-            NotificationTemplate, Notification, NotificationLog
-        )
-        # Gold loan models
-        from backend.shared.database.gold_loan_models import (
-            GoldLoanScheme, GoldLoan, Ornament, OrnamentAppraisal, 
-            OrnamentRelease, GoldRateHistory
-        )
-        # Master data models
-        from backend.shared.database.master_data_models import (
-            Country, State, District, City, Pincode,
-            Bank, BankBranch, DocumentType, OccupationType,
-            IncomeSource, Religion, Caste, Education, MaritalStatus
-        )
-        logger.info("✅ All models imported successfully")
-        return True
-    except Exception as e:
-        logger.error(f"❌ Error importing models: {e}")
-        return False
+# Import all models at module level to register them with SQLAlchemy
+# This must happen before any database operations
+from backend.shared.database.models import (
+    Tenant, User, Role, UserRole, Permission, RolePermission,
+    Branch, AuditLog, SystemConfig
+)
+from backend.shared.database.customer_models import (
+    Customer, CustomerDocument, FamilyMember, BankAccount
+)
+from backend.shared.database.loan_models import (
+    LoanProduct, LoanApplication, LoanAccount, Repayment, 
+    CollateralType, Collateral, LoanPurpose
+)
+from backend.shared.database.deposit_models import (
+    DepositProduct, DepositAccount, DepositTransaction, MaturitySchedule
+)
+from backend.shared.database.accounting_models import (
+    ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
+    TrialBalance, AccountingPeriod
+)
+from backend.shared.database.workflow_models import (
+    WorkflowTemplate, WorkflowInstance, WorkflowStep, 
+    WorkflowHistory, WorkflowTask, WorkflowSLATracking
+)
+from backend.shared.database.rules_models import (
+    RuleSet, Rule, RuleCondition, RuleAction, RuleExecution
+)
+from backend.shared.database.decision_models import (
+    DecisionStrategy, OfferTemplate, OfferInstance, DecisionHistory
+)
+from backend.shared.database.notification_models import (
+    NotificationTemplate, Notification, NotificationLog
+)
+from backend.shared.database.gold_loan_models import (
+    GoldLoanScheme, GoldLoan, Ornament, OrnamentAppraisal, 
+    OrnamentRelease, GoldRateHistory
+)
+from backend.shared.database.master_data_models import (
+    Country, State, District, City, Pincode,
+    Bank, BankBranch, DocumentType, OccupationType,
+    IncomeSource, Religion, Caste, Education, MaritalStatus
+)
 
 # Configure logging
 logging.basicConfig(
@@ -119,7 +101,7 @@ async def lifespan(app: FastAPI):
             logger.warning(f"⚠️  Migration warning: {result.stderr}")
             # If migrations fail, try creating tables directly
             logger.info("🔄 Attempting to create tables directly...")
-            import_all_models()  # Import all models first
+            logger.info(f"📊 Registered tables: {list(Base.metadata.tables.keys())}")
             
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
@@ -130,13 +112,15 @@ async def lifespan(app: FastAPI):
         # Try direct table creation as fallback
         try:
             logger.info("🔄 Fallback: Creating tables directly...")
-            import_all_models()  # Import all models first
+            logger.info(f"📊 Registered tables: {list(Base.metadata.tables.keys())}")
             
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
             logger.info("✅ Database tables created successfully (fallback)")
         except Exception as e2:
             logger.error(f"❌ Failed to create tables: {e2}")
+            import traceback
+            logger.error(traceback.format_exc())
             # Continue startup anyway
     
     # Create default tenant if it doesn't exist
@@ -316,12 +300,48 @@ async def health_check() -> Dict[str, Any]:
     }
 
 
+@app.get("/debug/tables", tags=["Health"])
+async def debug_tables() -> Dict[str, Any]:
+    """Debug endpoint to check registered tables"""
+    from backend.shared.database.connection import Base, engine
+    from sqlalchemy import text
+    
+    try:
+        # Check what tables SQLAlchemy knows about
+        registered_tables = list(Base.metadata.tables.keys())
+        
+        # Check what tables actually exist in the database
+        async with engine.connect() as conn:
+            result = await conn.execute(text(
+                "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+            ))
+            existing_tables = [row[0] for row in result]
+        
+        return {
+            "success": True,
+            "data": {
+                "registered_tables": registered_tables,
+                "registered_count": len(registered_tables),
+                "existing_tables": existing_tables,
+                "existing_count": len(existing_tables),
+                "missing_tables": list(set(registered_tables) - set(existing_tables))
+            }
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 @app.post("/init-db", tags=["Health"])
 async def initialize_database() -> Dict[str, Any]:
     """Initialize database tables (for first-time setup)"""
     try:
+        from backend.shared.database.connection import Base, engine
+        
         logger.info("🔄 Creating database tables...")
-        import_all_models()  # Import all models first
+        logger.info(f"📊 Registered tables: {list(Base.metadata.tables.keys())}")
         
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
@@ -330,7 +350,6 @@ async def initialize_database() -> Dict[str, Any]:
         
         # Create default tenant
         from backend.shared.database.connection import AsyncSessionLocal
-        from backend.shared.database.models import Tenant
         from sqlalchemy import select
         
         async with AsyncSessionLocal() as session:
@@ -355,16 +374,21 @@ async def initialize_database() -> Dict[str, Any]:
             "success": True,
             "data": {
                 "message": "Database initialized successfully",
-                "tables_created": True,
+                "tables_created": list(Base.metadata.tables.keys()),
                 "default_tenant_created": True
             }
         }
     except Exception as e:
         logger.error(f"❌ Failed to initialize database: {e}", exc_info=True)
+        import traceback
         return {
             "success": False,
             "error": {
                 "code": "INIT_ERROR",
+                "message": str(e),
+                "traceback": traceback.format_exc()
+            }
+        }
                 "message": str(e)
             }
         }
