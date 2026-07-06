@@ -140,26 +140,6 @@ class AuthService:
         Raises:
             ConflictError: Username or email already exists
         """
-        # Ensure default tenant exists
-        from backend.shared.database.models import Tenant
-        tenant_result = await self.db.execute(
-            select(Tenant).where(Tenant.code == request.tenant_id)
-        )
-        tenant = tenant_result.scalar_one_or_none()
-        
-        if not tenant:
-            # Create default tenant
-            tenant = Tenant(
-                id=uuid.uuid4(),
-                name="Default Organization",
-                code=request.tenant_id,
-                is_active=True,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
-            )
-            self.db.add(tenant)
-            await self.db.flush()  # Flush to get the tenant ID
-        
         # Check if username exists
         result = await self.db.execute(
             select(User).where(
@@ -197,9 +177,9 @@ class AuthService:
             last_name=request.last_name,
             phone=request.phone,
             is_active=True,
-            is_superuser=False,
-            is_verified=False,
-            email_verified=False,
+            is_superuser=True,  # First user is superuser
+            is_verified=True,  # Auto-verify first user
+            email_verified=True,
             phone_verified=False,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
