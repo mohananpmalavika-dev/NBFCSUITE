@@ -14,7 +14,7 @@ from sqlalchemy import Column, Integer, String, Date, DateTime, Boolean, JSON, D
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
-from .base import Base
+from .connection import Base
 
 
 class BureauReport(Base):
