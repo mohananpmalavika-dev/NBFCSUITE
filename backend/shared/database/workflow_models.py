@@ -133,7 +133,7 @@ class WorkflowInstance(Base):
     initiator = relationship("User", foreign_keys=[initiated_by])
     escalated_user = relationship("User", foreign_keys=[escalated_to])
     steps = relationship("WorkflowStep", back_populates="instance", cascade="all, delete-orphan", 
-                        foreign_keys="[WorkflowStep.workflow_instance_id]")
+                        foreign_keys="WorkflowStep.workflow_instance_id")
     history = relationship("WorkflowHistory", back_populates="instance", cascade="all, delete-orphan")
     tasks = relationship("WorkflowTask", back_populates="instance", cascade="all, delete-orphan")
     sla_tracking = relationship("WorkflowSLATracking", back_populates="instance", cascade="all, delete-orphan")
