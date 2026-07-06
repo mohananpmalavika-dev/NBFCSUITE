@@ -443,6 +443,7 @@ async def liveness_check() -> Dict[str, Any]:
 
 # Import routers
 from backend.services.auth.router import router as auth_router
+from backend.services.dashboard.router import router as dashboard_router
 from backend.services.masterdata.router import router as masterdata_router
 from backend.services.customer.router import router as customer_router
 from backend.services.loan import router as loan_router
@@ -457,6 +458,7 @@ from backend.services.gold.router import router as gold_loan_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(dashboard_router, prefix="/api/v1", tags=["Dashboard"])
 app.include_router(masterdata_router, prefix="/api/v1/masterdata", tags=["Master Data"])
 app.include_router(customer_router, prefix="/api/v1/customers", tags=["Customers"])
 app.include_router(loan_router, prefix="/api/v1", tags=["Loans"])
