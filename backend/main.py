@@ -22,18 +22,20 @@ from backend.shared.middleware.error_handler import ErrorHandlerMiddleware
 # Import all models at module level to register them with SQLAlchemy
 # This must happen before any database operations
 from backend.shared.database.models import (
-    Tenant, User, Role, UserRole, Permission, RolePermission,
-    Branch, AuditLog, SystemConfig
+    Tenant, User, Role, UserRole, Permission, RolePermission, FileUpload
 )
 from backend.shared.database.customer_models import (
-    Customer, CustomerDocument, FamilyMember, BankAccount
+    Customer, CustomerKYC, CustomerDocument, CustomerFamily, 
+    CustomerBankAccount, CustomerReference
 )
 from backend.shared.database.loan_models import (
-    LoanProduct, LoanApplication, LoanAccount, Repayment, 
-    CollateralType, Collateral, LoanPurpose
+    LoanProduct, LoanApplication, LoanApplicationCoApplicant,
+    LoanApplicationDocument, LoanApprovalWorkflow, LoanAccount,
+    LoanEMISchedule, LoanRepayment
 )
 from backend.shared.database.deposit_models import (
-    DepositProduct, DepositAccount, DepositTransaction, MaturitySchedule
+    DepositProduct, DepositAccount, DepositTransaction,
+    DepositInterestCalculation, DepositMaturityQueue, DepositPassbookEntry
 )
 from backend.shared.database.accounting_models import (
     ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
@@ -44,22 +46,25 @@ from backend.shared.database.workflow_models import (
     WorkflowHistory, WorkflowTask, WorkflowSLATracking
 )
 from backend.shared.database.rules_models import (
-    RuleSet, Rule, RuleCondition, RuleAction, RuleExecution
+    RuleCategory, BusinessRule, RuleCondition, RuleAction, 
+    RuleEvaluation, RuleDecision, RuleVersion
 )
 from backend.shared.database.decision_models import (
-    DecisionStrategy, OfferTemplate, OfferInstance, DecisionHistory
+    InstantDecision, PreApprovedOffer, DecisionStrategy,
+    DecisionCache, DecisionAnalytics, DecisionLimit
 )
 from backend.shared.database.notification_models import (
-    NotificationTemplate, Notification, NotificationLog
+    NotificationTemplate, Notification, NotificationQueue,
+    NotificationLog, NotificationAnalytics
 )
 from backend.shared.database.gold_loan_models import (
-    GoldLoanScheme, GoldLoan, Ornament, OrnamentAppraisal, 
-    OrnamentRelease, GoldRateHistory
+    GoldLoanProduct, GoldOrnament, GoldLoanAccount,
+    GoldLoanTransaction, GoldReleaseRequest, GoldAuction
 )
 from backend.shared.database.master_data_models import (
-    Country, State, District, City, Pincode,
-    Bank, BankBranch, DocumentType, OccupationType,
-    IncomeSource, Religion, Caste, Education, MaritalStatus
+    Country, State, City, Pincode, Bank, BankBranch, Currency,
+    InterestRateType, LoanProductType, DocumentType, Occupation,
+    Industry, LoanPurpose, RelationshipType, Holiday, FinancialYear
 )
 
 # Configure logging
