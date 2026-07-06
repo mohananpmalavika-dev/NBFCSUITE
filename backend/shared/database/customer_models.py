@@ -7,6 +7,7 @@ from sqlalchemy import (
     Column, Integer, String, Boolean, DateTime, Date, Numeric, Text,
     ForeignKey, JSON, Enum as SQLEnum, Index
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from decimal import Decimal
@@ -121,8 +122,8 @@ class Customer(BaseModel):
     spouse_name = Column(String(200))
     
     # Occupation & Income
-    occupation_id = Column(Integer, ForeignKey("occupations.id"))
-    industry_id = Column(Integer, ForeignKey("industries.id"))
+    occupation_id = Column(UUID(as_uuid=True), ForeignKey("occupations.id"))
+    industry_id = Column(UUID(as_uuid=True), ForeignKey("industries.id"))
     employer_name = Column(String(300))
     employment_type = Column(String(50))  # Permanent, Contract, Self-Employed
     years_in_business = Column(Integer)
@@ -133,23 +134,23 @@ class Customer(BaseModel):
     # Address Information
     current_address_line1 = Column(String(500))
     current_address_line2 = Column(String(500))
-    current_city_id = Column(Integer, ForeignKey("cities.id"))
-    current_state_id = Column(Integer, ForeignKey("states.id"))
+    current_city_id = Column(UUID(as_uuid=True), ForeignKey("cities.id"))
+    current_state_id = Column(UUID(as_uuid=True), ForeignKey("states.id"))
     current_pincode = Column(String(6))
     current_address_type = Column(String(50))  # Owned, Rented, Company Provided
     years_at_current_address = Column(Integer)
     
     permanent_address_line1 = Column(String(500))
     permanent_address_line2 = Column(String(500))
-    permanent_city_id = Column(Integer, ForeignKey("cities.id"))
-    permanent_state_id = Column(Integer, ForeignKey("states.id"))
+    permanent_city_id = Column(UUID(as_uuid=True), ForeignKey("cities.id"))
+    permanent_state_id = Column(UUID(as_uuid=True), ForeignKey("states.id"))
     permanent_pincode = Column(String(6))
     is_permanent_same_as_current = Column(Boolean, default=False)
     
     # KYC & Verification
     kyc_status = Column(SQLEnum(KYCStatus), default=KYCStatus.PENDING)
     kyc_completed_date = Column(DateTime)
-    kyc_verified_by = Column(Integer, ForeignKey("users.id"))
+    kyc_verified_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     kyc_remarks = Column(Text)
     is_kyc_verified = Column(Boolean, default=False)
     
@@ -163,8 +164,8 @@ class Customer(BaseModel):
     aml_last_checked = Column(DateTime)
     
     # Banking Preferences
-    preferred_bank_id = Column(Integer, ForeignKey("banks.id"))
-    preferred_branch_id = Column(Integer, ForeignKey("bank_branches.id"))
+    preferred_bank_id = Column(UUID(as_uuid=True), ForeignKey("banks.id"))
+    preferred_branch_id = Column(UUID(as_uuid=True), ForeignKey("bank_branches.id"))
     
     # Status & Flags
     is_active = Column(Boolean, default=True)
@@ -216,7 +217,7 @@ class CustomerKYC(BaseModel):
     """Detailed KYC information and verification history"""
     __tablename__ = "customer_kyc"
     
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False)
     
     # Aadhaar Verification
     aadhaar_verified = Column(Boolean, default=False)
@@ -240,7 +241,7 @@ class CustomerKYC(BaseModel):
     video_kyc_done = Column(Boolean, default=False)
     video_kyc_date = Column(DateTime)
     video_kyc_recording_url = Column(String(500))
-    video_kyc_agent_id = Column(Integer, ForeignKey("users.id"))
+    video_kyc_agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     
     # Biometric
     biometric_captured = Column(Boolean, default=False)
@@ -250,7 +251,7 @@ class CustomerKYC(BaseModel):
     # In-Person Verification
     in_person_verification_done = Column(Boolean, default=False)
     in_person_verification_date = Column(DateTime)
-    verified_by_agent_id = Column(Integer, ForeignKey("users.id"))
+    verified_by_agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     verification_location = Column(String(500))
     
     # CIBIL/Credit Bureau
@@ -276,8 +277,8 @@ class CustomerDocument(BaseModel):
     """Customer documents (Aadhaar, PAN, Bank statements, etc.)"""
     __tablename__ = "customer_documents"
     
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
-    document_type_id = Column(Integer, ForeignKey("document_types.id"), nullable=False)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
+    document_type_id = Column(UUID(as_uuid=True), ForeignKey("document_types.id"), nullable=False)
     
     # Document Details
     document_number = Column(String(100))
@@ -288,7 +289,7 @@ class CustomerDocument(BaseModel):
     
     # Verification
     status = Column(SQLEnum(DocumentStatus), default=DocumentStatus.PENDING)
-    verified_by = Column(Integer, ForeignKey("users.id"))
+    verified_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     verified_date = Column(DateTime)
     verification_remarks = Column(Text)
     
@@ -304,7 +305,7 @@ class CustomerDocument(BaseModel):
     extracted_address = Column(Text)
     
     # Metadata
-    uploaded_by = Column(Integer, ForeignKey("users.id"))
+    uploaded_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     uploaded_date = Column(DateTime, default=datetime.utcnow)
     file_hash = Column(String(64))  # For duplicate detection
     
@@ -327,8 +328,8 @@ class CustomerFamily(BaseModel):
     """Customer family members and dependents"""
     __tablename__ = "customer_family"
     
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
-    relationship_type_id = Column(Integer, ForeignKey("relationship_types.id"))
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
+    relationship_type_id = Column(UUID(as_uuid=True), ForeignKey("relationship_types.id"))
     
     # Member Details
     name = Column(String(300), nullable=False)
@@ -376,9 +377,9 @@ class CustomerBankAccount(BaseModel):
     """Customer bank accounts for disbursement and collections"""
     __tablename__ = "customer_bank_accounts"
     
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
-    bank_id = Column(Integer, ForeignKey("banks.id"))
-    bank_branch_id = Column(Integer, ForeignKey("bank_branches.id"))
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
+    bank_id = Column(UUID(as_uuid=True), ForeignKey("banks.id"))
+    bank_branch_id = Column(UUID(as_uuid=True), ForeignKey("bank_branches.id"))
     
     # Account Details
     account_number = Column(String(50), nullable=False)
@@ -429,8 +430,8 @@ class CustomerReference(BaseModel):
     """Customer references and guarantors"""
     __tablename__ = "customer_references"
     
-    customer_id = Column(Integer, ForeignKey("customers.id"), nullable=False, index=True)
-    relationship_type_id = Column(Integer, ForeignKey("relationship_types.id"))
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
+    relationship_type_id = Column(UUID(as_uuid=True), ForeignKey("relationship_types.id"))
     
     # Reference Details
     name = Column(String(300), nullable=False)
@@ -441,8 +442,8 @@ class CustomerReference(BaseModel):
     # Address
     address_line1 = Column(String(500))
     address_line2 = Column(String(500))
-    city_id = Column(Integer, ForeignKey("cities.id"))
-    state_id = Column(Integer, ForeignKey("states.id"))
+    city_id = Column(UUID(as_uuid=True), ForeignKey("cities.id"))
+    state_id = Column(UUID(as_uuid=True), ForeignKey("states.id"))
     pincode = Column(String(6))
     
     # Occupation
@@ -457,7 +458,7 @@ class CustomerReference(BaseModel):
     # Verification
     is_verified = Column(Boolean, default=False)
     verified_date = Column(DateTime)
-    verified_by = Column(Integer, ForeignKey("users.id"))
+    verified_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
     verification_method = Column(String(50))  # Phone, In-Person, Document
     verification_remarks = Column(Text)
     
