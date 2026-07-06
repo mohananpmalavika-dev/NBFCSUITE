@@ -1,6 +1,7 @@
 """
 NBFC Financial Suite - Main Application
 Tier-1 Enterprise Platform - Backend API
+Version: 1.0.1 - Fixed async context issues
 """
 
 from fastapi import FastAPI, Request, status
