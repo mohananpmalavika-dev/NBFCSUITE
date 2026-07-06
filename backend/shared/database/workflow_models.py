@@ -194,7 +194,8 @@ class WorkflowStep(Base):
     completed_by = Column(Integer, ForeignKey("users.id"))
     
     # Relationships
-    instance = relationship("WorkflowInstance", back_populates="steps")
+    instance = relationship("WorkflowInstance", back_populates="steps", 
+                           foreign_keys=[workflow_instance_id])
     assigned_user = relationship("User", foreign_keys=[assigned_to])
     completed_user = relationship("User", foreign_keys=[completed_by])
     tasks = relationship("WorkflowTask", back_populates="step")
