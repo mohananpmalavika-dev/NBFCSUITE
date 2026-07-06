@@ -66,6 +66,15 @@ const navigationItems = [
     icon: TrendingUp,
   },
   {
+    title: 'Workflows',
+    href: '/workflows',
+    icon: GitBranch,
+    children: [
+      { title: 'My Tasks', href: '/workflows/tasks' },
+      { title: 'Templates', href: '/workflows/templates' },
+    ],
+  },
+  {
     title: 'Accounting',
     href: '/accounting',
     icon: Calculator,
@@ -76,23 +85,14 @@ const navigationItems = [
     ],
   },
   {
-    title: 'Workflows',
-    href: '/workflows',
-    icon: GitBranch,
-    children: [
-      { title: 'My Tasks', href: '/workflows/tasks' },
-      { title: 'Templates', href: '/workflows/templates' },
-    ],
+    title: 'Reports',
+    href: '/reports',
+    icon: BarChart3,
   },
   {
     title: 'Master Data',
     href: '/master-data',
     icon: Database,
-  },
-  {
-    title: 'Reports',
-    href: '/reports',
-    icon: BarChart3,
   },
   {
     title: 'Settings',

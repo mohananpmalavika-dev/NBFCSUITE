@@ -26,6 +26,7 @@ export default function GoldLoansPage() {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -34,6 +35,7 @@ export default function GoldLoansPage() {
   const loadData = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Load loans
       const loansData = await getGoldLoans({
@@ -44,18 +46,28 @@ export default function GoldLoansPage() {
       });
       
       if (loansData) {
-        setLoans(loansData.loans);
-        setTotalPages(loansData.total_pages);
+        setLoans(loansData.loans || []);
+        setTotalPages(loansData.total_pages || 1);
       }
 
       // Load statistics
       const statsData = await getGoldLoanStatistics();
+      
       if (statsData) {
         setStatistics(statsData);
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load gold loans:', error);
+      
+      // Check if it's a network/database error
+      if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        setError('Cannot connect to the server. Please check if the backend is running.');
+      } else if (error.response?.status === 500) {
+        setError('Database connection error. Please ensure PostgreSQL is running or configure a cloud database.');
+      } else {
+        setError(error.response?.data?.error?.message || 'Failed to load gold loans data. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -82,6 +94,42 @@ export default function GoldLoansPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Error Alert */}
+        {error && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="text-red-800 font-medium mb-1">Connection Error</h3>
+                  <p className="text-red-700 text-sm mb-3">{error}</p>
+                  <div className="text-xs text-red-600 bg-red-100 p-3 rounded border border-red-200">
+                    <p className="font-medium mb-1">To fix this:</p>
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Set up a free PostgreSQL database (Render.com, Railway.app, or Supabase.com)</li>
+                      <li>Update DATABASE_URL in backend/.env file</li>
+                      <li>Restart the backend server</li>
+                    </ol>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setError(null);
+                    loadData();
+                  }}
+                  className="border-red-300 text-red-700 hover:bg-red-100"
+                >
+                  Retry
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
         {/* Header */}
         <div className="flex justify-between items-center">
         <div>

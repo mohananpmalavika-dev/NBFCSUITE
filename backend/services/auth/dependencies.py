@@ -180,3 +180,18 @@ async def get_tenant_id(
             detail="No tenant associated with user"
         )
     return current_user.tenant_id
+
+
+async def get_current_user_id(
+    current_user: UserWithRoles = Depends(get_current_user)
+) -> str:
+    """
+    Get current user ID
+    
+    Usage:
+        @app.get("/my-profile")
+        async def get_profile(user_id: str = Depends(get_current_user_id)):
+            return {"user_id": user_id}
+    """
+    return current_user.id
+

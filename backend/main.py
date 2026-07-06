@@ -43,7 +43,8 @@ from backend.shared.database.master_data_models import (
 # 3. Customer models (references master data)
 from backend.shared.database.customer_models import (
     Customer, CustomerKYC, CustomerDocument, CustomerFamily, 
-    CustomerBankAccount, CustomerReference
+    CustomerBankAccount, CustomerReference, CustomerTimeline,
+    CustomerBureauHistory, ActivityType, BureauProvider, BureauPullStatus
 )
 
 # 4. Loan models (references customer models)
@@ -195,6 +196,10 @@ app = FastAPI(
         {"name": "Health", "description": "Health check endpoints"},
         {"name": "Authentication", "description": "Authentication and authorization"},
         {"name": "Customers", "description": "Customer management (CIF)"},
+        {"name": "Customer Timeline", "description": "Customer activity history and timeline tracking"},
+        {"name": "Credit Bureau", "description": "Credit bureau integration (CIBIL, Equifax, Experian, CRIF)"},
+        {"name": "eKYC / Aadhaar", "description": "Aadhaar eKYC with OTP and biometric verification"},
+        {"name": "DigiLocker", "description": "DigiLocker document integration"},
         {"name": "Loans", "description": "Loan origination and management"},
         {"name": "Collections", "description": "Collection management"},
         {"name": "Deposits", "description": "Deposit management (Nidhi)"},
@@ -446,6 +451,10 @@ from backend.services.auth.router import router as auth_router
 from backend.services.dashboard.router import router as dashboard_router
 from backend.services.masterdata.router import router as masterdata_router
 from backend.services.customer.router import router as customer_router
+from backend.services.customer.timeline_router import router as customer_timeline_router
+from backend.services.customer.bureau_router import router as customer_bureau_router
+from backend.services.customer.ekyc_router import router as customer_ekyc_router
+from backend.services.customer.digilocker_router import router as customer_digilocker_router
 from backend.services.loan import router as loan_router
 from backend.services.accounting.router import router as accounting_router
 from backend.services.deposit import product_router, account_router, interest_router
@@ -461,6 +470,13 @@ app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["Dashboard"])
 app.include_router(masterdata_router, prefix="/api/v1/masterdata", tags=["Master Data"])
 app.include_router(customer_router, prefix="/api/v1/customers", tags=["Customers"])
+
+# Customer 360 / CIF Enhanced Features
+app.include_router(customer_timeline_router, prefix="/api/v1", tags=["Customer Timeline"])
+app.include_router(customer_bureau_router, prefix="/api/v1", tags=["Credit Bureau"])
+app.include_router(customer_ekyc_router, prefix="/api/v1", tags=["eKYC / Aadhaar"])
+app.include_router(customer_digilocker_router, prefix="/api/v1", tags=["DigiLocker"])
+
 app.include_router(loan_router, prefix="/api/v1", tags=["Loans"])
 app.include_router(accounting_router, prefix="/api/v1", tags=["Accounting"])
 

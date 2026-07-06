@@ -194,6 +194,8 @@ class Customer(BaseModel):
     bank_accounts = relationship("CustomerBankAccount", back_populates="customer", cascade="all, delete-orphan")
     references = relationship("CustomerReference", back_populates="customer", cascade="all, delete-orphan")
     kyc_details = relationship("CustomerKYC", back_populates="customer", cascade="all, delete-orphan")
+    timeline = relationship("CustomerTimeline", back_populates="customer", cascade="all, delete-orphan")
+    bureau_history = relationship("CustomerBureauHistory", back_populates="customer", cascade="all, delete-orphan")
     
     # Loan relationships
     loan_applications = relationship("LoanApplication", back_populates="customer")
@@ -470,3 +472,235 @@ class CustomerReference(BaseModel):
     relationship_type = relationship("RelationshipType")
     city = relationship("City")
     state = relationship("State")
+
+
+# ============================================================================
+# CUSTOMER TIMELINE/ACTIVITY HISTORY MODEL
+# ============================================================================
+
+class ActivityType(str, enum.Enum):
+    """Types of customer activities"""
+    # Customer Events
+    CUSTOMER_CREATED = "customer_created"
+    CUSTOMER_UPDATED = "customer_updated"
+    CUSTOMER_ACTIVATED = "customer_activated"
+    CUSTOMER_DEACTIVATED = "customer_deactivated"
+    CUSTOMER_BLACKLISTED = "customer_blacklisted"
+    CUSTOMER_UNBLACKLISTED = "customer_unblacklisted"
+    
+    # KYC Events
+    KYC_INITIATED = "kyc_initiated"
+    KYC_COMPLETED = "kyc_completed"
+    KYC_REJECTED = "kyc_rejected"
+    AADHAAR_VERIFIED = "aadhaar_verified"
+    PAN_VERIFIED = "pan_verified"
+    VIDEO_KYC_COMPLETED = "video_kyc_completed"
+    BIOMETRIC_CAPTURED = "biometric_captured"
+    
+    # Document Events
+    DOCUMENT_UPLOADED = "document_uploaded"
+    DOCUMENT_VERIFIED = "document_verified"
+    DOCUMENT_REJECTED = "document_rejected"
+    DOCUMENT_EXPIRED = "document_expired"
+    
+    # Bureau Events
+    CIBIL_PULLED = "cibil_pulled"
+    BUREAU_REPORT_FETCHED = "bureau_report_fetched"
+    CREDIT_SCORE_UPDATED = "credit_score_updated"
+    RISK_RATING_CHANGED = "risk_rating_changed"
+    
+    # Loan Events
+    LOAN_APPLICATION_SUBMITTED = "loan_application_submitted"
+    LOAN_APPROVED = "loan_approved"
+    LOAN_REJECTED = "loan_rejected"
+    LOAN_DISBURSED = "loan_disbursed"
+    LOAN_CLOSED = "loan_closed"
+    
+    # Payment Events
+    PAYMENT_RECEIVED = "payment_received"
+    PAYMENT_MISSED = "payment_missed"
+    EMI_BOUNCED = "emi_bounced"
+    PREPAYMENT_DONE = "prepayment_done"
+    FORECLOSURE_DONE = "foreclosure_done"
+    
+    # Collection Events
+    COLLECTION_CALL = "collection_call"
+    FIELD_VISIT = "field_visit"
+    PAYMENT_PROMISE = "payment_promise"
+    LEGAL_NOTICE_SENT = "legal_notice_sent"
+    
+    # Communication Events
+    SMS_SENT = "sms_sent"
+    EMAIL_SENT = "email_sent"
+    WHATSAPP_SENT = "whatsapp_sent"
+    CALL_MADE = "call_made"
+    
+    # Account Events
+    BANK_ACCOUNT_ADDED = "bank_account_added"
+    BANK_ACCOUNT_VERIFIED = "bank_account_verified"
+    FAMILY_MEMBER_ADDED = "family_member_added"
+    NOMINEE_UPDATED = "nominee_updated"
+    
+    # Other Events
+    NOTE_ADDED = "note_added"
+    COMMENT_ADDED = "comment_added"
+    COMPLAINT_RAISED = "complaint_raised"
+    COMPLAINT_RESOLVED = "complaint_resolved"
+
+
+class CustomerTimeline(BaseModel):
+    """Customer activity and event timeline"""
+    __tablename__ = "customer_timeline"
+    
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
+    
+    # Activity Details
+    activity_type = Column(SQLEnum(ActivityType), nullable=False, index=True)
+    title = Column(String(500), nullable=False)
+    description = Column(Text)
+    
+    # Event Context
+    event_date = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    event_source = Column(String(100))  # web, mobile, api, system
+    event_category = Column(String(50))  # kyc, loan, payment, collection, communication
+    
+    # Related Entities
+    related_entity_type = Column(String(50))  # loan, document, payment, etc.
+    related_entity_id = Column(UUID(as_uuid=True))
+    
+    # Actor
+    performed_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    performed_by_name = Column(String(300))
+    performed_by_role = Column(String(100))
+    
+    # Change Tracking
+    old_value = Column(JSON)  # Previous state
+    new_value = Column(JSON)  # New state
+    changes = Column(JSON)  # Detailed change log
+    
+    # Additional Context
+    event_metadata = Column(JSON)  # Flexible additional data
+    tags = Column(JSON)  # ["important", "urgent", etc.]
+    
+    # Status & Priority
+    is_important = Column(Boolean, default=False)
+    is_system_generated = Column(Boolean, default=True)
+    priority = Column(Integer, default=0)  # 0=normal, 1=high, 2=critical
+    
+    # Visibility
+    is_visible_to_customer = Column(Boolean, default=False)
+    is_internal_only = Column(Boolean, default=True)
+    
+    # Relationships
+    customer = relationship("Customer")
+    performed_by_user = relationship("User", foreign_keys=[performed_by])
+    
+    __table_args__ = (
+        Index('idx_timeline_customer_date', 'customer_id', 'event_date'),
+        Index('idx_timeline_activity_type', 'tenant_id', 'activity_type'),
+        Index('idx_timeline_entity', 'related_entity_type', 'related_entity_id'),
+    )
+
+
+# ============================================================================
+# CREDIT BUREAU HISTORY MODEL
+# ============================================================================
+
+class BureauProvider(str, enum.Enum):
+    """Credit bureau providers"""
+    CIBIL = "cibil"
+    EQUIFAX = "equifax"
+    EXPERIAN = "experian"
+    CRIF = "crif"
+
+
+class BureauPullStatus(str, enum.Enum):
+    """Bureau pull status"""
+    INITIATED = "initiated"
+    SUCCESS = "success"
+    FAILED = "failed"
+    TIMEOUT = "timeout"
+    INVALID_RESPONSE = "invalid_response"
+
+
+class CustomerBureauHistory(BaseModel):
+    """Credit bureau pull history and reports"""
+    __tablename__ = "customer_bureau_history"
+    
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
+    
+    # Bureau Details
+    bureau_provider = Column(SQLEnum(BureauProvider), nullable=False)
+    bureau_request_id = Column(String(100), unique=True)
+    bureau_response_id = Column(String(100))
+    
+    # Request Details
+    request_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    request_type = Column(String(50))  # individual, commercial
+    request_purpose = Column(String(100))  # loan_application, periodic_review
+    requested_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+    
+    # Response Details
+    response_date = Column(DateTime)
+    status = Column(SQLEnum(BureauPullStatus), nullable=False)
+    response_time_ms = Column(Integer)
+    
+    # Credit Score
+    credit_score = Column(Integer)  # 300-900 for CIBIL
+    score_date = Column(Date)
+    score_version = Column(String(50))
+    
+    # Report Details
+    report_url = Column(String(500))
+    report_pdf_url = Column(String(500))
+    report_json = Column(JSON)  # Parsed report data
+    
+    # Key Metrics
+    total_accounts = Column(Integer)
+    active_accounts = Column(Integer)
+    closed_accounts = Column(Integer)
+    total_credit_limit = Column(Numeric(15, 2))
+    total_outstanding = Column(Numeric(15, 2))
+    credit_utilization_percent = Column(Numeric(5, 2))
+    
+    # Delinquency
+    dpd_30_count = Column(Integer, default=0)
+    dpd_60_count = Column(Integer, default=0)
+    dpd_90_count = Column(Integer, default=0)
+    dpd_90_plus_count = Column(Integer, default=0)
+    total_overdue_amount = Column(Numeric(15, 2))
+    
+    # Enquiries
+    recent_enquiries_1m = Column(Integer, default=0)
+    recent_enquiries_3m = Column(Integer, default=0)
+    recent_enquiries_6m = Column(Integer, default=0)
+    recent_enquiries_12m = Column(Integer, default=0)
+    
+    # Account Age
+    oldest_account_date = Column(Date)
+    newest_account_date = Column(Date)
+    credit_history_length_months = Column(Integer)
+    
+    # Error Handling
+    error_code = Column(String(50))
+    error_message = Column(Text)
+    
+    # Cost & Compliance
+    cost_amount = Column(Numeric(10, 2))
+    consent_given = Column(Boolean, default=True)
+    consent_date = Column(DateTime)
+    consent_ip_address = Column(String(50))
+    
+    # Metadata
+    raw_response = Column(JSON)  # Full API response
+    api_version = Column(String(20))
+    
+    # Relationships
+    customer = relationship("Customer")
+    requested_by_user = relationship("User", foreign_keys=[requested_by])
+    
+    __table_args__ = (
+        Index('idx_bureau_customer_date', 'customer_id', 'request_date'),
+        Index('idx_bureau_provider', 'tenant_id', 'bureau_provider'),
+        Index('idx_bureau_status', 'status', 'request_date'),
+    )

@@ -371,3 +371,239 @@ class CustomerBankAccountUpdate(BaseModel):
     use_for_disbursement: Optional[bool] = None
     use_for_collection: Optional[bool] = None
     is_active: Optional[bool] = None
+
+
+
+# ============================================================================
+# CUSTOMER TIMELINE SCHEMAS
+# ============================================================================
+
+class TimelineActivityCreate(BaseModel):
+    """Create timeline activity"""
+    activity_type: str  # Will be converted to ActivityType enum
+    title: str = Field(..., min_length=1, max_length=500)
+    description: Optional[str] = Field(None, max_length=5000)
+    event_category: Optional[str] = None
+    related_entity_type: Optional[str] = None
+    related_entity_id: Optional[int] = None
+    metadata: Optional[Dict[str, Any]] = None
+    is_important: bool = False
+    is_visible_to_customer: bool = False
+
+
+class TimelineActivityResponse(BaseModel):
+    """Timeline activity response"""
+    id: int
+    customer_id: int
+    activity_type: str
+    title: str
+    description: Optional[str] = None
+    event_date: datetime
+    event_category: Optional[str] = None
+    event_source: Optional[str] = None
+    related_entity_type: Optional[str] = None
+    related_entity_id: Optional[int] = None
+    performed_by: Optional[int] = None
+    performed_by_name: Optional[str] = None
+    performed_by_role: Optional[str] = None
+    old_value: Optional[Dict[str, Any]] = None
+    new_value: Optional[Dict[str, Any]] = None
+    changes: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    is_important: bool
+    is_system_generated: bool
+    is_visible_to_customer: bool
+    priority: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class PaginatedTimelineResponse(BaseModel):
+    """Paginated timeline response"""
+    items: List[TimelineActivityResponse]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
+class TimelineSummaryResponse(BaseModel):
+    """Timeline activity summary"""
+    customer_id: int
+    days: int
+    activity_counts: Dict[str, int]
+
+
+
+# ============================================================================
+# CREDIT BUREAU SCHEMAS
+# ============================================================================
+
+class BureauPullRequest(BaseModel):
+    """Request to pull credit report"""
+    bureau_provider: str  # cibil, equifax, experian, crif
+    request_purpose: Optional[str] = "loan_application"
+
+
+class BureauPullResponse(BaseModel):
+    """Bureau pull response"""
+    id: int
+    customer_id: int
+    bureau_provider: str
+    bureau_request_id: str
+    request_date: datetime
+    response_date: Optional[datetime] = None
+    status: str
+    credit_score: Optional[int] = None
+    score_date: Optional[date] = None
+    total_accounts: Optional[int] = None
+    active_accounts: Optional[int] = None
+    total_outstanding: Optional[Decimal] = None
+    recent_enquiries_1m: Optional[int] = None
+    recent_enquiries_3m: Optional[int] = None
+    recent_enquiries_6m: Optional[int] = None
+    recent_enquiries_12m: Optional[int] = None
+    response_time_ms: Optional[int] = None
+    error_message: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class BureauHistoryResponse(BaseModel):
+    """Bureau pull history item"""
+    id: int
+    bureau_provider: str
+    request_date: datetime
+    status: str
+    credit_score: Optional[int] = None
+    response_time_ms: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class CreditScoreResponse(BaseModel):
+    """Credit score response"""
+    customer_id: int
+    credit_score: int
+
+
+
+# ============================================================================
+# eKYC / AADHAAR SCHEMAS
+# ============================================================================
+
+class AadhaarOTPInitRequest(BaseModel):
+    """Request to initiate Aadhaar OTP"""
+    aadhaar_number: str = Field(..., min_length=12, max_length=12, pattern="^[0-9]{12}$")
+    
+    @validator('aadhaar_number')
+    def validate_aadhaar(cls, v):
+        if not v.isdigit() or len(v) != 12:
+            raise ValueError('Aadhaar must be exactly 12 digits')
+        return v
+
+
+class AadhaarOTPInitResponse(BaseModel):
+    """Response from OTP initiation"""
+    success: bool
+    request_id: str
+    message: str
+    expires_at: str
+
+
+class AadhaarOTPVerifyRequest(BaseModel):
+    """Request to verify Aadhaar OTP"""
+    aadhaar_number: str = Field(..., min_length=12, max_length=12)
+    otp: str = Field(..., min_length=6, max_length=6, pattern="^[0-9]{6}$")
+    request_id: str
+    
+    @validator('otp')
+    def validate_otp(cls, v):
+        if not v.isdigit() or len(v) != 6:
+            raise ValueError('OTP must be exactly 6 digits')
+        return v
+
+
+class AadhaarOTPVerifyResponse(BaseModel):
+    """Response from OTP verification"""
+    success: bool
+    verified: bool
+    message: str
+    ekyc_data: Optional[Dict[str, Any]] = None
+
+
+class BiometricVerifyRequest(BaseModel):
+    """Request for biometric verification"""
+    aadhaar_number: str = Field(..., min_length=12, max_length=12)
+    biometric_data: str = Field(..., description="Base64 encoded biometric data")
+    biometric_type: str = Field(default="fingerprint", description="fingerprint or iris")
+
+
+class BiometricVerifyResponse(BaseModel):
+    """Response from biometric verification"""
+    success: bool
+    verified: bool
+    message: str
+    ekyc_data: Optional[Dict[str, Any]] = None
+
+
+
+# ============================================================================
+# DIGILOCKER SCHEMAS
+# ============================================================================
+
+class DigiLockerAuthInitResponse(BaseModel):
+    """Response from DigiLocker authorization initiation"""
+    authorization_url: str
+    state: str
+
+
+class DigiLockerAuthCompleteRequest(BaseModel):
+    """Request to complete DigiLocker authorization"""
+    code: str = Field(..., description="Authorization code from callback")
+    redirect_uri: str = Field(..., description="Same redirect URI used in /authorize")
+
+
+class DigiLockerAuthCompleteResponse(BaseModel):
+    """Response from DigiLocker authorization completion"""
+    success: bool
+    access_token: str
+    expires_in: int
+    documents: List[Dict[str, Any]]
+
+
+class DigiLockerDocumentResponse(BaseModel):
+    """DigiLocker document metadata"""
+    uri: str
+    name: str
+    type: str
+    size: int
+    date: str
+    issuer: str
+
+
+class DigiLockerFetchDocumentRequest(BaseModel):
+    """Request to fetch and store document"""
+    access_token: str
+    document_uri: str
+    document_type_id: str = Field(..., description="Document type UUID from master data")
+
+
+class CustomerDocumentResponse(BaseModel):
+    """Customer document response"""
+    id: int
+    customer_id: int
+    document_type_id: int
+    document_name: str
+    document_url: str
+    document_format: str
+    status: str
+    uploaded_date: datetime
+    
+    class Config:
+        from_attributes = True

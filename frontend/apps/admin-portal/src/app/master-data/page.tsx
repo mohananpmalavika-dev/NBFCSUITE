@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { 
   Database, 
   Globe, 
@@ -9,8 +10,10 @@ import {
   FileText,
   Briefcase,
   Factory,
-  ChevronRight
+  ChevronRight,
+  Home
 } from "lucide-react";
+import Link from "next/link";
 
 export default function MasterDataPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -111,23 +114,34 @@ export default function MasterDataPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Database className="w-6 h-6 text-blue-600" />
+    <DashboardLayout>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+              <Link href="/dashboard" className="hover:text-blue-600 flex items-center gap-1">
+                <Home className="w-4 h-4" />
+                Dashboard
+              </Link>
+              <ChevronRight className="w-4 h-4" />
+              <span className="text-gray-900 font-medium">Master Data</span>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Master Data Management</h1>
-              <p className="text-sm text-gray-600">
-                Manage reference data for your NBFC operations
-              </p>
+            
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Database className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Master Data Management</h1>
+                <p className="text-sm text-gray-600">
+                  Manage reference data for your NBFC operations
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
       {/* Stats Bar */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
@@ -259,6 +273,6 @@ export default function MasterDataPage() {
           </div>
         </div>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }

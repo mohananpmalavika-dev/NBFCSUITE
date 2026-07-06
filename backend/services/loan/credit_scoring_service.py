@@ -1,6 +1,12 @@
 """
 Credit Scoring Service
 Automated credit assessment for loan applications
+
+Enhanced with:
+- Bureau data integration (CIBIL, Equifax, etc.)
+- Bank statement analysis
+- Payment history verification
+- Advanced risk indicators
 """
 
 from sqlalchemy.orm import Session
@@ -11,6 +17,7 @@ from dateutil.relativedelta import relativedelta
 
 from backend.shared.database.loan_models import LoanApplication, LoanProduct
 from backend.shared.database.customer_models import Customer
+from backend.shared.database.integration_models import BureauReport, BankStatementAnalysis
 from .schemas import RiskRating
 
 
@@ -30,6 +37,8 @@ class CreditScoringService:
         """
         Calculate comprehensive credit score (0-100) and risk rating
         
+        Enhanced with bureau data and bank statement analysis
+        
         Returns:
             - credit_score (0-100)
             - risk_rating (low, medium, high, very_high)
@@ -38,43 +47,97 @@ class CreditScoringService:
         
         breakdown = {}
         
-        # 1. CIBIL Score Factor (40% weight)
-        cibil_score, cibil_points = self._calculate_cibil_factor(
-            customer.cibil_score
-        )
-        breakdown['cibil'] = {
-            'score': customer.cibil_score,
-            'points': cibil_points,
-            'weight': 40,
-            'weighted_score': cibil_score
-        }
+        # Get latest bureau report
+        bureau_report = self._get_latest_bureau_report(customer.id)
         
-        # 2. Income Factor (25% weight)
-        income_score, income_points = self._calculate_income_factor(
-            monthly_income=customer.monthly_income or Decimal("0"),
-            loan_amount=application.requested_amount,
-            emi_amount=application.emi_amount or Decimal("0")
-        )
-        breakdown['income'] = {
-            'monthly_income': float(customer.monthly_income or 0),
-            'loan_amount': float(application.requested_amount),
-            'emi_amount': float(application.emi_amount or 0),
-            'points': income_points,
-            'weight': 25,
-            'weighted_score': income_score
-        }
+        # Get latest bank statement analysis
+        bank_analysis = self._get_latest_bank_analysis(customer.id, application.id)
         
-        # 3. Debt-to-Income Ratio (20% weight)
+        # Determine if we have enhanced data
+        has_bureau_data = bureau_report is not None
+        has_bank_data = bank_analysis is not None
+        
+        # 1. Bureau/Credit Score Factor (35% weight if enhanced, 40% if basic)
+        if has_bureau_data:
+            bureau_score, bureau_points = self._calculate_enhanced_bureau_factor(bureau_report)
+            breakdown['bureau'] = {
+                'score': bureau_report.score,
+                'bureau_name': bureau_report.bureau_name,
+                'points': bureau_points,
+                'weight': 35,
+                'weighted_score': bureau_score,
+                'enhanced': True,
+                'accounts_summary': bureau_report.report_json.get('summary', {}) if bureau_report.report_json else {}
+            }
+        else:
+            cibil_score, cibil_points = self._calculate_cibil_factor(customer.cibil_score)
+            breakdown['bureau'] = {
+                'score': customer.cibil_score,
+                'points': cibil_points,
+                'weight': 40,
+                'weighted_score': cibil_score,
+                'enhanced': False
+            }
+        
+        # 2. Income Factor (20% weight if enhanced, 25% if basic)
+        if has_bank_data:
+            income_score, income_points = self._calculate_enhanced_income_factor(
+                bank_analysis=bank_analysis,
+                stated_income=customer.monthly_income or Decimal("0"),
+                loan_amount=application.requested_amount,
+                emi_amount=application.emi_amount or Decimal("0")
+            )
+            breakdown['income'] = {
+                'stated_income': float(customer.monthly_income or 0),
+                'verified_income': float(bank_analysis.avg_monthly_income or 0),
+                'income_stability_score': bank_analysis.income_stability_score,
+                'loan_amount': float(application.requested_amount),
+                'emi_amount': float(application.emi_amount or 0),
+                'points': income_points,
+                'weight': 20,
+                'weighted_score': income_score,
+                'enhanced': True
+            }
+        else:
+            income_score, income_points = self._calculate_income_factor(
+                monthly_income=customer.monthly_income or Decimal("0"),
+                loan_amount=application.requested_amount,
+                emi_amount=application.emi_amount or Decimal("0")
+            )
+            breakdown['income'] = {
+                'monthly_income': float(customer.monthly_income or 0),
+                'loan_amount': float(application.requested_amount),
+                'emi_amount': float(application.emi_amount or 0),
+                'points': income_points,
+                'weight': 25,
+                'weighted_score': income_score,
+                'enhanced': False
+            }
+        
+        # 3. Debt-to-Income Ratio (15% weight if enhanced, 20% if basic)
+        # Calculate existing obligations from bureau data
+        existing_obligations = Decimal("0")
+        if has_bureau_data and bureau_report.report_json:
+            accounts = bureau_report.report_json.get('accounts', [])
+            for account in accounts:
+                if not account.get('date_closed'):  # Active accounts only
+                    existing_obligations += Decimal(str(account.get('current_balance', 0)))
+        
+        # Use verified income if available
+        income_for_dti = bank_analysis.avg_monthly_income if has_bank_data else (customer.monthly_income or Decimal("0"))
+        
         dti_score, dti_ratio, dti_points = self._calculate_dti_factor(
-            monthly_income=customer.monthly_income or Decimal("0"),
+            monthly_income=income_for_dti,
             emi_amount=application.emi_amount or Decimal("0"),
-            existing_obligations=Decimal("0")  # TODO: Calculate from existing loans
+            existing_obligations=existing_obligations
         )
         breakdown['debt_to_income'] = {
             'ratio': float(dti_ratio),
+            'existing_obligations': float(existing_obligations),
             'points': dti_points,
-            'weight': 20,
-            'weighted_score': dti_score
+            'weight': 15 if (has_bureau_data or has_bank_data) else 20,
+            'weighted_score': dti_score,
+            'enhanced': has_bureau_data or has_bank_data
         }
         
         # 4. Employment Stability (10% weight)
@@ -90,7 +153,25 @@ class CreditScoringService:
             'weighted_score': employment_score
         }
         
-        # 5. Age Factor (5% weight)
+        # 5. Banking Behavior (15% weight if enhanced, 0% if basic)
+        if has_bank_data:
+            banking_score, banking_points = self._calculate_banking_behavior_factor(bank_analysis)
+            breakdown['banking_behavior'] = {
+                'bounced_transactions': bank_analysis.bounced_transactions or 0,
+                'avg_balance': float(bank_analysis.avg_balance or 0),
+                'risk_score': bank_analysis.risk_score,
+                'risk_level': bank_analysis.risk_level,
+                'red_flags': bank_analysis.red_flags or [],
+                'points': banking_points,
+                'weight': 15,
+                'weighted_score': banking_score,
+                'enhanced': True
+            }
+        else:
+            banking_score = 0
+            breakdown['banking_behavior'] = None
+        
+        # 6. Age Factor (5% weight)
         age_score, age_points = self._calculate_age_factor(customer.age or 0)
         breakdown['age'] = {
             'age': customer.age,
@@ -99,14 +180,33 @@ class CreditScoringService:
             'weighted_score': age_score
         }
         
-        # Calculate total score
-        total_score = (
-            cibil_score +
-            income_score +
-            dti_score +
-            employment_score +
-            age_score
-        )
+        # Calculate total score based on available data
+        if has_bureau_data or has_bank_data:
+            # Enhanced scoring model (weights: 35+20+15+10+15+5 = 100)
+            bureau_weight = breakdown['bureau']['weighted_score']
+            income_weight = breakdown['income']['weighted_score']
+            dti_weight = breakdown['debt_to_income']['weighted_score']
+            employment_weight = breakdown['employment']['weighted_score']
+            banking_weight = banking_score
+            age_weight = breakdown['age']['weighted_score']
+            
+            total_score = (
+                bureau_weight +
+                income_weight +
+                dti_weight +
+                employment_weight +
+                banking_weight +
+                age_weight
+            )
+        else:
+            # Basic scoring model (weights: 40+25+20+10+5 = 100)
+            total_score = (
+                breakdown['bureau']['weighted_score'] +
+                income_score +
+                dti_score +
+                employment_score +
+                age_score
+            )
         
         # Determine risk rating
         risk_rating = self._determine_risk_rating(total_score)
@@ -420,3 +520,209 @@ class CreditScoringService:
                 })
         
         return results
+
+    def _get_latest_bureau_report(self, customer_id: int) -> Optional[BureauReport]:
+        """Get latest bureau report for customer"""
+        return self.db.query(BureauReport).filter(
+            BureauReport.customer_id == customer_id,
+            BureauReport.tenant_id == self.tenant_id,
+            BureauReport.is_deleted == False
+        ).order_by(BureauReport.report_date.desc()).first()
+    
+    def _get_latest_bank_analysis(
+        self,
+        customer_id: int,
+        application_id: Optional[int] = None
+    ) -> Optional[BankStatementAnalysis]:
+        """Get latest bank statement analysis"""
+        query = self.db.query(BankStatementAnalysis).filter(
+            BankStatementAnalysis.customer_id == customer_id,
+            BankStatementAnalysis.tenant_id == self.tenant_id,
+            BankStatementAnalysis.is_deleted == False
+        )
+        
+        if application_id:
+            query = query.filter(BankStatementAnalysis.application_id == application_id)
+        
+        return query.order_by(BankStatementAnalysis.analyzed_at.desc()).first()
+    
+    def _calculate_enhanced_bureau_factor(self, bureau_report: BureauReport) -> Tuple[float, int]:
+        """
+        Calculate enhanced bureau factor using full bureau data (35% weight)
+        
+        Considers:
+        - Credit score
+        - Payment history
+        - Credit utilization
+        - Account age
+        - Recent enquiries
+        """
+        points = 0
+        
+        # 1. Credit Score (50% of bureau score)
+        score = bureau_report.score or 0
+        if score >= 750:
+            points += 50
+        elif score >= 700:
+            points += 40
+        elif score >= 650:
+            points += 30
+        elif score >= 600:
+            points += 20
+        else:
+            points += 10
+        
+        # 2. Payment History (20% of bureau score)
+        if bureau_report.report_json:
+            summary = bureau_report.report_json.get('summary', {})
+            
+            # No defaulted accounts
+            if summary.get('defaulted_accounts', 0) == 0:
+                points += 20
+            elif summary.get('defaulted_accounts', 0) <= 1:
+                points += 10
+            else:
+                points += 0
+        
+        # 3. Credit Utilization (15% of bureau score)
+        if bureau_report.report_json:
+            summary = bureau_report.report_json.get('summary', {})
+            utilization = summary.get('credit_utilization', 0)
+            
+            if utilization < 30:
+                points += 15
+            elif utilization < 50:
+                points += 10
+            elif utilization < 70:
+                points += 5
+            else:
+                points += 0
+        
+        # 4. Recent Enquiries (10% of bureau score)
+        if bureau_report.report_json:
+            summary = bureau_report.report_json.get('summary', {})
+            recent_enquiries = summary.get('recent_enquiries_3m', 0)
+            
+            if recent_enquiries == 0:
+                points += 10
+            elif recent_enquiries <= 2:
+                points += 7
+            elif recent_enquiries <= 4:
+                points += 4
+            else:
+                points += 0
+        
+        # 5. Account Mix Bonus (5% of bureau score)
+        if bureau_report.report_json:
+            accounts = bureau_report.report_json.get('accounts', [])
+            account_types = set(a.get('account_type') for a in accounts)
+            
+            if len(account_types) >= 3:  # Good mix
+                points += 5
+            elif len(account_types) >= 2:
+                points += 3
+        
+        points = min(100, points)  # Cap at 100
+        weighted_score = (points * 35) / 100
+        return weighted_score, points
+    
+    def _calculate_enhanced_income_factor(
+        self,
+        bank_analysis: BankStatementAnalysis,
+        stated_income: Decimal,
+        loan_amount: Decimal,
+        emi_amount: Decimal
+    ) -> Tuple[float, int]:
+        """
+        Calculate enhanced income factor using bank statement data (20% weight)
+        
+        Considers:
+        - Income verification (stated vs verified)
+        - Income stability
+        - EMI to income ratio
+        """
+        points = 0
+        
+        verified_income = bank_analysis.avg_monthly_income or Decimal("0")
+        
+        # 1. Income Verification Match (40% of income score)
+        if stated_income > 0:
+            variance = abs(float(stated_income) - float(verified_income)) / float(stated_income)
+            
+            if variance < 0.1:  # Within 10%
+                points += 40
+            elif variance < 0.2:  # Within 20%
+                points += 30
+            elif variance < 0.3:  # Within 30%
+                points += 20
+            else:
+                points += 10  # Significant mismatch
+        
+        # 2. Income Stability (30% of income score)
+        stability_score = bank_analysis.income_stability_score or 50
+        points += int(stability_score * 0.3)
+        
+        # 3. EMI to Income Ratio (30% of income score)
+        if verified_income > 0:
+            emi_to_income = (float(emi_amount) / float(verified_income)) * 100
+            
+            if emi_to_income <= 30:
+                points += 30
+            elif emi_to_income <= 40:
+                points += 24
+            elif emi_to_income <= 50:
+                points += 18
+            elif emi_to_income <= 60:
+                points += 12
+            else:
+                points += 6
+        
+        points = min(100, points)
+        weighted_score = (points * 20) / 100
+        return weighted_score, points
+    
+    def _calculate_banking_behavior_factor(
+        self,
+        bank_analysis: BankStatementAnalysis
+    ) -> Tuple[float, int]:
+        """
+        Calculate banking behavior factor (15% weight)
+        
+        Considers:
+        - Bounced transactions
+        - Average balance
+        - Banking relationship
+        - Red flags
+        """
+        points = 100  # Start with perfect score
+        
+        # 1. Bounced Transactions (40% penalty potential)
+        bounced = bank_analysis.bounced_transactions or 0
+        if bounced == 0:
+            pass  # No penalty
+        elif bounced <= 2:
+            points -= 10
+        elif bounced <= 5:
+            points -= 20
+        else:
+            points -= 40
+        
+        # 2. Average Balance (20% bonus/penalty)
+        avg_balance = float(bank_analysis.avg_balance or 0)
+        if avg_balance >= 100000:  # 1 lakh+
+            points += 0  # Already at max
+        elif avg_balance >= 50000:
+            points -= 5
+        elif avg_balance >= 20000:
+            points -= 10
+        else:
+            points -= 20
+        
+        # 3. Red Flags (40% penalty potential)
+        red_flags = bank_analysis.red_flags or []
+        penalty = min(len(red_flags) * 10, 40)
+        points -= penalty
+        
+        points = max(0, min(100, points))
+        weighted_score = (points * 15) / 100
+        return weighted_score, points

@@ -13,7 +13,8 @@ import string
 
 from backend.shared.database.customer_models import (
     Customer, CustomerKYC, CustomerDocument, CustomerFamily,
-    CustomerBankAccount, CustomerReference, KYCStatus, RiskRating
+    CustomerBankAccount, CustomerReference, KYCStatus, RiskRating,
+    CustomerTimeline, ActivityType
 )
 from .schemas import (
     CustomerCreate, CustomerUpdate, CustomerListItem,
@@ -94,6 +95,19 @@ class CustomerService:
         
         # Create empty KYC record
         await self._create_kyc_record(customer.id)
+        
+        # Log timeline event
+        await self._log_timeline_event(
+            customer_id=customer.id,
+            activity_type=ActivityType.CUSTOMER_CREATED,
+            title="Customer created",
+            description=f"New customer {full_name} created with code {customer_code}",
+            metadata={
+                "customer_code": customer_code,
+                "customer_type": str(data.customer_type),
+                "mobile": data.mobile
+            }
+        )
         
         return customer
     
@@ -205,6 +219,15 @@ class CustomerService:
         if not customer:
             return None
         
+        # Track old values for change logging
+        old_values = {
+            "full_name": customer.full_name,
+            "mobile": customer.mobile,
+            "email": customer.email,
+            "kyc_status": str(customer.kyc_status) if customer.kyc_status else None,
+            "risk_rating": str(customer.risk_rating) if customer.risk_rating else None,
+        }
+        
         # Update fields
         update_data = data.dict(exclude_unset=True)
         
@@ -232,6 +255,26 @@ class CustomerService:
         await self.db.commit()
         await self.db.refresh(customer)
         
+        # Track new values
+        new_values = {
+            "full_name": customer.full_name,
+            "mobile": customer.mobile,
+            "email": customer.email,
+            "kyc_status": str(customer.kyc_status) if customer.kyc_status else None,
+            "risk_rating": str(customer.risk_rating) if customer.risk_rating else None,
+        }
+        
+        # Log timeline event
+        await self._log_timeline_event(
+            customer_id=customer.id,
+            activity_type=ActivityType.CUSTOMER_UPDATED,
+            title="Customer information updated",
+            description=f"Customer {customer.full_name} information updated",
+            old_value=old_values,
+            new_value=new_values,
+            metadata={"updated_fields": list(update_data.keys())}
+        )
+        
         return customer
     
     async def delete_customer(self, customer_id: int) -> bool:
@@ -246,6 +289,16 @@ class CustomerService:
         customer.updated_at = datetime.utcnow()
         
         await self.db.commit()
+        
+        # Log timeline event
+        await self._log_timeline_event(
+            customer_id=customer.id,
+            activity_type=ActivityType.CUSTOMER_DEACTIVATED,
+            title="Customer deleted",
+            description=f"Customer {customer.full_name} was deleted (soft delete)",
+            metadata={"customer_code": customer.customer_code}
+        )
+        
         return True
     
     async def search_customers(
@@ -402,3 +455,48 @@ class CustomerService:
         if today.month < dob.month or (today.month == dob.month and today.day < dob.day):
             age -= 1
         return age
+    
+    async def _log_timeline_event(
+        self,
+        customer_id: int,
+        activity_type: ActivityType,
+        title: str,
+        description: str = None,
+        old_value: dict = None,
+        new_value: dict = None,
+        metadata: dict = None
+    ):
+        """Log event to customer timeline"""
+        
+        # Calculate changes if both old and new values provided
+        changes = None
+        if old_value and new_value:
+            changes = {}
+            for key in set(old_value.keys()) | set(new_value.keys()):
+                if old_value.get(key) != new_value.get(key):
+                    changes[key] = {
+                        "old": old_value.get(key),
+                        "new": new_value.get(key)
+                    }
+        
+        timeline = CustomerTimeline(
+            tenant_id=self.tenant_id,
+            customer_id=customer_id,
+            activity_type=activity_type,
+            title=title,
+            description=description,
+            event_category="customer",
+            event_source="api",
+            performed_by=self.user_id,
+            old_value=old_value,
+            new_value=new_value,
+            changes=changes,
+            metadata=metadata,
+            is_system_generated=True,
+            is_internal_only=True,
+            created_by=self.user_id
+        )
+        
+        self.db.add(timeline)
+        await self.db.commit()
+
