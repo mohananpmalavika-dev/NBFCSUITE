@@ -62,6 +62,38 @@ async def lifespan(app: FastAPI):
         logger.warning(f"⚠️  Could not run migrations: {e}")
         # Continue startup anyway
     
+    # Create default tenant if it doesn't exist
+    try:
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from backend.shared.database.connection import async_session
+        from backend.shared.database.models import Tenant
+        from sqlalchemy import select
+        
+        async with async_session() as session:
+            result = await session.execute(select(Tenant).where(Tenant.id == "default"))
+            tenant = result.scalar_one_or_none()
+            
+            if not tenant:
+                logger.info("🏢 Creating default tenant...")
+                tenant = Tenant(
+                    id="default",
+                    name="Default Organization",
+                    display_name="Default Organization",
+                    email="admin@nbfc.com",
+                    is_active=True,
+                    subscription_plan="enterprise",
+                    subscription_status="active"
+                )
+                session.add(tenant)
+                await session.commit()
+                logger.info("✅ Default tenant created successfully")
+            else:
+                logger.info("✅ Default tenant already exists")
+                
+    except Exception as e:
+        logger.warning(f"⚠️  Could not create default tenant: {e}")
+        # Continue startup anyway
+    
     logger.info("✅ Database connection ready")
     logger.info("✅ Application startup complete")
     
