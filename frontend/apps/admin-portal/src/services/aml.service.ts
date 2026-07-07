@@ -3,7 +3,7 @@
  * API service for AML/CFT operations
  */
 
-import { apiClient } from './api-client';
+import { apiClient } from '@/lib/api-client';
 
 export interface TransactionMonitoring {
   id: string;

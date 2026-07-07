@@ -203,7 +203,7 @@ class CashPosition(Base):
     Daily Cash Position Tracking
     Records cash holdings across branches and bank accounts
     """
-    __tablename__ = "cash_positions"
+    __tablename__ = "treasury_cash_positions"
     
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(Integer, nullable=False, index=True)

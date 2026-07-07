@@ -2,7 +2,7 @@
  * Branch & Operations Management Service
  */
 
-import { apiClient } from './api';
+import { apiClient } from '@/lib/api-client';
 import type {
   Organization,
   OrganizationFormData,
