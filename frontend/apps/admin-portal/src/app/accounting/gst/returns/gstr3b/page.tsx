@@ -33,9 +33,9 @@ export default function GSTR3BPage() {
     try {
       setPreparing(true);
       const data = await gstService.prepareGSTR3B({
+        gstin: '', // TODO: Get GSTIN from configuration
         month: period.month,
-        year: period.year,
-        adjustments
+        financial_year: period.year
       });
       setReturnData(data);
       toast({
