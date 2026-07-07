@@ -139,8 +139,8 @@ export default function MasterDataPage() {
 
         {/* Stats Bar */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-3xl font-bold">36+</div>
               <div className="text-sm text-blue-100">States & UTs</div>
@@ -159,13 +159,12 @@ export default function MasterDataPage() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Category Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories.map((category) => {
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Category Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {categories.map((category) => {
             const Icon = category.icon;
             const isExpanded = selectedCategory === category.id;
 
@@ -227,7 +226,7 @@ export default function MasterDataPage() {
                 )}
               </div>
             );
-          })}
+            })}
         </div>
 
         {/* Quick Actions */}
@@ -246,7 +245,7 @@ export default function MasterDataPage() {
               <MapPin className="w-5 h-5 text-purple-600" />
               <span className="text-sm font-medium text-gray-700">Export Data</span>
             </button>
-          </div>
+            </div>
         </div>
 
         {/* Info Box */}
@@ -265,6 +264,7 @@ export default function MasterDataPage() {
               </p>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </DashboardLayout>

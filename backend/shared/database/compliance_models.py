@@ -175,7 +175,7 @@ class CRILCFacility(BaseModel):
     __tablename__ = "crilc_facilities"
     
     borrower_id = Column(UUID(as_uuid=True), ForeignKey("crilc_borrowers.id"), nullable=False, index=True)
-    loan_account_id = Column(UUID(as_uuid=True), ForeignKey("loan_accounts.id"), index=True)
+    loan_account_id = Column(Integer, ForeignKey("loan_accounts.id"), index=True)
     
     # Facility Details
     facility_id = Column(String(100), unique=True, nullable=False)
@@ -228,7 +228,7 @@ class SMATracking(BaseModel):
     __tablename__ = "sma_tracking"
     
     borrower_id = Column(UUID(as_uuid=True), ForeignKey("crilc_borrowers.id"), nullable=False, index=True)
-    loan_account_id = Column(UUID(as_uuid=True), ForeignKey("loan_accounts.id"), nullable=False, index=True)
+    loan_account_id = Column(Integer, ForeignKey("loan_accounts.id"), nullable=False, index=True)
     
     # As-on Date
     as_on_date = Column(Date, nullable=False, index=True)
@@ -286,7 +286,7 @@ class SMAStatusHistory(BaseModel):
     __tablename__ = "sma_status_history"
     
     borrower_id = Column(UUID(as_uuid=True), ForeignKey("crilc_borrowers.id"), nullable=False, index=True)
-    loan_account_id = Column(UUID(as_uuid=True), ForeignKey("loan_accounts.id"), nullable=False, index=True)
+    loan_account_id = Column(Integer, ForeignKey("loan_accounts.id"), nullable=False, index=True)
     
     # Status Change
     from_status = Column(SQLEnum(SMAStatus), nullable=False)
