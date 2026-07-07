@@ -73,15 +73,20 @@ export default function NewGSTTransactionPage() {
 
   const loadData = async () => {
     try {
-      const [codes, configs] = await Promise.all([
-        gstService.getHSNSAC(),
-        gstService.getConfiguration()
-      ]);
+      // TODO: Implement getAllHSNSAC or getHSNSACList endpoint to fetch all codes
+      // const codes = await gstService.getAllHSNSAC();
+      const codes: HSNSAC[] = []; // Placeholder until endpoint is implemented
+      
+      // TODO: Get GSTIN from user's organization settings or allow user to select
+      // For now, configuration will not be loaded automatically
+      // const config = await gstService.getConfiguration(gstin);
       setHsnSacCodes(codes.filter((c: HSNSAC) => c.is_active));
-      if (configs.length > 0) {
-        setConfiguration(configs[0]);
-        setFormData(prev => ({ ...prev, place_of_supply: configs[0].state_code }));
-      }
+      
+      toast({
+        title: "Info",
+        description: "Please configure GST settings and HSN/SAC codes before creating transactions",
+        variant: "default"
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -242,9 +247,22 @@ export default function NewGSTTransactionPage() {
     }
 
     try {
-      await gstService.createTransaction({
-        ...formData,
-        line_items: lineItems
+      await gstService.recordTransaction({
+        transaction_date: formData.invoice_date,
+        transaction_type: formData.transaction_type,
+        reference_type: 'MANUAL',
+        reference_id: 0, // TODO: Link to actual reference
+        party_name: formData.party_name,
+        taxable_amount: formData.taxable_amount,
+        cgst_amount: formData.cgst_amount,
+        sgst_amount: formData.sgst_amount,
+        igst_amount: formData.igst_amount,
+        cess_amount: formData.cess_amount,
+        party_gstin: formData.party_gstin || undefined,
+        party_state: formData.party_state_code || undefined,
+        invoice_number: formData.invoice_number,
+        place_of_supply: formData.place_of_supply || undefined,
+        is_reverse_charge: formData.reverse_charge
       });
       toast({
         title: "Success",
