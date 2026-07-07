@@ -42,6 +42,10 @@ pytz==2023.3
 # File Processing (minimal)
 openpyxl==3.1.2
 
+# AWS SDK (for S3/MinIO)
+boto3==1.34.12
+botocore==1.34.12
+
 # PDF Processing
 reportlab==4.0.7
 
