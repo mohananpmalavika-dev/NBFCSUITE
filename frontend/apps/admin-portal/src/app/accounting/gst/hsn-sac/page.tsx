@@ -107,7 +107,7 @@ export default function HSNSACMasterPage() {
   const handleEdit = (item: HSNSAC) => {
     setEditingItem(item);
     setFormData({
-      code_type: item.code_type,
+      code_type: item.code_type as "HSN" | "SAC",
       code: item.code,
       description: item.description,
       cgst_rate: item.cgst_rate,
