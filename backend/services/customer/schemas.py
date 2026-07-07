@@ -4,7 +4,7 @@ Request/Response models for customer API
 """
 
 from pydantic import BaseModel, EmailStr, validator, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from decimal import Decimal
 from enum import Enum
