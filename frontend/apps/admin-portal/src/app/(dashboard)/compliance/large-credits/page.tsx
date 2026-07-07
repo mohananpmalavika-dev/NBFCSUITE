@@ -72,7 +72,7 @@ export default function LargeCreditsPage() {
     onSuccess: (result) => {
       toast({
         title: 'Large Credits Identified',
-        description: `Found ${result.data.total_large_credits} large credits. ${result.data.newly_identified} newly identified.`,
+        description: `Found ${result.total_large_credits} large credits. ${result.newly_identified} newly identified.`,
       })
       setIdentifyDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['large-credits'] })
@@ -116,7 +116,7 @@ export default function LargeCreditsPage() {
     )
   }
 
-  const filteredBorrowers = data?.data?.items?.filter((borrower: CRILCBorrower) =>
+  const filteredBorrowers = data?.items?.filter((borrower: CRILCBorrower) =>
     borrower.borrower_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     borrower.borrower_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
     borrower.pan_number?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -196,7 +196,7 @@ export default function LargeCreditsPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data?.data?.total || 0}</div>
+            <div className="text-2xl font-bold">{data?.total || 0}</div>
           </CardContent>
         </Card>
 
@@ -207,7 +207,7 @@ export default function LargeCreditsPage() {
           <CardContent>
             <div className="text-2xl font-bold">
               {formatCurrency(
-                data?.data?.items?.reduce((sum: number, b: CRILCBorrower) => sum + b.total_credit_exposure, 0) || 0
+                data?.items?.reduce((sum: number, b: CRILCBorrower) => sum + b.total_credit_exposure, 0) || 0
               )}
             </div>
           </CardContent>
@@ -220,7 +220,7 @@ export default function LargeCreditsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {data?.data?.items?.filter((b: CRILCBorrower) =>
+              {data?.items?.filter((b: CRILCBorrower) =>
                 ['sma_0', 'sma_1', 'sma_2'].includes(b.current_sma_status)
               ).length || 0}
             </div>
@@ -234,7 +234,7 @@ export default function LargeCreditsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {data?.data?.items?.filter((b: CRILCBorrower) =>
+              {data?.items?.filter((b: CRILCBorrower) =>
                 b.current_sma_status.startsWith('npa')
               ).length || 0}
             </div>
@@ -337,10 +337,10 @@ export default function LargeCreditsPage() {
           </Table>
 
           {/* Pagination */}
-          {data && data.data && data.data.total > 20 && (
+          {data && data.total > 20 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
-                Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, data.data.total)} of {data.data.total} borrowers
+                Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, data.total)} of {data.total} borrowers
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -355,7 +355,7 @@ export default function LargeCreditsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setPage(page + 1)}
-                  disabled={page * 20 >= data.data.total}
+                  disabled={page * 20 >= data.total}
                 >
                   Next
                 </Button>
