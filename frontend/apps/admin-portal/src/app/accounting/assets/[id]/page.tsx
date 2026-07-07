@@ -59,8 +59,8 @@ export default function AssetDetailsPage() {
   const loadAsset = async () => {
     try {
       setLoading(true);
-      const data = await assetService.getAsset(assetId.toString());
-      setAsset(data);
+      const response = await assetService.getAsset(assetId.toString());
+      setAsset(response.data.data);
     } catch (error) {
       toast({
         title: "Error",
@@ -74,8 +74,8 @@ export default function AssetDetailsPage() {
 
   const loadDepreciationSchedule = async () => {
     try {
-      const data = await assetService.getDepreciationSchedule({ asset_id: assetId.toString() });
-      setSchedule(data.schedule);
+      const response = await assetService.getDepreciationSchedule({ asset_id: assetId.toString() });
+      setSchedule(response.data.schedule);
     } catch (error) {
       console.error('Failed to load depreciation schedule', error);
     }
@@ -83,8 +83,8 @@ export default function AssetDetailsPage() {
 
   const loadMaintenance = async () => {
     try {
-      const data = await assetService.getMaintenanceHistory(assetId.toString());
-      setMaintenance(data.maintenance);
+      const response = await assetService.getMaintenanceHistory(assetId.toString());
+      setMaintenance(response.data.maintenance);
     } catch (error) {
       console.error('Failed to load maintenance records', error);
     }
