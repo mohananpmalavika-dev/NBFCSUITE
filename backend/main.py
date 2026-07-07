@@ -539,6 +539,7 @@ from backend.services.compliance.router import router as compliance_router
 from backend.services.treasury.bank_account_router import router as treasury_bank_account_router
 from backend.services.treasury.cash_position_router import router as treasury_cash_position_router
 from backend.services.treasury.reconciliation_router import router as treasury_reconciliation_router
+from backend.services.treasury.fund_transfer_router import router as treasury_fund_transfer_router
 from backend.services.treasury.alm_router import router as alm_router
 
 # NEW: Accounting Extended Routers (TDS & GST & Assets)
@@ -646,6 +647,7 @@ app.include_router(compliance_router, prefix="/api/v1", tags=["Compliance & Regu
 app.include_router(treasury_bank_account_router, prefix="/api/v1/treasury", tags=["Treasury - Bank Accounts"])
 app.include_router(treasury_cash_position_router, prefix="/api/v1/treasury", tags=["Treasury - Cash Position"])
 app.include_router(treasury_reconciliation_router, prefix="/api/v1/treasury", tags=["Treasury - Reconciliation"])
+app.include_router(treasury_fund_transfer_router, prefix="/api/v1/treasury", tags=["Treasury - Fund Transfers"])
 app.include_router(alm_router, prefix="/api/v1/treasury", tags=["Treasury - ALM"])
 
 # Bank Statement Analysis (Perfios/FinBox)

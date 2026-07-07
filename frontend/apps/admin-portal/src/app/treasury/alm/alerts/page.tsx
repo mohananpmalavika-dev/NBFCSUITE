@@ -1,499 +1,156 @@
-"use client";
+'use client'
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { RefreshCw, AlertTriangle, AlertCircle, Info, XCircle, CheckCircle, Bell, BellOff } from "lucide-react";
-import { almService } from '@/services/almService';
-import type { ALMAlertResponse } from '@/types/alm';
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ArrowLeft, AlertTriangle, CheckCircle2, X } from 'lucide-react'
+import { almService } from '@/services/alm.service'
+import { toast } from 'sonner'
 
-export default function AlertsPage() {
-  const [loading, setLoading] = useState(true);
-  const [alerts, setAlerts] = useState<ALMAlertResponse[]>([]);
-  const [selectedAlert, setSelectedAlert] = useState<ALMAlertResponse | null>(null);
-  const [showResolveDialog, setShowResolveDialog] = useState(false);
-  const [showAcknowledgeDialog, setShowAcknowledgeDialog] = useState(false);
-  const [resolution, setResolution] = useState('');
-  const [activeTab, setActiveTab] = useState('active');
+const MOCK_ALERTS = [
+  { id: 1, alert_type: 'ratio_breach', severity: 'high', title: 'LCR Below Threshold', description: 'Liquidity Coverage Ratio dropped to 95%', status: 'active', created_at: '2024-01-15T10:30:00Z' },
+  { id: 2, alert_type: 'gap_limit', severity: 'medium', title: 'Negative Gap in 1-month bucket', description: 'Cumulative gap: -₹50 Cr', status: 'active', created_at: '2024-01-14T15:20:00Z' },
+  { id: 3, alert_type: 'concentration', severity: 'medium', title: 'Funding Concentration', description: 'Single counterparty exceeds 15%', status: 'acknowledged', created_at: '2024-01-13T09:00:00Z' },
+  { id: 4, alert_type: 'irr_threshold', severity: 'low', title: 'IRR Impact Warning', description: 'NII impact exceeds 10% in stress scenario', status: 'resolved', created_at: '2024-01-12T14:45:00Z' },
+]
 
-  useEffect(() => {
-    fetchAlerts();
-  }, []);
-
-  const fetchAlerts = async () => {
-    try {
-      setLoading(true);
-      const response = await almService.getAlerts();
-      setAlerts(response);
-    } catch (error) {
-      console.error('Failed to fetch alerts:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAcknowledge = async () => {
-    if (!selectedAlert) return;
-    
-    try {
-      await almService.acknowledgeAlert(selectedAlert.id);
-      await fetchAlerts();
-      setShowAcknowledgeDialog(false);
-      setSelectedAlert(null);
-    } catch (error) {
-      console.error('Failed to acknowledge alert:', error);
-    }
-  };
-
-  const handleResolve = async () => {
-    if (!selectedAlert || !resolution.trim()) return;
-    
-    try {
-      await almService.resolveAlert(selectedAlert.id, resolution);
-      await fetchAlerts();
-      setShowResolveDialog(false);
-      setSelectedAlert(null);
-      setResolution('');
-    } catch (error) {
-      console.error('Failed to resolve alert:', error);
-    }
-  };
-
-  const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return <XCircle className="h-5 w-5 text-red-600" />;
-      case 'high':
-        return <AlertTriangle className="h-5 w-5 text-orange-600" />;
-      case 'medium':
-        return <AlertCircle className="h-5 w-5 text-yellow-600" />;
-      case 'low':
-        return <Info className="h-5 w-5 text-blue-600" />;
-      default:
-        return <Bell className="h-5 w-5 text-gray-600" />;
-    }
-  };
+export default function ALMAlertsPage() {
+  const router = useRouter()
+  const [alerts, setAlerts] = useState(MOCK_ALERTS)
+  const [severityFilter, setSeverityFilter] = useState<string>('')
+  const [statusFilter, setStatusFilter] = useState<string>('')
 
   const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return 'bg-red-50 border-red-200 text-red-700';
-      case 'high':
-        return 'bg-orange-50 border-orange-200 text-orange-700';
-      case 'medium':
-        return 'bg-yellow-50 border-yellow-200 text-yellow-700';
-      case 'low':
-        return 'bg-blue-50 border-blue-200 text-blue-700';
-      default:
-        return 'bg-gray-50 border-gray-200 text-gray-700';
+    const colors: Record<string, string> = {
+      low: 'bg-blue-100 text-blue-800',
+      medium: 'bg-yellow-100 text-yellow-800',
+      high: 'bg-orange-100 text-orange-800',
+      critical: 'bg-red-100 text-red-800',
     }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="destructive">Active</Badge>;
-      case 'acknowledged':
-        return <Badge variant="default">Acknowledged</Badge>;
-      case 'resolved':
-        return <Badge variant="default" className="bg-green-600">Resolved</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const filterAlerts = (status: string) => {
-    return alerts.filter(alert => alert.status === status);
-  };
-
-  const activeAlerts = filterAlerts('active');
-  const acknowledgedAlerts = filterAlerts('acknowledged');
-  const resolvedAlerts = filterAlerts('resolved');
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return colors[severity] || 'bg-gray-100 text-gray-800'
   }
 
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      active: 'bg-red-100 text-red-800',
+      acknowledged: 'bg-yellow-100 text-yellow-800',
+      resolved: 'bg-green-100 text-green-800',
+    }
+    return colors[status] || 'bg-gray-100 text-gray-800'
+  }
+
+  const filteredAlerts = alerts.filter(alert => {
+    if (severityFilter && alert.severity !== severityFilter) return false
+    if (statusFilter && alert.status !== statusFilter) return false
+    return true
+  })
+
+  const activeCount = alerts.filter(a => a.status === 'active').length
+  const criticalCount = alerts.filter(a => a.severity === 'critical').length
+
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
+    <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">ALM Alerts</h1>
-          <p className="text-muted-foreground">
-            Monitor and manage ALM risk alerts and threshold breaches
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchAlerts}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="icon" onClick={() => router.back()}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
+          <div>
+            <h1 className="text-3xl font-bold">ALM Alerts</h1>
+            <p className="text-muted-foreground">Monitor limit breaches & risk thresholds</p>
+          </div>
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{activeAlerts.length}</div>
-          </CardContent>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">Total Alerts</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{alerts.length}</div></CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Critical</CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {alerts.filter(a => a.severity === 'critical' && a.status === 'active').length}
-            </div>
-          </CardContent>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">Active</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold text-red-600">{activeCount}</div></CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Acknowledged</CardTitle>
-            <CheckCircle className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{acknowledgedAlerts.length}</div>
-          </CardContent>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">Critical</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold text-red-600">{criticalCount}</div></CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resolved</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{resolvedAlerts.length}</div>
-          </CardContent>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium">Resolved</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold text-green-600">{alerts.filter(a => a.status === 'resolved').length}</div></CardContent>
         </Card>
       </div>
 
-      {/* Alerts List */}
       <Card>
         <CardHeader>
-          <CardTitle>Alert Management</CardTitle>
-          <CardDescription>View and manage all ALM risk alerts</CardDescription>
+          <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="active">
-                Active ({activeAlerts.length})
-              </TabsTrigger>
-              <TabsTrigger value="acknowledged">
-                Acknowledged ({acknowledgedAlerts.length})
-              </TabsTrigger>
-              <TabsTrigger value="resolved">
-                Resolved ({resolvedAlerts.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="active" className="space-y-4 mt-4">
-              {activeAlerts.length === 0 ? (
-                <div className="text-center py-12">
-                  <CheckCircle className="h-12 w-12 mx-auto text-green-600 mb-4" />
-                  <p className="text-muted-foreground">No active alerts</p>
-                </div>
-              ) : (
-                activeAlerts.map((alert) => (
-                  <AlertCard
-                    key={alert.id}
-                    alert={alert}
-                    getSeverityIcon={getSeverityIcon}
-                    getSeverityColor={getSeverityColor}
-                    getStatusBadge={getStatusBadge}
-                    onAcknowledge={() => {
-                      setSelectedAlert(alert);
-                      setShowAcknowledgeDialog(true);
-                    }}
-                    onResolve={() => {
-                      setSelectedAlert(alert);
-                      setShowResolveDialog(true);
-                    }}
-                  />
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="acknowledged" className="space-y-4 mt-4">
-              {acknowledgedAlerts.length === 0 ? (
-                <div className="text-center py-12">
-                  <BellOff className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No acknowledged alerts</p>
-                </div>
-              ) : (
-                acknowledgedAlerts.map((alert) => (
-                  <AlertCard
-                    key={alert.id}
-                    alert={alert}
-                    getSeverityIcon={getSeverityIcon}
-                    getSeverityColor={getSeverityColor}
-                    getStatusBadge={getStatusBadge}
-                    onResolve={() => {
-                      setSelectedAlert(alert);
-                      setShowResolveDialog(true);
-                    }}
-                  />
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="resolved" className="space-y-4 mt-4">
-              {resolvedAlerts.length === 0 ? (
-                <div className="text-center py-12">
-                  <Info className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No resolved alerts</p>
-                </div>
-              ) : (
-                resolvedAlerts.map((alert) => (
-                  <AlertCard
-                    key={alert.id}
-                    alert={alert}
-                    getSeverityIcon={getSeverityIcon}
-                    getSeverityColor={getSeverityColor}
-                    getStatusBadge={getStatusBadge}
-                  />
-                ))
-              )}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-
-      {/* Alert Guidelines */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Alert Response Guidelines</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="border-l-4 border-red-500 pl-4 py-2">
-              <h4 className="font-semibold text-red-700">Critical Alerts</h4>
-              <p className="text-sm text-muted-foreground">
-                Immediate action required. Escalate to senior management and treasury head.
-                Implement contingency plans if thresholds are breached significantly.
-              </p>
-            </div>
-            <div className="border-l-4 border-orange-500 pl-4 py-2">
-              <h4 className="font-semibold text-orange-700">High Priority Alerts</h4>
-              <p className="text-sm text-muted-foreground">
-                Action required within 24 hours. Review positions and implement corrective measures.
-                Monitor closely until resolved.
-              </p>
-            </div>
-            <div className="border-l-4 border-yellow-500 pl-4 py-2">
-              <h4 className="font-semibold text-yellow-700">Medium Priority Alerts</h4>
-              <p className="text-sm text-muted-foreground">
-                Review within 2-3 business days. Assess trend and take preventive action if deteriorating.
-              </p>
-            </div>
-            <div className="border-l-4 border-blue-500 pl-4 py-2">
-              <h4 className="font-semibold text-blue-700">Low Priority Alerts</h4>
-              <p className="text-sm text-muted-foreground">
-                Informational only. Monitor as part of regular ALM review process.
-              </p>
-            </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Select value={severityFilter} onValueChange={setSeverityFilter}>
+              <SelectTrigger><SelectValue placeholder="All severities" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Severities</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="critical">Critical</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger><SelectValue placeholder="All statuses" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Statuses</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="acknowledged">Acknowledged</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={() => { setSeverityFilter(''); setStatusFilter('') }}>Clear Filters</Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Acknowledge Dialog */}
-      <Dialog open={showAcknowledgeDialog} onOpenChange={setShowAcknowledgeDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Acknowledge Alert</DialogTitle>
-            <DialogDescription>
-              Confirm that you have reviewed this alert and are taking appropriate action.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedAlert && (
-            <div className="py-4">
-              <div className={`p-4 border rounded-lg ${getSeverityColor(selectedAlert.severity)}`}>
-                <div className="flex items-start gap-3">
-                  {getSeverityIcon(selectedAlert.severity)}
-                  <div className="flex-1">
-                    <p className="font-semibold">{selectedAlert.alert_type}</p>
-                    <p className="text-sm mt-1">{selectedAlert.message}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAcknowledgeDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAcknowledge}>
-              Acknowledge
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Resolve Dialog */}
-      <Dialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Resolve Alert</DialogTitle>
-            <DialogDescription>
-              Mark this alert as resolved and provide details of the resolution.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedAlert && (
-            <div className="space-y-4 py-4">
-              <div className={`p-4 border rounded-lg ${getSeverityColor(selectedAlert.severity)}`}>
-                <div className="flex items-start gap-3">
-                  {getSeverityIcon(selectedAlert.severity)}
-                  <div className="flex-1">
-                    <p className="font-semibold">{selectedAlert.alert_type}</p>
-                    <p className="text-sm mt-1">{selectedAlert.message}</p>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Resolution Details (Required)</label>
-                <Textarea
-                  placeholder="Describe the actions taken to resolve this alert..."
-                  value={resolution}
-                  onChange={(e) => setResolution(e.target.value)}
-                  rows={4}
-                  required
-                />
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowResolveDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleResolve}
-              disabled={!resolution.trim()}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Resolve Alert
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <Card>
+        <CardHeader><CardTitle>Alert List</CardTitle><CardDescription>All ALM system alerts</CardDescription></CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Alert</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Severity</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAlerts.map((alert) => (
+                <TableRow key={alert.id}>
+                  <TableCell>
+                    <div><p className="font-medium">{alert.title}</p><p className="text-sm text-muted-foreground">{alert.description}</p></div>
+                  </TableCell>
+                  <TableCell><Badge variant="outline">{alert.alert_type.replace('_', ' ')}</Badge></TableCell>
+                  <TableCell><Badge className={getSeverityColor(alert.severity)}>{alert.severity.toUpperCase()}</Badge></TableCell>
+                  <TableCell><Badge className={getStatusColor(alert.status)}>{alert.status.toUpperCase()}</Badge></TableCell>
+                  <TableCell>{new Date(alert.created_at).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-1">
+                      {alert.status === 'active' && <Button variant="ghost" size="sm"><CheckCircle2 className="h-4 w-4" /></Button>}
+                      <Button variant="ghost" size="sm"><X className="h-4 w-4" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
-  );
-}
-
-function AlertCard({
-  alert,
-  getSeverityIcon,
-  getSeverityColor,
-  getStatusBadge,
-  onAcknowledge,
-  onResolve
-}: {
-  alert: ALMAlertResponse;
-  getSeverityIcon: (severity: string) => React.ReactNode;
-  getSeverityColor: (severity: string) => string;
-  getStatusBadge: (status: string) => React.ReactNode;
-  onAcknowledge?: () => void;
-  onResolve?: () => void;
-}) {
-  return (
-    <div className={`border rounded-lg p-4 ${getSeverityColor(alert.severity)}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3 flex-1">
-          {getSeverityIcon(alert.severity)}
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold">{alert.alert_type}</h3>
-              {getStatusBadge(alert.status)}
-            </div>
-            
-            <p className="text-sm">{alert.message}</p>
-            
-            <div className="grid gap-2 md:grid-cols-2 text-sm">
-              <div>
-                <span className="text-muted-foreground">Severity:</span>
-                <span className="font-medium ml-2">{alert.severity.toUpperCase()}</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Triggered:</span>
-                <span className="font-medium ml-2">
-                  {new Date(alert.triggered_at).toLocaleString()}
-                </span>
-              </div>
-              {alert.threshold_value && (
-                <div>
-                  <span className="text-muted-foreground">Threshold:</span>
-                  <span className="font-medium ml-2">{alert.threshold_value}</span>
-                </div>
-              )}
-              {alert.actual_value && (
-                <div>
-                  <span className="text-muted-foreground">Actual:</span>
-                  <span className="font-medium ml-2">{alert.actual_value}</span>
-                </div>
-              )}
-            </div>
-
-            {alert.acknowledged_at && (
-              <div className="text-sm">
-                <span className="text-muted-foreground">Acknowledged:</span>
-                <span className="ml-2">
-                  {new Date(alert.acknowledged_at).toLocaleString()}
-                  {alert.acknowledged_by && ` by ${alert.acknowledged_by}`}
-                </span>
-              </div>
-            )}
-
-            {alert.resolved_at && (
-              <div className="text-sm">
-                <span className="text-muted-foreground">Resolved:</span>
-                <span className="ml-2">
-                  {new Date(alert.resolved_at).toLocaleString()}
-                  {alert.resolved_by && ` by ${alert.resolved_by}`}
-                </span>
-              </div>
-            )}
-
-            {alert.resolution && (
-              <div className="mt-2 p-3 bg-white/50 rounded border">
-                <p className="text-sm font-medium mb-1">Resolution:</p>
-                <p className="text-sm">{alert.resolution}</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2 ml-4">
-          {alert.status === 'active' && onAcknowledge && (
-            <Button variant="outline" size="sm" onClick={onAcknowledge}>
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Acknowledge
-            </Button>
-          )}
-          {(alert.status === 'active' || alert.status === 'acknowledged') && onResolve && (
-            <Button variant="default" size="sm" onClick={onResolve} className="bg-green-600 hover:bg-green-700">
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Resolve
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  )
 }

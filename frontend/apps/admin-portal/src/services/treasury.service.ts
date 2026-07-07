@@ -819,3 +819,278 @@ export const reconciliationService = {
     return response.data
   },
 }
+
+
+// ============================================
+// Fund Transfer Types
+// ============================================
+
+export type FundTransferType = 
+  | 'internal' 
+  | 'neft' 
+  | 'rtgs' 
+  | 'imps' 
+  | 'upi' 
+  | 'cheque' 
+  | 'demand_draft'
+
+export type FundTransferStatus = 
+  | 'draft' 
+  | 'pending_approval' 
+  | 'approved' 
+  | 'rejected' 
+  | 'scheduled' 
+  | 'in_progress' 
+  | 'completed' 
+  | 'failed' 
+  | 'cancelled'
+
+export interface FundTransfer {
+  id: number
+  tenant_id: number
+  transfer_number: string
+  transfer_date: string
+  transfer_type: FundTransferType
+  
+  source_account_id: number
+  source_account_number?: string
+  
+  destination_account_id?: number
+  destination_account_number?: string
+  destination_bank_name?: string
+  destination_ifsc?: string
+  destination_account_holder?: string
+  
+  amount: number
+  currency: string
+  purpose: string
+  reference_number?: string
+  
+  is_scheduled: boolean
+  scheduled_date?: string
+  
+  status: FundTransferStatus
+  
+  requested_by: number
+  approved_by?: number
+  approved_at?: string
+  approval_notes?: string
+  
+  rejected_by?: number
+  rejected_at?: string
+  rejection_reason?: string
+  
+  executed_by?: number
+  executed_at?: string
+  transaction_reference?: string
+  
+  failure_reason?: string
+  retry_count: number
+  
+  journal_entry_id?: number
+  
+  notes?: string
+  created_at: string
+  updated_at: string
+  created_by: number
+  updated_by?: number
+}
+
+export interface FundTransferCreate {
+  transfer_type: FundTransferType
+  source_account_id: number
+  destination_account_id?: number
+  destination_account_number?: string
+  destination_bank_name?: string
+  destination_ifsc?: string
+  destination_account_holder?: string
+  amount: number
+  currency?: string
+  purpose: string
+  reference_number?: string
+  is_scheduled?: boolean
+  scheduled_date?: string
+  notes?: string
+}
+
+export interface FundTransferStatistics {
+  total_transfers: number
+  draft_count: number
+  pending_approval_count: number
+  approved_count: number
+  rejected_count: number
+  scheduled_count: number
+  in_progress_count: number
+  completed_count: number
+  failed_count: number
+  cancelled_count: number
+  total_amount_transferred: number
+  total_amount_pending: number
+  total_amount_completed: number
+  total_amount_failed: number
+  avg_transfer_amount: number
+  largest_transfer: number
+  by_type: Record<string, number>
+  today_transfers: number
+  this_month_transfers: number
+}
+
+export interface FundTransferSummary {
+  account_id: number
+  total_transfers: number
+  total_sent: number
+  total_received: number
+  net_position: number
+  pending_transfers: number
+  pending_amount: number
+}
+
+export interface FundTransferSchedule {
+  total_scheduled: number
+  due_today: number
+  due_this_week: number
+  due_this_month: number
+  overdue: number
+  scheduled_amount: number
+}
+
+// Add to treasuryService or create new fundTransferService
+export const fundTransferService = {
+  // ============================================
+  // Fund Transfer Management
+  // ============================================
+
+  async getTransfers(params?: PaginationParams & {
+    source_account_id?: number
+    destination_account_id?: number
+    transfer_type?: FundTransferType
+    status?: FundTransferStatus
+    start_date?: string
+    end_date?: string
+    is_scheduled?: boolean
+  }) {
+    const response = await apiClient.get<PaginatedResponse<FundTransfer>>(
+      '/treasury/fund-transfers',
+      { params }
+    )
+    return response.data
+  },
+
+  async getTransfer(id: number) {
+    const response = await apiClient.get<FundTransfer>(
+      `/treasury/fund-transfers/${id}`
+    )
+    return response.data
+  },
+
+  async createTransfer(data: FundTransferCreate) {
+    const response = await apiClient.post<FundTransfer>(
+      '/treasury/fund-transfers',
+      data
+    )
+    return response.data
+  },
+
+  async updateTransfer(id: number, data: Partial<FundTransferCreate>) {
+    const response = await apiClient.patch<FundTransfer>(
+      `/treasury/fund-transfers/${id}`,
+      data
+    )
+    return response.data
+  },
+
+  async deleteTransfer(id: number) {
+    const response = await apiClient.delete(`/treasury/fund-transfers/${id}`)
+    return response.data
+  },
+
+  // ============================================
+  // Approval Workflow
+  // ============================================
+
+  async submitForApproval(id: number) {
+    const response = await apiClient.post<FundTransfer>(
+      `/treasury/fund-transfers/${id}/submit`
+    )
+    return response.data
+  },
+
+  async approveTransfer(id: number, approvalNotes?: string) {
+    const response = await apiClient.post<FundTransfer>(
+      `/treasury/fund-transfers/${id}/approve`,
+      { approval_notes: approvalNotes }
+    )
+    return response.data
+  },
+
+  async rejectTransfer(id: number, rejectionReason: string) {
+    const response = await apiClient.post<FundTransfer>(
+      `/treasury/fund-transfers/${id}/reject`,
+      { rejection_reason: rejectionReason }
+    )
+    return response.data
+  },
+
+  // ============================================
+  // Execution
+  // ============================================
+
+  async executeTransfer(id: number, transactionReference?: string) {
+    const response = await apiClient.post<FundTransfer>(
+      `/treasury/fund-transfers/${id}/execute`,
+      { transaction_reference: transactionReference }
+    )
+    return response.data
+  },
+
+  async cancelTransfer(id: number, cancellationReason: string) {
+    const response = await apiClient.post<FundTransfer>(
+      `/treasury/fund-transfers/${id}/cancel`,
+      { cancellation_reason: cancellationReason }
+    )
+    return response.data
+  },
+
+  // ============================================
+  // Scheduled Transfers
+  // ============================================
+
+  async getScheduledTransfers() {
+    const response = await apiClient.get<FundTransfer[]>(
+      '/treasury/fund-transfers/scheduled/list'
+    )
+    return response.data
+  },
+
+  async getDueScheduledTransfers() {
+    const response = await apiClient.get<FundTransfer[]>(
+      '/treasury/fund-transfers/scheduled/due'
+    )
+    return response.data
+  },
+
+  async getScheduleSummary() {
+    const response = await apiClient.get<FundTransferSchedule>(
+      '/treasury/fund-transfers/scheduled/summary'
+    )
+    return response.data
+  },
+
+  // ============================================
+  // Statistics & Reports
+  // ============================================
+
+  async getStatistics() {
+    const response = await apiClient.get<FundTransferStatistics>(
+      '/treasury/fund-transfers/statistics/summary'
+    )
+    return response.data
+  },
+
+  async getAccountSummary(accountId: number) {
+    const response = await apiClient.get<FundTransferSummary>(
+      `/treasury/fund-transfers/account/${accountId}/summary`
+    )
+    return response.data
+  },
+}
