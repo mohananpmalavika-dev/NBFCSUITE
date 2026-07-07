@@ -433,7 +433,7 @@ export default function HSNSACMasterPage() {
               <div>
                 <p className="text-sm text-muted-foreground">Active Codes</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {items.filter(i => i.is_active).length}
+                  {items.length}
                 </p>
               </div>
               <div>
