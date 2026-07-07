@@ -69,7 +69,17 @@ export default function NewTDSChallanPage() {
     }
 
     try {
-      await tdsService.createChallan(formData);
+      await tdsService.createChallan({
+        financial_year: parseInt(formData.financial_year),
+        quarter: parseInt(formData.quarter.replace('Q', '')),
+        section_code: formData.section_code,
+        payment_date: formData.payment_date,
+        bsr_code: formData.bsr_code,
+        bank_name: formData.bank_name,
+        total_tds_amount: formData.amount_paid,
+        payment_mode: 'online',
+        transaction_reference: formData.challan_number
+      });
       toast({
         title: "Success",
         description: "TDS challan recorded successfully"
