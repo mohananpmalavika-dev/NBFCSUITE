@@ -34,22 +34,26 @@ export const complianceService = {
   // ============================================================================
 
   async getBorrowers(params?: PaginationParams & LargeCreditFilter) {
-    return apiClient.get<PaginatedResponse<CRILCBorrower>>(
+    const response = await apiClient.get<PaginatedResponse<CRILCBorrower>>(
       '/compliance/crilc/borrowers',
       { params }
     )
+    return response.data
   },
 
   async getBorrower(id: string) {
-    return apiClient.get<CRILCBorrower>(`/compliance/crilc/borrowers/${id}`)
+    const response = await apiClient.get<CRILCBorrower>(`/compliance/crilc/borrowers/${id}`)
+    return response.data
   },
 
   async createBorrower(data: CreateCRILCBorrowerRequest) {
-    return apiClient.post<CRILCBorrower>('/compliance/crilc/borrowers', data)
+    const response = await apiClient.post<CRILCBorrower>('/compliance/crilc/borrowers', data)
+    return response.data
   },
 
   async updateBorrower(id: string, data: UpdateCRILCBorrowerRequest) {
-    return apiClient.put<CRILCBorrower>(`/compliance/crilc/borrowers/${id}`, data)
+    const response = await apiClient.put<CRILCBorrower>(`/compliance/crilc/borrowers/${id}`, data)
+    return response.data
   },
 
   // ============================================================================
@@ -57,17 +61,20 @@ export const complianceService = {
   // ============================================================================
 
   async getBorrowerFacilities(borrowerId: string) {
-    return apiClient.get<CRILCFacility[]>(
+    const response = await apiClient.get<CRILCFacility[]>(
       `/compliance/crilc/borrowers/${borrowerId}/facilities`
     )
+    return response.data
   },
 
   async createFacility(data: CreateCRILCFacilityRequest) {
-    return apiClient.post<CRILCFacility>('/compliance/crilc/facilities', data)
+    const response = await apiClient.post<CRILCFacility>('/compliance/crilc/facilities', data)
+    return response.data
   },
 
   async updateFacility(id: string, data: Partial<CreateCRILCFacilityRequest>) {
-    return apiClient.put<CRILCFacility>(`/compliance/crilc/facilities/${id}`, data)
+    const response = await apiClient.put<CRILCFacility>(`/compliance/crilc/facilities/${id}`, data)
+    return response.data
   },
 
   // ============================================================================
@@ -75,10 +82,11 @@ export const complianceService = {
   // ============================================================================
 
   async identifyLargeCredits(data: LargeCreditIdentificationRequest) {
-    return apiClient.post<LargeCreditIdentificationResponse>(
+    const response = await apiClient.post<LargeCreditIdentificationResponse>(
       '/compliance/crilc/identify-large-credits',
       data
     )
+    return response.data
   },
 
   // ============================================================================
@@ -86,36 +94,41 @@ export const complianceService = {
   // ============================================================================
 
   async getQuarterlyReturns(params?: PaginationParams) {
-    return apiClient.get<PaginatedResponse<CRILCQuarterlyReturn>>(
+    const response = await apiClient.get<PaginatedResponse<CRILCQuarterlyReturn>>(
       '/compliance/crilc/quarterly-returns',
       { params }
     )
+    return response.data
   },
 
   async getQuarterlyReturn(id: string) {
-    return apiClient.get<CRILCQuarterlyReturn>(
+    const response = await apiClient.get<CRILCQuarterlyReturn>(
       `/compliance/crilc/quarterly-returns/${id}`
     )
+    return response.data
   },
 
   async generateQuarterlyReturn(data: CreateCRILCQuarterlyReturnRequest) {
-    return apiClient.post<CRILCQuarterlyReturn>(
+    const response = await apiClient.post<CRILCQuarterlyReturn>(
       '/compliance/crilc/quarterly-returns',
       data
     )
+    return response.data
   },
 
   async approveQuarterlyReturn(id: string) {
-    return apiClient.post<CRILCQuarterlyReturn>(
+    const response = await apiClient.post<CRILCQuarterlyReturn>(
       `/compliance/crilc/quarterly-returns/${id}/approve`
     )
+    return response.data
   },
 
   async submitQuarterlyReturn(id: string, submissionReference: string) {
-    return apiClient.post<CRILCQuarterlyReturn>(
+    const response = await apiClient.post<CRILCQuarterlyReturn>(
       `/compliance/crilc/quarterly-returns/${id}/submit`,
       { submission_reference: submissionReference }
     )
+    return response.data
   },
 
   // ============================================================================
@@ -123,40 +136,46 @@ export const complianceService = {
   // ============================================================================
 
   async calculateSMA(data: SMACalculationRequest) {
-    return apiClient.post<SMACalculationResponse>(
+    const response = await apiClient.post<SMACalculationResponse>(
       '/compliance/sma/calculate',
       data
     )
+    return response.data
   },
 
   async getSMATracking(params?: PaginationParams & { as_on_date?: string; sma_status?: string }) {
-    return apiClient.get<PaginatedResponse<SMATracking>>(
+    const response = await apiClient.get<PaginatedResponse<SMATracking>>(
       '/compliance/sma/tracking',
       { params }
     )
+    return response.data
   },
 
   async getSMATrackingById(id: string) {
-    return apiClient.get<SMATracking>(`/compliance/sma/tracking/${id}`)
+    const response = await apiClient.get<SMATracking>(`/compliance/sma/tracking/${id}`)
+    return response.data
   },
 
   async getLoanSMAHistory(loanAccountId: string) {
-    return apiClient.get<SMATracking[]>(
+    const response = await apiClient.get<SMATracking[]>(
       `/compliance/sma/loan/${loanAccountId}/history`
     )
+    return response.data
   },
 
   async getSMAStatusChanges(params?: PaginationParams & { loan_account_id?: string; borrower_id?: string }) {
-    return apiClient.get<PaginatedResponse<SMAStatusHistory>>(
+    const response = await apiClient.get<PaginatedResponse<SMAStatusHistory>>(
       '/compliance/sma/status-changes',
       { params }
     )
+    return response.data
   },
 
   async getSMADashboard(asOnDate?: string) {
-    return apiClient.get<SMADashboardStats>('/compliance/sma/dashboard', {
+    const response = await apiClient.get<SMADashboardStats>('/compliance/sma/dashboard', {
       params: { as_on_date: asOnDate },
     })
+    return response.data
   },
 
   // ============================================================================
@@ -164,10 +183,11 @@ export const complianceService = {
   // ============================================================================
 
   async generateSMAQuarterlyReport(data: CreateSMAQuarterlyReportRequest) {
-    return apiClient.post<SMAQuarterlyReport>(
+    const response = await apiClient.post<SMAQuarterlyReport>(
       '/compliance/sma/quarterly-reports',
       data
     )
+    return response.data
   },
 
   // ============================================================================
@@ -175,19 +195,22 @@ export const complianceService = {
   // ============================================================================
 
   async getAlerts(params?: PaginationParams & ComplianceAlertFilter) {
-    return apiClient.get<PaginatedResponse<ComplianceAlert>>(
+    const response = await apiClient.get<PaginatedResponse<ComplianceAlert>>(
       '/compliance/alerts',
       { params }
     )
+    return response.data
   },
 
   async acknowledgeAlert(id: string) {
-    return apiClient.post(`/compliance/alerts/${id}/acknowledge`)
+    const response = await apiClient.post(`/compliance/alerts/${id}/acknowledge`)
+    return response.data
   },
 
   async resolveAlert(id: string, resolutionNotes: string) {
-    return apiClient.post(`/compliance/alerts/${id}/resolve`, {
+    const response = await apiClient.post(`/compliance/alerts/${id}/resolve`, {
       resolution_notes: resolutionNotes,
     })
+    return response.data
   },
 }
