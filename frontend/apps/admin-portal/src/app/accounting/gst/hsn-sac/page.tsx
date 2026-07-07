@@ -40,8 +40,10 @@ export default function HSNSACMasterPage() {
   const loadItems = async () => {
     try {
       setLoading(true);
-      const data = await gstService.getHSNSAC();
-      setItems(data);
+      // TODO: Implement getAllHSNSAC or getHSNSACList endpoint to fetch all codes
+      // const data = await gstService.getAllHSNSAC();
+      // setItems(data);
+      setItems([]);
     } catch (error) {
       toast({
         title: "Error",
