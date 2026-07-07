@@ -181,15 +181,16 @@ export default function TDSChallansPage() {
                       <TableCell>{challan.bsr_code}</TableCell>
                       <TableCell>{challan.bank_name}</TableCell>
                       <TableCell>
-                        {challan.assessment_year} - {challan.quarter}
+                        {/* Challan type doesn't have these properties yet */}
+                        N/A
                       </TableCell>
                       <TableCell className="text-right">
-                        ₹{challan.amount_paid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        ₹{challan.total_tds_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </TableCell>
-                      <TableCell>{getStatusBadge(challan.status)}</TableCell>
+                      <TableCell>{getStatusBadge(challan.payment_status)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          {challan.status === 'paid' && (
+                          {challan.payment_status === 'paid' && (
                             <Button
                               variant="ghost"
                               size="sm"
