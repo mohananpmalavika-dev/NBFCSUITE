@@ -115,8 +115,7 @@ export default function DepreciationPage() {
     try {
       for (const item of preview) {
         try {
-          await assetService.postDepreciation({
-            asset_id: item.asset_id,
+          await assetService.postDepreciation(item.asset_id.toString(), {
             depreciation_date: depreciationDate
           });
           successCount++;
