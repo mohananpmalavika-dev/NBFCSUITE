@@ -20,8 +20,10 @@ export default function AssetsPage() {
   const loadDashboard = async () => {
     try {
       setLoading(true);
-      const data = await assetService.getDashboard();
-      setDashboard(data);
+      // TODO: Implement getDashboard endpoint in backend
+      // const response = await assetService.getDashboard();
+      // setDashboard(response.data);
+      setDashboard(null);
     } catch (error) {
       console.error('Failed to load dashboard', error);
     } finally {
