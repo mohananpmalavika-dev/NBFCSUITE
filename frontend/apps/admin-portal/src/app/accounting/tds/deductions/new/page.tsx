@@ -43,8 +43,9 @@ export default function NewTDSDeductionPage() {
 
   const loadSections = async () => {
     try {
-      const data = await tdsService.getSections();
-      setSections(data.filter((s: TDSSection) => s.is_active));
+      const currentYear = new Date().getFullYear();
+      const response = await tdsService.getSections(currentYear);
+      setSections(response.data.data.sections.filter((s: TDSSection) => s.is_active));
     } catch (error) {
       toast({
         title: "Error",
