@@ -37,12 +37,12 @@ export default function AssetsListPage() {
       if (filters.status !== 'all') params.status = filters.status;
       if (filters.location) params.location = filters.location;
 
-      const data = await assetService.getAssets(params);
+      const response = await assetService.getAssets(params);
       
       // Client-side search
-      let filtered = data.assets;
+      let filtered = response.data.items;
       if (filters.search) {
-        filtered = data.assets.filter((asset: FixedAsset) =>
+        filtered = response.data.items.filter((asset: FixedAsset) =>
           asset.asset_name.toLowerCase().includes(filters.search.toLowerCase()) ||
           asset.asset_code.toLowerCase().includes(filters.search.toLowerCase()) ||
           asset.location?.toLowerCase().includes(filters.search.toLowerCase())
