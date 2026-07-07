@@ -8,8 +8,8 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from shared.database.connection import get_db
-from services.auth.dependencies import get_current_user, get_tenant_id
+from backend.shared.database.connection import get_db
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from .cash_position_service import CashPositionService
 from .cash_position_schemas import (
     CashPositionCreate,

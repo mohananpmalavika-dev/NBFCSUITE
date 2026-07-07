@@ -10,12 +10,12 @@ from decimal import Decimal
 from uuid import UUID
 import uuid
 
-from shared.database.compliance_models import (
+from backend.shared.database.compliance_models import (
     CRILCBorrower, CRILCFacility, CRILCQuarterlyReturn,
     BorrowerType, SMAStatus, AssetClassification, ExposureType
 )
-from shared.database.loan_models import LoanAccount
-from shared.database.customer_models import Customer
+from backend.shared.database.loan_models import LoanAccount
+from backend.shared.database.customer_models import Customer
 from .schemas import (
     CRILCBorrowerCreate, CRILCBorrowerUpdate, CRILCBorrowerResponse,
     CRILCFacilityCreate, CRILCFacilityUpdate, CRILCFacilityResponse,

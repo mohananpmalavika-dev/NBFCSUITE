@@ -11,11 +11,11 @@ from decimal import Decimal
 from uuid import UUID
 import uuid
 
-from shared.database.compliance_models import (
+from backend.shared.database.compliance_models import (
     SMATracking, SMAStatusHistory, SMAQuarterlyReport, ComplianceAlert,
     CRILCBorrower, SMAStatus, AssetClassification
 )
-from shared.database.loan_models import LoanAccount, LoanEMISchedule
+from backend.shared.database.loan_models import LoanAccount, LoanEMISchedule
 from .schemas import (
     SMATrackingCreate, SMATrackingResponse,
     SMAQuarterlyReportCreate, SMAQuarterlyReportResponse,

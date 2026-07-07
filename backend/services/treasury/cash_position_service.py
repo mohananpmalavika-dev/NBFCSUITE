@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, desc
 from fastapi import HTTPException, status
 
-from shared.database.treasury_models import (
+from backend.shared.database.treasury_models import (
     CashPosition,
     CashPositionStatus,
     TreasuryBankAccount

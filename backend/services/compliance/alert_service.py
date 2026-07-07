@@ -8,7 +8,7 @@ from typing import List, Optional
 from datetime import date, datetime
 from uuid import UUID
 
-from shared.database.compliance_models import ComplianceAlert
+from backend.shared.database.compliance_models import ComplianceAlert
 from .schemas import ComplianceAlertCreate, ComplianceAlertResponse
 
 

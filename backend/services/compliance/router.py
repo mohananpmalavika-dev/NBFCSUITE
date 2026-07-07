@@ -9,9 +9,9 @@ from typing import List, Optional
 from datetime import date
 from uuid import UUID
 
-from shared.database.connection import get_db
-from services.auth.dependencies import get_current_user, require_permissions
-from shared.database.models import User
+from backend.shared.database.connection import get_db
+from backend.services.auth.dependencies import get_current_user, require_permissions
+from backend.shared.database.models import User
 
 from .schemas import (
     # CRILC Schemas
