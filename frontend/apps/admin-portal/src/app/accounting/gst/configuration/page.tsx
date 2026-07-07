@@ -37,26 +37,29 @@ export default function GSTConfigurationPage() {
   const loadConfiguration = async () => {
     try {
       setLoading(true);
-      const data = await gstService.getConfiguration();
-      setConfigurations(data);
+      // TODO: Implement getConfigurations (plural) endpoint to fetch all GST configurations
+      // For now, skip loading as the backend only has getConfiguration(gstin) for single config
+      // const data = await gstService.getConfigurations();
+      // setConfigurations(data);
+      setConfigurations([]);
       
       // Load first active configuration if exists
-      if (data.length > 0) {
-        const active = data.find((c: GSTConfiguration) => c.is_active) || data[0];
-        setFormData({
-          gstin: active.gstin,
-          legal_name: active.legal_name,
-          trade_name: active.trade_name || '',
-          registration_date: active.registration_date.split('T')[0],
-          state_code: active.state_code,
-          state_name: active.state_name,
-          business_type: active.business_type,
-          composition_scheme: active.composition_scheme,
-          is_active: active.is_active,
-          gst_portal_username: active.gst_portal_username || '',
-          filing_frequency: active.filing_frequency
-        });
-      }
+      // if (data.length > 0) {
+      //   const active = data.find((c: GSTConfiguration) => c.is_active) || data[0];
+      //   setFormData({
+      //     gstin: active.gstin,
+      //     legal_name: active.legal_name,
+      //     trade_name: active.trade_name || '',
+      //     registration_date: active.registration_date.split('T')[0],
+      //     state_code: active.state_code,
+      //     state_name: active.state_name,
+      //     business_type: active.business_type,
+      //     composition_scheme: active.composition_scheme,
+      //     is_active: active.is_active,
+      //     gst_portal_username: active.gst_portal_username || '',
+      //     filing_frequency: active.filing_frequency
+      //   });
+      // }
     } catch (error) {
       console.error('Failed to load configuration', error);
     } finally {
