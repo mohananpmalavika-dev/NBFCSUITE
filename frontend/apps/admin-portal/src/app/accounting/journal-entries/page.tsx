@@ -279,13 +279,13 @@ export default function JournalEntriesPage() {
               {data?.data && data.data.items.length > 0 && (
                 <div className="flex items-center justify-between px-6 py-4 border-t">
                   <p className="text-sm text-gray-600">
-                    Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.metadata?.total || 0)} of {data.metadata?.total || 0} entries
+                    Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.data?.total || 0)} of {data.data?.total || 0} entries
                   </p>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={!data.metadata?.has_prev}
+                      disabled={!data.data?.has_prev}
                       onClick={() => setPage(page - 1)}
                     >
                       Previous
@@ -293,7 +293,7 @@ export default function JournalEntriesPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={!data.metadata?.has_next}
+                      disabled={!data.data?.has_next}
                       onClick={() => setPage(page + 1)}
                     >
                       Next
