@@ -72,7 +72,7 @@ export default function DepreciationPage() {
     try {
       for (const asset of assets) {
         try {
-          const result = await assetService.calculateDepreciation(asset.id, depreciationDate);
+          const result = await assetService.calculateDepreciation(asset.id.toString(), depreciationDate);
           previews.push(result);
         } catch (error) {
           console.error(`Failed to calculate for asset ${asset.id}`, error);
