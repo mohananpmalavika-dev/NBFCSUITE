@@ -236,14 +236,14 @@ export default function QuarterlyReportsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {crilcReturns?.data?.items?.length === 0 ? (
+                      {crilcReturns?.items?.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={7} className="text-center text-muted-foreground">
                             No CRILC returns found. Generate your first return to get started.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        crilcReturns?.data?.items?.map((returnItem: CRILCQuarterlyReturn) => (
+                        crilcReturns?.items?.map((returnItem: CRILCQuarterlyReturn) => (
                           <TableRow key={returnItem.id}>
                             <TableCell className="font-medium">
                               {returnItem.return_number}
@@ -300,7 +300,7 @@ export default function QuarterlyReportsPage() {
                   </Table>
 
                   {/* Summary Stats */}
-                  {crilcReturns?.data?.items && crilcReturns.data.items.length > 0 && (
+                  {crilcReturns?.items && crilcReturns.items.length > 0 && (
                     <div className="mt-6 grid gap-4 md:grid-cols-3">
                       <Card className="bg-blue-50">
                         <CardHeader className="pb-2">
