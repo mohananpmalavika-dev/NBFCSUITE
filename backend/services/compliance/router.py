@@ -10,7 +10,7 @@ from datetime import date
 from uuid import UUID
 
 from backend.shared.database.connection import get_db
-from backend.services.auth.dependencies import get_current_user, require_permissions
+from backend.services.auth.dependencies import get_current_user
 from backend.shared.database.models import User
 
 from .schemas import (
@@ -48,7 +48,7 @@ router = APIRouter(prefix="/api/compliance", tags=["Compliance"])
 def create_crilc_borrower(
     data: CRILCBorrowerCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Create CRILC borrower for large credit tracking"""
     service = CRILCService(db, current_user.tenant_id)
@@ -60,7 +60,7 @@ def create_crilc_borrower(
 def get_crilc_borrower(
     borrower_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Get CRILC borrower details"""
     service = CRILCService(db, current_user.tenant_id)
@@ -77,7 +77,7 @@ def update_crilc_borrower(
     borrower_id: UUID,
     data: CRILCBorrowerUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Update CRILC borrower"""
     service = CRILCService(db, current_user.tenant_id)
@@ -98,7 +98,7 @@ def list_crilc_borrowers(
     industry_code: Optional[str] = None,
     state: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """List CRILC borrowers with filters"""
     service = CRILCService(db, current_user.tenant_id)
@@ -121,7 +121,7 @@ def list_crilc_borrowers(
 def add_crilc_facility(
     data: CRILCFacilityCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Add facility to CRILC borrower"""
     service = CRILCService(db, current_user.tenant_id)
@@ -134,7 +134,7 @@ def update_crilc_facility(
     facility_id: UUID,
     data: CRILCFacilityUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Update CRILC facility"""
     service = CRILCService(db, current_user.tenant_id)
@@ -150,7 +150,7 @@ def update_crilc_facility(
 def get_borrower_facilities(
     borrower_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Get all facilities for a borrower"""
     service = CRILCService(db, current_user.tenant_id)
@@ -166,7 +166,7 @@ def get_borrower_facilities(
 def identify_large_credits(
     request: LargeCreditIdentificationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Identify large credits based on threshold (₹5 Crore default)"""
     service = CRILCService(db, current_user.tenant_id)
@@ -182,7 +182,7 @@ def identify_large_credits(
 def generate_crilc_quarterly_return(
     data: CRILCQuarterlyReturnCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Generate CRILC quarterly return"""
     service = CRILCService(db, current_user.tenant_id)
@@ -194,7 +194,7 @@ def generate_crilc_quarterly_return(
 def get_crilc_quarterly_return(
     return_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Get CRILC quarterly return"""
     service = CRILCService(db, current_user.tenant_id)
@@ -211,7 +211,7 @@ def list_crilc_quarterly_returns(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """List CRILC quarterly returns"""
     service = CRILCService(db, current_user.tenant_id)
@@ -223,7 +223,7 @@ def list_crilc_quarterly_returns(
 def approve_crilc_quarterly_return(
     return_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.approve"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Approve CRILC quarterly return"""
     service = CRILCService(db, current_user.tenant_id)
@@ -240,7 +240,7 @@ def submit_crilc_quarterly_return(
     return_id: UUID,
     submission_reference: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.submit"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Submit CRILC quarterly return to RBI"""
     service = CRILCService(db, current_user.tenant_id)
@@ -260,7 +260,7 @@ def submit_crilc_quarterly_return(
 def calculate_sma_status(
     request: SMACalculationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Calculate SMA status for loan accounts"""
     service = SMAService(db, current_user.tenant_id)
@@ -272,7 +272,7 @@ def calculate_sma_status(
 def get_sma_tracking(
     tracking_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Get SMA tracking record"""
     service = SMAService(db, current_user.tenant_id)
@@ -291,7 +291,7 @@ def list_sma_tracking(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """List SMA tracking records"""
     service = SMAService(db, current_user.tenant_id)
@@ -308,7 +308,7 @@ def list_sma_tracking(
 def get_loan_sma_history(
     loan_account_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Get SMA history for a loan account"""
     service = SMAService(db, current_user.tenant_id)
@@ -323,7 +323,7 @@ def get_sma_status_changes(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Get SMA status change history"""
     service = SMAService(db, current_user.tenant_id)
@@ -340,7 +340,7 @@ def get_sma_status_changes(
 def get_sma_dashboard(
     as_on_date: Optional[date] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Get SMA dashboard statistics"""
     service = SMAService(db, current_user.tenant_id)
@@ -356,7 +356,7 @@ def get_sma_dashboard(
 def generate_sma_quarterly_report(
     data: SMAQuarterlyReportCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Generate SMA quarterly report"""
     service = SMAService(db, current_user.tenant_id)
@@ -376,7 +376,7 @@ def list_compliance_alerts(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.read"]))
+    current_user: User = Depends(get_current_user)
 ):
     """List compliance alerts"""
     service = ComplianceAlertService(db, current_user.tenant_id)
@@ -394,7 +394,7 @@ def list_compliance_alerts(
 def acknowledge_alert(
     alert_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Acknowledge compliance alert"""
     service = ComplianceAlertService(db, current_user.tenant_id)
@@ -411,7 +411,7 @@ def resolve_alert(
     alert_id: UUID,
     resolution_notes: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permissions(["compliance.write"]))
+    current_user: User = Depends(get_current_user)
 ):
     """Resolve compliance alert"""
     service = ComplianceAlertService(db, current_user.tenant_id)
