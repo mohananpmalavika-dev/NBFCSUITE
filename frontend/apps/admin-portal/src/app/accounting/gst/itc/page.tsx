@@ -29,11 +29,13 @@ export default function ITCPage() {
   const loadITC = async () => {
     try {
       setLoading(true);
-      const params: any = {
-        month: filters.month,
-        year: filters.year
-      };
-      const data = await gstService.getInputCredit(params);
+      // TODO: Implement getInputCredit endpoint to fetch ITC records
+      // const params: any = {
+      //   month: filters.month,
+      //   year: filters.year
+      // };
+      // const data = await gstService.getInputCredit(params);
+      const data: any[] = [];
       
       // Client-side filters
       let filtered = data;
