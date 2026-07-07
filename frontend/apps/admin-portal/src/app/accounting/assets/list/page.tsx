@@ -62,7 +62,7 @@ export default function AssetsListPage() {
     }
   };
 
-  const getStatusBadge = (status: AssetStatus) => {
+  const getStatusBadge = (status: string) => {
     const variants: Record<string, any> = {
       'ACTIVE': 'success',
       'UNDER_MAINTENANCE': 'warning',
