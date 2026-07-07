@@ -45,8 +45,9 @@ services:
     region: oregon
     plan: free
     branch: main
-    buildCommand: cd frontend/apps/admin-portal && npm install --legacy-peer-deps && npm run build
-    startCommand: cd frontend/apps/admin-portal && npm start
+    rootDir: frontend
+    buildCommand: npm install --legacy-peer-deps && cd apps/admin-portal && npm run build
+    startCommand: cd apps/admin-portal && npm start
     envVars:
       - key: NODE_ENV
         value: production
