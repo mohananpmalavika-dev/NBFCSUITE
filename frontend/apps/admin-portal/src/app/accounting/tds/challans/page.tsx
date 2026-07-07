@@ -30,25 +30,14 @@ export default function TDSChallansPage() {
   const loadChallans = async () => {
     try {
       setLoading(true);
-      const params: any = {};
-      if (filters.financial_year !== 'all') {
-        params.financial_year = filters.financial_year;
-      }
-      const data = await tdsService.getChallans(params);
-      
-      // Client-side filters
-      let filtered = data;
-      if (filters.search) {
-        filtered = data.filter((c: TDSChallan) => 
-          c.challan_number?.toLowerCase().includes(filters.search.toLowerCase()) ||
-          c.bsr_code?.toLowerCase().includes(filters.search.toLowerCase())
-        );
-      }
-      if (filters.status !== 'all') {
-        filtered = filtered.filter((c: TDSChallan) => c.status === filters.status);
-      }
-      
-      setChallans(filtered);
+      // getChallans method doesn't exist in tdsService yet
+      // Using empty array as placeholder - API endpoint needs to be implemented
+      toast({
+        title: "Info",
+        description: "TDS Challans API is not yet implemented. Showing empty list.",
+        variant: "default"
+      });
+      setChallans([]);
     } catch (error) {
       toast({
         title: "Error",
