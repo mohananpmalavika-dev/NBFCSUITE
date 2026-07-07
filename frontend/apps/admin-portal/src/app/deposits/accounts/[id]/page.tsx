@@ -150,10 +150,11 @@ export default function DepositAccountDetailPage() {
         {/* Tabs */}
         <Tabs defaultValue="details" className="space-y-6">
           <TabsList>
-            <TabsTrigger value="details">Account Details</TabsTrigger>
+            <TabsTrigger value="details">Details</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="interest">Interest Details</TabsTrigger>
-            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="passbook">Passbook</TabsTrigger>
+            <TabsTrigger value="statements">Statements</TabsTrigger>
+            <TabsTrigger value="certificates">Certificates</TabsTrigger>
           </TabsList>
 
           {/* Account Details */}
@@ -287,6 +288,162 @@ export default function DepositAccountDetailPage() {
                 <div className="text-center py-8 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto text-gray-400 mb-2" />
                   <p>No documents uploaded</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Passbook Tab */}
+          <TabsContent value="passbook">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Passbook</CardTitle>
+                  <Link href={`/deposits/passbook/${accountId}`}>
+                    <Button>
+                      <FileText className="h-4 w-4 mr-2" />
+                      View Full Passbook
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      View detailed passbook entries, download PDF, or mark entries as printed.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-gray-50 p-4 rounded">
+                      <p className="text-sm text-gray-600 mb-1">Total Entries</p>
+                      <p className="text-2xl font-bold">-</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded">
+                      <p className="text-sm text-gray-600 mb-1">Unprinted</p>
+                      <p className="text-2xl font-bold text-orange-600">-</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded">
+                      <p className="text-sm text-gray-600 mb-1">Current Page</p>
+                      <p className="text-2xl font-bold">-</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Statements Tab */}
+          <TabsContent value="statements">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Account Statements</CardTitle>
+                  <Link href={`/deposits/statements/${accountId}`}>
+                    <Button>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generate Statement
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <p className="text-sm text-green-800">
+                      Generate account statements in PDF or Excel format for any date range.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Button variant="outline" className="justify-start h-auto py-4" asChild>
+                      <Link href={`/deposits/statements/${accountId}`}>
+                        <div className="text-left">
+                          <div className="font-semibold">Custom Statement</div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Select custom date range
+                          </p>
+                        </div>
+                      </Link>
+                    </Button>
+                    <Button variant="outline" className="justify-start h-auto py-4" asChild>
+                      <Link href={`/deposits/statements/${accountId}?tab=quarterly`}>
+                        <div className="text-left">
+                          <div className="font-semibold">Quarterly Statement</div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Q1, Q2, Q3, Q4
+                          </p>
+                        </div>
+                      </Link>
+                    </Button>
+                    <Button variant="outline" className="justify-start h-auto py-4" asChild>
+                      <Link href={`/deposits/statements/${accountId}?tab=annual`}>
+                        <div className="text-left">
+                          <div className="font-semibold">Annual Statement</div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Financial year statement
+                          </p>
+                        </div>
+                      </Link>
+                    </Button>
+                    <Button variant="outline" className="justify-start h-auto py-4" asChild>
+                      <Link href={`/deposits/statements/${accountId}?tab=email`}>
+                        <div className="text-left">
+                          <div className="font-semibold">Email Statement</div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Send via email
+                          </p>
+                        </div>
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Certificates Tab */}
+          <TabsContent value="certificates">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Certificates</CardTitle>
+                  <Link href={`/deposits/certificates/${accountId}`}>
+                    <Button>
+                      <FileText className="h-4 w-4 mr-2" />
+                      View All Certificates
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <p className="text-sm text-purple-800">
+                      Generate interest certificates and TDS Form 16A for tax filing.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Button variant="outline" className="justify-start h-auto py-4" asChild>
+                      <Link href={`/deposits/certificates/${accountId}`}>
+                        <div className="text-left">
+                          <div className="font-semibold">Interest Certificate</div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Annual interest earned details
+                          </p>
+                        </div>
+                      </Link>
+                    </Button>
+                    <Button variant="outline" className="justify-start h-auto py-4" asChild>
+                      <Link href={`/deposits/certificates/${accountId}?tab=tds`}>
+                        <div className="text-left">
+                          <div className="font-semibold">TDS Certificate (Form 16A)</div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Quarterly/Annual TDS certificate
+                          </p>
+                        </div>
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

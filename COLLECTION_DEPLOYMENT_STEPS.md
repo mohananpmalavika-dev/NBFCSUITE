@@ -817,3 +817,692 @@ services:
 - CPU usage
 - Disk space
 
+
+### Log Management
+
+**Logging Configuration**:
+```python
+# backend/config/logging.py
+import logging
+from logging.handlers import RotatingFileHandler
+
+def setup_logging():
+    logger = logging.getLogger("collection")
+    logger.setLevel(logging.INFO)
+    
+    # File handler
+    handler = RotatingFileHandler(
+        "logs/collection.log",
+        maxBytes=10485760,  # 10MB
+        backupCount=10
+    )
+    
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    
+    return logger
+```
+
+**Log Aggregation** (Optional):
+- ELK Stack (Elasticsearch, Logstash, Kibana)
+- Splunk
+- CloudWatch Logs (AWS)
+- Google Cloud Logging
+
+### Alert Configuration
+
+**Critical Alerts**:
+```yaml
+alerts:
+  - name: High Error Rate
+    condition: error_rate > 5%
+    duration: 5m
+    notification: email, slack
+    
+  - name: Slow Response Time
+    condition: p95_latency > 2s
+    duration: 10m
+    notification: email, slack
+    
+  - name: Database Connection Failed
+    condition: db_connection_errors > 0
+    duration: 1m
+    notification: pagerduty
+    
+  - name: Disk Space Low
+    condition: disk_usage > 80%
+    duration: 5m
+    notification: email
+```
+
+---
+
+## 🚨 Rollback Plan
+
+### When to Rollback
+- Critical bugs affecting core functionality
+- Data corruption detected
+- Performance degradation >50%
+- Security vulnerability discovered
+- Unrecoverable errors in production
+
+### Rollback Steps
+
+**Option 1: Quick Rollback (Code Only)**
+```bash
+# 1. Deploy previous version
+docker pull your-registry/nbfc-collection-api:previous
+docker-compose down
+docker-compose up -d
+
+# 2. Verify rollback
+curl https://api.nbfc.com/health
+
+# 3. Frontend rollback
+vercel rollback
+# or
+docker deploy previous frontend image
+```
+
+
+**Option 2: Full Rollback (with Database)**
+```bash
+# 1. Stop application
+docker-compose down
+
+# 2. Rollback database migration
+docker exec nbfc-api alembic downgrade -1
+
+# 3. Restore database backup (if needed)
+psql -h prod-db -U user nbfc_db < backup_YYYYMMDD.sql
+
+# 4. Deploy previous code version
+docker pull your-registry/nbfc-collection-api:previous
+docker-compose up -d
+
+# 5. Verify rollback
+# Run smoke tests
+```
+
+---
+
+## 📋 Deployment Checklist Summary
+
+### Pre-Deployment
+- [ ] All code reviewed and approved
+- [ ] All tests passing (unit, integration, UAT)
+- [ ] Security scan completed
+- [ ] Performance testing done
+- [ ] Documentation updated
+- [ ] Database backup taken
+- [ ] Rollback plan prepared
+- [ ] Team notified
+
+### During Deployment
+- [ ] Maintenance mode enabled (if needed)
+- [ ] Database migration executed
+- [ ] Backend deployed
+- [ ] Frontend deployed
+- [ ] Smoke tests passed
+- [ ] Monitoring verified
+
+### Post-Deployment
+- [ ] Application accessible
+- [ ] All features working
+- [ ] No errors in logs
+- [ ] Performance acceptable
+- [ ] Monitoring active
+- [ ] Alerts configured
+- [ ] Team notified
+- [ ] Documentation updated
+
+---
+
+## 📞 Support & Escalation
+
+### Support Contacts
+- **L1 Support**: support@nbfc.com, 1800-XXX-XXXX
+- **L2 Technical**: tech-support@nbfc.com
+- **L3 Dev Team**: dev-team@nbfc.com
+- **On-Call Engineer**: +91-XXXXX-XXXXX
+
+### Escalation Matrix
+1. **P0 - Critical** (Production down)
+   - Response: Immediate
+   - Escalate to: On-call engineer
+   
+2. **P1 - High** (Major feature broken)
+   - Response: 1 hour
+   - Escalate to: L2 Technical team
+   
+3. **P2 - Medium** (Minor issue)
+   - Response: 4 hours
+   - Escalate to: L1 Support
+
+4. **P3 - Low** (Enhancement request)
+   - Response: 24 hours
+   - Escalate to: Product team
+
+---
+
+## 📚 Post-Deployment Activities
+
+### Day 1 Post-Launch
+**Activities**:
+- Monitor error logs continuously
+- Check system performance metrics
+- Verify scheduled jobs running
+- Review user feedback
+- Document any issues encountered
+
+**Metrics to Track**:
+- Number of users logged in
+- Features most used
+- API response times
+- Error rates
+- User feedback/complaints
+
+### Week 1 Post-Launch
+**Activities**:
+- Daily performance reviews
+- User training sessions
+- Bug fixes for non-critical issues
+- Performance optimization
+- Documentation updates
+
+**Success Criteria**:
+- System uptime >99%
+- Average response time <500ms
+- Zero critical bugs
+- Positive user feedback
+- Key workflows completed successfully
+
+### Month 1 Post-Launch
+**Activities**:
+- Monthly performance review
+- User satisfaction survey
+- Feature enhancement planning
+- Process optimization
+- ROI analysis
+
+---
+
+## 🎯 Success Metrics
+
+### Technical Metrics
+```
+System Performance:
+- API Response Time: <500ms (p95)
+- Page Load Time: <2 seconds
+- Uptime: >99.5%
+- Error Rate: <1%
+
+Database Performance:
+- Query Time: <100ms (p95)
+- Connection Pool: 80% utilization
+- Deadlocks: 0
+- Slow Queries: <10/day
+```
+
+### Business Metrics
+```
+Collection Efficiency:
+- Recovery Rate: >15% increase
+- Collection Cost: <10% of recovered amount
+- Time to Recovery: <30% reduction
+- NPA Reduction: >5%
+
+Operational Efficiency:
+- Cases per Agent: 40-50
+- Visit Efficiency: >80%
+- Promise Fulfillment: >70%
+- Settlement Success: >60%
+```
+
+
+---
+
+## 🔧 Troubleshooting Guide
+
+### Issue 1: API Endpoints Not Responding
+**Symptoms**: 404 errors on collection endpoints
+
+**Solution**:
+```bash
+# Check if routers are registered
+grep "collection" backend/main.py
+
+# Verify imports
+python -c "from services.collection.strategy_router import router; print('OK')"
+
+# Restart server
+docker-compose restart api
+
+# Check logs
+docker logs nbfc-api | grep collection
+```
+
+### Issue 2: Database Connection Errors
+**Symptoms**: "Connection refused" or "Too many connections"
+
+**Solution**:
+```bash
+# Check database status
+docker exec nbfc-db pg_isready
+
+# Check connection pool
+psql -h localhost -U user -d nbfc_db -c "SELECT * FROM pg_stat_activity;"
+
+# Increase pool size if needed
+# Update backend/config/database.py
+# pool_size=20, max_overflow=40
+
+# Restart services
+docker-compose restart
+```
+
+### Issue 3: Frontend Build Failures
+**Symptoms**: Build errors, type errors
+
+**Solution**:
+```bash
+# Clear cache
+rm -rf .next node_modules
+npm install
+
+# Fix type errors
+npm run type-check
+
+# Rebuild
+npm run build
+```
+
+### Issue 4: CORS Errors
+**Symptoms**: "CORS policy" errors in browser console
+
+**Solution**:
+```python
+# Update backend/main.py
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "https://app.nbfc.com"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+### Issue 5: Authentication Failures
+**Symptoms**: 401 Unauthorized errors
+
+**Solution**:
+```bash
+# Verify JWT token
+# Check token expiry
+# Update token in localStorage
+# Clear cache and re-login
+
+# Check backend auth configuration
+# Verify JWT_SECRET matches
+```
+
+
+---
+
+## 📖 Additional Resources
+
+### Documentation Links
+- [Collection Quick Start Guide](./COLLECTION_QUICK_START.md)
+- [Frontend Implementation Details](./COLLECTION_FRONTEND_COMPLETE.md)
+- [Backend Service Layer](./COLLECTION_PROJECT_COMPLETE.md)
+- [Overall Status](./COLLECTION_IMPLEMENTATION_STATUS.md)
+- [Final Summary](./COLLECTION_FINAL_SUMMARY.md)
+
+### External References
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Docker Documentation](https://docs.docker.com/)
+- [Alembic Documentation](https://alembic.sqlalchemy.org/)
+
+### API Documentation
+After deployment, access:
+- Swagger UI: `https://api.nbfc.com/docs`
+- ReDoc: `https://api.nbfc.com/redoc`
+- OpenAPI JSON: `https://api.nbfc.com/openapi.json`
+
+---
+
+## ✅ Final Checklist
+
+### Before Starting Deployment
+```
+☐ Read this deployment guide completely
+☐ Understand each phase
+☐ Gather required credentials
+☐ Schedule deployment window
+☐ Notify stakeholders
+☐ Prepare rollback plan
+☐ Setup monitoring
+☐ Assign responsibilities
+```
+
+### Required Skills/Knowledge
+```
+Backend Developer:
+☐ FastAPI framework
+☐ SQLAlchemy ORM
+☐ Alembic migrations
+☐ Python async/await
+☐ API design
+
+Frontend Developer:
+☐ Next.js 14 (App Router)
+☐ React 18
+☐ TypeScript
+☐ TailwindCSS
+☐ API integration
+
+DevOps Engineer:
+☐ Docker & Docker Compose
+☐ PostgreSQL administration
+☐ Nginx/reverse proxy
+☐ SSL certificates
+☐ Monitoring tools
+```
+
+
+### Team Assignments
+```
+Role: Backend Developer
+Tasks:
+☐ Create 5 API routers (10 days)
+☐ Create database migration (1 day)
+☐ Register routers in main.py (0.5 day)
+☐ Write unit tests (2 days)
+☐ API documentation (1 day)
+
+Role: Frontend Developer
+Tasks:
+☐ Update navigation menu (0.5 day)
+☐ Configure API client (0.5 day)
+☐ Test all pages (2 days)
+☐ Fix integration issues (2 days)
+☐ Update documentation (1 day)
+
+Role: QA Engineer
+Tasks:
+☐ Create test plans (1 day)
+☐ Execute UAT (2 days)
+☐ Performance testing (1 day)
+☐ Security testing (1 day)
+☐ Bug reporting & tracking (ongoing)
+
+Role: DevOps Engineer
+Tasks:
+☐ Setup staging environment (1 day)
+☐ Configure monitoring (1 day)
+☐ Setup alerts (0.5 day)
+☐ Production deployment (1 day)
+☐ Post-deployment monitoring (ongoing)
+```
+
+---
+
+## 🎓 Training & Knowledge Transfer
+
+### Internal Team Training
+
+**Session 1: System Overview** (2 hours)
+- Collection management concepts
+- System architecture
+- Module overview
+- Demo of key features
+
+**Session 2: Technical Deep Dive** (3 hours)
+- Database schema
+- Service layer architecture
+- API endpoints
+- Frontend components
+- Integration patterns
+
+**Session 3: Deployment & Operations** (2 hours)
+- Deployment process
+- Monitoring & alerts
+- Troubleshooting
+- Rollback procedures
+- Best practices
+
+### User Training
+
+**Session 1: Collection Manager** (2 hours)
+- Strategy creation
+- Agent management
+- Reports & analytics
+- Settlement approvals
+
+**Session 2: Field Agents** (1.5 hours)
+- Mobile app usage
+- Visit recording
+- Payment collection
+- Best practices
+
+**Session 3: Legal Team** (1.5 hours)
+- Notice generation
+- Case management
+- Document handling
+- Recovery tracking
+
+
+---
+
+## 📊 Budget & Timeline Summary
+
+### Resource Requirements
+
+**Backend Development**: 2 weeks
+- Senior Backend Developer: 80 hours @ ₹2,000/hr = ₹1,60,000
+- API testing & documentation: ₹40,000
+- **Subtotal**: ₹2,00,000
+
+**Frontend Integration**: 1 week
+- Senior Frontend Developer: 40 hours @ ₹1,800/hr = ₹72,000
+- Testing & bug fixes: ₹28,000
+- **Subtotal**: ₹1,00,000
+
+**QA & Testing**: 1 week
+- QA Engineer: 40 hours @ ₹1,200/hr = ₹48,000
+- Test automation: ₹22,000
+- **Subtotal**: ₹70,000
+
+**DevOps & Deployment**: 3 days
+- DevOps Engineer: 24 hours @ ₹1,500/hr = ₹36,000
+- Infrastructure & monitoring: ₹24,000
+- **Subtotal**: ₹60,000
+
+**Contingency (10%)**: ₹43,000
+
+**Total Deployment Cost**: ₹4,73,000 (~₹4.7 Lakhs)
+
+### Timeline Summary
+```
+Week 1-2: Backend API Development (Days 1-10)
+  Day 1-2:   Strategy Router
+  Day 3-4:   Field Agent Router
+  Day 5-6:   Promise & Legal Routers
+  Day 7-8:   Settlement Router
+  Day 9:     Database Migration
+  Day 10:    Integration & Testing
+
+Week 3: Frontend Integration (Days 11-15)
+  Day 11:    Navigation & API Config
+  Day 12-13: End-to-end Testing
+  Day 14-15: Bug Fixes
+
+Week 4: Testing & Deployment (Days 16-23)
+  Day 16-18: QA Testing
+  Day 19-20: Performance & Security
+  Day 21:    Staging Deployment
+  Day 22:    UAT & Fixes
+  Day 23:    Production Deployment
+```
+
+### Cost-Benefit Analysis
+
+**Total Investment to Date**: ₹42 Lakhs (Backend + Frontend)
+**Deployment Investment**: ₹4.7 Lakhs
+**Total Project Cost**: ₹46.7 Lakhs
+
+**Expected Benefits** (Annual):
+- Improved recovery rate: 15% increase = ₹3-5 Cr additional recovery
+- Reduced collection cost: 30% reduction = ₹50-80 Lakhs savings
+- Time savings: 40% efficiency = ₹30-50 Lakhs equivalent
+- NPA reduction: 5% = ₹2-3 Cr portfolio impact
+
+**ROI**: 600-1000% annually (conservative estimate)
+**Payback Period**: 2-3 months
+
+
+---
+
+## 🎯 Go-Live Decision Criteria
+
+### Technical Readiness
+```
+☑ All 5 API routers implemented and tested
+☑ Database migration script created and tested
+☑ All endpoints returning correct responses
+☑ Authentication/authorization working
+☑ Frontend integrated with backend APIs
+☑ All 14 pages functional
+☑ No critical bugs
+☑ Performance benchmarks met
+☑ Security scan passed
+☑ Monitoring and alerts configured
+```
+
+### Business Readiness
+```
+☑ User training completed
+☑ Documentation finalized
+☑ Support team prepared
+☑ Rollback plan tested
+☑ Business processes defined
+☑ Stakeholder approval obtained
+☑ Communication plan ready
+☑ Success metrics defined
+```
+
+### Go/No-Go Decision
+**GO if**: All critical items checked, <3 medium priority issues  
+**NO-GO if**: Any critical bug, >5 medium priority issues, performance issues
+
+---
+
+## 📞 Emergency Contacts
+
+### Critical Issue Response Team
+```
+Name                Role                    Contact
+----------------------------------------------------------------------------
+[Name]              Tech Lead              +91-XXXXX-XXXXX, email@domain.com
+[Name]              Backend Lead           +91-XXXXX-XXXXX, email@domain.com
+[Name]              Frontend Lead          +91-XXXXX-XXXXX, email@domain.com
+[Name]              DevOps Lead            +91-XXXXX-XXXXX, email@domain.com
+[Name]              Product Manager        +91-XXXXX-XXXXX, email@domain.com
+[Name]              Business Sponsor       +91-XXXXX-XXXXX, email@domain.com
+```
+
+### Vendor Contacts
+```
+Service             Provider               Support Contact
+----------------------------------------------------------------------------
+Cloud Infrastructure  [Provider]           support@provider.com
+Database             PostgreSQL            [DBA Contact]
+SMS Gateway          [Provider]            api-support@provider.com
+Email Service        [Provider]            support@provider.com
+Payment Gateway      [Provider]            integration@provider.com
+```
+
+---
+
+## 📝 Deployment Sign-Off
+
+### Pre-Deployment Approval
+```
+Role                 Name                Sign              Date
+----------------------------------------------------------------------------
+Tech Lead           _______________     _______________   __________
+Product Manager     _______________     _______________   __________
+QA Lead             _______________     _______________   __________
+DevOps Lead         _______________     _______________   __________
+Business Sponsor    _______________     _______________   __________
+```
+
+### Post-Deployment Verification
+```
+Verification Item                        Status      Verified By      Date
+----------------------------------------------------------------------------
+Application accessible                   ☐ Pass     ___________      ______
+All features working                     ☐ Pass     ___________      ______
+Performance acceptable                   ☐ Pass     ___________      ______
+No critical errors                       ☐ Pass     ___________      ______
+Monitoring active                        ☐ Pass     ___________      ______
+```
+
+---
+
+## 🎉 Deployment Completion
+
+Once all phases are complete and sign-offs obtained, the Collection Management System will be fully deployed and operational.
+
+**Next Steps After Deployment**:
+1. Monitor system for first 48 hours continuously
+2. Conduct daily reviews for first week
+3. Weekly reviews for first month
+4. Gather user feedback
+5. Plan enhancements for Phase 2
+6. Celebrate success! 🎊
+
+---
+
+**Document Version**: 1.0  
+**Created**: January 2024  
+**Last Updated**: January 2024  
+**Next Review**: After successful deployment  
+**Owner**: Technology Team
+
+---
+
+## 🔗 Quick Links
+
+- **Project Repository**: [Git URL]
+- **CI/CD Pipeline**: [Jenkins/GitHub Actions URL]
+- **API Documentation**: https://api.nbfc.com/docs
+- **Monitoring Dashboard**: [Grafana URL]
+- **Issue Tracker**: [Jira/GitHub Issues URL]
+- **Deployment Wiki**: [Confluence/Wiki URL]
+
+---
+
+**⚠️ IMPORTANT REMINDERS**
+
+1. **ALWAYS take database backup before migration**
+2. **Test rollback procedure before production deployment**
+3. **Monitor logs continuously for first 24 hours**
+4. **Keep emergency contacts readily available**
+5. **Document any deviations from this plan**
+6. **Update this document based on lessons learned**
+
+---
+
+**Good luck with the deployment! 🚀**
+
+For questions or issues during deployment, contact:
+- **Deployment Lead**: [Name] - [Contact]
+- **Escalation**: [Name] - [Contact]
