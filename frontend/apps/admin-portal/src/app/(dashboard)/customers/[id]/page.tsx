@@ -66,6 +66,7 @@ export default function CustomerDetailPage() {
   });
 
   const customer = customer360?.customer;
+  const kyc = customer360?.kyc;
 
   const handleBack = () => {
     router.push("/customers/list");
@@ -342,7 +343,7 @@ export default function CustomerDetailPage() {
                   <p className="text-sm text-muted-foreground">PAN Number</p>
                   <div className="flex items-center gap-2">
                     <p className="font-medium font-mono">{customer.pan_number || "—"}</p>
-                    {customer.pan_verified && (
+                    {kyc?.pan_verified && (
                       <Badge variant="default" className="text-xs">Verified</Badge>
                     )}
                   </div>
@@ -356,7 +357,7 @@ export default function CustomerDetailPage() {
                         ? `XXXX-XXXX-${customer.aadhaar_number.slice(-4)}`
                         : "—"}
                     </p>
-                    {customer.aadhaar_verified && (
+                    {kyc?.aadhaar_verified && (
                       <Badge variant="default" className="text-xs">Verified</Badge>
                     )}
                   </div>
