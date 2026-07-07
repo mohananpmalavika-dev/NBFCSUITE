@@ -24,8 +24,9 @@ export default function GSTR1Page() {
     try {
       setPreparing(true);
       const data = await gstService.prepareGSTR1({
+        gstin: '', // TODO: Get GSTIN from configuration
         month: period.month,
-        year: period.year
+        financial_year: period.year
       });
       setReturnData(data);
       toast({
