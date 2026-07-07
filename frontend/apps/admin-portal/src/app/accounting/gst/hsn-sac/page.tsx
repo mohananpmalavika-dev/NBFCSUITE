@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { gstService, type HSNSACMaster } from '@/services/accounting.service';
+import { gstService, type HSNSAC } from '@/services/accounting.service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,10 +14,10 @@ import { toast } from '@/components/ui/use-toast';
 import { Plus, Edit, Trash2, Save, X, Search } from 'lucide-react';
 
 export default function HSNSACMasterPage() {
-  const [items, setItems] = useState<HSNSACMaster[]>([]);
+  const [items, setItems] = useState<HSNSAC[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<HSNSACMaster | null>(null);
+  const [editingItem, setEditingItem] = useState<HSNSAC | null>(null);
   const [filters, setFilters] = useState({
     search: '',
     type: 'all'
@@ -101,7 +101,7 @@ export default function HSNSACMasterPage() {
     }
   };
 
-  const handleEdit = (item: HSNSACMaster) => {
+  const handleEdit = (item: HSNSAC) => {
     setEditingItem(item);
     setFormData({
       code_type: item.code_type,
