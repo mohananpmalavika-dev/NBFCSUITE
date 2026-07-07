@@ -135,7 +135,21 @@ export default function NewTDSDeductionPage() {
     }
 
     try {
-      await tdsService.createDeduction(formData);
+      // Map form data to the expected API structure
+      const deductionData = {
+        section_code: formData.section_code,
+        deduction_date: formData.deduction_date,
+        deductee_type: 'individual', // Default value, could be made dynamic
+        deductee_id: 0, // Could be linked to a party/vendor if needed
+        deductee_name: formData.deductee_name,
+        deductee_pan: formData.deductee_pan,
+        transaction_type: 'manual', // Default for manual entries
+        transaction_id: 0, // For manual entries without linked transaction
+        gross_amount: formData.taxable_amount,
+        invoice_number: formData.voucher_number
+      };
+
+      await tdsService.recordDeduction(deductionData);
       toast({
         title: "Success",
         description: "TDS deduction recorded successfully"
