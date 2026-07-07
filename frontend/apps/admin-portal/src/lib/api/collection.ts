@@ -585,3 +585,71 @@ export const settlementApi = {
     return response.data;
   }
 };
+
+// Export combined API for backward compatibility
+export const collectionApi = {
+  // Strategy methods
+  ...collectionStrategyApi,
+  
+  // Template methods (add prefix for clarity)
+  getTemplates: templateApi.list,
+  getTemplate: templateApi.get,
+  createTemplate: templateApi.create,
+  updateTemplate: templateApi.update,
+  deleteTemplate: (id: number) => templateApi.update(id, { is_active: false }), // Soft delete
+  
+  // Field agent methods
+  listAgents: fieldAgentApi.listAgents,
+  getAgent: fieldAgentApi.getAgent,
+  createAgent: fieldAgentApi.createAgent,
+  updateAgent: fieldAgentApi.updateAgent,
+  getAgentDashboard: fieldAgentApi.getDashboard,
+  listTerritories: fieldAgentApi.listTerritories,
+  createTerritory: fieldAgentApi.createTerritory,
+  
+  // Visit methods
+  listVisits: visitApi.list,
+  getVisit: visitApi.get,
+  createVisit: visitApi.create,
+  updateVisit: visitApi.update,
+  recordVisitPayment: visitApi.recordPayment,
+  allocateVisits: visitApi.allocateVisits,
+  
+  // Promise methods
+  listPromises: promiseApi.list,
+  getPromise: promiseApi.get,
+  createPromise: promiseApi.create,
+  updatePromiseStatus: promiseApi.updateStatus,
+  reschedulePromise: promiseApi.reschedule,
+  getPromiseAnalytics: promiseApi.getAnalytics,
+  checkPromiseFulfillment: promiseApi.checkFulfillment,
+  
+  // Legal methods
+  listNotices: legalApi.listNotices,
+  createNotice: legalApi.createNotice,
+  updateNoticeDelivery: legalApi.updateNoticeDelivery,
+  listCases: legalApi.listCases,
+  getCase: legalApi.getCase,
+  fileCase: legalApi.fileCase,
+  updateCaseStatus: legalApi.updateCaseStatus,
+  listAgencies: legalApi.listAgencies,
+  createAgency: legalApi.createAgency,
+  assignToAgency: legalApi.assignToAgency,
+  
+  // Settlement methods
+  listPolicies: settlementApi.listPolicies,
+  createPolicy: settlementApi.createPolicy,
+  listProposals: settlementApi.listProposals,
+  getProposal: settlementApi.getProposal,
+  createProposal: settlementApi.createProposal,
+  calculateNPV: settlementApi.calculateNPV,
+  submitForApproval: settlementApi.submitForApproval,
+  approveSettlement: settlementApi.approve,
+  rejectSettlement: settlementApi.reject,
+  createAgreement: settlementApi.createAgreement,
+  recordSettlementPayment: settlementApi.recordPayment,
+  getSettlementStatistics: settlementApi.getStatistics,
+};
+
+// Export default
+export default collectionApi;

@@ -65,8 +65,8 @@ export default function QuarterlyReportsPage() {
     queryKey: ['crilc-quarterly-returns', page],
     queryFn: () =>
       complianceService.getQuarterlyReturns({
-        skip: (page - 1) * 20,
-        limit: 20,
+        page: page,
+        page_size: 20,
       }),
     enabled: activeTab === 'crilc',
   })

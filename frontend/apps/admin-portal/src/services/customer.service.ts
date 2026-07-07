@@ -776,4 +776,5 @@ const customerService = {
   getCustomerLoansCount,
 };
 
+export { customerService };
 export default customerService;
