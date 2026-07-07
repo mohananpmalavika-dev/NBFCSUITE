@@ -31,8 +31,8 @@ export default function DepreciationPage() {
   const loadAssets = async () => {
     try {
       setLoading(true);
-      const data = await assetService.getAssets({ status: 'ACTIVE' });
-      setAssets(data.assets);
+      const response = await assetService.getAssets({ status: 'ACTIVE' });
+      setAssets(response.data.items);
     } catch (error) {
       toast({
         title: "Error",
@@ -46,11 +46,11 @@ export default function DepreciationPage() {
 
   const loadSchedule = async () => {
     try {
-      const data = await assetService.getDepreciationSchedule({
+      const response = await assetService.getDepreciationSchedule({
         financial_year: selectedYear,
         month: selectedMonth
       });
-      setSchedule(data.schedule);
+      setSchedule(response.data.schedule);
     } catch (error) {
       console.error('Failed to load schedule', error);
     }
