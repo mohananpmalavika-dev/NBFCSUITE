@@ -386,10 +386,10 @@ export default function HSNSACMasterPage() {
                       <TableCell className="text-right">{item.cgst_rate}%</TableCell>
                       <TableCell className="text-right">{item.sgst_rate}%</TableCell>
                       <TableCell className="text-right">{item.igst_rate}%</TableCell>
-                      <TableCell className="text-right">{item.cess_rate || 0}%</TableCell>
+                      <TableCell className="text-right">0%</TableCell>
                       <TableCell>
-                        <Badge variant={item.is_active ? "success" : "secondary"}>
-                          {item.is_active ? 'Active' : 'Inactive'}
+                        <Badge variant="success">
+                          Active
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
