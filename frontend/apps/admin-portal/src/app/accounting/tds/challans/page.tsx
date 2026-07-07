@@ -51,12 +51,14 @@ export default function TDSChallansPage() {
 
   const handleVerifyChallan = async (id: number) => {
     try {
-      await tdsService.updateChallan(id, { status: 'verified' });
+      // updateChallan method doesn't exist yet - placeholder
       toast({
-        title: "Success",
-        description: "Challan verified successfully"
+        title: "Not Implemented",
+        description: "Challan verification API endpoint needs to be implemented",
+        variant: "default"
       });
-      loadChallans();
+      // await tdsService.updateChallan(id, { status: 'verified' });
+      // loadChallans();
     } catch (error) {
       toast({
         title: "Error",
