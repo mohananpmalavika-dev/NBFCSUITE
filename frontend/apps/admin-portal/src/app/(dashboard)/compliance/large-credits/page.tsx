@@ -72,7 +72,7 @@ export default function LargeCreditsPage() {
     onSuccess: (result) => {
       toast({
         title: 'Large Credits Identified',
-        description: `Found ${result.total_large_credits} large credits. ${result.newly_identified} newly identified.`,
+        description: `Found ${result.data.total_large_credits} large credits. ${result.data.newly_identified} newly identified.`,
       })
       setIdentifyDialogOpen(false)
       queryClient.invalidateQueries({ queryKey: ['large-credits'] })
