@@ -79,10 +79,11 @@ export default function HSNSACMasterPage() {
 
     try {
       if (editingItem) {
-        await gstService.updateHSNSAC(editingItem.id, formData);
+        // TODO: Implement updateHSNSAC endpoint
+        // await gstService.updateHSNSAC(editingItem.id, formData);
         toast({
-          title: "Success",
-          description: "Code updated successfully"
+          title: "Info",
+          description: "Update endpoint not yet implemented"
         });
       } else {
         await gstService.createHSNSAC(formData);
