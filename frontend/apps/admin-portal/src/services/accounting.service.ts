@@ -83,6 +83,7 @@ export interface GSTTransaction {
   id: number
   transaction_number: string
   transaction_date: string
+  invoice_date?: string
   transaction_type: string
   party_name: string
   party_gstin?: string

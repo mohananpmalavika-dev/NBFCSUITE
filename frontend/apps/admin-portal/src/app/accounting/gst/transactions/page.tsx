@@ -293,11 +293,12 @@ export default function GSTTransactionsPage() {
                     transactions.map((transaction) => (
                       <TableRow key={transaction.id}>
                         <TableCell>
-                          {format(new Date(transaction.invoice_date), 'dd MMM yyyy')}
+                          {transaction.invoice_date ? format(new Date(transaction.invoice_date), 'dd MMM yyyy') : 
+                           format(new Date(transaction.transaction_date), 'dd MMM yyyy')}
                         </TableCell>
                         <TableCell className="font-medium">{transaction.invoice_number}</TableCell>
                         <TableCell>{getTypeBadge(transaction.transaction_type)}</TableCell>
-                        <TableCell>{getSupplyTypeBadge(transaction.supply_type)}</TableCell>
+                        <TableCell>{transaction.supply_type ? getSupplyTypeBadge(transaction.supply_type) : '-'}</TableCell>
                         <TableCell>{transaction.party_name}</TableCell>
                         <TableCell className="font-mono text-xs">{transaction.party_gstin}</TableCell>
                         <TableCell className="text-right">
