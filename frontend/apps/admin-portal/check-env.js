@@ -1,6 +1,7 @@
 /**
  * Build-time environment variable checker
  * Ensures NEXT_PUBLIC_API_URL is set during build
+ * Updated: 2026-07-07
  */
 
 console.log('=== Environment Variable Check ===')
