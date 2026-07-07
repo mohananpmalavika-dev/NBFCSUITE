@@ -123,7 +123,7 @@ export default function LargeCreditsPage() {
   ) || []
 
   if (isLoading) {
-    return <LargeCreditsSkele ton />
+    return <LargeCreditsSkeleton />
   }
 
   return (
@@ -368,7 +368,7 @@ export default function LargeCreditsPage() {
   )
 }
 
-function LargeCreditsSkele ton() {
+function LargeCreditsSkeleton() {
   return (
     <div className="space-y-6">
       <Skeleton className="h-12 w-96" />

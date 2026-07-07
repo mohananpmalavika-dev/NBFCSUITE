@@ -12,7 +12,6 @@ from fastapi import HTTPException, status
 
 from backend.shared.database.treasury_models import (
     CashPosition,
-    CashPositionStatus,
     TreasuryBankAccount
 )
 from .cash_position_schemas import (

@@ -238,6 +238,9 @@ class CashPosition(Base):
     reconciled_by = Column(Integer, nullable=True)
     reconciled_at = Column(DateTime, nullable=True)
     
+    # Status
+    status = Column(String(20), default="draft")  # draft, verified, finalized
+    
     # Notes
     notes = Column(Text, nullable=True)
     

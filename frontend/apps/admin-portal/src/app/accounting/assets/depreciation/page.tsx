@@ -388,8 +388,9 @@ export default function DepreciationPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-              </Table>
-            )}
+              </TableBody>
+            </Table>
+          )}
           </CardContent>
         </Card>
       )}
