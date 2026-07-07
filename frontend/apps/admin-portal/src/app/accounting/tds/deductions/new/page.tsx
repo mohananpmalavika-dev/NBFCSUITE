@@ -63,7 +63,7 @@ export default function NewTDSDeductionPage() {
         ...formData,
         section_id: section.id,
         section_code: section.section_code,
-        tds_rate: section.rate_percentage
+        tds_rate: section.tds_rate
       });
     }
   };
@@ -287,7 +287,7 @@ export default function NewTDSDeductionPage() {
                     <SelectContent>
                       {sections.map((section) => (
                         <SelectItem key={section.id} value={section.id.toString()}>
-                          {section.section_code} - {section.section_name} ({section.rate_percentage}%)
+                          {section.section_code} - {section.section_name} ({section.tds_rate}%)
                         </SelectItem>
                       ))}
                     </SelectContent>
