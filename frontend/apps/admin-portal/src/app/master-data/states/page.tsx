@@ -49,15 +49,6 @@ export default function StatesPage() {
       setLoading(false);
     }
   };
-    } catch (error) {
-      console.error("Error fetching states:", error);
-      // Show error toast
-      setData([]);
-      setTotalRecords(0);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Initial load
   useEffect(() => {
