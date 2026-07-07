@@ -123,12 +123,13 @@ export default function HSNSACMasterPage() {
     if (!confirm('Are you sure you want to delete this code?')) return;
     
     try {
-      await gstService.deleteHSNSAC(id);
+      // TODO: Implement deleteHSNSAC endpoint
+      // await gstService.deleteHSNSAC(id);
       toast({
-        title: "Success",
-        description: "Code deleted successfully"
+        title: "Info",
+        description: "Delete endpoint not yet implemented"
       });
-      loadItems();
+      // loadItems();
     } catch (error) {
       toast({
         title: "Error",
