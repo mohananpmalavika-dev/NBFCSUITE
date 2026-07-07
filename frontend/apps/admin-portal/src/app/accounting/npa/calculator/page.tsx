@@ -65,10 +65,8 @@ export default function ProvisioningCalculatorPage() {
         existing_provision: parseFloat(formData.existing_provision),
       })
 
-      if (response.success) {
-        setResult(response.data)
-        toast.success('Provisioning calculated successfully')
-      }
+      setResult(response.data)
+      toast.success('Provisioning calculated successfully')
     } catch (error: any) {
       toast.error(error.message || 'Failed to calculate provisioning')
     } finally {

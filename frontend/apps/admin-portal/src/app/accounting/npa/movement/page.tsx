@@ -46,10 +46,8 @@ export default function NPAMovementReportPage() {
         to_date: toDate,
       })
 
-      if (response.success) {
-        setReport(response.data)
-        toast.success('Movement report generated successfully')
-      }
+      setReport(response.data)
+      toast.success('Movement report generated successfully')
     } catch (error: any) {
       toast.error(error.message || 'Failed to generate report')
     } finally {

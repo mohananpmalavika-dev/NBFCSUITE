@@ -37,9 +37,7 @@ export default function NPAManagementPage() {
     try {
       setLoading(true)
       const response = await npaService.getNPASummary()
-      if (response.success) {
-        setSummary(response.data)
-      }
+      setSummary(response.data)
     } catch (error: any) {
       toast.error(error.message || 'Failed to load NPA summary')
     } finally {

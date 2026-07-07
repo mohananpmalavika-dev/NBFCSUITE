@@ -100,10 +100,8 @@ export default function ClassifyLoanPage() {
         is_written_off: formData.is_written_off,
       })
 
-      if (response.success) {
-        setResult(response.data)
-        toast.success('Classification completed')
-      }
+      setResult(response.data)
+      toast.success('Classification completed')
     } catch (error: any) {
       toast.error(error.message || 'Failed to classify asset')
     } finally {
