@@ -159,12 +159,13 @@ export default function MasterDataPage() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Category Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categories.map((category) => {
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Category Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {categories.map((category) => {
             const Icon = category.icon;
             const isExpanded = selectedCategory === category.id;
 
@@ -226,7 +227,7 @@ export default function MasterDataPage() {
                 )}
               </div>
             );
-            })}
+          })}
         </div>
 
         {/* Quick Actions */}
@@ -245,7 +246,7 @@ export default function MasterDataPage() {
               <MapPin className="w-5 h-5 text-purple-600" />
               <span className="text-sm font-medium text-gray-700">Export Data</span>
             </button>
-            </div>
+          </div>
         </div>
 
         {/* Info Box */}
@@ -264,7 +265,6 @@ export default function MasterDataPage() {
               </p>
             </div>
           </div>
-        </div>
         </div>
       </div>
     </DashboardLayout>
