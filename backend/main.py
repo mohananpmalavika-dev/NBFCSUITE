@@ -149,9 +149,17 @@ async def lifespan(app: FastAPI):
         logger.info(f"📊 Registered tables ({len(Base.metadata.tables)}): {list(Base.metadata.tables.keys())[:10]}...")
 
         async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            try:
+                await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+            except Exception as create_error:
+                # Ignore duplicate index/table errors - tables already exist
+                error_msg = str(create_error).lower()
+                if 'already exists' in error_msg or 'duplicate' in error_msg:
+                    logger.info("⚠️ Some tables/indexes already exist, skipping creation")
+                else:
+                    raise
             existing_tables = await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_table_names())
-        logger.info(f"✅ Database tables created successfully. Existing tables: {existing_tables}")
+        logger.info(f"✅ Database tables ready. Existing tables: {len(existing_tables)}")
         if "users" not in existing_tables:
             raise RuntimeError("Database created, but users table is still missing")
     except Exception as e:
