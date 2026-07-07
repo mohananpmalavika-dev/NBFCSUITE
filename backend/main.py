@@ -537,7 +537,14 @@ from backend.services.compliance.router import router as compliance_router
 
 # NEW: Treasury & Cash Management Router
 from backend.services.treasury.bank_account_router import router as treasury_bank_account_router
+from backend.services.treasury.cash_position_router import router as treasury_cash_position_router
+from backend.services.treasury.reconciliation_router import router as treasury_reconciliation_router
 from backend.services.treasury.alm_router import router as alm_router
+
+# NEW: Accounting Extended Routers (TDS & GST & Assets)
+from backend.services.accounting.tds_router import router as tds_router
+from backend.services.accounting.gst_router import router as gst_router
+from backend.services.accounting.asset_router import router as asset_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -553,6 +560,11 @@ app.include_router(customer_digilocker_router, prefix="/api/v1", tags=["DigiLock
 
 app.include_router(loan_router, prefix="/api/v1", tags=["Loans"])
 app.include_router(accounting_router, prefix="/api/v1", tags=["Accounting"])
+
+# Accounting Extended - TDS, GST & Assets
+app.include_router(tds_router, prefix="/api/v1/accounting/tds", tags=["Accounting - TDS"])
+app.include_router(gst_router, prefix="/api/v1/accounting/gst", tags=["Accounting - GST"])
+app.include_router(asset_router, prefix="/api/v1/accounting/assets", tags=["Accounting - Assets"])
 
 # Deposit Management Routers
 app.include_router(product_router, prefix="/api/v1", tags=["Deposit Products"])
@@ -632,6 +644,8 @@ app.include_router(compliance_router, prefix="/api/v1", tags=["Compliance & Regu
 # Bank Accounts, Cash Position, Reconciliation, Transfers, Liquidity, Investments, ALM
 # ============================================================================
 app.include_router(treasury_bank_account_router, prefix="/api/v1/treasury", tags=["Treasury - Bank Accounts"])
+app.include_router(treasury_cash_position_router, prefix="/api/v1/treasury", tags=["Treasury - Cash Position"])
+app.include_router(treasury_reconciliation_router, prefix="/api/v1/treasury", tags=["Treasury - Reconciliation"])
 app.include_router(alm_router, prefix="/api/v1/treasury", tags=["Treasury - ALM"])
 
 # Bank Statement Analysis (Perfios/FinBox)

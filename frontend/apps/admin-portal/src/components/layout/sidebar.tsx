@@ -17,7 +17,9 @@ import {
   Sparkles,
   Coins,
   Landmark,
-  Shield
+  Shield,
+  AlertTriangle,
+  Activity
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -32,6 +34,11 @@ const navigationItems = [
     title: 'Customers',
     href: '/customers',
     icon: Users,
+    children: [
+      { title: 'Dashboard', href: '/customers' },
+      { title: 'All Customers', href: '/customers/list' },
+      { title: 'New Customer', href: '/customers/create' },
+    ],
   },
   {
     title: 'Loans',
@@ -77,6 +84,7 @@ const navigationItems = [
       { title: 'Cash Position', href: '/treasury/cash-position' },
       { title: 'Reconciliation', href: '/treasury/reconciliation' },
       { title: 'Fund Transfers', href: '/treasury/fund-transfers' },
+      { title: 'ALM (Asset-Liability)', href: '/treasury/alm' },
     ],
   },
   {
@@ -95,6 +103,10 @@ const navigationItems = [
     children: [
       { title: 'Chart of Accounts', href: '/accounting/chart-of-accounts' },
       { title: 'Journal Entries', href: '/accounting/journal-entries' },
+      { title: 'TDS Management', href: '/accounting/tds' },
+      { title: 'GST Management', href: '/accounting/gst' },
+      { title: 'Asset Management', href: '/accounting/assets' },
+      { title: 'NPA Management', href: '/accounting/npa' },
       { title: 'Reports', href: '/accounting/reports' },
     ],
   },

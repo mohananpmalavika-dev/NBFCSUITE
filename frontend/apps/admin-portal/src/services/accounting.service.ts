@@ -569,3 +569,215 @@ export const assetService = {
     })
   },
 }
+
+
+// ============================================
+// ASSET MANAGEMENT TYPES & SERVICE
+// ============================================
+
+export type AssetCategory = 'LAND' | 'BUILDING' | 'PLANT_MACHINERY' | 'FURNITURE_FIXTURES' | 
+  'OFFICE_EQUIPMENT' | 'COMPUTERS' | 'VEHICLES' | 'SOFTWARE' | 'INTANGIBLE';
+
+export type DepreciationMethod = 'STRAIGHT_LINE' | 'WRITTEN_DOWN_VALUE';
+
+export type AssetStatus = 'ACTIVE' | 'UNDER_MAINTENANCE' | 'DISPOSED' | 'SOLD';
+
+export interface FixedAsset {
+  id: number;
+  asset_code: string;
+  asset_name: string;
+  description?: string;
+  category: AssetCategory;
+  purchase_date: string;
+  purchase_cost: number;
+  vendor_name?: string;
+  invoice_number?: string;
+  location?: string;
+  department?: string;
+  custodian?: string;
+  depreciation_method: DepreciationMethod;
+  depreciation_rate: number;
+  useful_life_years: number;
+  useful_life_months?: number;
+  salvage_value: number;
+  accumulated_depreciation: number;
+  written_down_value: number;
+  status: AssetStatus;
+  disposal_date?: string;
+  disposal_amount?: number;
+  gain_loss_on_disposal?: number;
+  last_depreciation_date?: string;
+  created_at: string;
+}
+
+export interface AssetCreate {
+  asset_name: string;
+  category: AssetCategory;
+  purchase_date: string;
+  purchase_cost: number;
+  depreciation_method: DepreciationMethod;
+  depreciation_rate: number;
+  useful_life_years: number;
+  useful_life_months?: number;
+  salvage_value?: number;
+  description?: string;
+  location?: string;
+  department?: string;
+  custodian?: string;
+  vendor_name?: string;
+  invoice_number?: string;
+}
+
+export interface DepreciationSchedule {
+  id: number;
+  asset_id: number;
+  depreciation_date: string;
+  financial_year: number;
+  month: number;
+  opening_wdv: number;
+  depreciation_amount: number;
+  accumulated_depreciation: number;
+  closing_wdv: number;
+  is_posted: boolean;
+}
+
+export interface AssetTransfer {
+  id: number;
+  asset_id: number;
+  transfer_number: string;
+  transfer_date: string;
+  from_location?: string;
+  from_department?: string;
+  to_location?: string;
+  to_department?: string;
+  transfer_reason?: string;
+}
+
+export interface AssetMaintenance {
+  id: number;
+  asset_id: number;
+  maintenance_date: string;
+  maintenance_type: string;
+  description: string;
+  maintenance_cost: number;
+  vendor_name?: string;
+  is_completed: boolean;
+}
+
+export const assetService = {
+  // Asset CRUD
+  async getAssets(params?: {
+    category?: AssetCategory;
+    status?: AssetStatus;
+    location?: string;
+    skip?: number;
+    limit?: number;
+  }): Promise<{ assets: FixedAsset[]; total: number }> {
+    const response = await apiClient.get('/accounting/assets/assets', { params });
+    return response.data;
+  },
+
+  async getAsset(id: number): Promise<FixedAsset> {
+    const response = await apiClient.get(`/accounting/assets/assets/${id}`);
+    return response.data;
+  },
+
+  async createAsset(data: AssetCreate): Promise<FixedAsset> {
+    const response = await apiClient.post('/accounting/assets/assets', data);
+    return response.data;
+  },
+
+  async updateAsset(id: number, data: Partial<AssetCreate>): Promise<FixedAsset> {
+    const response = await apiClient.put(`/accounting/assets/assets/${id}`, data);
+    return response.data;
+  },
+
+  // Depreciation
+  async calculateDepreciation(assetId: number, depreciationDate: string): Promise<{
+    asset_id: number;
+    asset_name: string;
+    opening_wdv: number;
+    depreciation_amount: number;
+    closing_wdv: number;
+    method: string;
+  }> {
+    const response = await apiClient.post(
+      `/accounting/assets/assets/depreciation/calculate/${assetId}`,
+      null,
+      { params: { depreciation_date: depreciationDate } }
+    );
+    return response.data;
+  },
+
+  async postDepreciation(data: {
+    asset_id: number;
+    depreciation_date: string;
+    journal_entry_id?: number;
+  }): Promise<DepreciationSchedule> {
+    const response = await apiClient.post('/accounting/assets/assets/depreciation/post', data);
+    return response.data;
+  },
+
+  async getDepreciationSchedule(params?: {
+    asset_id?: number;
+    financial_year?: number;
+    month?: number;
+  }): Promise<{ schedule: DepreciationSchedule[]; count: number }> {
+    const response = await apiClient.get('/accounting/assets/assets/depreciation/schedule', { params });
+    return response.data;
+  },
+
+  // Transfer
+  async transferAsset(data: {
+    asset_id: number;
+    to_location?: string;
+    to_department?: string;
+    to_custodian?: string;
+    transfer_reason?: string;
+  }): Promise<AssetTransfer> {
+    const response = await apiClient.post('/accounting/assets/assets/transfer', data);
+    return response.data;
+  },
+
+  // Disposal
+  async disposeAsset(data: {
+    asset_id: number;
+    disposal_date: string;
+    disposal_amount: number;
+    disposal_reason: string;
+  }): Promise<FixedAsset> {
+    const response = await apiClient.post('/accounting/assets/assets/dispose', data);
+    return response.data;
+  },
+
+  // Maintenance
+  async recordMaintenance(data: {
+    asset_id: number;
+    maintenance_date: string;
+    maintenance_type: string;
+    description: string;
+    cost: number;
+    vendor_name?: string;
+  }): Promise<AssetMaintenance> {
+    const response = await apiClient.post('/accounting/assets/assets/maintenance', data);
+    return response.data;
+  },
+
+  async getAssetMaintenance(assetId: number): Promise<{ maintenance: AssetMaintenance[]; count: number }> {
+    const response = await apiClient.get(`/accounting/assets/assets/${assetId}/maintenance`);
+    return response.data;
+  },
+
+  // Dashboard
+  async getDashboard(): Promise<{
+    total_assets: number;
+    total_value: number;
+    total_wdv: number;
+    total_depreciation: number;
+    status_breakdown: Record<string, number>;
+    category_breakdown: Array<{ category: string; count: number; value: number }>;
+  }> {
+    const response = await apiClient.get('/accounting/assets/assets/summary/dashboard');
+    return response.data;
+  },
+};
