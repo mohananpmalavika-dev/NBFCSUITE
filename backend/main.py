@@ -160,11 +160,16 @@ async def lifespan(app: FastAPI):
                     logger.info("✅ All tables dropped")
                 except Exception as drop_error:
                     logger.warning(f"Could not drop tables: {drop_error}")
+                    # Rollback the transaction to recover
+                    await conn.rollback()
             
             try:
                 await conn.run_sync(Base.metadata.create_all, checkfirst=True)
                 logger.info("✅ Tables created/verified")
             except Exception as create_error:
+                # Rollback the transaction first to recover from error state
+                await conn.rollback()
+                
                 # Ignore duplicate index/table errors - tables already exist
                 error_msg = str(create_error).lower()
                 if 'already exists' in error_msg or 'duplicate' in error_msg:
@@ -176,7 +181,9 @@ async def lifespan(app: FastAPI):
                     raise
                 else:
                     raise
-                    
+        
+        # Use a fresh connection to inspect tables after potential rollback
+        async with engine.connect() as conn:            
             existing_tables = await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_table_names())
             
         logger.info(f"✅ Database tables ready. Existing tables: {len(existing_tables)}")
