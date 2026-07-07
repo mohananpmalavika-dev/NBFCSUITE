@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 import asyncio
 import time
 import logging
+import os
 from pathlib import Path
 from typing import Dict, Any
 
@@ -148,17 +149,36 @@ async def lifespan(app: FastAPI):
         logger.info("🔄 Creating database tables...")
         logger.info(f"📊 Registered tables ({len(Base.metadata.tables)}): {list(Base.metadata.tables.keys())[:10]}...")
 
+        # Check if we should drop and recreate all tables (useful for schema changes on free hosting)
+        force_recreate = os.getenv("DROP_ALL_TABLES", "false").lower() == "true"
+        
         async with engine.begin() as conn:
+            if force_recreate:
+                logger.warning("⚠️ DROP_ALL_TABLES=true: Dropping all tables and recreating...")
+                try:
+                    await conn.run_sync(Base.metadata.drop_all)
+                    logger.info("✅ All tables dropped")
+                except Exception as drop_error:
+                    logger.warning(f"Could not drop tables: {drop_error}")
+            
             try:
                 await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+                logger.info("✅ Tables created/verified")
             except Exception as create_error:
                 # Ignore duplicate index/table errors - tables already exist
                 error_msg = str(create_error).lower()
                 if 'already exists' in error_msg or 'duplicate' in error_msg:
                     logger.info("⚠️ Some tables/indexes already exist, skipping creation")
+                elif 'cannot be implemented' in error_msg or 'incompatible types' in error_msg:
+                    # Schema mismatch - suggest dropping tables
+                    logger.error(f"❌ Schema mismatch detected: {create_error}")
+                    logger.error("💡 Set environment variable DROP_ALL_TABLES=true to recreate tables")
+                    raise
                 else:
                     raise
+                    
             existing_tables = await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_table_names())
+            
         logger.info(f"✅ Database tables ready. Existing tables: {len(existing_tables)}")
         if "users" not in existing_tables:
             raise RuntimeError("Database created, but users table is still missing")
