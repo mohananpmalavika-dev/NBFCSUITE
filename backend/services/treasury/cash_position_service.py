@@ -11,14 +11,14 @@ from sqlalchemy import func, and_, or_, desc
 from fastapi import HTTPException, status
 
 from backend.shared.database.treasury_models import (
-    CashPosition,
+    TreasuryTreasuryCashPosition,
     TreasuryBankAccount
 )
 from .cash_position_schemas import (
-    CashPositionCreate,
-    CashPositionUpdate,
-    CashPositionResponse,
-    CashPositionStatistics,
+    TreasuryCashPositionCreate,
+    TreasuryCashPositionUpdate,
+    TreasuryCashPositionResponse,
+    TreasuryCashPositionStatistics,
     BranchCashSummary,
     CashMovementSummary,
     CashAlertResponse,
@@ -27,7 +27,7 @@ from .cash_position_schemas import (
 )
 
 
-class CashPositionService:
+class TreasuryCashPositionService:
     """Service for cash position management"""
     
     def __init__(self, db: Session, tenant_id: int):
@@ -40,18 +40,18 @@ class CashPositionService:
     
     async def create_cash_position(
         self,
-        data: CashPositionCreate,
+        data: TreasuryCashPositionCreate,
         user_id: int
-    ) -> CashPosition:
+    ) -> TreasuryTreasuryCashPosition:
         """Create new cash position record"""
         
         # Check if position already exists for this date and branch
-        existing = self.db.query(CashPosition).filter(
+        existing = self.db.query(TreasuryTreasuryCashPosition).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == data.position_date,
-                CashPosition.branch_id == data.branch_id,
-                CashPosition.is_deleted == False
+                TreasuryTreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryTreasuryCashPosition.position_date == data.position_date,
+                TreasuryTreasuryCashPosition.branch_id == data.branch_id,
+                TreasuryTreasuryCashPosition.is_deleted == False
             )
         ).first()
         
@@ -71,7 +71,7 @@ class CashPositionService:
         )
         
         # Create position record
-        position = CashPosition(
+        position = TreasuryTreasuryCashPosition(
             tenant_id=self.tenant_id,
             position_date=data.position_date,
             branch_id=data.branch_id,
@@ -101,13 +101,13 @@ class CashPositionService:
         
         return position
     
-    async def get_cash_position(self, position_id: int) -> CashPosition:
+    async def get_cash_position(self, position_id: int) -> TreasuryTreasuryCashPosition:
         """Get cash position by ID"""
-        position = self.db.query(CashPosition).filter(
+        position = self.db.query(TreasuryTreasuryCashPosition).filter(
             and_(
-                CashPosition.id == position_id,
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.is_deleted == False
+                TreasuryTreasuryCashPosition.id == position_id,
+                TreasuryTreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryTreasuryCashPosition.is_deleted == False
             )
         ).first()
         
@@ -127,44 +127,44 @@ class CashPositionService:
         status_filter: Optional[str] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None
-    ) -> Tuple[List[CashPosition], int]:
+    ) -> Tuple[List[TreasuryTreasuryCashPosition], int]:
         """List cash positions with filters and pagination"""
         
-        query = self.db.query(CashPosition).filter(
+        query = self.db.query(TreasuryTreasuryCashPosition).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.is_deleted == False
+                TreasuryTreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryTreasuryCashPosition.is_deleted == False
             )
         )
         
         # Apply filters
         if branch_id:
-            query = query.filter(CashPosition.branch_id == branch_id)
+            query = query.filter(TreasuryTreasuryCashPosition.branch_id == branch_id)
         
         if status_filter:
-            query = query.filter(CashPosition.status == status_filter)
+            query = query.filter(TreasuryTreasuryCashPosition.status == status_filter)
         
         if start_date:
-            query = query.filter(CashPosition.position_date >= start_date)
+            query = query.filter(TreasuryTreasuryCashPosition.position_date >= start_date)
         
         if end_date:
-            query = query.filter(CashPosition.position_date <= end_date)
+            query = query.filter(TreasuryTreasuryCashPosition.position_date <= end_date)
         
         # Get total count
         total = query.count()
         
         # Apply pagination
         offset = (page - 1) * page_size
-        positions = query.order_by(desc(CashPosition.position_date)).offset(offset).limit(page_size).all()
+        positions = query.order_by(desc(TreasuryTreasuryCashPosition.position_date)).offset(offset).limit(page_size).all()
         
         return positions, total
     
     async def update_cash_position(
         self,
         position_id: int,
-        data: CashPositionUpdate,
+        data: TreasuryCashPositionUpdate,
         user_id: int
-    ) -> CashPosition:
+    ) -> TreasuryTreasuryCashPosition:
         """Update cash position"""
         position = await self.get_cash_position(position_id)
         
@@ -229,7 +229,7 @@ class CashPositionService:
         self,
         position_id: int,
         user_id: int
-    ) -> CashPosition:
+    ) -> TreasuryCashPosition:
         """Verify cash position"""
         position = await self.get_cash_position(position_id)
         
@@ -253,7 +253,7 @@ class CashPositionService:
         self,
         position_id: int,
         user_id: int
-    ) -> CashPosition:
+    ) -> TreasuryCashPosition:
         """Finalize cash position (cannot be changed after)"""
         position = await self.get_cash_position(position_id)
         
@@ -274,20 +274,20 @@ class CashPositionService:
     async def get_current_position(
         self,
         branch_id: Optional[int] = None
-    ) -> Optional[CashPosition]:
+    ) -> Optional[TreasuryCashPosition]:
         """Get current cash position for branch"""
         today = date.today()
         
-        query = self.db.query(CashPosition).filter(
+        query = self.db.query(TreasuryCashPosition).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == today,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == today,
+                TreasuryCashPosition.is_deleted == False
             )
         )
         
         if branch_id:
-            query = query.filter(CashPosition.branch_id == branch_id)
+            query = query.filter(TreasuryCashPosition.branch_id == branch_id)
         
         return query.first()
     
@@ -295,18 +295,18 @@ class CashPositionService:
         self,
         position_date: date,
         branch_id: Optional[int] = None
-    ) -> Optional[CashPosition]:
+    ) -> Optional[TreasuryCashPosition]:
         """Get cash position for specific date"""
-        query = self.db.query(CashPosition).filter(
+        query = self.db.query(TreasuryCashPosition).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == position_date,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == position_date,
+                TreasuryCashPosition.is_deleted == False
             )
         )
         
         if branch_id:
-            query = query.filter(CashPosition.branch_id == branch_id)
+            query = query.filter(TreasuryCashPosition.branch_id == branch_id)
         
         return query.first()
     
@@ -314,81 +314,81 @@ class CashPositionService:
     # Statistics & Reports
     # ============================================
     
-    async def get_statistics(self) -> CashPositionStatistics:
+    async def get_statistics(self) -> TreasuryCashPositionStatistics:
         """Get cash position statistics"""
         today = date.today()
         
         # Total cash on hand
         total_cash = self.db.query(
-            func.sum(CashPosition.closing_balance)
+            func.sum(TreasuryCashPosition.closing_balance)
         ).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == today,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == today,
+                TreasuryCashPosition.is_deleted == False
             )
         ).scalar() or Decimal(0)
         
         # Branch counts
         total_branches = self.db.query(
-            func.count(func.distinct(CashPosition.branch_id))
+            func.count(func.distinct(TreasuryCashPosition.branch_id))
         ).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == today,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == today,
+                TreasuryCashPosition.is_deleted == False
             )
         ).scalar() or 0
         
         # Low cash branches (< 50,000)
         low_cash_branches = self.db.query(
-            func.count(CashPosition.id)
+            func.count(TreasuryCashPosition.id)
         ).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == today,
-                CashPosition.closing_balance < 50000,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == today,
+                TreasuryCashPosition.closing_balance < 50000,
+                TreasuryCashPosition.is_deleted == False
             )
         ).scalar() or 0
         
         # High cash branches (> 500,000)
         high_cash_branches = self.db.query(
-            func.count(CashPosition.id)
+            func.count(TreasuryCashPosition.id)
         ).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == today,
-                CashPosition.closing_balance > 500000,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == today,
+                TreasuryCashPosition.closing_balance > 500000,
+                TreasuryCashPosition.is_deleted == False
             )
         ).scalar() or 0
         
         # Today's totals
         today_stats = self.db.query(
-            func.sum(CashPosition.cash_received),
-            func.sum(CashPosition.cash_paid),
-            func.sum(CashPosition.bank_deposit)
+            func.sum(TreasuryCashPosition.cash_received),
+            func.sum(TreasuryCashPosition.cash_paid),
+            func.sum(TreasuryCashPosition.bank_deposit)
         ).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == today,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == today,
+                TreasuryCashPosition.is_deleted == False
             )
         ).first()
         
         # Pending verification
         pending_verification = self.db.query(
-            func.count(CashPosition.id)
+            func.count(TreasuryCashPosition.id)
         ).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.status == "draft",
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.status == "draft",
+                TreasuryCashPosition.is_deleted == False
             )
         ).scalar() or 0
         
-        return CashPositionStatistics(
+        return TreasuryCashPositionStatistics(
             total_cash_on_hand=total_cash,
             total_branches=total_branches,
             branches_with_low_cash=low_cash_branches,
@@ -432,19 +432,19 @@ class CashPositionService:
         branch_id: Optional[int] = None
     ) -> List[CashMovementSummary]:
         """Get cash movement summary for date range"""
-        query = self.db.query(CashPosition).filter(
+        query = self.db.query(TreasuryCashPosition).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date >= start_date,
-                CashPosition.position_date <= end_date,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date >= start_date,
+                TreasuryCashPosition.position_date <= end_date,
+                TreasuryCashPosition.is_deleted == False
             )
         )
         
         if branch_id:
-            query = query.filter(CashPosition.branch_id == branch_id)
+            query = query.filter(TreasuryCashPosition.branch_id == branch_id)
         
-        positions = query.order_by(CashPosition.position_date).all()
+        positions = query.order_by(TreasuryCashPosition.position_date).all()
         
         summaries = []
         for pos in positions:
@@ -472,12 +472,12 @@ class CashPositionService:
         today = date.today()
         
         # Low cash alerts
-        low_cash = self.db.query(CashPosition).filter(
+        low_cash = self.db.query(TreasuryCashPosition).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == today,
-                CashPosition.closing_balance < 50000,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == today,
+                TreasuryCashPosition.closing_balance < 50000,
+                TreasuryCashPosition.is_deleted == False
             )
         ).all()
         
@@ -493,12 +493,12 @@ class CashPositionService:
             ))
         
         # High cash alerts
-        high_cash = self.db.query(CashPosition).filter(
+        high_cash = self.db.query(TreasuryCashPosition).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.position_date == today,
-                CashPosition.closing_balance > 500000,
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == today,
+                TreasuryCashPosition.closing_balance > 500000,
+                TreasuryCashPosition.is_deleted == False
             )
         ).all()
         
@@ -514,12 +514,12 @@ class CashPositionService:
             ))
         
         # Discrepancy alerts
-        discrepancy = self.db.query(CashPosition).filter(
+        discrepancy = self.db.query(TreasuryCashPosition).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.discrepancy_amount != 0,
-                CashPosition.status != "finalized",
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.discrepancy_amount != 0,
+                TreasuryCashPosition.status != "finalized",
+                TreasuryCashPosition.is_deleted == False
             )
         ).all()
         
@@ -535,11 +535,11 @@ class CashPositionService:
             ))
         
         # Pending verification
-        pending = self.db.query(CashPosition).filter(
+        pending = self.db.query(TreasuryCashPosition).filter(
             and_(
-                CashPosition.tenant_id == self.tenant_id,
-                CashPosition.status == "draft",
-                CashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.status == "draft",
+                TreasuryCashPosition.is_deleted == False
             )
         ).all()
         
@@ -562,7 +562,7 @@ class CashPositionService:
     
     async def bulk_create_positions(
         self,
-        positions: List[CashPositionCreate],
+        positions: List[TreasuryCashPositionCreate],
         user_id: int
     ) -> Tuple[List[int], List[Dict]]:
         """Bulk create cash positions"""

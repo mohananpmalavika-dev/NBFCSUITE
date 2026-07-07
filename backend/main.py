@@ -117,7 +117,7 @@ from backend.shared.database.compliance_models import (
 
 # 11. Treasury & Cash Management models (NEW - Treasury Module)
 from backend.shared.database.treasury_models import (
-    TreasuryBankAccount, CashPosition, BankStatement,
+    TreasuryBankAccount, TreasuryCashPosition, BankStatement,
     BankReconciliation, ReconciliationItem, FundTransfer,
     LiquidityPosition, Investment, InvestmentTransaction, CashFlowForecast
 )
@@ -133,6 +133,18 @@ from backend.shared.database.branch_models import (
     Organization, Branch, BranchDayOperation, BranchCounter,
     CashTransaction, CashDenomination, CashPosition,
     BranchPerformance, BranchTarget, BranchAuditLog
+)
+
+# 14. HRMS (Human Resource Management System) models (NEW - HRMS Module)
+from backend.shared.database.hrms_models import (
+    Organization as HRMSOrganization, Department, Designation, 
+    Employee, ReportingHierarchy
+)
+
+# 14. Risk Management models (NEW - Risk Management & Credit Policy Module)
+from backend.shared.database.risk_models import (
+    CreditPolicy, RiskPricingRule, ExposureLimit, ExposureTransaction,
+    RiskRating, EarlyWarningSignal, EarlyWarningAlert
 )
 
 # Configure logging
@@ -295,7 +307,12 @@ app = FastAPI(
         {"name": "Decision", "description": "Instant decision engine"},
         {"name": "Notifications", "description": "Multi-channel notifications"},
         {"name": "Compliance", "description": "RBI compliance and reporting"},
+        {"name": "Risk Management", "description": "Risk management and credit policy engine"},
         {"name": "File Upload", "description": "Document and file management"},
+        {"name": "HRMS - Employees", "description": "Employee management and master data"},
+        {"name": "HRMS - Departments", "description": "Department hierarchy and management"},
+        {"name": "HRMS - Designations", "description": "Job titles and designation management"},
+        {"name": "HRMS - Organizations", "description": "Organization/company entity management"},
     ]
 )
 
@@ -586,14 +603,28 @@ from backend.services.treasury.alm_router import router as alm_router
 
 # NEW: Branch & Operations Management Routers
 from backend.services.branch import (
-    organization_router, branch_router, day_operation_router, 
-    cash_router, performance_router
+    organization_router as branch_organization_router, 
+    branch_router, 
+    day_operation_router, 
+    cash_router, 
+    performance_router
 )
 
 # NEW: Accounting Extended Routers (TDS & GST & Assets)
 from backend.services.accounting.tds_router import router as tds_router
 from backend.services.accounting.gst_router import router as gst_router
 from backend.services.accounting.asset_router import router as asset_router
+
+# NEW: Risk Management & Credit Policy Router
+from backend.services.risk.router import router as risk_router
+
+# NEW: HRMS (Human Resource Management System) Routers
+from backend.services.hrms import (
+    employee_router, 
+    department_router, 
+    designation_router, 
+    organization_router as hrms_organization_router
+)
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -693,6 +724,12 @@ from backend.services.compliance.rbi_returns_router import router as rbi_returns
 app.include_router(rbi_returns_router, tags=["RBI Returns Automation"])
 
 # ============================================================================
+# NEW: RISK MANAGEMENT & CREDIT POLICY ROUTER
+# Credit Policies, Risk-Based Pricing, Exposure Limits, Risk Ratings, Early Warning Signals
+# ============================================================================
+app.include_router(risk_router, prefix="/api/v1", tags=["Risk Management"])
+
+# ============================================================================
 # NEW: TREASURY & CASH MANAGEMENT ROUTERS
 # Bank Accounts, Cash Position, Reconciliation, Transfers, Liquidity, Investments, ALM
 # ============================================================================
@@ -706,11 +743,20 @@ app.include_router(alm_router, prefix="/api/v1/treasury", tags=["Treasury - ALM"
 # NEW: BRANCH & OPERATIONS MANAGEMENT ROUTERS
 # Organizational Hierarchy, Day Operations, Cash Management, Performance Tracking
 # ============================================================================
-app.include_router(organization_router, prefix="/api/v1", tags=["Branch - Organizations"])
+app.include_router(branch_organization_router, prefix="/api/v1", tags=["Branch - Organizations"])
 app.include_router(branch_router, prefix="/api/v1", tags=["Branch - Branches"])
 app.include_router(day_operation_router, prefix="/api/v1", tags=["Branch - Day Operations"])
 app.include_router(cash_router, prefix="/api/v1", tags=["Branch - Cash Management"])
 app.include_router(performance_router, prefix="/api/v1", tags=["Branch - Performance"])
+
+# ============================================================================
+# NEW: HRMS (HUMAN RESOURCE MANAGEMENT SYSTEM) ROUTERS
+# Employee Master, Organization Structure, Department, Designation, Reporting Hierarchy
+# ============================================================================
+app.include_router(employee_router, prefix="/api/v1", tags=["HRMS - Employees"])
+app.include_router(department_router, prefix="/api/v1", tags=["HRMS - Departments"])
+app.include_router(designation_router, prefix="/api/v1", tags=["HRMS - Designations"])
+app.include_router(hrms_organization_router, prefix="/api/v1", tags=["HRMS - Organizations"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

@@ -186,7 +186,7 @@ class TreasuryBankAccount(Base):
     
     # Relationships
     gl_account = relationship("ChartOfAccounts")
-    cash_positions = relationship("CashPosition", back_populates="bank_account")
+    cash_positions = relationship("TreasuryCashPosition", back_populates="bank_account")
     bank_statements = relationship("BankStatement", back_populates="bank_account")
     reconciliations = relationship("BankReconciliation", back_populates="bank_account")
     
@@ -198,7 +198,7 @@ class TreasuryBankAccount(Base):
     )
 
 
-class CashPosition(Base):
+class TreasuryCashPosition(Base):
     """
     Daily Cash Position Tracking
     Records cash holdings across branches and bank accounts
