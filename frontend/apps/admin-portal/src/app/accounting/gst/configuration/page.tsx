@@ -23,6 +23,8 @@ export default function GSTConfigurationPage() {
     registration_date: '',
     state_code: '',
     state_name: '',
+    address: '',
+    pincode: '',
     business_type: 'regular',
     composition_scheme: false,
     is_active: true,
