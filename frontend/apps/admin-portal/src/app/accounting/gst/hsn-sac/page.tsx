@@ -113,8 +113,8 @@ export default function HSNSACMasterPage() {
       cgst_rate: item.cgst_rate,
       sgst_rate: item.sgst_rate,
       igst_rate: item.igst_rate,
-      cess_rate: item.cess_rate || 0,
-      is_active: item.is_active
+      cess_rate: 0, // Not in HSNSAC type, default to 0
+      is_active: true // Not in HSNSAC type, default to true
     });
     setIsDialogOpen(true);
   };
