@@ -171,7 +171,7 @@ export default function ComplianceAlertsPage() {
     return <ComplianceAlertsSkeleton />
   }
 
-  const alerts = data?.data?.items || []
+  const alerts = data?.items || []
 
   return (
     <div className="space-y-6">
@@ -365,10 +365,10 @@ export default function ComplianceAlertsPage() {
           </Table>
 
           {/* Pagination */}
-          {data && data.data && data.data.total > 20 && (
+          {data && data.total > 20 && (
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-muted-foreground">
-                Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, data.data.total)} of {data.data.total} alerts
+                Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, data.total)} of {data.total} alerts
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -383,7 +383,7 @@ export default function ComplianceAlertsPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setPage(page + 1)}
-                  disabled={page * 20 >= data.data.total}
+                  disabled={page * 20 >= data.total}
                 >
                   Next
                 </Button>
