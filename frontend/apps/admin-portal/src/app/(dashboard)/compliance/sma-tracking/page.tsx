@@ -57,8 +57,8 @@ export default function SMATrackingPage() {
     queryKey: ['sma-tracking', page, smaFilter],
     queryFn: () =>
       complianceService.getSMATracking({
-        skip: (page - 1) * 20,
-        limit: 20,
+        page: page,
+        page_size: 20,
         sma_status: smaFilter !== 'all' ? smaFilter : undefined,
       }),
   })

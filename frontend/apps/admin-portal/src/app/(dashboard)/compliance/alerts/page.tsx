@@ -64,8 +64,8 @@ export default function ComplianceAlertsPage() {
     queryKey: ['compliance-alerts', page, statusFilter, severityFilter],
     queryFn: () =>
       complianceService.getAlerts({
-        skip: (page - 1) * 20,
-        limit: 20,
+        page: page,
+        page_size: 20,
         status: statusFilter !== 'all' ? statusFilter : undefined,
         severity: severityFilter !== 'all' ? severityFilter : undefined,
       }),

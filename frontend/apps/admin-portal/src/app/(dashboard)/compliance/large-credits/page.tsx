@@ -59,8 +59,8 @@ export default function LargeCreditsPage() {
     queryKey: ['large-credits', page, smaFilter],
     queryFn: () =>
       complianceService.getBorrowers({
-        skip: (page - 1) * 20,
-        limit: 20,
+        page: page,
+        page_size: 20,
         is_large_credit: true,
         sma_status: smaFilter !== 'all' ? smaFilter : undefined,
       }),
