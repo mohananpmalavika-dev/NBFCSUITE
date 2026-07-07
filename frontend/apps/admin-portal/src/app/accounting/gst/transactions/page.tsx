@@ -38,7 +38,8 @@ export default function GSTTransactionsPage() {
       if (filters.transaction_type !== 'all') {
         params.transaction_type = filters.transaction_type;
       }
-      const data = await gstService.getTransactions(params);
+      const response = await gstService.getTransactions(params);
+      const data = response.data.items || [];
       
       // Client-side search filter
       let filtered = data;

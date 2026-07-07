@@ -85,9 +85,18 @@ export interface GSTTransaction {
   transaction_date: string
   transaction_type: string
   party_name: string
+  party_gstin?: string
+  invoice_number?: string
   taxable_amount: number
+  cgst_amount: number
+  sgst_amount: number
+  igst_amount: number
+  cess_amount?: number
   total_gst: number
   total_amount: number
+  supply_type?: string
+  place_of_supply?: string
+  is_reverse_charge?: boolean
 }
 
 export interface HSNSAC {
