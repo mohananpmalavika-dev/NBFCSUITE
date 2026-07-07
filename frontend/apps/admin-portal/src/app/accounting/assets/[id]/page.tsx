@@ -59,7 +59,7 @@ export default function AssetDetailsPage() {
   const loadAsset = async () => {
     try {
       setLoading(true);
-      const data = await assetService.getAsset(assetId);
+      const data = await assetService.getAsset(assetId.toString());
       setAsset(data);
     } catch (error) {
       toast({
@@ -74,7 +74,7 @@ export default function AssetDetailsPage() {
 
   const loadDepreciationSchedule = async () => {
     try {
-      const data = await assetService.getDepreciationSchedule({ asset_id: assetId });
+      const data = await assetService.getDepreciationSchedule({ asset_id: assetId.toString() });
       setSchedule(data.schedule);
     } catch (error) {
       console.error('Failed to load depreciation schedule', error);
@@ -83,7 +83,7 @@ export default function AssetDetailsPage() {
 
   const loadMaintenance = async () => {
     try {
-      const data = await assetService.getAssetMaintenance(assetId);
+      const data = await assetService.getMaintenanceHistory(assetId.toString());
       setMaintenance(data.maintenance);
     } catch (error) {
       console.error('Failed to load maintenance records', error);
@@ -93,10 +93,7 @@ export default function AssetDetailsPage() {
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await assetService.transferAsset({
-        asset_id: assetId,
-        ...transferData
-      });
+      await assetService.transferAsset(assetId.toString(), transferData);
       toast({
         title: "Success",
         description: "Asset transferred successfully"
@@ -115,10 +112,7 @@ export default function AssetDetailsPage() {
   const handleMaintenance = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await assetService.recordMaintenance({
-        asset_id: assetId,
-        ...maintenanceData
-      });
+      await assetService.recordMaintenance(assetId.toString(), maintenanceData);
       toast({
         title: "Success",
         description: "Maintenance recorded successfully"
@@ -139,10 +133,7 @@ export default function AssetDetailsPage() {
     if (!confirm('Are you sure you want to dispose this asset? This action cannot be undone.')) return;
 
     try {
-      await assetService.disposeAsset({
-        asset_id: assetId,
-        ...disposeData
-      });
+      await assetService.disposeAsset(assetId.toString(), disposeData);
       toast({
         title: "Success",
         description: "Asset disposed successfully"
