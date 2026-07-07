@@ -392,7 +392,6 @@ export default function DepreciationPage() {
           )}
           </CardContent>
         </Card>
-      )}
 
       {/* Information */}
       <Card>
