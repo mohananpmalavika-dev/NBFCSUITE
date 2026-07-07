@@ -145,52 +145,52 @@ async def lifespan(app: FastAPI):
     logger.info(f"Multi-tenant: {settings.TENANT_ISOLATION_ENABLED}")
     
     # Force create all tables on startup (simple approach for free hosting)
-    try:
-        logger.info("🔄 Creating database tables...")
-        logger.info(f"📊 Registered tables ({len(Base.metadata.tables)}): {list(Base.metadata.tables.keys())[:10]}...")
+    logger.info("🔄 Creating database tables...")
+    logger.info(f"📊 Registered tables ({len(Base.metadata.tables)}): {list(Base.metadata.tables.keys())[:10]}...")
 
-        # Check if we should drop and recreate all tables (useful for schema changes on free hosting)
-        force_recreate = os.getenv("DROP_ALL_TABLES", "false").lower() == "true"
-        
-        async with engine.begin() as conn:
-            if force_recreate:
-                logger.warning("⚠️ DROP_ALL_TABLES=true: Dropping all tables and recreating...")
-                try:
-                    await conn.run_sync(Base.metadata.drop_all)
-                    logger.info("✅ All tables dropped")
-                except Exception as drop_error:
-                    logger.warning(f"Could not drop tables: {drop_error}")
-                    # Rollback the transaction to recover
-                    await conn.rollback()
-            
-            try:
+    # Check if we should drop and recreate all tables (useful for schema changes on free hosting)
+    force_recreate = os.getenv("DROP_ALL_TABLES", "false").lower() == "true"
+    
+    if force_recreate:
+        logger.warning("⚠️ DROP_ALL_TABLES=true: Dropping all tables and recreating...")
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.drop_all)
+                logger.info("✅ All tables dropped")
+        except Exception as drop_error:
+            logger.warning(f"Could not drop tables: {drop_error}")
+    
+    # Create tables - use connect() with manual transaction control for better error handling
+    try:
+        async with engine.connect() as conn:
+            async with conn.begin():
                 await conn.run_sync(Base.metadata.create_all, checkfirst=True)
                 logger.info("✅ Tables created/verified")
-            except Exception as create_error:
-                # Rollback the transaction first to recover from error state
-                await conn.rollback()
-                
-                # Ignore duplicate index/table errors - tables already exist
-                error_msg = str(create_error).lower()
-                if 'already exists' in error_msg or 'duplicate' in error_msg:
-                    logger.info("⚠️ Some tables/indexes already exist, skipping creation")
-                elif 'cannot be implemented' in error_msg or 'incompatible types' in error_msg:
-                    # Schema mismatch - suggest dropping tables
-                    logger.error(f"❌ Schema mismatch detected: {create_error}")
-                    logger.error("💡 Set environment variable DROP_ALL_TABLES=true to recreate tables")
-                    raise
-                else:
-                    raise
-        
-        # Use a fresh connection to inspect tables after potential rollback
+    except Exception as create_error:
+        # Ignore duplicate index/table errors - tables already exist
+        error_msg = str(create_error).lower()
+        if 'already exists' in error_msg or 'duplicate' in error_msg:
+            logger.info("⚠️ Some tables/indexes already exist, skipping creation (this is normal)")
+        elif 'cannot be implemented' in error_msg or 'incompatible types' in error_msg:
+            # Schema mismatch - suggest dropping tables
+            logger.error(f"❌ Schema mismatch detected: {create_error}")
+            logger.error("💡 Set environment variable DROP_ALL_TABLES=true to recreate tables")
+            raise
+        else:
+            logger.error(f"❌ Unexpected error creating tables: {create_error}")
+            raise
+    
+    # Verify tables exist
+    try:
         async with engine.connect() as conn:            
             existing_tables = await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_table_names())
             
         logger.info(f"✅ Database tables ready. Existing tables: {len(existing_tables)}")
         if "users" not in existing_tables:
+            logger.error("❌ Database created, but users table is still missing")
             raise RuntimeError("Database created, but users table is still missing")
     except Exception as e:
-        logger.error(f"❌ Failed to create tables: {e}")
+        logger.error(f"❌ Failed to verify tables: {e}")
         import traceback
         logger.error(traceback.format_exc())
         raise
