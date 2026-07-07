@@ -80,7 +80,7 @@ export default function NewGSTTransactionPage() {
       // TODO: Get GSTIN from user's organization settings or allow user to select
       // For now, configuration will not be loaded automatically
       // const config = await gstService.getConfiguration(gstin);
-      setHsnSacCodes(codes.filter((c: HSNSAC) => c.is_active));
+      setHsnSacCodes(codes);
       
       toast({
         title: "Info",
