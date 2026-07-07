@@ -55,10 +55,9 @@ export default function BatchClassificationPage() {
       clearInterval(progressInterval)
       setProgress(100)
 
-      if (response.success) {
-        setResult(response.data)
-        toast.success('Batch classification completed successfully')
-      }
+      // Axios responses are successful if no error was thrown
+      setResult(response.data)
+      toast.success('Batch classification completed successfully')
     } catch (error: any) {
       toast.error(error.message || 'Failed to run batch classification')
       setProgress(0)
