@@ -3,7 +3,7 @@
  * Complete service layer for customer management operations
  */
 
-import { apiClient } from "./api-client";
+import { apiClient } from "@/lib/api/client";
 import type {
   Customer,
   CustomerCreate,

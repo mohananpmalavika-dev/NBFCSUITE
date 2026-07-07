@@ -2,7 +2,7 @@
  * ALM Service - API calls for Asset Liability Management
  */
 
-import api from '@/lib/api';
+import api from '@/lib/api/client';
 import type {
   MaturityLadderEntry,
   MaturityLadderCreate,

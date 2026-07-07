@@ -262,7 +262,7 @@ export const tdsService = {
     from_date?: string
     to_date?: string
   }) {
-    return apiClient.get<Pag inatedResponse<TDSDeduction>>('/accounting/tds/deductions', { params })
+    return apiClient.get<PaginatedResponse<TDSDeduction>>('/accounting/tds/deductions', { params })
   },
 
   async recordDeduction(data: {
