@@ -224,19 +224,19 @@ export default function TDSChallansPage() {
             <div>
               <p className="text-sm text-muted-foreground">Total Paid</p>
               <p className="text-2xl font-bold">
-                ₹{challans.reduce((sum, c) => sum + c.amount_paid, 0).toLocaleString('en-IN')}
+                ₹{challans.reduce((sum, c) => sum + c.total_tds_amount, 0).toLocaleString('en-IN')}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Verified</p>
               <p className="text-2xl font-bold text-green-600">
-                {challans.filter(c => c.status === 'verified').length}
+                {challans.filter(c => c.payment_status === 'verified').length}
               </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Pending Verification</p>
               <p className="text-2xl font-bold text-orange-600">
-                {challans.filter(c => c.status === 'paid').length}
+                {challans.filter(c => c.payment_status === 'paid').length}
               </p>
             </div>
           </div>
