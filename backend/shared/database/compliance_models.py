@@ -445,7 +445,7 @@ class ComplianceAlert(BaseModel):
     
     # Reference
     borrower_id = Column(UUID(as_uuid=True), ForeignKey("crilc_borrowers.id"), index=True)
-    loan_account_id = Column(UUID(as_uuid=True), ForeignKey("loan_accounts.id"), index=True)
+    loan_account_id = Column(Integer, ForeignKey("loan_accounts.id"), index=True)
     
     # Alert Message
     alert_message = Column(Text, nullable=False)
