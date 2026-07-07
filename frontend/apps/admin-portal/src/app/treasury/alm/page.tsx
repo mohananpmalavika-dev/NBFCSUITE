@@ -41,9 +41,7 @@ export default function ALMDashboardPage() {
     try {
       setLoading(true)
       const response = await almService.getDashboard(asOfDate)
-      if (response.success) {
-        setDashboard(response.data)
-      }
+      setDashboard(response.data)
     } catch (error: any) {
       toast.error(error.message || 'Failed to load dashboard')
       // Mock data for demonstration

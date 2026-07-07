@@ -39,10 +39,8 @@ export default function RBINPAReturnPage() {
       setLoading(true)
       const response = await npaService.getRBINPAReturn(asOfDate)
 
-      if (response.success) {
-        setReturnData(response.data)
-        toast.success('RBI return generated successfully')
-      }
+      setReturnData(response.data)
+      toast.success('RBI return generated successfully')
     } catch (error: any) {
       toast.error(error.message || 'Failed to generate return')
       // Mock data for demonstration

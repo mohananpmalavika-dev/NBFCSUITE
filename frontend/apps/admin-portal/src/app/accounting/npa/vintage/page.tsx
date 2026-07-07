@@ -107,10 +107,8 @@ export default function VintageAnalysisPage() {
         cohort_by: cohortBy,
       })
 
-      if (response.success) {
-        setCohorts(response.data.cohorts || MOCK_COHORTS)
-        toast.success('Vintage analysis generated')
-      }
+      setCohorts(response.data.cohorts || MOCK_COHORTS)
+      toast.success('Vintage analysis generated')
     } catch (error: any) {
       toast.error(error.message || 'Failed to generate analysis')
       setCohorts(MOCK_COHORTS)

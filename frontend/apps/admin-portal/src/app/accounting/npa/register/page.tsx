@@ -66,9 +66,7 @@ export default function AssetClassificationRegisterPage() {
         category_filter: categoryFilter || undefined,
       })
 
-      if (response.success) {
-        setRegister(response.data)
-      }
+      setRegister(response.data)
     } catch (error: any) {
       toast.error(error.message || 'Failed to load register')
     } finally {

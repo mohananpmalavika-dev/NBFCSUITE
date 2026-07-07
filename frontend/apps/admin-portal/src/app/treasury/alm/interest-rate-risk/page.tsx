@@ -32,10 +32,8 @@ export default function InterestRateRiskPage() {
     try {
       setLoading(true)
       const response = await almService.getInterestRateRisk(reportDate)
-      if (response.success) {
-        setScenarios(response.data || MOCK_SCENARIOS)
-        toast.success('Interest rate risk analyzed')
-      }
+      setScenarios(response.data || MOCK_SCENARIOS)
+      toast.success('Interest rate risk analyzed')
     } catch (error: any) {
       toast.error(error.message || 'Failed to analyze')
       setScenarios(MOCK_SCENARIOS)

@@ -38,10 +38,8 @@ export default function ProvisioningCoverageRatioPage() {
       setLoading(true)
       const response = await npaService.getProvisioningCoverageRatio(asOfDate)
 
-      if (response.success) {
-        setPcrData(response.data)
-        toast.success('PCR calculated successfully')
-      }
+      setPcrData(response.data)
+      toast.success('PCR calculated successfully')
     } catch (error: any) {
       toast.error(error.message || 'Failed to calculate PCR')
       // Mock data for demonstration
