@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { gstService, type GSTInputCredit } from '@/services/accounting.service';
+import { gstService } from '@/services/accounting.service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { Search, Download, CheckCircle, XCircle, AlertTriangle } from 'lucide-re
 import { format } from 'date-fns';
 
 export default function ITCPage() {
-  const [itcRecords, setItcRecords] = useState<GSTInputCredit[]>([]);
+  const [itcRecords, setItcRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     search: '',
@@ -38,14 +38,14 @@ export default function ITCPage() {
       // Client-side filters
       let filtered = data;
       if (filters.search) {
-        filtered = data.filter((itc: GSTInputCredit) => 
+        filtered = data.filter((itc: any) => 
           itc.supplier_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
           itc.supplier_gstin?.toLowerCase().includes(filters.search.toLowerCase()) ||
           itc.invoice_number?.toLowerCase().includes(filters.search.toLowerCase())
         );
       }
       if (filters.eligibility !== 'all') {
-        filtered = filtered.filter((itc: GSTInputCredit) => itc.eligibility_status === filters.eligibility);
+        filtered = filtered.filter((itc: any) => itc.eligibility_status === filters.eligibility);
       }
       
       setItcRecords(filtered);
