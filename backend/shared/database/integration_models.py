@@ -11,8 +11,10 @@ Includes:
 """
 
 from sqlalchemy import Column, Integer, String, Date, DateTime, Boolean, JSON, DECIMAL, Text, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
+import uuid
 
 from .connection import Base
 
@@ -21,9 +23,9 @@ class BureauReport(Base):
     """Bureau Credit Reports"""
     __tablename__ = "bureau_reports"
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    customer_id = Column(Integer, ForeignKey('customers.id'), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(String(50), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False, index=True)
     
     # Bureau Information
     bureau_name = Column(String(50), nullable=False, index=True)  # CIBIL, Equifax, Experian, CRIF
@@ -39,8 +41,8 @@ class BureauReport(Base):
     report_pdf_url = Column(String(500))  # PDF report URL
     
     # Metadata
-    consent_id = Column(Integer, ForeignKey('bureau_consents.id'))
-    pulled_by = Column(Integer)  # User ID who pulled the report
+    consent_id = Column(UUID(as_uuid=True), ForeignKey('bureau_consents.id'))
+    pulled_by = Column(UUID(as_uuid=True))  # User ID who pulled the report
     pulled_at = Column(DateTime, default=datetime.utcnow)
     
     # Analysis
@@ -61,9 +63,9 @@ class BureauConsent(Base):
     """Bureau Consent Management"""
     __tablename__ = "bureau_consents"
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    customer_id = Column(Integer, ForeignKey('customers.id'), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(String(50), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False, index=True)
     
     # Consent Details
     consent_type = Column(String(50))  # credit_report, monitoring, etc.
@@ -93,10 +95,10 @@ class BankStatementAnalysis(Base):
     """Bank Statement Analysis Results"""
     __tablename__ = "bank_statement_analyses"
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    customer_id = Column(Integer, ForeignKey('customers.id'), nullable=False, index=True)
-    application_id = Column(Integer, ForeignKey('loan_applications.id'), index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(String(50), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False, index=True)
+    application_id = Column(UUID(as_uuid=True), ForeignKey('loan_applications.id'), index=True)
     
     # Bank Information
     bank_name = Column(String(200))
@@ -166,10 +168,10 @@ class DocumentOCRResult(Base):
     """OCR Processing Results"""
     __tablename__ = "document_ocr_results"
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    customer_id = Column(Integer, ForeignKey('customers.id'), index=True)
-    document_id = Column(Integer, ForeignKey('customer_documents.id'), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(String(50), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), index=True)
+    document_id = Column(UUID(as_uuid=True), ForeignKey('customer_documents.id'), nullable=False, index=True)
     
     # Document Information
     document_type = Column(String(100))  # Aadhaar, PAN, DL, Passport, etc.
@@ -229,9 +231,9 @@ class EKYCRecord(Base):
     """eKYC Verification Records"""
     __tablename__ = "ekyc_records"
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    customer_id = Column(Integer, ForeignKey('customers.id'), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(String(50), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False, index=True)
     
     # eKYC Type
     kyc_type = Column(String(50))  # aadhaar_otp, aadhaar_biometric, digilocker
@@ -273,9 +275,9 @@ class DigiLockerDocument(Base):
     """DigiLocker Fetched Documents"""
     __tablename__ = "digilocker_documents"
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    customer_id = Column(Integer, ForeignKey('customers.id'), nullable=False, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(String(50), nullable=False, index=True)
+    customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False, index=True)
     
     # DigiLocker Information
     digilocker_id = Column(String(100))  # DigiLocker document ID
