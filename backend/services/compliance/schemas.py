@@ -388,6 +388,612 @@ class SMADashboardStats(BaseModel):
     total_accounts: int
     standard_count: int
     standard_amount: Decimal
+
+
+# ============================================================================
+# RBI RETURNS AUTOMATION SCHEMAS
+# ============================================================================
+
+# ============================================================================
+# RBI RETURN MASTER SCHEMAS
+# ============================================================================
+
+class RBIReturnMasterCreate(BaseModel):
+    return_code: str = Field(..., max_length=50)
+    return_name: str = Field(..., max_length=300)
+    return_type: str
+    description: Optional[str] = None
+    applicable_to: Optional[List[str]] = None
+    is_mandatory: bool = True
+    effective_from: Optional[date] = None
+    effective_to: Optional[date] = None
+    frequency: str
+    due_day_of_month: Optional[int] = None
+    due_days_after_period: Optional[int] = None
+    grace_period_days: int = 0
+    file_formats: Optional[List[str]] = None
+    has_xbrl: bool = False
+    xbrl_taxonomy: Optional[str] = None
+    submission_portal: Optional[str] = None
+    submission_method: Optional[str] = None
+    validation_rules: Optional[Dict[str, Any]] = None
+
+
+class RBIReturnMasterUpdate(BaseModel):
+    return_name: Optional[str] = None
+    description: Optional[str] = None
+    applicable_to: Optional[List[str]] = None
+    is_mandatory: Optional[bool] = None
+    effective_to: Optional[date] = None
+    frequency: Optional[str] = None
+    due_day_of_month: Optional[int] = None
+    due_days_after_period: Optional[int] = None
+    grace_period_days: Optional[int] = None
+    file_formats: Optional[List[str]] = None
+    has_xbrl: Optional[bool] = None
+    submission_portal: Optional[str] = None
+    submission_method: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class RBIReturnMasterResponse(BaseModel):
+    id: UUID
+    tenant_id: str
+    return_code: str
+    return_name: str
+    return_type: str
+    description: Optional[str]
+    applicable_to: Optional[List[str]]
+    is_mandatory: bool
+    effective_from: Optional[date]
+    effective_to: Optional[date]
+    frequency: str
+    due_day_of_month: Optional[int]
+    due_days_after_period: Optional[int]
+    grace_period_days: int
+    file_formats: Optional[List[str]]
+    has_xbrl: bool
+    xbrl_taxonomy: Optional[str]
+    submission_portal: Optional[str]
+    submission_method: Optional[str]
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# NBS-7 RETURN SCHEMAS
+# ============================================================================
+
+class NBS7ReturnCreate(BaseModel):
+    return_master_id: Optional[UUID] = None
+    reporting_period: str = Field(..., max_length=20)
+    period_start_date: date
+    period_end_date: date
+    as_on_date: date
+    financial_year: str = Field(..., max_length=10)
+    quarter: Optional[str] = Field(None, max_length=5)
+    
+    # Asset Side Data
+    term_loans: Decimal = Field(default=0, ge=0)
+    hire_purchase: Decimal = Field(default=0, ge=0)
+    leasing: Decimal = Field(default=0, ge=0)
+    bills_discounted: Decimal = Field(default=0, ge=0)
+    other_loans: Decimal = Field(default=0, ge=0)
+    
+    provision_standard_assets: Decimal = Field(default=0, ge=0)
+    provision_npa: Decimal = Field(default=0, ge=0)
+    
+    government_securities: Decimal = Field(default=0, ge=0)
+    corporate_bonds: Decimal = Field(default=0, ge=0)
+    mutual_funds: Decimal = Field(default=0, ge=0)
+    shares_equity: Decimal = Field(default=0, ge=0)
+    other_investments: Decimal = Field(default=0, ge=0)
+    
+    fixed_assets_gross: Decimal = Field(default=0, ge=0)
+    accumulated_depreciation: Decimal = Field(default=0, ge=0)
+    
+    cash_bank_balances: Decimal = Field(default=0, ge=0)
+    other_assets: Decimal = Field(default=0, ge=0)
+    
+    # Liability Side Data
+    share_capital: Decimal = Field(default=0, ge=0)
+    reserves_surplus: Decimal = Field(default=0)
+    
+    bank_borrowings: Decimal = Field(default=0, ge=0)
+    debentures: Decimal = Field(default=0, ge=0)
+    commercial_paper: Decimal = Field(default=0, ge=0)
+    subordinated_debt: Decimal = Field(default=0, ge=0)
+    other_borrowings: Decimal = Field(default=0, ge=0)
+    
+    public_deposits: Decimal = Field(default=0, ge=0)
+    
+    other_liabilities: Decimal = Field(default=0, ge=0)
+    provisions_liabilities: Decimal = Field(default=0, ge=0)
+    
+    # Income Statement Data
+    interest_income: Decimal = Field(default=0, ge=0)
+    other_income: Decimal = Field(default=0, ge=0)
+    
+    interest_expenditure: Decimal = Field(default=0, ge=0)
+    operating_expenses: Decimal = Field(default=0, ge=0)
+    provisions_write_offs: Decimal = Field(default=0, ge=0)
+    
+    tax_provision: Decimal = Field(default=0, ge=0)
+    
+    # NPA & Prudential Data
+    gross_npa: Decimal = Field(default=0, ge=0)
+    net_npa: Decimal = Field(default=0, ge=0)
+    
+    tier1_capital: Decimal = Field(default=0, ge=0)
+    tier2_capital: Decimal = Field(default=0, ge=0)
+    risk_weighted_assets: Decimal = Field(default=0, ge=0)
+    
+    sectoral_deployment: Optional[Dict[str, Any]] = None
+    geographic_distribution: Optional[Dict[str, Any]] = None
+    detailed_data: Optional[Dict[str, Any]] = None
+    
+    remarks: Optional[str] = None
+    internal_notes: Optional[str] = None
+
+
+class NBS7ReturnUpdate(BaseModel):
+    term_loans: Optional[Decimal] = None
+    hire_purchase: Optional[Decimal] = None
+    leasing: Optional[Decimal] = None
+    bills_discounted: Optional[Decimal] = None
+    other_loans: Optional[Decimal] = None
+    
+    provision_standard_assets: Optional[Decimal] = None
+    provision_npa: Optional[Decimal] = None
+    
+    government_securities: Optional[Decimal] = None
+    corporate_bonds: Optional[Decimal] = None
+    mutual_funds: Optional[Decimal] = None
+    shares_equity: Optional[Decimal] = None
+    other_investments: Optional[Decimal] = None
+    
+    fixed_assets_gross: Optional[Decimal] = None
+    accumulated_depreciation: Optional[Decimal] = None
+    
+    cash_bank_balances: Optional[Decimal] = None
+    other_assets: Optional[Decimal] = None
+    
+    share_capital: Optional[Decimal] = None
+    reserves_surplus: Optional[Decimal] = None
+    
+    bank_borrowings: Optional[Decimal] = None
+    debentures: Optional[Decimal] = None
+    commercial_paper: Optional[Decimal] = None
+    subordinated_debt: Optional[Decimal] = None
+    other_borrowings: Optional[Decimal] = None
+    
+    public_deposits: Optional[Decimal] = None
+    
+    other_liabilities: Optional[Decimal] = None
+    provisions_liabilities: Optional[Decimal] = None
+    
+    interest_income: Optional[Decimal] = None
+    other_income: Optional[Decimal] = None
+    
+    interest_expenditure: Optional[Decimal] = None
+    operating_expenses: Optional[Decimal] = None
+    provisions_write_offs: Optional[Decimal] = None
+    
+    tax_provision: Optional[Decimal] = None
+    
+    gross_npa: Optional[Decimal] = None
+    net_npa: Optional[Decimal] = None
+    
+    tier1_capital: Optional[Decimal] = None
+    tier2_capital: Optional[Decimal] = None
+    risk_weighted_assets: Optional[Decimal] = None
+    
+    sectoral_deployment: Optional[Dict[str, Any]] = None
+    geographic_distribution: Optional[Dict[str, Any]] = None
+    detailed_data: Optional[Dict[str, Any]] = None
+    
+    remarks: Optional[str] = None
+    internal_notes: Optional[str] = None
+
+
+class NBS7ReturnResponse(BaseModel):
+    id: UUID
+    tenant_id: str
+    return_number: str
+    return_master_id: Optional[UUID]
+    reporting_period: str
+    period_start_date: date
+    period_end_date: date
+    as_on_date: date
+    financial_year: str
+    quarter: Optional[str]
+    status: str
+    
+    # Calculated Totals
+    total_loans: Decimal
+    total_provisions: Decimal
+    net_loans_advances: Decimal
+    total_investments: Decimal
+    fixed_assets_net: Decimal
+    total_assets: Decimal
+    
+    total_capital_reserves: Decimal
+    total_borrowings: Decimal
+    public_deposits: Decimal
+    total_liabilities: Decimal
+    
+    total_income: Decimal
+    total_expenditure: Decimal
+    profit_before_tax: Decimal
+    profit_after_tax: Decimal
+    
+    gross_npa: Decimal
+    net_npa: Decimal
+    npa_ratio: Decimal
+    
+    crar_percentage: Decimal
+    tier1_capital: Decimal
+    tier2_capital: Decimal
+    total_capital: Decimal
+    risk_weighted_assets: Decimal
+    
+    excel_file_url: Optional[str]
+    pdf_file_url: Optional[str]
+    
+    prepared_date: Optional[datetime]
+    reviewed_date: Optional[datetime]
+    approved_date: Optional[datetime]
+    submitted_date: Optional[datetime]
+    
+    due_date: date
+    is_overdue: bool
+    days_overdue: int
+    
+    submission_reference: Optional[str]
+    acknowledgement_number: Optional[str]
+    
+    remarks: Optional[str]
+    
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NBS7ReturnGenerateRequest(BaseModel):
+    """Auto-generate NBS-7 return from system data"""
+    reporting_period: str = Field(..., max_length=20)
+    period_start_date: date
+    period_end_date: date
+    as_on_date: date
+    financial_year: str = Field(..., max_length=10)
+    quarter: Optional[str] = Field(None, max_length=5)
+    include_sectoral: bool = True
+    include_geographic: bool = True
+    remarks: Optional[str] = None
+
+
+# ============================================================================
+# STATUTORY RETURN SCHEMAS
+# ============================================================================
+
+class StatutoryReturnCreate(BaseModel):
+    return_master_id: UUID
+    return_type: str
+    reporting_period: str = Field(..., max_length=20)
+    period_start_date: date
+    period_end_date: date
+    as_on_date: date
+    financial_year: str = Field(..., max_length=10)
+    return_data: Dict[str, Any]
+    schedules: Optional[Dict[str, Any]] = None
+    summary_data: Optional[Dict[str, Any]] = None
+    remarks: Optional[str] = None
+    internal_notes: Optional[str] = None
+
+
+class StatutoryReturnUpdate(BaseModel):
+    return_data: Optional[Dict[str, Any]] = None
+    schedules: Optional[Dict[str, Any]] = None
+    summary_data: Optional[Dict[str, Any]] = None
+    remarks: Optional[str] = None
+    internal_notes: Optional[str] = None
+
+
+class StatutoryReturnResponse(BaseModel):
+    id: UUID
+    tenant_id: str
+    return_number: str
+    return_master_id: UUID
+    return_type: str
+    reporting_period: str
+    period_start_date: date
+    period_end_date: date
+    as_on_date: date
+    financial_year: str
+    status: str
+    
+    return_data: Dict[str, Any]
+    schedules: Optional[Dict[str, Any]]
+    summary_data: Optional[Dict[str, Any]]
+    
+    validation_status: str
+    validation_errors: Optional[List[Dict[str, Any]]]
+    validation_warnings: Optional[List[Dict[str, Any]]]
+    
+    excel_file_url: Optional[str]
+    pdf_file_url: Optional[str]
+    
+    prepared_date: Optional[datetime]
+    reviewed_date: Optional[datetime]
+    approved_date: Optional[datetime]
+    submitted_date: Optional[datetime]
+    
+    due_date: date
+    is_overdue: bool
+    days_overdue: int
+    
+    submission_reference: Optional[str]
+    acknowledgement_number: Optional[str]
+    
+    revision_number: int
+    parent_return_id: Optional[UUID]
+    
+    remarks: Optional[str]
+    
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# XBRL DOCUMENT SCHEMAS
+# ============================================================================
+
+class XBRLDocumentCreate(BaseModel):
+    document_name: str = Field(..., max_length=300)
+    return_type: str
+    nbs7_return_id: Optional[UUID] = None
+    statutory_return_id: Optional[UUID] = None
+    taxonomy_version: str
+    taxonomy_url: Optional[str] = None
+    schema_version: Optional[str] = None
+    reporting_period: str = Field(..., max_length=20)
+    period_start_date: date
+    period_end_date: date
+    entity_identifier: Optional[str] = None
+    entity_name: Optional[str] = None
+    remarks: Optional[str] = None
+
+
+class XBRLDocumentResponse(BaseModel):
+    id: UUID
+    tenant_id: str
+    document_number: str
+    document_name: str
+    return_type: str
+    nbs7_return_id: Optional[UUID]
+    statutory_return_id: Optional[UUID]
+    taxonomy_version: str
+    taxonomy_url: Optional[str]
+    schema_version: Optional[str]
+    reporting_period: str
+    period_start_date: date
+    period_end_date: date
+    is_valid: bool
+    validation_errors: Optional[List[Dict[str, Any]]]
+    validation_date: Optional[datetime]
+    xbrl_file_url: Optional[str]
+    xbrl_file_size: Optional[int]
+    entity_identifier: Optional[str]
+    entity_name: Optional[str]
+    status: str
+    generated_date: Optional[datetime]
+    submitted_date: Optional[datetime]
+    submission_reference: Optional[str]
+    remarks: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class XBRLGenerateRequest(BaseModel):
+    """Generate XBRL from return data"""
+    return_type: str
+    return_id: UUID  # Either NBS7 or Statutory Return ID
+    taxonomy_version: str
+    entity_identifier: str = Field(..., max_length=100)
+    entity_name: str = Field(..., max_length=300)
+    include_validation: bool = True
+
+
+class XBRLValidationResponse(BaseModel):
+    is_valid: bool
+    errors: List[Dict[str, str]]
+    warnings: List[Dict[str, str]]
+    validation_date: datetime
+
+
+# ============================================================================
+# COMPLIANCE CALENDAR SCHEMAS
+# ============================================================================
+
+class ComplianceCalendarCreate(BaseModel):
+    event_code: Optional[str] = Field(None, max_length=50)
+    event_title: str = Field(..., max_length=300)
+    event_type: str
+    description: Optional[str] = None
+    requirements: Optional[str] = None
+    event_date: date
+    event_time: Optional[str] = None
+    due_date: Optional[date] = None
+    priority: str = "medium"
+    category: Optional[str] = Field(None, max_length=100)
+    return_master_id: Optional[UUID] = None
+    nbs7_return_id: Optional[UUID] = None
+    statutory_return_id: Optional[UUID] = None
+    is_recurring: bool = False
+    recurrence_pattern: Optional[str] = None
+    recurrence_day: Optional[int] = None
+    assigned_to: Optional[UUID] = None
+    reminder_enabled: bool = True
+    reminder_days_before: Optional[List[int]] = Field(default=[30, 15, 7, 3, 1])
+    notes: Optional[str] = None
+
+
+class ComplianceCalendarUpdate(BaseModel):
+    event_title: Optional[str] = None
+    description: Optional[str] = None
+    requirements: Optional[str] = None
+    event_date: Optional[date] = None
+    event_time: Optional[str] = None
+    due_date: Optional[date] = None
+    priority: Optional[str] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
+    assigned_to: Optional[UUID] = None
+    reminder_enabled: Optional[bool] = None
+    reminder_days_before: Optional[List[int]] = None
+    notes: Optional[str] = None
+    internal_comments: Optional[str] = None
+
+
+class ComplianceCalendarResponse(BaseModel):
+    id: UUID
+    tenant_id: str
+    event_code: Optional[str]
+    event_title: str
+    event_type: str
+    description: Optional[str]
+    requirements: Optional[str]
+    event_date: date
+    event_time: Optional[str]
+    due_date: Optional[date]
+    priority: str
+    category: Optional[str]
+    return_master_id: Optional[UUID]
+    nbs7_return_id: Optional[UUID]
+    statutory_return_id: Optional[UUID]
+    is_recurring: bool
+    recurrence_pattern: Optional[str]
+    recurrence_day: Optional[int]
+    status: str
+    completion_date: Optional[datetime]
+    completed_by: Optional[UUID]
+    assigned_to: Optional[UUID]
+    assigned_by: Optional[UUID]
+    assigned_date: Optional[datetime]
+    reminder_enabled: bool
+    reminder_days_before: Optional[List[int]]
+    last_reminder_sent: Optional[datetime]
+    notification_sent: bool
+    notification_date: Optional[datetime]
+    attachments: Optional[List[str]]
+    notes: Optional[str]
+    internal_comments: Optional[str]
+    start_date: Optional[datetime]
+    estimated_effort_hours: Optional[Decimal]
+    actual_effort_hours: Optional[Decimal]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ComplianceCalendarCompleteRequest(BaseModel):
+    completion_notes: Optional[str] = None
+    actual_effort_hours: Optional[Decimal] = None
+
+
+# ============================================================================
+# DASHBOARD & ANALYTICS SCHEMAS
+# ============================================================================
+
+class RBIReturnsDashboardStats(BaseModel):
+    total_returns_due: int
+    overdue_returns: int
+    submitted_this_month: int
+    pending_approval: int
+    draft_returns: int
+    
+    nbs7_monthly_status: Dict[str, int]
+    nbs7_quarterly_status: Dict[str, int]
+    statutory_returns_status: Dict[str, int]
+    
+    upcoming_deadlines: List[Dict[str, Any]]
+    recent_submissions: List[Dict[str, Any]]
+    
+    compliance_score: float
+    on_time_submission_rate: float
+
+
+class ComplianceCalendarSummary(BaseModel):
+    total_events: int
+    upcoming_events: int
+    overdue_events: int
+    completed_events: int
+    events_this_month: int
+    events_this_quarter: int
+    
+    by_priority: Dict[str, int]
+    by_category: Dict[str, int]
+    by_status: Dict[str, int]
+    
+    upcoming_critical: List[ComplianceCalendarResponse]
+
+
+class ReturnSubmissionHistoryResponse(BaseModel):
+    id: UUID
+    tenant_id: str
+    return_type: str
+    nbs7_return_id: Optional[UUID]
+    statutory_return_id: Optional[UUID]
+    xbrl_document_id: Optional[UUID]
+    action: str
+    previous_status: Optional[str]
+    new_status: Optional[str]
+    action_by: UUID
+    action_date: datetime
+    action_details: Optional[Dict[str, Any]]
+    comments: Optional[str]
+    ip_address: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ============================================================================
+# FILTER & QUERY SCHEMAS
+# ============================================================================
+
+class RBIReturnsFilter(BaseModel):
+    return_type: Optional[str] = None
+    financial_year: Optional[str] = None
+    quarter: Optional[str] = None
+    status: Optional[str] = None
+    is_overdue: Optional[bool] = None
+    from_date: Optional[date] = None
+    to_date: Optional[date] = None
+
+
+class ComplianceCalendarFilter(BaseModel):
+    event_type: Optional[str] = None
+    priority: Optional[str] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
+    assigned_to: Optional[UUID] = None
+    from_date: Optional[date] = None
+    to_date: Optional[date] = None
+    is_overdue: Optional[bool] = None
     sma_0_count: int
     sma_0_amount: Decimal
     sma_1_count: int

@@ -19,7 +19,8 @@ import {
   Landmark,
   Shield,
   AlertTriangle,
-  Activity
+  Activity,
+  FileText
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -120,6 +121,18 @@ const navigationItems = [
       { title: 'SMA Tracking', href: '/compliance/sma-tracking' },
       { title: 'Alerts', href: '/compliance/alerts' },
       { title: 'Quarterly Reports', href: '/compliance/quarterly-reports' },
+    ],
+  },
+  {
+    title: 'RBI Returns',
+    href: '/rbi-returns',
+    icon: FileText,
+    children: [
+      { title: 'Dashboard', href: '/rbi-returns' },
+      { title: 'NBS-7 Returns', href: '/rbi-returns/nbs7' },
+      { title: 'Statutory Returns', href: '/rbi-returns/statutory' },
+      { title: 'Compliance Calendar', href: '/rbi-returns/calendar' },
+      { title: 'XBRL Generation', href: '/rbi-returns/xbrl' },
     ],
   },
   {

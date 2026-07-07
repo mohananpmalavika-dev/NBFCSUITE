@@ -128,6 +128,13 @@ from backend.shared.database.alm_models import (
     QuarterlyReturn, ALMLimits, ALMAlert
 )
 
+# 13. Branch & Operations Management models (NEW - Branch Module)
+from backend.shared.database.branch_models import (
+    Organization, Branch, BranchDayOperation, BranchCounter,
+    CashTransaction, CashDenomination, CashPosition,
+    BranchPerformance, BranchTarget, BranchAuditLog
+)
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -577,6 +584,12 @@ from backend.services.treasury.reconciliation_router import router as treasury_r
 from backend.services.treasury.fund_transfer_router import router as treasury_fund_transfer_router
 from backend.services.treasury.alm_router import router as alm_router
 
+# NEW: Branch & Operations Management Routers
+from backend.services.branch import (
+    organization_router, branch_router, day_operation_router, 
+    cash_router, performance_router
+)
+
 # NEW: Accounting Extended Routers (TDS & GST & Assets)
 from backend.services.accounting.tds_router import router as tds_router
 from backend.services.accounting.gst_router import router as gst_router
@@ -675,6 +688,10 @@ app.include_router(insurance_router, prefix="/api/v1", tags=["Loan Insurance"])
 # ============================================================================
 app.include_router(compliance_router, prefix="/api/v1", tags=["Compliance & Regulatory"])
 
+# RBI Returns Automation (NBS-7, Statutory Returns, XBRL, Compliance Calendar)
+from backend.services.compliance.rbi_returns_router import router as rbi_returns_router
+app.include_router(rbi_returns_router, tags=["RBI Returns Automation"])
+
 # ============================================================================
 # NEW: TREASURY & CASH MANAGEMENT ROUTERS
 # Bank Accounts, Cash Position, Reconciliation, Transfers, Liquidity, Investments, ALM
@@ -684,6 +701,16 @@ app.include_router(treasury_cash_position_router, prefix="/api/v1/treasury", tag
 app.include_router(treasury_reconciliation_router, prefix="/api/v1/treasury", tags=["Treasury - Reconciliation"])
 app.include_router(treasury_fund_transfer_router, prefix="/api/v1/treasury", tags=["Treasury - Fund Transfers"])
 app.include_router(alm_router, prefix="/api/v1/treasury", tags=["Treasury - ALM"])
+
+# ============================================================================
+# NEW: BRANCH & OPERATIONS MANAGEMENT ROUTERS
+# Organizational Hierarchy, Day Operations, Cash Management, Performance Tracking
+# ============================================================================
+app.include_router(organization_router, prefix="/api/v1", tags=["Branch - Organizations"])
+app.include_router(branch_router, prefix="/api/v1", tags=["Branch - Branches"])
+app.include_router(day_operation_router, prefix="/api/v1", tags=["Branch - Day Operations"])
+app.include_router(cash_router, prefix="/api/v1", tags=["Branch - Cash Management"])
+app.include_router(performance_router, prefix="/api/v1", tags=["Branch - Performance"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

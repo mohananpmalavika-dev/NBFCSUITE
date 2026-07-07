@@ -37,7 +37,8 @@ export default function TDSDeductionsPage() {
       if (filters.status !== 'all') {
         params.status = filters.status;
       }
-      const data = await tdsService.getDeductions(params);
+      const response = await tdsService.getDeductions(params);
+      const data = response.data.items || [];
       
       // Client-side search filter
       let filtered = data;
