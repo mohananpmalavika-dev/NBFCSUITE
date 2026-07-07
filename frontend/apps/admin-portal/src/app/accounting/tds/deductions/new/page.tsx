@@ -80,12 +80,14 @@ export default function NewTDSDeductionPage() {
 
     try {
       setCalculating(true);
-      const result = await tdsService.calculateTDS({
+      const response = await tdsService.calculateTDS({
         section_code: formData.section_code,
         gross_amount: formData.taxable_amount,
         financial_year: new Date().getFullYear(),
         has_pan: !!formData.deductee_pan
       });
+
+      const result = response.data;
 
       setFormData({
         ...formData,
