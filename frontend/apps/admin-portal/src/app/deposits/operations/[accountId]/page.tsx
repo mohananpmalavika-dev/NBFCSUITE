@@ -3,26 +3,27 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { depositService } from '@/services/deposit.service';
-import { toast } from 'react-hot-toast';
+import { useToast } from '@/hooks/use-toast';
 import {
-  FreezeIcon,
-  LockIcon,
-  TransferIcon,
-  UsersIcon,
-  AlertTriangleIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  InfoIcon,
+  Snowflake as FreezeIcon,
+  Lock as LockIcon,
+  ArrowRightLeft as TransferIcon,
+  Users as UsersIcon,
+  AlertTriangle as AlertTriangleIcon,
+  CheckCircle as CheckCircleIcon,
+  XCircle as XCircleIcon,
+  Info as InfoIcon,
 } from 'lucide-react';
 
 export default function AdvancedOperationsPage() {
   const params = useParams();
   const accountId = params.accountId as string;
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('freeze');
 
   // Fetch account details
@@ -40,23 +41,37 @@ export default function AdvancedOperationsPage() {
   const freezeMutation = useMutation({
     mutationFn: (data: any) => depositService.freezeAccount(accountId, data),
     onSuccess: () => {
-      toast.success('Account frozen successfully');
+      toast({
+        title: 'Success',
+        description: 'Account frozen successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['deposit-account', accountId] });
       setFreezeData({ reason: '', notes: '' });
     },
     onError: () => {
-      toast.error('Failed to freeze account');
+      toast({
+        title: 'Error',
+        description: 'Failed to freeze account',
+        variant: 'destructive',
+      });
     },
   });
 
   const unfreezeMutation = useMutation({
     mutationFn: () => depositService.unfreezeAccount(accountId),
     onSuccess: () => {
-      toast.success('Account unfrozen successfully');
+      toast({
+        title: 'Success',
+        description: 'Account unfrozen successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['deposit-account', accountId] });
     },
     onError: () => {
-      toast.error('Failed to unfreeze account');
+      toast({
+        title: 'Error',
+        description: 'Failed to unfreeze account',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -72,23 +87,37 @@ export default function AdvancedOperationsPage() {
   const createLienMutation = useMutation({
     mutationFn: (data: any) => depositService.createLien(accountId, data),
     onSuccess: () => {
-      toast.success('Lien created successfully');
+      toast({
+        title: 'Success',
+        description: 'Lien created successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['deposit-account', accountId] });
       setLienData({ amount: '', reason: '', reference_number: '', expiry_date: '', notes: '' });
     },
     onError: () => {
-      toast.error('Failed to create lien');
+      toast({
+        title: 'Error',
+        description: 'Failed to create lien',
+        variant: 'destructive',
+      });
     },
   });
 
   const releaseLienMutation = useMutation({
     mutationFn: (lienId: string) => depositService.releaseLien(accountId, lienId),
     onSuccess: () => {
-      toast.success('Lien released successfully');
+      toast({
+        title: 'Success',
+        description: 'Lien released successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['deposit-account', accountId] });
     },
     onError: () => {
-      toast.error('Failed to release lien');
+      toast({
+        title: 'Error',
+        description: 'Failed to release lien',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -103,12 +132,19 @@ export default function AdvancedOperationsPage() {
   const transferMutation = useMutation({
     mutationFn: (data: any) => depositService.transferAccount(accountId, data),
     onSuccess: () => {
-      toast.success('Account transferred successfully');
+      toast({
+        title: 'Success',
+        description: 'Account transferred successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['deposit-account', accountId] });
       setTransferData({ new_customer_id: '', reason: '', effective_date: '', notes: '' });
     },
     onError: () => {
-      toast.error('Failed to transfer account');
+      toast({
+        title: 'Error',
+        description: 'Failed to transfer account',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -123,23 +159,37 @@ export default function AdvancedOperationsPage() {
   const addJointHolderMutation = useMutation({
     mutationFn: (data: any) => depositService.addJointHolder(accountId, data),
     onSuccess: () => {
-      toast.success('Joint holder added successfully');
+      toast({
+        title: 'Success',
+        description: 'Joint holder added successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['deposit-account', accountId] });
       setJointAccountData({ customer_id: '', relationship: '', holding_pattern: 'joint', nomination_percentage: '' });
     },
     onError: () => {
-      toast.error('Failed to add joint holder');
+      toast({
+        title: 'Error',
+        description: 'Failed to add joint holder',
+        variant: 'destructive',
+      });
     },
   });
 
   const removeJointHolderMutation = useMutation({
     mutationFn: (holderId: string) => depositService.removeJointHolder(accountId, holderId),
     onSuccess: () => {
-      toast.success('Joint holder removed successfully');
+      toast({
+        title: 'Success',
+        description: 'Joint holder removed successfully',
+      });
       queryClient.invalidateQueries({ queryKey: ['deposit-account', accountId] });
     },
     onError: () => {
-      toast.error('Failed to remove joint holder');
+      toast({
+        title: 'Error',
+        description: 'Failed to remove joint holder',
+        variant: 'destructive',
+      });
     },
   });
 
@@ -155,7 +205,11 @@ export default function AdvancedOperationsPage() {
 
   const handleFreeze = () => {
     if (!freezeData.reason.trim()) {
-      toast.error('Please provide a reason for freezing');
+      toast({
+        title: 'Error',
+        description: 'Please provide a reason for freezing',
+        variant: 'destructive',
+      });
       return;
     }
     freezeMutation.mutate(freezeData);
@@ -169,11 +223,19 @@ export default function AdvancedOperationsPage() {
 
   const handleCreateLien = () => {
     if (!lienData.amount || parseFloat(lienData.amount) <= 0) {
-      toast.error('Please provide a valid lien amount');
+      toast({
+        title: 'Error',
+        description: 'Please provide a valid lien amount',
+        variant: 'destructive',
+      });
       return;
     }
     if (!lienData.reason.trim()) {
-      toast.error('Please provide a reason for the lien');
+      toast({
+        title: 'Error',
+        description: 'Please provide a reason for the lien',
+        variant: 'destructive',
+      });
       return;
     }
     createLienMutation.mutate({
@@ -184,11 +246,19 @@ export default function AdvancedOperationsPage() {
 
   const handleTransfer = () => {
     if (!transferData.new_customer_id.trim()) {
-      toast.error('Please provide the new customer ID');
+      toast({
+        title: 'Error',
+        description: 'Please provide the new customer ID',
+        variant: 'destructive',
+      });
       return;
     }
     if (!transferData.reason.trim()) {
-      toast.error('Please provide a reason for transfer');
+      toast({
+        title: 'Error',
+        description: 'Please provide a reason for transfer',
+        variant: 'destructive',
+      });
       return;
     }
     if (window.confirm('Are you sure you want to transfer this account? This action cannot be undone.')) {
@@ -198,11 +268,19 @@ export default function AdvancedOperationsPage() {
 
   const handleAddJointHolder = () => {
     if (!jointAccountData.customer_id.trim()) {
-      toast.error('Please provide the customer ID');
+      toast({
+        title: 'Error',
+        description: 'Please provide the customer ID',
+        variant: 'destructive',
+      });
       return;
     }
     if (!jointAccountData.relationship.trim()) {
-      toast.error('Please provide the relationship');
+      toast({
+        title: 'Error',
+        description: 'Please provide the relationship',
+        variant: 'destructive',
+      });
       return;
     }
     addJointHolderMutation.mutate(jointAccountData);
@@ -312,7 +390,6 @@ export default function AdvancedOperationsPage() {
                     <Button
                       onClick={handleUnfreeze}
                       disabled={unfreezeMutation.isPending}
-                      variant="success"
                       className="w-full"
                     >
                       <CheckCircleIcon className="h-5 w-5 mr-2" />
@@ -356,7 +433,7 @@ export default function AdvancedOperationsPage() {
                     <Button
                       onClick={handleFreeze}
                       disabled={freezeMutation.isPending}
-                      variant="danger"
+                      variant="destructive"
                       className="w-full"
                     >
                       <XCircleIcon className="h-5 w-5 mr-2" />
@@ -611,7 +688,7 @@ export default function AdvancedOperationsPage() {
                   <Button
                     onClick={handleTransfer}
                     disabled={transferMutation.isPending}
-                    variant="danger"
+                    variant="destructive"
                     className="w-full"
                   >
                     <TransferIcon className="h-5 w-5 mr-2" />

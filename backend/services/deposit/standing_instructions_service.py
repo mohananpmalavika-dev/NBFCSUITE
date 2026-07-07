@@ -14,8 +14,9 @@ from typing import Dict, Any, Optional, List
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+from sqlalchemy import Column, Integer, String, Numeric, Boolean, Date, DateTime, ForeignKey
 from backend.shared.database.deposit_models import DepositAccount
-from backend.shared.database.models import Base, Column, Integer, String, Numeric, Boolean, Date, DateTime, ForeignKey
+from backend.shared.database.models import Base
 from backend.shared.common.response import CustomException
 from .account_service import DepositAccountService
 
