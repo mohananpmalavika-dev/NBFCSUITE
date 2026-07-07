@@ -97,10 +97,11 @@ export default function GSTConfigurationPage() {
     try {
       setSaving(true);
       if (configurations.length > 0) {
-        await gstService.updateConfiguration(configurations[0].id, formData);
+        // TODO: Implement updateConfiguration endpoint
+        // await gstService.updateConfiguration(configurations[0].id, formData);
         toast({
-          title: "Success",
-          description: "GST configuration updated successfully"
+          title: "Info",
+          description: "Update endpoint not yet implemented"
         });
       } else {
         await gstService.createConfiguration(formData);
