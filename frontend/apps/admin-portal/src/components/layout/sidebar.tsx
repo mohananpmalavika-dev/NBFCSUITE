@@ -15,7 +15,9 @@ import {
   Settings,
   ChevronDown,
   Sparkles,
-  Coins
+  Coins,
+  Landmark,
+  Shield
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -66,6 +68,18 @@ const navigationItems = [
     icon: TrendingUp,
   },
   {
+    title: 'Treasury',
+    href: '/treasury',
+    icon: Landmark,
+    children: [
+      { title: 'Dashboard', href: '/treasury/dashboard' },
+      { title: 'Bank Accounts', href: '/treasury/bank-accounts' },
+      { title: 'Cash Position', href: '/treasury/cash-position' },
+      { title: 'Reconciliation', href: '/treasury/reconciliation' },
+      { title: 'Fund Transfers', href: '/treasury/fund-transfers' },
+    ],
+  },
+  {
     title: 'Workflows',
     href: '/workflows',
     icon: GitBranch,
@@ -82,6 +96,18 @@ const navigationItems = [
       { title: 'Chart of Accounts', href: '/accounting/chart-of-accounts' },
       { title: 'Journal Entries', href: '/accounting/journal-entries' },
       { title: 'Reports', href: '/accounting/reports' },
+    ],
+  },
+  {
+    title: 'Compliance',
+    href: '/compliance',
+    icon: Shield,
+    children: [
+      { title: 'SMA Dashboard', href: '/compliance/sma-dashboard' },
+      { title: 'Large Credits', href: '/compliance/large-credits' },
+      { title: 'SMA Tracking', href: '/compliance/sma-tracking' },
+      { title: 'Alerts', href: '/compliance/alerts' },
+      { title: 'Quarterly Reports', href: '/compliance/quarterly-reports' },
     ],
   },
   {

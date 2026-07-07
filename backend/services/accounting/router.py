@@ -22,6 +22,10 @@ from backend.shared.database.accounting_models import (
 
 router = APIRouter(prefix="/accounting", tags=["Accounting"])
 
+# Include NPA Management router
+from backend.services.accounting.npa_router import router as npa_router
+router.include_router(npa_router)
+
 
 def get_accounting_service(
     db: AsyncSession = Depends(get_db),

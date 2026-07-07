@@ -108,6 +108,25 @@ from backend.shared.database.lms_extended_models import (
     LoanInsurancePolicy, InsurancePremiumPayment, InsuranceClaim
 )
 
+# 10. Compliance & Regulatory models (NEW - CRILC & SMA Reporting)
+from backend.shared.database.compliance_models import (
+    CRILCBorrower, CRILCFacility, CRILCQuarterlyReturn,
+    SMATracking, SMAStatusHistory, SMAQuarterlyReport, ComplianceAlert
+)
+
+# 11. Treasury & Cash Management models (NEW - Treasury Module)
+from backend.shared.database.treasury_models import (
+    TreasuryBankAccount, CashPosition, BankStatement,
+    BankReconciliation, ReconciliationItem, FundTransfer,
+    LiquidityPosition, Investment, InvestmentTransaction, CashFlowForecast
+)
+
+# 12. ALM (Asset Liability Management) models (NEW - ALM Module)
+from backend.shared.database.alm_models import (
+    MaturityLadder, GapAnalysis, LiquidityRatio, InterestRateRisk,
+    QuarterlyReturn, ALMLimits, ALMAlert
+)
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -513,6 +532,13 @@ from backend.services.lms.nach_router import router as nach_router
 from backend.services.lms.restructuring_router import router as restructuring_router
 from backend.services.lms.insurance_router import router as insurance_router
 
+# NEW: Compliance & Regulatory Reporting Routers (CRILC & SMA)
+from backend.services.compliance.router import router as compliance_router
+
+# NEW: Treasury & Cash Management Router
+from backend.services.treasury.bank_account_router import router as treasury_bank_account_router
+from backend.services.treasury.alm_router import router as alm_router
+
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["Dashboard"])
@@ -594,6 +620,19 @@ app.include_router(restructuring_router, prefix="/api/v1", tags=["Loan Restructu
 
 # Loan Insurance Tracking
 app.include_router(insurance_router, prefix="/api/v1", tags=["Loan Insurance"])
+
+# ============================================================================
+# NEW: COMPLIANCE & REGULATORY REPORTING ROUTERS
+# CRILC (Large Credits) & SMA (Special Mention Accounts) Reporting
+# ============================================================================
+app.include_router(compliance_router, prefix="/api/v1", tags=["Compliance & Regulatory"])
+
+# ============================================================================
+# NEW: TREASURY & CASH MANAGEMENT ROUTERS
+# Bank Accounts, Cash Position, Reconciliation, Transfers, Liquidity, Investments, ALM
+# ============================================================================
+app.include_router(treasury_bank_account_router, prefix="/api/v1/treasury", tags=["Treasury - Bank Accounts"])
+app.include_router(alm_router, prefix="/api/v1/treasury", tags=["Treasury - ALM"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

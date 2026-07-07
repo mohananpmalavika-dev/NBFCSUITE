@@ -71,6 +71,8 @@ class JournalEntryType(str, enum.Enum):
     EXPENSE_BOOKING = "expense_booking"
     ADJUSTMENT = "adjustment"
     REVERSAL = "reversal"
+    PROVISION = "provision"
+    WRITE_OFF = "write_off"
 
 
 class JournalEntryStatus(str, enum.Enum):
