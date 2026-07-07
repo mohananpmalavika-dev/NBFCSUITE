@@ -68,8 +68,15 @@ export interface GSTConfiguration {
   id: number
   gstin: string
   legal_name: string
+  state_code: string
   state_name: string
   registration_type: string
+  registration_date: string
+  address?: string
+  pincode?: string
+  trade_name?: string
+  email?: string
+  phone?: string
 }
 
 export interface GSTTransaction {
