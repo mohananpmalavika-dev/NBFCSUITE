@@ -172,6 +172,7 @@ class LoanApplication(Base):
     documents = relationship("LoanApplicationDocument", back_populates="application")
     workflows = relationship("LoanApprovalWorkflow", back_populates="application")
     loan_account = relationship("LoanAccount", back_populates="application", uselist=False)
+    bank_analyses = relationship("BankStatementAnalysis", back_populates="application")
 
 
 class LoanApplicationCoApplicant(Base):

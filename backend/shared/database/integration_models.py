@@ -98,7 +98,7 @@ class BankStatementAnalysis(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     tenant_id = Column(String(50), nullable=False, index=True)
     customer_id = Column(UUID(as_uuid=True), ForeignKey('customers.id'), nullable=False, index=True)
-    application_id = Column(UUID(as_uuid=True), ForeignKey('loan_applications.id'), index=True)
+    application_id = Column(Integer, ForeignKey('loan_applications.id'), index=True)
     
     # Bank Information
     bank_name = Column(String(200))
