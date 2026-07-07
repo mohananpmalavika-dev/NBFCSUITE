@@ -18,6 +18,7 @@ import io
 from backend.shared.database.deposit_models import (
     DepositAccount, DepositPassbookEntry, DepositProduct
 )
+from backend.shared.database.customer_models import Customer
 from backend.shared.common.response import CustomException
 
 
@@ -84,7 +85,6 @@ class PassbookService:
             })
         
         # Get customer info
-        from backend.shared.database.models import Customer
         customer = self.db.query(Customer).filter(
             Customer.id == account.customer_id
         ).first()

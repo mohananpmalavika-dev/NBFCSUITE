@@ -14,7 +14,7 @@ import io
 from backend.shared.database.deposit_models import (
     DepositAccount, DepositTransaction, DepositProduct
 )
-from backend.shared.database.models import Customer
+from backend.shared.database.customer_models import Customer
 from backend.shared.common.response import CustomException
 
 
