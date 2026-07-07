@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { gstService, type HSNSACMaster, type GSTConfiguration } from '@/services/accounting.service';
+import { gstService, type HSNSAC, type GSTConfiguration } from '@/services/accounting.service';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +28,7 @@ interface LineItem {
 
 export default function NewGSTTransactionPage() {
   const router = useRouter();
-  const [hsnSacCodes, setHsnSacCodes] = useState<HSNSACMaster[]>([]);
+  const [hsnSacCodes, setHsnSacCodes] = useState<HSNSAC[]>([]);
   const [configuration, setConfiguration] = useState<GSTConfiguration | null>(null);
   const [calculating, setCalculating] = useState(false);
   const [formData, setFormData] = useState({
@@ -77,7 +77,7 @@ export default function NewGSTTransactionPage() {
         gstService.getHSNSAC(),
         gstService.getConfiguration()
       ]);
-      setHsnSacCodes(codes.filter((c: HSNSACMaster) => c.is_active));
+      setHsnSacCodes(codes.filter((c: HSNSAC) => c.is_active));
       if (configs.length > 0) {
         setConfiguration(configs[0]);
         setFormData(prev => ({ ...prev, place_of_supply: configs[0].state_code }));
