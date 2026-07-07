@@ -116,6 +116,7 @@ export default function LargeCreditsPage() {
     )
   }
 
+  // Force rebuild: 2026-07-07 14:30
   const filteredBorrowers = data?.items?.filter((borrower: CRILCBorrower) =>
     borrower.borrower_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     borrower.borrower_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
