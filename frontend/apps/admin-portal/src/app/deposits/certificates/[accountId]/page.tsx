@@ -64,7 +64,8 @@ export default function CertificatesPage() {
   const generateInterestCertMutation = useMutation({
     mutationFn: () =>
       depositService.getInterestCertificatePDF(accountId, { financial_year: financialYear }),
-    onSuccess: (blob) => {
+    onSuccess: (response) => {
+      const blob = response.data
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -95,7 +96,8 @@ export default function CertificatesPage() {
         financial_year: financialYear,
         quarter: quarter,
       }),
-    onSuccess: (blob) => {
+    onSuccess: (response) => {
+      const blob = response.data
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
