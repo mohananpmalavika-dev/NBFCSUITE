@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
 from backend.shared.database.connection import get_db
-from backend.shared.dependencies.auth import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from .onboarding_service import OnboardingService, BackgroundVerificationService
 from .schemas import (
     OnboardingCreate, OnboardingUpdate, OnboardingResponse,

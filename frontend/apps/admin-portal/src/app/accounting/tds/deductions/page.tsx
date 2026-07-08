@@ -229,7 +229,7 @@ export default function TDSDeductionsPage() {
                       <TableCell className="text-right">
                         ₹{deduction.tds_amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </TableCell>
-                      <TableCell>{getStatusBadge(deduction.status)}</TableCell>
+                      <TableCell>{getStatusBadge(deduction.payment_status)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button
@@ -239,7 +239,7 @@ export default function TDSDeductionsPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {deduction.status === 'deposited' && (
+                          {deduction.payment_status === 'deposited' && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -286,7 +286,7 @@ export default function TDSDeductionsPage() {
               <p className="text-sm text-muted-foreground">Pending Deposit</p>
               <p className="text-2xl font-bold">
                 ₹{deductions
-                  .filter(d => d.status === 'deducted')
+                  .filter(d => d.payment_status === 'deducted')
                   .reduce((sum, d) => sum + d.tds_amount, 0)
                   .toLocaleString('en-IN')}
               </p>

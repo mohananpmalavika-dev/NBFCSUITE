@@ -9,12 +9,12 @@ from typing import Optional
 from datetime import date
 
 from backend.shared.database.connection import get_db
-from backend.shared.dependencies.auth import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from .interview_service import InterviewService
 from .schemas import (
     InterviewCreate, InterviewUpdate, InterviewResponse,
     PaginatedInterviewResponse, InterviewStatusEnum, InterviewTypeEnum,
-    InterviewFeedback
+    InterviewFeedback, InterviewReschedule
 )
 
 

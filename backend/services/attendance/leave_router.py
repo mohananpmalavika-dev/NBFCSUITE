@@ -9,7 +9,7 @@ from typing import Optional
 from datetime import date
 
 from backend.shared.database.connection import get_db
-from backend.shared.dependencies.auth import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from .leave_service import LeavePolicyService, LeaveBalanceService, LeaveApplicationService
 from .schemas import (
     LeavePolicyCreate, LeavePolicyUpdate, LeavePolicyResponse, LeavePolicyListResponse,

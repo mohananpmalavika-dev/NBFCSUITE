@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
 from backend.shared.database.connection import get_db
-from backend.shared.dependencies.auth import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from .attendance_service import ShiftService
 from .schemas import (
     ShiftCreate, ShiftUpdate, ShiftResponse, ShiftListResponse,

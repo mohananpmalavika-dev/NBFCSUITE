@@ -203,7 +203,7 @@ class ApplicationService:
         return application
     
     async def change_status(
-        self, application_id: str, status: ApplicationStatusEnum
+        self, application_id: str, status: ApplicationStatusEnum, notes: Optional[str] = None
     ) -> JobApplication:
         """Change application status"""
         application = await self.get_application(application_id)
@@ -211,6 +211,29 @@ class ApplicationService:
             raise ValueError("Application not found")
         
         application.status = status
+        if notes:
+            application.screening_notes = notes
+        application.updated_by = self.user_id
+        
+        await self.db.commit()
+        await self.db.refresh(application)
+        
+        return application
+    
+    async def shortlist_application(self, application_id: str) -> JobApplication:
+        """Shortlist an application"""
+        return await self.change_status(application_id, ApplicationStatusEnum.SHORTLISTED)
+    
+    async def reject_application(self, application_id: str, reason: str) -> JobApplication:
+        """Reject an application"""
+        application = await self.get_application(application_id)
+        if not application:
+            raise ValueError("Application not found")
+        
+        application.status = ApplicationStatusEnum.REJECTED
+        application.rejection_reason = reason
+        application.rejected_by_employee_id = self.user_id
+        application.rejected_date = date.today()
         application.updated_by = self.user_id
         
         await self.db.commit()

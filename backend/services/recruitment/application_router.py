@@ -8,11 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List
 
 from backend.shared.database.connection import get_db
-from backend.shared.dependencies.auth import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from .application_service import ApplicationService
 from .schemas import (
     JobApplicationCreate, JobApplicationUpdate, JobApplicationResponse,
-    PaginatedApplicationResponse, ApplicationStatusEnum, ApplicationSourceEnum
+    PaginatedApplicationResponse, ApplicationStatusEnum, ApplicationSourceEnum,
+    ApplicationBulkAction
 )
 
 

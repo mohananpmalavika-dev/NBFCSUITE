@@ -161,7 +161,12 @@ class InterviewService:
         return interview
     
     async def reschedule_interview(
-        self, interview_id: str, new_date: datetime, reason: Optional[str] = None
+        self, 
+        interview_id: str, 
+        new_date: datetime,
+        new_start_time: Optional[datetime] = None,
+        new_end_time: Optional[datetime] = None,
+        reason: Optional[str] = None
     ) -> Interview:
         """Reschedule interview"""
         interview = await self.get_interview(interview_id)

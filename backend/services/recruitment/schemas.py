@@ -321,6 +321,14 @@ class JobApplicationUpdate(BaseModel):
     rejection_reason: Optional[str] = None
 
 
+class ApplicationBulkAction(BaseModel):
+    """Bulk action on applications"""
+    action: str  # shortlist, reject, change_status
+    application_ids: List[int]
+    new_status: Optional[ApplicationStatusEnum] = None
+    notes: Optional[str] = None
+
+
 class JobApplicationResponse(JobApplicationBase):
     """Job application response"""
     id: int
@@ -399,6 +407,14 @@ class InterviewFeedback(BaseModel):
     overall_rating: Optional[int] = Field(None, ge=1, le=10)
     result: InterviewResultEnum
     result_notes: Optional[str] = None
+
+
+class InterviewReschedule(BaseModel):
+    """Interview reschedule request"""
+    new_scheduled_date: datetime
+    new_start_time: Optional[datetime] = None
+    new_end_time: Optional[datetime] = None
+    reschedule_reason: Optional[str] = None
 
 
 class InterviewResponse(InterviewBase):
