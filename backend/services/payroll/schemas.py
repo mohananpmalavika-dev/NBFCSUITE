@@ -62,6 +62,23 @@ class StatutoryType(str, Enum):
     LWF = "LWF"
 
 
+class PaymentFileFormat(str, Enum):
+    NEFT = "NEFT"
+    RTGS = "RTGS"
+    IMPS = "IMPS"
+    UPI = "UPI"
+    EXCEL = "EXCEL"
+    CSV = "CSV"
+
+
+class PaymentFileStatus(str, Enum):
+    DRAFT = "DRAFT"
+    GENERATED = "GENERATED"
+    UPLOADED = "UPLOADED"
+    PROCESSED = "PROCESSED"
+    FAILED = "FAILED"
+
+
 # ============ Salary Component Schemas ============
 
 class SalaryComponentBase(BaseModel):

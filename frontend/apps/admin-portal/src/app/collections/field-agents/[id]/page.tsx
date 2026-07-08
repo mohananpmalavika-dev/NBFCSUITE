@@ -141,12 +141,12 @@ export default function FieldAgentDetailPage() {
           >
             ← Back to Field Agents
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">{agent.name}</h1>
-          <p className="text-gray-600 mt-1">{agent.employee_id}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{agent.full_name}</h1>
+          <p className="text-gray-600 mt-1">{agent.agent_code}</p>
         </div>
         <div className="flex gap-3">
-          <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(agent.status)}`}>
-            {agent.status.toUpperCase()}
+          <span className={`px-4 py-2 rounded-lg text-sm font-medium ${agent.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+            {agent.is_active ? 'ACTIVE' : 'INACTIVE'}
           </span>
           <button
             onClick={() => router.push(`/collections/field-agents/${agent.id}/edit`)}
@@ -198,12 +198,12 @@ export default function FieldAgentDetailPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Agent Information</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600">Employee ID</p>
-                <p className="font-medium text-gray-900">{agent.employee_id}</p>
+                <p className="text-sm text-gray-600">Agent Code</p>
+                <p className="font-medium text-gray-900">{agent.agent_code}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Name</p>
-                <p className="font-medium text-gray-900">{agent.name}</p>
+                <p className="font-medium text-gray-900">{agent.full_name}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Mobile</p>
@@ -215,57 +215,53 @@ export default function FieldAgentDetailPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Status</p>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(agent.status)}`}>
-                  {agent.status.toUpperCase()}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${agent.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  {agent.is_active ? 'ACTIVE' : 'INACTIVE'}
                 </span>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Max Cases</p>
-                <p className="font-medium text-gray-900">{agent.max_cases}</p>
+                <p className="text-sm text-gray-600">Employment Type</p>
+                <p className="font-medium text-gray-900">{agent.employment_type}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Territory ID</p>
+                <p className="font-medium text-gray-900">{agent.territory_id}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Joined Date</p>
                 <p className="font-medium text-gray-900">{formatDate(agent.created_at)}</p>
               </div>
-              {agent.reporting_to && (
-                <div>
-                  <p className="text-sm text-gray-600">Reports To</p>
-                  <p className="font-medium text-gray-900">{agent.reporting_to}</p>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Territory Information */}
-          {agent.territories && agent.territories.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Assigned Territories</h2>
-              <div className="space-y-3">
-                {agent.territories.map((territory, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-gray-900">{territory.name}</p>
-                        {territory.description && (
-                          <p className="text-sm text-gray-600 mt-1">{territory.description}</p>
-                        )}
-                        <div className="flex gap-4 mt-2">
-                          {territory.pincodes && (
-                            <p className="text-xs text-gray-500">
-                              Pincodes: {territory.pincodes.join(', ')}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${territory.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {territory.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+          {/* Performance Stats */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Performance Statistics</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Total Collections</p>
+                <p className="font-medium text-gray-900">{formatCurrency(agent.total_collection_amount)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Visits</p>
+                <p className="font-medium text-gray-900">{agent.total_visits_completed}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Monthly Target (Collection)</p>
+                <p className="font-medium text-gray-900">{formatCurrency(agent.monthly_collection_target)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Monthly Target (Visits)</p>
+                <p className="font-medium text-gray-900">{agent.monthly_visit_target}</p>
+              </div>
+              <div className="col-span-2">
+                <p className="text-sm text-gray-600">Success Rate</p>
+                <p className="font-medium text-gray-900">{agent.success_rate.toFixed(1)}%</p>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Remove territories section - not in FieldAgent type */}
 
           {/* Recent Visits */}
           <div className="bg-white rounded-lg shadow p-6">

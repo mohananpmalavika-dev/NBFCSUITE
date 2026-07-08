@@ -17,7 +17,8 @@ from backend.services.payroll.schemas import (
     StatutoryComplianceCreate, StatutoryComplianceUpdate, StatutoryComplianceResponse, StatutoryComplianceListResponse,
     Form16Create, Form16Update, Form16Response, Form16ListResponse,
     PaymentFileCreate, PaymentFileUpdate, PaymentFileResponse, PaymentFileListResponse,
-    ComponentType, PayrollStatus, StatutoryType, PaymentStatus, PaymentMode
+    ComponentType, PayrollStatus, StatutoryType, PaymentStatus, PaymentMode,
+    PaymentFileFormat, PaymentFileStatus
 )
 from backend.services.payroll.salary_component_service import SalaryComponentService
 from backend.services.payroll.salary_structure_service import SalaryStructureService
