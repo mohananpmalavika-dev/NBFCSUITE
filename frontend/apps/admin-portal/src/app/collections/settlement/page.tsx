@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { FileText, Clock, CheckCircle, XCircle, DollarSign, TrendingUp } from 'lucide-react';
 import { settlementApi } from '@/lib/api/collection';
 import { SettlementProposal, SettlementStatus } from '@/types/collection';
 import { StatusBadge, CollectionStatCard } from '@/components/collections';
@@ -109,35 +110,35 @@ export default function SettlementPage() {
         <CollectionStatCard
           title="Total Proposals"
           value={stats.total.toString()}
-          icon="📋"
+          icon={FileText}
         />
         <CollectionStatCard
           title="Pending Approval"
           value={stats.pending.toString()}
-          icon="⏳"
+          icon={Clock}
           trend="warning"
         />
         <CollectionStatCard
           title="Approved"
           value={stats.approved.toString()}
-          icon="✅"
+          icon={CheckCircle}
           trend="success"
         />
         <CollectionStatCard
           title="Rejected"
           value={stats.rejected.toString()}
-          icon="❌"
+          icon={XCircle}
           trend="danger"
         />
         <CollectionStatCard
           title="Total Outstanding"
           value={formatCurrency(stats.totalOsAmount)}
-          icon="💰"
+          icon={DollarSign}
         />
         <CollectionStatCard
           title="Settlement Amount"
           value={formatCurrency(stats.totalSettlement)}
-          icon="💵"
+          icon={TrendingUp}
           trend="success"
         />
       </div>
