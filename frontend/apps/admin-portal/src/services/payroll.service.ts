@@ -330,6 +330,17 @@ export const payrollDashboardService = {
 
 // ============ Export All Services ============
 
+// Export individual services with PascalCase names for compatibility
+export const SalaryComponentService = salaryComponentService;
+export const SalaryStructureService = salaryStructureService;
+export const EmployeeSalaryService = employeeSalaryService;
+export const PayrollRunService = payrollRunService;
+export const PayslipService = payslipService;
+export const StatutoryComplianceService = statutoryComplianceService;
+export const Form16Service = form16Service;
+export const PaymentFileService = paymentFileService;
+export const PayrollDashboardService = payrollDashboardService;
+
 export const payrollService = {
   salaryComponent: salaryComponentService,
   salaryStructure: salaryStructureService,

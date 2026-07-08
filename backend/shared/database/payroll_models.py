@@ -6,7 +6,7 @@ from sqlalchemy import Column, Integer, String, Numeric, Date, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
-from .base import Base
+from .connection import Base
 
 
 # Enums

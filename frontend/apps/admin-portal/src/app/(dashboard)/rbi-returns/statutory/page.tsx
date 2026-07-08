@@ -52,7 +52,7 @@ import { rbiReturnsService } from '@/services/rbi-returns.service'
 import { formatDate } from '@/lib/utils'
 import { toast } from '@/components/ui/use-toast'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { StatutoryReturnCreateRequest } from '@/types/rbi-returns.types'
+import type { CreateStatutoryReturnRequest } from '@/types/rbi-returns.types'
 
 export default function StatutoryReturnsPage() {
   const queryClient = useQueryClient()
@@ -86,7 +86,7 @@ export default function StatutoryReturnsPage() {
 
   // Create statutory return mutation
   const createMutation = useMutation({
-    mutationFn: (request: StatutoryReturnCreateRequest) =>
+    mutationFn: (request: CreateStatutoryReturnRequest) =>
       rbiReturnsService.createStatutoryReturn(request),
     onSuccess: () => {
       toast({
@@ -154,14 +154,15 @@ export default function StatutoryReturnsPage() {
       return
     }
 
-    const request: StatutoryReturnCreateRequest = {
+    const request: CreateStatutoryReturnRequest = {
       return_master_id: '', // Will be handled by backend
       return_type: returnType,
       return_number: returnNumber,
       reporting_period: reportingPeriod,
-      period_start_date: periodStartDate || undefined,
-      period_end_date: periodEndDate || undefined,
-      due_date: dueDate,
+      period_start_date: periodStartDate,
+      period_end_date: periodEndDate,
+      as_on_date: periodEndDate,
+      financial_year: new Date(periodEndDate).getFullYear().toString(),
       return_data: parsedData,
       remarks: remarks || undefined,
     }
