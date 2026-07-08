@@ -296,7 +296,7 @@ export default function PassbookPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(accountData?.data?.current_balance || 0)}
+                  {formatCurrency(accountData?.data?.account_balance || 0)}
                 </div>
                 <p className="text-xs text-gray-600 mt-1">
                   As of today
