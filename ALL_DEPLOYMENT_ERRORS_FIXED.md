@@ -44,37 +44,6 @@ from .onboarding_router import router as onboarding_router
 **Issue**: `PaymentPromise` interface missing `promise_source` field
 **Fix**: Added `promise_source: string` to interface
 
-**Before:**
-```typescript
-export interface PaymentPromise {
-  id: number;
-  loan_account_id: number;
-  customer_id: number;
-  promise_amount: number;
-  promise_date: string;
-  promised_on_date: string;
-  promised_by: string;
-  promise_status: string;
-  ...
-}
-```
-
-**After:**
-```typescript
-export interface PaymentPromise {
-  id: number;
-  loan_account_id: number;
-  customer_id: number;
-  promise_amount: number;
-  promise_date: string;
-  promised_on_date: string;
-  promised_by: string;
-  promise_source: string;  // Added
-  promise_status: string;
-  ...
-}
-```
-
 #### 2. `frontend/apps/admin-portal/src/app/collections/promises/[id]/page.tsx`
 **Issue**: Using incorrect property name `promise.status` instead of `promise.promise_status`
 **Fix**: Changed all occurrences from `promise.status` to `promise.promise_status`
@@ -83,6 +52,20 @@ export interface PaymentPromise {
 - Line 189: `promise.status === 'pending'` → `promise.promise_status === 'pending'`
 - Line 195: `promise.status === 'pending'` → `promise.promise_status === 'pending'`
 - Line 225: `promise.status === 'pending'` → `promise.promise_status === 'pending'`
+
+#### 3. `frontend/apps/admin-portal/src/app/collections/settlement/[id]/page.tsx`
+**Issue**: Type mismatch - passing string to function expecting number
+**Fix**: Parse proposalId to number before passing to API
+
+**Before:**
+```typescript
+const data = await settlementApi.getProposal(proposalId);
+```
+
+**After:**
+```typescript
+const data = await settlementApi.getProposal(parseInt(proposalId));
+```
 
 **Frontend Status**: ✅ **ALL FRONTEND ERRORS FIXED**
 

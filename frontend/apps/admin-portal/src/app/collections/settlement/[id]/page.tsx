@@ -24,7 +24,7 @@ export default function SettlementDetailPage() {
   const loadProposal = async () => {
     try {
       setLoading(true);
-      const data = await settlementApi.getProposal(proposalId);
+      const data = await settlementApi.getProposal(parseInt(proposalId));
       setProposal(data);
     } catch (error) {
       console.error('Failed to load proposal:', error);
