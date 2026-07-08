@@ -29,7 +29,7 @@ export default function AdvancedOperationsPage() {
   // Fetch account details
   const { data: account, isLoading: accountLoading } = useQuery({
     queryKey: ['deposit-account', accountId],
-    queryFn: () => depositService.getAccountById(accountId),
+    queryFn: () => depositService.getAccount(accountId),
   });
 
   // Freeze/Unfreeze Account
