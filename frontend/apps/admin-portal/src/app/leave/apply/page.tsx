@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { attendanceService } from '@/services/attendance.service';
-import { LeavePolicy, LeaveBalance } from '@/types/attendance.types';
+import { LeavePolicy, LeaveBalance, LeavePeriod } from '@/types/attendance.types';
 
 export default function ApplyLeavePage() {
   const router = useRouter();
@@ -76,9 +76,42 @@ export default function ApplyLeavePage() {
       return;
     }
 
+    // Find selected leave policy to get leave_type
+    const selectedPolicy = leaveTypes.find(p => p.id === formData.leave_policy_id);
+    if (!selectedPolicy) {
+      alert('Selected leave policy not found');
+      return;
+    }
+
+    // TODO: Get actual employee_id from auth context/session
+    // For now using placeholder - this should come from logged-in user
+    const employee_id = 'current-user-id'; // This should be replaced with actual employee ID
+
+    // Determine from_period and to_period based on is_half_day
+    const from_period: LeavePeriod = formData.is_half_day 
+      ? (formData.half_day_type === 'first_half' ? LeavePeriod.FIRST_HALF : LeavePeriod.SECOND_HALF)
+      : LeavePeriod.FULL_DAY;
+    const to_period: LeavePeriod = formData.is_half_day 
+      ? (formData.half_day_type === 'first_half' ? LeavePeriod.FIRST_HALF : LeavePeriod.SECOND_HALF)
+      : LeavePeriod.FULL_DAY;
+
+    // Transform form data to match LeaveApplicationCreate interface
+    const applicationData = {
+      employee_id,
+      leave_policy_id: formData.leave_policy_id,
+      leave_type: selectedPolicy.leave_type,
+      from_date: formData.start_date,
+      to_date: formData.end_date,
+      from_period,
+      to_period,
+      reason: formData.reason,
+      contact_during_leave: formData.contact_details || undefined,
+      address_during_leave: formData.emergency_contact || undefined,
+    };
+
     try {
       setSubmitting(true);
-      await attendanceService.leave.createApplication(formData);
+      await attendanceService.leave.createApplication(applicationData);
       alert('Leave application submitted successfully!');
       router.push('/leave');
     } catch (err: any) {

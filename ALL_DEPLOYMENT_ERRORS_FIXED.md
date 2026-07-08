@@ -2,6 +2,37 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #46) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/leave/apply/page.tsx`
+
+**Error**: 
+```
+Type error: Argument of type '{ leave_policy_id: string; start_date: string; ... }' is not assignable to parameter of type 'LeaveApplicationCreate'.
+Missing properties: employee_id, leave_type, from_date, to_date
+```
+
+**Root Cause**: Form data structure doesn't match `LeaveApplicationCreate` interface. The interface requires:
+- `employee_id` (not in form)
+- `leave_type` (needs to be extracted from selected policy)
+- `from_date` / `to_date` (form uses `start_date` / `end_date`)
+- `from_period` / `to_period` as `LeavePeriod` enum (form uses string)
+
+**Fixes Applied**:
+1. Imported `LeavePeriod` enum for proper typing
+2. Added data transformation in `handleSubmit()`:
+   - Extract `leave_type` from selected policy
+   - Map `start_date` → `from_date`, `end_date` → `to_date`
+   - Convert half-day string to `LeavePeriod` enum values
+   - Add placeholder `employee_id` (TODO: get from auth context)
+   - Map `contact_details` → `contact_during_leave`
+   - Map `emergency_contact` → `address_during_leave`
+3. Created properly typed `applicationData` object matching `LeaveApplicationCreate`
+
+**Status**: ✅ **FIXED** - Form data now properly transformed to match API interface
+
+---
+
 ## Latest Fix (Build #45) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/leave/apply/page.tsx`
