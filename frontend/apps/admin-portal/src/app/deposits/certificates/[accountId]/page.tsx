@@ -416,7 +416,7 @@ export default function CertificatesPage() {
                     </div>
                     <div>
                       <p className="text-gray-600">Account Type</p>
-                      <p className="font-medium">{accountData?.data?.account_type}</p>
+                      <p className="font-medium">{accountData?.data?.deposit_type}</p>
                     </div>
                     <div>
                       <p className="text-gray-600">Financial Year</p>
