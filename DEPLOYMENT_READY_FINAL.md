@@ -15,12 +15,13 @@ All backend and frontend errors have been systematically fixed and verified.
 2. ✅ `backend/services/recruitment/interview_router.py` - Fixed schema name
 3. ✅ `backend/services/recruitment/interview_service.py` - Added missing imports and methods
 
-### Frontend Errors Fixed: **5 files**
+### Frontend Errors Fixed: **6 files**
 1. ✅ `frontend/apps/admin-portal/src/types/collection.ts` - Added `promise_source` field + Updated SettlementProposal type
 2. ✅ `frontend/apps/admin-portal/src/app/collections/promises/[id]/page.tsx` - Fixed property names
 3. ✅ `frontend/apps/admin-portal/src/app/collections/settlement/[id]/page.tsx` - Fixed type conversion
 4. ✅ `frontend/apps/admin-portal/src/lib/api/collection.ts` - Added approveProposal/rejectProposal methods
 5. ✅ `frontend/apps/admin-portal/src/types/collection.ts` - Fixed SettlementProposal property names
+6. ✅ `frontend/apps/admin-portal/src/app/collections/settlement/new/page.tsx` - Fixed PaymentTerm → PaymentTerms
 
 ---
 
@@ -248,6 +249,25 @@ export interface SettlementProposal {
 
 ---
 
+### Frontend Fix 6: PaymentTerm Type Name
+**File**: `frontend/apps/admin-portal/src/app/collections/settlement/new/page.tsx`
+
+**Changed**: Fixed incorrect type import name
+
+```typescript
+// Before
+import { SettlementProposal, PaymentTerm } from '@/types/collection';
+payment_terms: 'lumpsum' as PaymentTerm,
+
+// After
+import { SettlementProposal, PaymentTerms } from '@/types/collection';
+payment_terms: 'lumpsum' as keyof typeof PaymentTerms,
+```
+
+**Error Resolved**: `'"@/types/collection"' has no exported member named 'PaymentTerm'`
+
+---
+
 ## 🧪 Verification Status
 
 ### Backend Verification ✅
@@ -304,6 +324,12 @@ Property 'original_outstanding' does not exist on type 'SettlementProposal'
 → Fixed: Updated SettlementProposal type to include all properties used by settlement detail page
 ```
 
+### Error 7 (Frontend)
+```
+'"@/types/collection"' has no exported member named 'PaymentTerm'
+→ Fixed: Changed PaymentTerm to PaymentTerms (correct enum name)
+```
+
 ---
 
 ## 🚀 Deployment Instructions
@@ -342,13 +368,14 @@ git push origin main
 2. `backend/services/recruitment/interview_router.py`
 3. `backend/services/recruitment/interview_service.py`
 
-### Frontend (4 files)
+### Frontend (5 files)
 1. `frontend/apps/admin-portal/src/types/collection.ts` (modified twice)
 2. `frontend/apps/admin-portal/src/app/collections/promises/[id]/page.tsx`
 3. `frontend/apps/admin-portal/src/app/collections/settlement/[id]/page.tsx`
 4. `frontend/apps/admin-portal/src/lib/api/collection.ts`
+5. `frontend/apps/admin-portal/src/app/collections/settlement/new/page.tsx`
 
-**Total**: 7 files modified (3 backend + 4 frontend)
+**Total**: 8 files modified (3 backend + 5 frontend)
 
 ---
 
