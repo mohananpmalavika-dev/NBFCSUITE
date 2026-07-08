@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { settlementApi } from '@/lib/api/collection';
-import { SettlementProposal, PaymentTerm } from '@/types/collection';
+import { SettlementProposal, PaymentTerms } from '@/types/collection';
 
 export default function NewSettlementPage() {
   const router = useRouter();
@@ -19,7 +19,7 @@ export default function NewSettlementPage() {
     settlement_amount: 0,
     waiver_amount: 0,
     waiver_percentage: 0,
-    payment_terms: 'lumpsum' as PaymentTerm,
+    payment_terms: 'lumpsum' as keyof typeof PaymentTerms,
     number_of_installments: 1,
     installment_frequency: 'monthly',
     valid_until: '',
