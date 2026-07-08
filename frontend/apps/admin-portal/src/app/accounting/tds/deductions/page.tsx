@@ -219,7 +219,7 @@ export default function TDSDeductionsPage() {
                       <TableCell>
                         {format(new Date(deduction.deduction_date), 'dd MMM yyyy')}
                       </TableCell>
-                      <TableCell className="font-medium">{deduction.voucher_number}</TableCell>
+                      <TableCell className="font-medium">{deduction.deduction_number}</TableCell>
                       <TableCell>{deduction.deductee_name}</TableCell>
                       <TableCell>{deduction.deductee_pan}</TableCell>
                       <TableCell>{deduction.section_code}</TableCell>

@@ -12,8 +12,8 @@ from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from .requisition_service import RequisitionService
 from .schemas import (
     JobRequisitionCreate, JobRequisitionUpdate, JobRequisitionResponse,
-    JobRequisitionListResponse, RequisitionStatusEnum, JobRequisitionApproval,
-    RequisitionDashboardStats
+    PaginatedRequisitionResponse, RequisitionStatusEnum, JobRequisitionApproval,
+    RecruitmentDashboardStats as RequisitionDashboardStats
 )
 from backend.shared.database.recruitment_models import JobRequisition
 
@@ -43,7 +43,7 @@ async def create_requisition(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=JobRequisitionListResponse)
+@router.get("/", response_model=PaginatedRequisitionResponse)
 async def get_requisitions(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
