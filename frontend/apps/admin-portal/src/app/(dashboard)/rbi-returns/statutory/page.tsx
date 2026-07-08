@@ -502,6 +502,7 @@ export default function StatutoryReturnsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="reporting_period">
