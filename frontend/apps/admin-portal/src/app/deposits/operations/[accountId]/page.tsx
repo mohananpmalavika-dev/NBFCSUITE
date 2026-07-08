@@ -304,6 +304,7 @@ export default function AdvancedOperationsPage() {
         </div>
 
         {/* Account Status Alert */}
+        {/* Temporarily disabled - is_frozen not in DepositAccount type
         {account?.data?.is_frozen && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
             <AlertTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -315,6 +316,7 @@ export default function AdvancedOperationsPage() {
             </div>
           </div>
         )}
+        */}
 
         {/* Tabs */}
         <div className="border-b border-gray-200">
@@ -382,15 +384,16 @@ export default function AdvancedOperationsPage() {
                   </div>
                 </div>
 
-                {account?.data?.is_frozen ? (
+                {/* Temporarily disabled - is_frozen not in DepositAccount type */}
+                {false ? (
                   <div className="space-y-4">
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                       <h4 className="font-semibold text-yellow-900">Account is Currently Frozen</h4>
                       <p className="text-yellow-700 text-sm mt-1">
-                        Frozen on: {new Date(account.data.frozen_at || '').toLocaleDateString()}
+                        Frozen on: N/A
                       </p>
                       <p className="text-yellow-700 text-sm">
-                        Reason: {account.data.freeze_reason || 'Not specified'}
+                        Reason: Not specified
                       </p>
                     </div>
                     <Button
@@ -555,7 +558,8 @@ export default function AdvancedOperationsPage() {
             </Card>
 
             {/* Active Liens */}
-            {account?.data?.liens && account.data.liens.length > 0 && (
+            {/* Temporarily disabled - liens not in DepositAccount type */}
+            {false && account?.data?.liens && account.data.liens.length > 0 && (
               <Card>
                 <div className="p-6">
                   <h4 className="font-semibold text-gray-900 mb-4">Active Liens</h4>
@@ -803,7 +807,8 @@ export default function AdvancedOperationsPage() {
             </Card>
 
             {/* Existing Joint Holders */}
-            {account?.data?.joint_holders && account.data.joint_holders.length > 0 && (
+            {/* Temporarily disabled - joint_holders not in DepositAccount type */}
+            {false && account?.data?.joint_holders && account.data.joint_holders.length > 0 && (
               <Card>
                 <div className="p-6">
                   <h4 className="font-semibold text-gray-900 mb-4">Current Joint Holders</h4>
