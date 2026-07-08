@@ -34,7 +34,7 @@ export default function TemplatesPage() {
     if (!confirmed) return;
 
     try {
-      await templateApi.update(id, { is_active: false });
+      await templateApi.update(parseInt(id), { is_active: false });
       loadTemplates();
     } catch (error) {
       console.error('Failed to delete template:', error);
