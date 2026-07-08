@@ -173,7 +173,7 @@ export default function TemplatesPage() {
                       <span className="text-gray-400">○ Inactive</span>
                     )}
                   </span>
-                  <span>Uses: {template.usage_count || 0}</span>
+                  <span className="text-gray-400">{template.language || 'en'}</span>
                 </div>
 
                 {template.variables && template.variables.length > 0 && (
