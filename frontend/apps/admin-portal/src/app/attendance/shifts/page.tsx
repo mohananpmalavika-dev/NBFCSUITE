@@ -164,7 +164,7 @@ export default function ShiftManagementPage() {
         return 'bg-blue-100 text-blue-800';
       case ShiftType.NIGHT:
         return 'bg-indigo-100 text-indigo-800';
-      case ShiftType.ROTATIONAL:
+      case ShiftType.ROTATING:
         return 'bg-purple-100 text-purple-800';
       case ShiftType.FLEXIBLE:
         return 'bg-green-100 text-green-800';
@@ -268,7 +268,7 @@ export default function ShiftManagementPage() {
                 >
                   <option value={ShiftType.REGULAR}>Regular</option>
                   <option value={ShiftType.NIGHT}>Night</option>
-                  <option value={ShiftType.ROTATIONAL}>Rotational</option>
+                  <option value={ShiftType.ROTATING}>Rotating</option>
                   <option value={ShiftType.FLEXIBLE}>Flexible</option>
                 </select>
               </div>
@@ -443,7 +443,7 @@ export default function ShiftManagementPage() {
               <option value="all">All Types</option>
               <option value={ShiftType.REGULAR}>Regular</option>
               <option value={ShiftType.NIGHT}>Night</option>
-              <option value={ShiftType.ROTATIONAL}>Rotational</option>
+              <option value={ShiftType.ROTATING}>Rotating</option>
               <option value={ShiftType.FLEXIBLE}>Flexible</option>
             </select>
           </div>
