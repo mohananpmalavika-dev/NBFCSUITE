@@ -9,7 +9,7 @@ export default function TemplatesPage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<CommunicationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<ActionType | 'all'>('all');
+  const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
     loadTemplates();
