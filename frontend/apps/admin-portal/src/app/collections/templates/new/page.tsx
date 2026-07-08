@@ -26,14 +26,14 @@ export default function NewTemplatePage() {
     legal_grounds: '',
   });
 
-  const actionTypes: ActionType[] = [
+  const actionTypes = [
     'sms',
     'email',
     'call',
     'field_visit',
     'legal_notice',
     'payment_link',
-  ];
+  ] as const;
 
   const noticeTypes = [
     { value: 'demand_notice', label: 'Demand Notice' },
