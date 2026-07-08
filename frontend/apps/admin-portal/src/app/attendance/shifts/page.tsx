@@ -106,11 +106,11 @@ export default function ShiftManagementPage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this shift?')) return;
     
     try {
-      await attendanceService.shift.delete(String(id));
+      await attendanceService.shift.delete(id);
       loadShifts();
     } catch (err: any) {
       alert(err.message || 'Failed to delete shift');
