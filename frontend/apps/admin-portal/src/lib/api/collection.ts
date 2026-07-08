@@ -368,6 +368,14 @@ export const legalApi = {
     return response.data;
   },
 
+  // Get notice by ID
+  getNotice: async (id: string | number) => {
+    const response = await apiClient.get<LegalNotice>(
+      `${BASE_URL}/legal/notices/${id}`
+    );
+    return response.data;
+  },
+
   // Create notice
   createNotice: async (data: Partial<LegalNotice>) => {
     const response = await apiClient.post<LegalNotice>(
@@ -626,6 +634,7 @@ export const collectionApi = {
   
   // Legal methods
   listNotices: legalApi.listNotices,
+  getNotice: legalApi.getNotice,
   createNotice: legalApi.createNotice,
   updateNoticeDelivery: legalApi.updateNoticeDelivery,
   listCases: legalApi.listCases,
