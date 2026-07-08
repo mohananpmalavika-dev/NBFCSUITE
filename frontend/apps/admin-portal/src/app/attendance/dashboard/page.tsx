@@ -112,14 +112,14 @@ export default function AttendanceDashboardPage() {
         return 'bg-red-100 text-red-800';
       case AttendanceStatus.HALF_DAY:
         return 'bg-yellow-100 text-yellow-800';
-      case AttendanceStatus.ON_LEAVE:
+      case AttendanceStatus.LEAVE:
         return 'bg-blue-100 text-blue-800';
       case AttendanceStatus.WEEK_OFF:
         return 'bg-gray-100 text-gray-800';
       case AttendanceStatus.HOLIDAY:
         return 'bg-purple-100 text-purple-800';
-      case AttendanceStatus.LATE:
-        return 'bg-orange-100 text-orange-800';
+      case AttendanceStatus.ON_DUTY:
+        return 'bg-indigo-100 text-indigo-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

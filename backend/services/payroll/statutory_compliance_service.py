@@ -12,10 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.shared.database.payroll_models import (
     StatutoryCompliance, StatutoryType, PaymentStatus
 )
-from backend.services.payroll.schemas import (
-    StatutoryComplianceCreate, StatutoryComplianceUpdate,
-    StatutoryComplianceResponse, StatutoryComplianceList
-)
 
 
 class StatutoryComplianceService:
