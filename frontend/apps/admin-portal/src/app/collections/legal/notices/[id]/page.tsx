@@ -244,30 +244,19 @@ export default function LegalNoticeDetailPage() {
                   <p className="text-xs text-gray-600">{formatDate(notice.created_at)}</p>
                 </div>
               </div>
-              {notice.issued_date && (
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-purple-600 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Notice Issued</p>
-                    <p className="text-xs text-gray-600">{formatDate(notice.issued_date)}</p>
-                  </div>
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 bg-purple-600 rounded-full mt-2"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Notice Date</p>
+                  <p className="text-xs text-gray-600">{formatDate(notice.notice_date)}</p>
                 </div>
-              )}
-              {notice.delivered_date && (
+              </div>
+              {notice.delivery_date && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-gray-900">Delivered</p>
-                    <p className="text-xs text-gray-600">{formatDate(notice.delivered_date)}</p>
-                  </div>
-                </div>
-              )}
-              {notice.acknowledgement_date && (
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Acknowledged</p>
-                    <p className="text-xs text-gray-600">{formatDate(notice.acknowledgement_date)}</p>
+                    <p className="text-xs text-gray-600">{formatDate(notice.delivery_date)}</p>
                   </div>
                 </div>
               )}
@@ -283,38 +272,16 @@ export default function LegalNoticeDetailPage() {
             </div>
           </div>
 
-          {/* Legal References */}
-          {notice.legal_sections && notice.legal_sections.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Legal Sections</h2>
-              <div className="space-y-2">
-                {notice.legal_sections.map((section, index) => (
-                  <div key={index} className="p-2 bg-blue-50 rounded text-sm text-blue-900">
-                    {section}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Status Info */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Status</h2>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Current Status</span>
+                <span className="text-sm text-gray-600">Delivery Status</span>
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(notice.delivery_status)}`}>
                   {notice.delivery_status.toUpperCase()}
                 </span>
               </div>
-              {notice.response_deadline && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Response Due</span>
-                  <span className="text-sm font-medium text-red-600">
-                    {formatDate(notice.response_deadline)}
-                  </span>
-                </div>
-              )}
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Response Received</span>
                 <span className={notice.response_received ? 'text-green-600' : 'text-gray-400'}>
