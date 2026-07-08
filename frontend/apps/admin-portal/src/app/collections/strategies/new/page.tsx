@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collectionApi } from '@/lib/api/collection';
-import { ActionType, DPDBucket } from '@/types/collection';
+import { ActionType } from '@/types/collection';
 
 export default function NewStrategyPage() {
   const router = useRouter();
