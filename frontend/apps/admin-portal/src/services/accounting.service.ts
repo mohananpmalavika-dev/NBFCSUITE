@@ -331,8 +331,11 @@ export const tdsService = {
     deductor_tan: string
     deductor_pan: string
     deductor_name: string
-  }) {
-    return apiClient.post('/accounting/tds/certificates/generate', data)
+  }): Promise<Blob> {
+    const response = await apiClient.post('/accounting/tds/certificates/generate', data, {
+      responseType: 'blob'
+    })
+    return response.data
   },
 
   // TDS Returns
