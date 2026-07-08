@@ -79,8 +79,8 @@ export default function NewDepositAccountPage() {
     setFormData(prev => ({ ...prev, [field]: value }))
     
     // Update selected product when product changes
-    if (field === 'product_id' && products?.items) {
-      const product = products.items.find((p: any) => p.id === value)
+    if (field === 'product_id' && products?.data?.items) {
+      const product = products.data.items.find((p: any) => p.id === value)
       setSelectedProduct(product)
     }
   }
@@ -189,7 +189,7 @@ export default function NewDepositAccountPage() {
                 required
               >
                 <option value="">Select a deposit product</option>
-                {products?.items?.map((product: any) => (
+                {products?.data?.items?.map((product: any) => (
                   <option key={product.id} value={product.id}>
                     {product.product_name} - {product.deposit_type} ({product.interest_rate}% p.a.)
                   </option>
