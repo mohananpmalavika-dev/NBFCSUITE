@@ -591,6 +591,38 @@ export const settlementApi = {
       { params: { from_date, to_date } }
     );
     return response.data;
+  },
+
+  // Simplified approval methods that work directly with proposal_id
+  approveProposal: async (proposal_id: number, notes?: string) => {
+    // First submit for approval, then immediately approve
+    // This is a simplified workflow for direct approval
+    const submitResponse = await apiClient.post(
+      `${BASE_URL}/settlement/proposals/${proposal_id}/submit`,
+      { approver_user_id: 1, approval_level: 1 } // Using default approver
+    );
+    const approval_id = submitResponse.data.id;
+    
+    const response = await apiClient.post(
+      `${BASE_URL}/settlement/approvals/${approval_id}/approve`,
+      { remarks: notes }
+    );
+    return response.data;
+  },
+
+  rejectProposal: async (proposal_id: number, reason: string) => {
+    // First submit for approval, then immediately reject
+    const submitResponse = await apiClient.post(
+      `${BASE_URL}/settlement/proposals/${proposal_id}/submit`,
+      { approver_user_id: 1, approval_level: 1 } // Using default approver
+    );
+    const approval_id = submitResponse.data.id;
+    
+    const response = await apiClient.post(
+      `${BASE_URL}/settlement/approvals/${approval_id}/reject`,
+      { remarks: reason }
+    );
+    return response.data;
   }
 };
 
