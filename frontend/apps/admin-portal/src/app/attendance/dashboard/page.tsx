@@ -66,8 +66,11 @@ export default function AttendanceDashboardPage() {
       });
 
       await attendanceService.attendance.checkIn({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
+        employee_id: '', // TODO: Get from current user context
+        location: {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        },
         device_info: navigator.userAgent,
       });
 
@@ -86,8 +89,11 @@ export default function AttendanceDashboardPage() {
       });
 
       await attendanceService.attendance.checkOut({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
+        employee_id: '', // TODO: Get from current user context
+        location: {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        },
         device_info: navigator.userAgent,
       });
 

@@ -69,8 +69,8 @@ class SalaryComponentBase(BaseModel):
     component_name: str = Field(..., max_length=200)
     component_type: ComponentType
     calculation_type: CalculationType
-    default_value: Optional[Decimal] = Field(default=0.00, decimal_places=2)
-    percentage: Optional[Decimal] = Field(default=None, decimal_places=2)
+    default_value: Optional[Decimal] = Field(default=0.00)
+    percentage: Optional[Decimal] = Field(default=None)
     formula: Optional[str] = None
     display_order: int = 0
     is_taxable: bool = True
