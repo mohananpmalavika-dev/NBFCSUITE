@@ -11,6 +11,7 @@ export default function NewSettlementPage() {
   const [loanDetails, setLoanDetails] = useState<any>(null);
   const [formData, setFormData] = useState({
     loan_account_id: '',
+    customer_id: 0,
     original_outstanding: 0,
     principal_outstanding: 0,
     interest_outstanding: 0,
@@ -111,6 +112,8 @@ export default function NewSettlementPage() {
     try {
       const payload = {
         ...formData,
+        loan_account_id: parseInt(formData.loan_account_id) || 0,
+        customer_id: formData.customer_id || 0,
         status: isDraft ? 'draft' : 'pending_approval',
         npv_analysis: npvData,
       };
