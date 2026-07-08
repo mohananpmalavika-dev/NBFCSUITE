@@ -479,6 +479,13 @@ class Form16Create(Form16Base):
     tenant_id: int
 
 
+class Form16Update(BaseModel):
+    is_issued: Optional[bool] = None
+    issued_date: Optional[date] = None
+    is_digitally_signed: Optional[bool] = None
+    form16_pdf_url: Optional[str] = None
+
+
 class Form16Response(Form16Base):
     id: int
     tenant_id: int

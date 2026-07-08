@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { ClipboardList, CheckCircle, Clock, DollarSign, TrendingUp } from 'lucide-react';
 import { fieldAgentApi } from '@/lib/api/collection';
 import { FieldAgent } from '@/types/collection';
 import { CollectionStatCard } from '@/components/collections';
@@ -162,31 +163,32 @@ export default function FieldAgentDetailPage() {
         <CollectionStatCard
           title="Total Cases"
           value={stats.totalCases.toString()}
-          icon="📋"
+          icon={ClipboardList}
+          color="bg-blue-600"
         />
         <CollectionStatCard
           title="Completed Visits"
           value={stats.completedVisits.toString()}
-          icon="✅"
-          trend="success"
+          icon={CheckCircle}
+          color="bg-green-600"
         />
         <CollectionStatCard
           title="Pending Visits"
           value={stats.pendingVisits.toString()}
-          icon="⏳"
-          trend="warning"
+          icon={Clock}
+          color="bg-yellow-600"
         />
         <CollectionStatCard
           title="Collections"
           value={formatCurrency(stats.collectionAmount)}
-          icon="💰"
-          trend="success"
+          icon={DollarSign}
+          color="bg-purple-600"
         />
         <CollectionStatCard
           title="Success Rate"
           value={`${stats.successRate}%`}
-          icon="📈"
-          trend={stats.successRate >= 70 ? 'success' : 'warning'}
+          icon={TrendingUp}
+          color={stats.successRate >= 70 ? 'bg-green-600' : 'bg-orange-600'}
         />
       </div>
 
