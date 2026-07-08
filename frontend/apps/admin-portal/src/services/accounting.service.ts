@@ -62,6 +62,20 @@ export interface TDSCertificate {
   status: string
 }
 
+export interface TDSReturn {
+  id: number
+  return_number: string
+  financial_year: number
+  quarter: number
+  return_type: string
+  filing_date?: string
+  acknowledgement_number?: string
+  status: string
+  total_deductions: number
+  total_amount: number
+  created_at: string
+}
+
 // ============================================
 // GST Types
 // ============================================
@@ -340,6 +354,15 @@ export const tdsService = {
   },
 
   // TDS Returns
+  async getReturns(params?: {
+    financial_year?: number
+    quarter?: number
+    return_type?: string
+    status?: string
+  }) {
+    return apiClient.get<{ data: TDSReturn[] }>('/accounting/tds/returns', { params })
+  },
+
   async prepareReturn(data: {
     financial_year: number
     quarter: number

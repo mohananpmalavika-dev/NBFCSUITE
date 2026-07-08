@@ -321,6 +321,12 @@ class JobApplicationUpdate(BaseModel):
     rejection_reason: Optional[str] = None
 
 
+class ApplicationStatusChange(BaseModel):
+    """Change application status"""
+    status: ApplicationStatusEnum
+    notes: Optional[str] = None
+
+
 class ApplicationBulkAction(BaseModel):
     """Bulk action on applications"""
     action: str  # shortlist, reject, change_status

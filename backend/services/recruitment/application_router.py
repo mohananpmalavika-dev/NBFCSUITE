@@ -13,7 +13,7 @@ from .application_service import ApplicationService
 from .schemas import (
     JobApplicationCreate, JobApplicationUpdate, JobApplicationResponse,
     PaginatedApplicationResponse, ApplicationStatusEnum, ApplicationSourceEnum,
-    ApplicationBulkAction
+    ApplicationBulkAction, ApplicationStatusChange
 )
 
 
