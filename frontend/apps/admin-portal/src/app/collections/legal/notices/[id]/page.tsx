@@ -131,30 +131,28 @@ export default function LegalNoticeDetailPage() {
                 <p className="font-medium text-gray-900">{getNoticeTypeLabel(notice.notice_type)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Loan Account</p>
+                <p className="text-sm text-gray-600">Notice Stage</p>
+                <p className="font-medium text-gray-900">{notice.notice_stage}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Loan Account ID</p>
                 <p className="font-medium text-gray-900">{notice.loan_account_id}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Customer Name</p>
-                <p className="font-medium text-gray-900">{notice.customer_name || 'N/A'}</p>
+                <p className="text-sm text-gray-600">Customer ID</p>
+                <p className="font-medium text-gray-900">{notice.customer_id}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Outstanding Amount</p>
-                <p className="text-xl font-bold text-red-600">{formatCurrency(notice.outstanding_amount)}</p>
+                <p className="text-sm text-gray-600">Amount Demanded</p>
+                <p className="text-xl font-bold text-red-600">{formatCurrency(notice.notice_amount_demanded)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Issued Date</p>
-                <p className="font-medium text-gray-900">{formatDate(notice.issued_date)}</p>
+                <p className="text-sm text-gray-600">Notice Date</p>
+                <p className="font-medium text-gray-900">{formatDate(notice.notice_date)}</p>
               </div>
-              {notice.response_deadline && (
-                <div>
-                  <p className="text-sm text-gray-600">Response Deadline</p>
-                  <p className="font-medium text-red-600">{formatDate(notice.response_deadline)}</p>
-                </div>
-              )}
               <div>
-                <p className="text-sm text-gray-600">Issued By</p>
-                <p className="font-medium text-gray-900">{notice.issued_by || 'N/A'}</p>
+                <p className="text-sm text-gray-600">Dispatch Mode</p>
+                <p className="font-medium text-gray-900 capitalize">{notice.dispatch_mode}</p>
               </div>
             </div>
           </div>
@@ -164,60 +162,22 @@ export default function LegalNoticeDetailPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Delivery Information</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-600">Delivery Mode</p>
-                <p className="font-medium text-gray-900 capitalize">
-                  {notice.delivery_mode?.replace('_', ' ') || 'N/A'}
-                </p>
+                <p className="text-sm text-gray-600">Delivery Status</p>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(notice.delivery_status)}`}>
+                  {notice.delivery_status.toUpperCase()}
+                </span>
               </div>
-              {notice.tracking_number && (
+              {notice.delivery_date && (
                 <div>
-                  <p className="text-sm text-gray-600">Tracking Number</p>
-                  <p className="font-medium text-gray-900">{notice.tracking_number}</p>
-                </div>
-              )}
-              {notice.delivered_date && (
-                <div>
-                  <p className="text-sm text-gray-600">Delivered Date</p>
-                  <p className="font-medium text-green-600">{formatDate(notice.delivered_date)}</p>
-                </div>
-              )}
-              {notice.acknowledgement_date && (
-                <div>
-                  <p className="text-sm text-gray-600">Acknowledged Date</p>
-                  <p className="font-medium text-green-600">{formatDate(notice.acknowledgement_date)}</p>
+                  <p className="text-sm text-gray-600">Delivery Date</p>
+                  <p className="font-medium text-green-600">{formatDate(notice.delivery_date)}</p>
                 </div>
               )}
             </div>
-            {notice.delivery_address && (
-              <div className="mt-4">
-                <p className="text-sm text-gray-600 mb-1">Delivery Address</p>
-                <p className="text-gray-900 whitespace-pre-wrap">{notice.delivery_address}</p>
-              </div>
-            )}
           </div>
 
-          {/* Notice Content */}
-          {notice.content && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Notice Content</h2>
-              <div className="prose max-w-none">
-                <div className="p-4 bg-gray-50 rounded-lg text-gray-800 whitespace-pre-wrap font-mono text-sm">
-                  {notice.content}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Legal Grounds */}
-          {notice.legal_grounds && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Legal Grounds</h2>
-              <p className="text-gray-700 whitespace-pre-wrap">{notice.legal_grounds}</p>
-            </div>
-          )}
-
-          {/* Response */}
-          {notice.response_received && notice.response_details && (
+          {/* Response Information */}
+          {notice.response_received && (
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Response Received</h2>
               <div className="space-y-3">
@@ -227,44 +187,7 @@ export default function LegalNoticeDetailPage() {
                     <p className="font-medium text-gray-900">{formatDate(notice.response_date)}</p>
                   </div>
                 )}
-                <div>
-                  <p className="text-sm text-gray-600 mb-2">Response Details</p>
-                  <p className="text-gray-900 whitespace-pre-wrap">{notice.response_details}</p>
-                </div>
               </div>
-            </div>
-          )}
-
-          {/* Attachments */}
-          {notice.attachments && notice.attachments.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Attachments</h2>
-              <div className="space-y-2">
-                {notice.attachments.map((attachment, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        📄
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{attachment.name}</p>
-                        <p className="text-xs text-gray-500">{attachment.size}</p>
-                      </div>
-                    </div>
-                    <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                      Download
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
-          {notice.notes && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Internal Notes</h2>
-              <p className="text-gray-700 whitespace-pre-wrap">{notice.notes}</p>
             </div>
           )}
         </div>
