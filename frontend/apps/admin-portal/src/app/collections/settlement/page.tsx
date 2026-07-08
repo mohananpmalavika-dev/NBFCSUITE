@@ -28,10 +28,10 @@ export default function SettlementPage() {
     try {
       setLoading(true);
       const data = await settlementApi.listProposals(
-        filter === 'all' ? undefined : filter
+        filter === 'all' ? undefined : { proposal_status: filter }
       );
-      setProposals(data);
-      calculateStats(data);
+      setProposals(data.items || data);
+      calculateStats(data.items || data);
     } catch (error) {
       console.error('Failed to load proposals:', error);
     } finally {
