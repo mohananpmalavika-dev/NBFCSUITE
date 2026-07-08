@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collectionApi } from '@/lib/api/collection';
+import { collectionStrategyApi } from '@/lib/api/collection';
 import { ActionType } from '@/types/collection';
 
 export default function NewStrategyPage() {
@@ -76,7 +76,7 @@ export default function NewStrategyPage() {
         actions,
       };
 
-      const strategy = await collectionApi.createStrategy(payload);
+      const strategy = await collectionStrategyApi.create(payload);
       router.push(`/collections/strategies`);
     } catch (error) {
       console.error('Failed to create strategy:', error);
