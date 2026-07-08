@@ -159,7 +159,14 @@ from backend.shared.database.risk_models import (
     RiskRating, EarlyWarningSignal, EarlyWarningAlert
 )
 
-# 18. Insurance & Bancassurance models (NEW - Insurance Module)
+# 18. Payroll Management models (NEW - HRMS Payroll Module)
+from backend.shared.database.payroll_models import (
+    SalaryComponent, SalaryStructure, SalaryStructureComponent, EmployeeSalary,
+    EmployeeSalaryComponent, PayrollRun, Payslip, PayslipComponent,
+    StatutoryCompliance, Form16, PaymentFile
+)
+
+# 19. Insurance & Bancassurance models (NEW - Insurance Module)
 from backend.services.insurance.models import (
     InsuranceAgent, InsurancePolicy, InsurancePremium,
     InsuranceClaim, InsuranceCommission
@@ -339,6 +346,7 @@ app = FastAPI(
         {"name": "HRMS - Attendance - Shifts", "description": "Shift management and employee shift assignments"},
         {"name": "HRMS - Attendance - Tracking", "description": "Attendance tracking, check-in/out, and biometric integration"},
         {"name": "HRMS - Leave Management", "description": "Leave policies, applications, balance, and approval workflow"},
+        {"name": "HRMS - Payroll", "description": "Salary structure, statutory compliance (PF/ESI/PT/TDS), payroll processing, Form 16, payment files"},
     ]
 )
 
@@ -674,6 +682,9 @@ from backend.services.attendance.shift_router import router as shift_router
 from backend.services.attendance.attendance_router import router as attendance_router
 from backend.services.attendance.leave_router import router as leave_router
 
+# NEW: HRMS Payroll Management Router
+from backend.services.payroll.payroll_router import router as payroll_router
+
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["Dashboard"])
@@ -832,6 +843,12 @@ app.include_router(onboarding_router, prefix="/api/v1/recruitment/onboarding", t
 app.include_router(shift_router, prefix="/api/v1/attendance/shifts", tags=["HRMS - Attendance - Shifts"])
 app.include_router(attendance_router, prefix="/api/v1/attendance", tags=["HRMS - Attendance - Tracking"])
 app.include_router(leave_router, prefix="/api/v1/leave", tags=["HRMS - Leave Management"])
+
+# ============================================================================
+# NEW: HRMS PAYROLL MANAGEMENT ROUTER
+# Salary Components, Structures, Processing, Statutory Compliance, Form 16, Payment Files
+# ============================================================================
+app.include_router(payroll_router, prefix="/api/v1/payroll", tags=["HRMS - Payroll"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

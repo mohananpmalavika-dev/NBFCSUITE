@@ -8,14 +8,25 @@ from typing import Optional, List
 
 from backend.services.payroll.schemas import (
     SalaryComponentCreate, SalaryComponentUpdate, SalaryComponentResponse, SalaryComponentListResponse,
+    SalaryStructureCreate, SalaryStructureUpdate, SalaryStructureResponse, SalaryStructureList,
+    EmployeeSalaryCreate, EmployeeSalaryUpdate, EmployeeSalaryResponse, EmployeeSalaryList,
+    StatutoryComplianceCreate, StatutoryComplianceUpdate, StatutoryComplianceResponse, StatutoryComplianceList,
+    Form16Create, Form16Update, Form16Response, Form16List,
+    PaymentFileCreate, PaymentFileUpdate, PaymentFileResponse, PaymentFileList,
     PayrollRunCreate, PayrollRunResponse, PayrollRunListResponse,
     PayrollRunProcessRequest, PayrollRunApproveRequest,
     PayslipListResponse, PayslipResponse,
     PayrollDashboardStats, PayrollSummary,
-    ComponentType, PayrollStatus
+    ComponentType, PayrollStatus, StatutoryType, PaymentStatus, 
+    Form16Status, PaymentFileFormat, PaymentFileStatus
 )
 from backend.services.payroll.salary_component_service import SalaryComponentService
+from backend.services.payroll.salary_structure_service import SalaryStructureService
+from backend.services.payroll.employee_salary_service import EmployeeSalaryService
 from backend.services.payroll.payroll_processing_service import PayrollProcessingService
+from backend.services.payroll.statutory_compliance_service import StatutoryComplianceService
+from backend.services.payroll.form16_service import Form16Service
+from backend.services.payroll.payment_file_service import PaymentFileService
 from backend.shared.database.payroll_models import PayrollRun, Payslip
 from sqlalchemy import and_
 
@@ -120,6 +131,172 @@ async def delete_salary_component(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
+
+# ============ Salary Structure Endpoints ============
+
+@router.post("/structures", response_model=SalaryStructureResponse)
+async def create_salary_structure(
+    structure: SalaryStructureCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new salary structure"""
+    try:
+        result = await SalaryStructureService.create_structure(
+            db, current_user["tenant_id"], structure, current_user["id"]
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/structures", response_model=SalaryStructureList)
+async def list_salary_structures(
+    is_active: Optional[bool] = None,
+    search: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """List salary structures with filters"""
+    return await SalaryStructureService.list_structures(
+        db, current_user["tenant_id"], is_active, search, page, page_size
+    )
+
+
+@router.get("/structures/{structure_id}", response_model=SalaryStructureResponse)
+async def get_salary_structure(
+    structure_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a salary structure by ID"""
+    result = await SalaryStructureService.get_structure(
+        db, current_user["tenant_id"], structure_id
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Salary structure not found")
+    return result
+
+
+@router.put("/structures/{structure_id}", response_model=SalaryStructureResponse)
+async def update_salary_structure(
+    structure_id: int,
+    structure: SalaryStructureUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a salary structure"""
+    try:
+        result = await SalaryStructureService.update_structure(
+            db, current_user["tenant_id"], structure_id, structure, current_user["id"]
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail="Salary structure not found")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/structures/{structure_id}")
+async def delete_salary_structure(
+    structure_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a salary structure"""
+    success = await SalaryStructureService.delete_structure(
+        db, current_user["tenant_id"], structure_id, current_user["id"]
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Salary structure not found or already in use")
+    return {"message": "Salary structure deleted successfully"}
+
+
+# ============ Employee Salary Endpoints ============
+
+@router.post("/employee-salaries", response_model=EmployeeSalaryResponse)
+async def assign_employee_salary(
+    salary: EmployeeSalaryCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Assign salary structure to an employee"""
+    try:
+        result = await EmployeeSalaryService.assign_salary(
+            db, current_user["tenant_id"], salary, current_user["id"]
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/employee-salaries", response_model=EmployeeSalaryList)
+async def list_employee_salaries(
+    employee_id: Optional[int] = None,
+    structure_id: Optional[int] = None,
+    is_active: Optional[bool] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """List employee salary assignments with filters"""
+    return await EmployeeSalaryService.list_employee_salaries(
+        db, current_user["tenant_id"], employee_id, structure_id, 
+        is_active, page, page_size
+    )
+
+
+@router.get("/employee-salaries/{salary_id}", response_model=EmployeeSalaryResponse)
+async def get_employee_salary(
+    salary_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get an employee salary assignment by ID"""
+    result = await EmployeeSalaryService.get_employee_salary(
+        db, current_user["tenant_id"], salary_id
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Employee salary not found")
+    return result
+
+
+@router.get("/employees/{employee_id}/salary", response_model=EmployeeSalaryResponse)
+async def get_employee_current_salary(
+    employee_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get current active salary for an employee"""
+    result = await EmployeeSalaryService.get_employee_active_salary(
+        db, current_user["tenant_id"], employee_id
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="No active salary found for employee")
+    return result
+
+
+@router.put("/employee-salaries/{salary_id}", response_model=EmployeeSalaryResponse)
+async def update_employee_salary(
+    salary_id: int,
+    salary: EmployeeSalaryUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update employee salary assignment"""
+    try:
+        result = await EmployeeSalaryService.update_employee_salary(
+            db, current_user["tenant_id"], salary_id, salary, current_user["id"]
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail="Employee salary not found")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ============ Payroll Run Endpoints ============
@@ -438,3 +615,421 @@ async def get_payroll_summary(
         raise HTTPException(status_code=404, detail="No payroll data found for the specified month")
     
     return result
+
+
+# ============ Statutory Compliance Endpoints ============
+
+@router.post("/compliance", response_model=StatutoryComplianceResponse)
+async def create_statutory_compliance(
+    compliance: StatutoryComplianceCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new statutory compliance record"""
+    try:
+        result = await StatutoryComplianceService.create_compliance(
+            db, current_user["tenant_id"], compliance, current_user["id"]
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/compliance", response_model=StatutoryComplianceList)
+async def list_statutory_compliance(
+    statutory_type: Optional[StatutoryType] = None,
+    payment_status: Optional[PaymentStatus] = None,
+    month: Optional[int] = None,
+    year: Optional[int] = None,
+    payroll_run_id: Optional[int] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """List statutory compliance records with filters"""
+    return await StatutoryComplianceService.list_compliance(
+        db, current_user["tenant_id"], statutory_type, payment_status,
+        month, year, payroll_run_id, page, page_size
+    )
+
+
+@router.get("/compliance/{compliance_id}", response_model=StatutoryComplianceResponse)
+async def get_statutory_compliance(
+    compliance_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a statutory compliance record by ID"""
+    result = await StatutoryComplianceService.get_compliance(
+        db, current_user["tenant_id"], compliance_id
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Compliance record not found")
+    return result
+
+
+@router.put("/compliance/{compliance_id}", response_model=StatutoryComplianceResponse)
+async def update_statutory_compliance(
+    compliance_id: int,
+    compliance: StatutoryComplianceUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update statutory compliance record"""
+    try:
+        result = await StatutoryComplianceService.update_compliance(
+            db, current_user["tenant_id"], compliance_id, compliance, current_user["id"]
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail="Compliance record not found")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/compliance/{compliance_id}/payment")
+async def update_compliance_payment(
+    compliance_id: int,
+    challan_number: str,
+    payment_date: str,
+    payment_status: PaymentStatus,
+    bank_name: Optional[str] = None,
+    bank_branch: Optional[str] = None,
+    remarks: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update compliance payment details"""
+    from datetime import datetime
+    try:
+        result = await StatutoryComplianceService.update_payment_status(
+            db, current_user["tenant_id"], compliance_id,
+            challan_number, datetime.strptime(payment_date, "%Y-%m-%d").date(),
+            payment_status, bank_name, bank_branch, remarks, current_user["id"]
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail="Compliance record not found")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/compliance/summary/{year}/{month}")
+async def get_compliance_summary(
+    year: int,
+    month: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get statutory compliance summary for a month"""
+    result = await StatutoryComplianceService.get_compliance_summary(
+        db, current_user["tenant_id"], month, year
+    )
+    return result
+
+
+@router.get("/compliance/pending-payments")
+async def get_pending_compliance_payments(
+    due_before: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get pending statutory compliance payments"""
+    from datetime import datetime
+    due_date = None
+    if due_before:
+        due_date = datetime.strptime(due_before, "%Y-%m-%d").date()
+    
+    result = await StatutoryComplianceService.get_pending_payments(
+        db, current_user["tenant_id"], due_date
+    )
+    return {"items": result, "total": len(result)}
+
+
+@router.delete("/compliance/{compliance_id}")
+async def delete_statutory_compliance(
+    compliance_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete statutory compliance record"""
+    success = await StatutoryComplianceService.delete_compliance(
+        db, current_user["tenant_id"], compliance_id, current_user["id"]
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Compliance record not found or cannot be deleted")
+    return {"message": "Compliance record deleted successfully"}
+
+
+# ============ Form 16 Endpoints ============
+
+@router.post("/form16", response_model=Form16Response)
+async def create_form16(
+    form16: Form16Create,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new Form 16 record"""
+    try:
+        result = await Form16Service.create_form16(
+            db, current_user["tenant_id"], form16, current_user["id"]
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/form16", response_model=Form16List)
+async def list_form16(
+    employee_id: Optional[int] = None,
+    financial_year: Optional[str] = None,
+    status: Optional[Form16Status] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """List Form 16 records with filters"""
+    return await Form16Service.list_form16(
+        db, current_user["tenant_id"], employee_id, financial_year,
+        status, page, page_size
+    )
+
+
+@router.get("/form16/{form16_id}", response_model=Form16Response)
+async def get_form16(
+    form16_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a Form 16 record by ID"""
+    result = await Form16Service.get_form16(
+        db, current_user["tenant_id"], form16_id
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Form 16 not found")
+    return result
+
+
+@router.put("/form16/{form16_id}", response_model=Form16Response)
+async def update_form16(
+    form16_id: int,
+    form16: Form16Update,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update Form 16 record"""
+    try:
+        result = await Form16Service.update_form16(
+            db, current_user["tenant_id"], form16_id, form16, current_user["id"]
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail="Form 16 not found")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/form16/generate")
+async def generate_form16(
+    employee_id: int,
+    financial_year: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate Form 16 for an employee"""
+    try:
+        result = await Form16Service.generate_form16(
+            db, current_user["tenant_id"], employee_id, 
+            financial_year, current_user["id"]
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/form16/{form16_id}/issue")
+async def issue_form16(
+    form16_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Issue Form 16 to employee"""
+    result = await Form16Service.issue_form16(
+        db, current_user["tenant_id"], form16_id, current_user["id"]
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Form 16 not found")
+    return result
+
+
+@router.get("/form16/{form16_id}/download")
+async def download_form16(
+    form16_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Download Form 16 PDF"""
+    result = await Form16Service.get_form16(
+        db, current_user["tenant_id"], form16_id
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Form 16 not found")
+    
+    # TODO: Implement PDF generation
+    return {"message": "PDF generation not implemented", "form16": result}
+
+
+@router.delete("/form16/{form16_id}")
+async def delete_form16(
+    form16_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete Form 16 record"""
+    success = await Form16Service.delete_form16(
+        db, current_user["tenant_id"], form16_id, current_user["id"]
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Form 16 not found or cannot be deleted")
+    return {"message": "Form 16 deleted successfully"}
+
+
+# ============ Payment File Endpoints ============
+
+@router.post("/payment-files", response_model=PaymentFileResponse)
+async def create_payment_file(
+    payment_file: PaymentFileCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new payment file record"""
+    try:
+        result = await PaymentFileService.create_payment_file(
+            db, current_user["tenant_id"], payment_file, current_user["id"]
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/payment-files", response_model=PaymentFileList)
+async def list_payment_files(
+    payroll_run_id: Optional[int] = None,
+    file_format: Optional[PaymentFileFormat] = None,
+    status: Optional[PaymentFileStatus] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """List payment files with filters"""
+    return await PaymentFileService.list_payment_files(
+        db, current_user["tenant_id"], payroll_run_id, file_format,
+        status, page, page_size
+    )
+
+
+@router.get("/payment-files/{payment_file_id}", response_model=PaymentFileResponse)
+async def get_payment_file(
+    payment_file_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a payment file by ID"""
+    result = await PaymentFileService.get_payment_file(
+        db, current_user["tenant_id"], payment_file_id
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Payment file not found")
+    return result
+
+
+@router.put("/payment-files/{payment_file_id}", response_model=PaymentFileResponse)
+async def update_payment_file(
+    payment_file_id: int,
+    payment_file: PaymentFileUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update payment file record"""
+    try:
+        result = await PaymentFileService.update_payment_file(
+            db, current_user["tenant_id"], payment_file_id, 
+            payment_file, current_user["id"]
+        )
+        if not result:
+            raise HTTPException(status_code=404, detail="Payment file not found")
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/payment-files/generate")
+async def generate_payment_file(
+    payroll_run_id: int,
+    file_format: PaymentFileFormat,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Generate payment file for a payroll run"""
+    try:
+        result = await PaymentFileService.generate_payment_file(
+            db, current_user["tenant_id"], payroll_run_id, 
+            file_format, current_user["id"]
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/payment-files/{payment_file_id}/upload")
+async def update_payment_file_status(
+    payment_file_id: int,
+    status: PaymentFileStatus,
+    uploaded_by: Optional[str] = None,
+    remarks: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Update payment file upload status"""
+    result = await PaymentFileService.update_upload_status(
+        db, current_user["tenant_id"], payment_file_id,
+        status, uploaded_by, remarks, current_user["id"]
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Payment file not found")
+    return result
+
+
+@router.get("/payment-files/{payment_file_id}/download")
+async def download_payment_file(
+    payment_file_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Download payment file"""
+    result = await PaymentFileService.get_payment_file(
+        db, current_user["tenant_id"], payment_file_id
+    )
+    if not result:
+        raise HTTPException(status_code=404, detail="Payment file not found")
+    
+    # TODO: Implement file download from storage
+    return {"message": "File download not implemented", "file_path": result.file_path}
+
+
+@router.delete("/payment-files/{payment_file_id}")
+async def delete_payment_file(
+    payment_file_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete payment file"""
+    success = await PaymentFileService.delete_payment_file(
+        db, current_user["tenant_id"], payment_file_id, current_user["id"]
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="Payment file not found or cannot be deleted")
+    return {"message": "Payment file deleted successfully"}
