@@ -416,20 +416,52 @@ export interface SettlementProposal {
   id: number;
   loan_account_id: number;
   customer_id: number;
+  customer_name?: string;
+  customer_contact?: string;
   proposal_number: string;
-  proposal_type: string;
-  total_outstanding: number;
-  outstanding_principal: number;
-  outstanding_interest: number;
-  penal_charges: number;
-  proposed_settlement_amount: number;
-  waiver_on_interest: number;
-  waiver_on_penal: number;
-  waiver_percentage: number;
+  proposal_type?: string;
+  
+  // Outstanding amounts
+  original_outstanding: number;
+  principal_outstanding: number;
+  interest_outstanding: number;
+  penalty_outstanding: number;
+  other_charges: number;
+  
+  // Settlement terms
+  settlement_amount: number;
+  waiver_amount: number;
   payment_terms: string;
-  proposal_status: string;
-  request_date: string;
+  number_of_installments?: number;
+  installment_frequency?: string;
+  valid_until?: string;
+  
+  // NPV Analysis (optional)
+  npv_analysis?: {
+    npv_without_settlement: number;
+    npv_with_settlement: number;
+    npv_benefit: number;
+    estimated_recovery_time: number;
+    estimated_recovery_amount: number;
+    discount_rate: number;
+  };
+  
+  // Justification
+  reason: string;
+  justification?: string;
+  internal_notes?: string;
+  
+  // Status and workflow
+  status: string;
   created_at: string;
+  created_by: string;
+  approved_at?: string;
+  approved_by?: string;
+  rejected_at?: string;
+  rejected_by?: string;
+  completed_at?: string;
+  approval_notes?: string;
+  rejection_reason?: string;
 }
 
 export interface SettlementAgreement {
