@@ -408,7 +408,7 @@ class LoanInsurancePolicy(BaseModel):
     loan_account = relationship("LoanAccount", foreign_keys=[loan_account_id])
     customer = relationship("Customer", foreign_keys=[customer_id])
     premium_payments = relationship("InsurancePremiumPayment", back_populates="policy", cascade="all, delete-orphan")
-    claims = relationship("InsuranceClaim", back_populates="policy", cascade="all, delete-orphan")
+    claims = relationship("LoanInsuranceClaim", back_populates="policy", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index('idx_policy_loan', 'tenant_id', 'loan_account_id'),
@@ -451,9 +451,9 @@ class InsurancePremiumPayment(BaseModel):
     )
 
 
-class InsuranceClaim(BaseModel):
-    """Insurance claim tracking"""
-    __tablename__ = "insurance_claims"
+class LoanInsuranceClaim(BaseModel):
+    """Loan Insurance claim tracking"""
+    __tablename__ = "loan_insurance_claims"
     
     policy_id = Column(UUID(as_uuid=True), ForeignKey("loan_insurance_policies.id"), nullable=False, index=True)
     loan_account_id = Column(UUID(as_uuid=True), ForeignKey("loan_accounts.id"), nullable=False)

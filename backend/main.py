@@ -106,7 +106,7 @@ from backend.shared.database.property_loan_models import (
 # 9. LMS Extended models (NEW - LMS Extensions)
 from backend.shared.database.lms_extended_models import (
     NACHMandate, NACHDebitTransaction, LoanRestructuring,
-    LoanInsurancePolicy, InsurancePremiumPayment, InsuranceClaim
+    LoanInsurancePolicy, InsurancePremiumPayment, LoanInsuranceClaim
 )
 
 # 10. Compliance & Regulatory models (NEW - CRILC & SMA Reporting)

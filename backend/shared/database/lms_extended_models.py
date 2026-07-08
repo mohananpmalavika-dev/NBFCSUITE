@@ -486,7 +486,7 @@ class LoanInsurancePolicy(Base):
     # Relationships
     loan_account = relationship("LoanAccount")
     customer = relationship("Customer")
-    claims = relationship("InsuranceClaim", back_populates="policy")
+    claims = relationship("LoanInsuranceClaim", back_populates="policy")
     premiums = relationship("InsurancePremiumPayment", back_populates="policy")
     
     # Indexes
@@ -546,9 +546,9 @@ class InsurancePremiumPayment(Base):
     )
 
 
-class InsuranceClaim(Base):
-    """Insurance Claim Tracking"""
-    __tablename__ = "insurance_claims"
+class LoanInsuranceClaim(Base):
+    """Loan Insurance Claim Tracking"""
+    __tablename__ = "loan_insurance_claims"
     
     id = Column(Integer, primary_key=True, index=True)
     tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)

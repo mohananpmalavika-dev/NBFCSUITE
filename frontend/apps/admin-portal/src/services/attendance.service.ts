@@ -271,6 +271,41 @@ export const leaveApplicationApi = {
     return response.data;
   },
 
+  // Alias for list (backward compatibility)
+  async listApplications(params: {
+    page?: number;
+    page_size?: number;
+    employee_id?: string;
+    status?: string;
+    leave_type?: string;
+    from_date?: string;
+    to_date?: string;
+    search?: string;
+  }): Promise<PaginatedResponse<LeaveApplication>> {
+    const response = await axios.get(`${API_BASE_URL}/leave/applications`, { params });
+    return response.data;
+  },
+
+  // List leave types
+  async listLeaveTypes(params?: {
+    page?: number;
+    page_size?: number;
+    is_active?: boolean;
+  }): Promise<PaginatedResponse<any>> {
+    const response = await axios.get(`${API_BASE_URL}/leave/types`, { params });
+    return response.data;
+  },
+
+  // List leave balances
+  async listBalances(params?: {
+    page?: number;
+    page_size?: number;
+    employee_id?: string;
+  }): Promise<PaginatedResponse<LeaveBalance>> {
+    const response = await axios.get(`${API_BASE_URL}/leave/balances`, { params });
+    return response.data;
+  },
+
   // Get leave application by ID
   async get(id: string): Promise<LeaveApplication> {
     const response = await axios.get(`${API_BASE_URL}/leave/applications/${id}`);
@@ -285,6 +320,12 @@ export const leaveApplicationApi = {
 
   // Create leave application
   async create(data: LeaveApplicationCreate): Promise<LeaveApplication> {
+    const response = await axios.post(`${API_BASE_URL}/leave/applications`, data);
+    return response.data;
+  },
+
+  // Alias for create (backward compatibility)
+  async createApplication(data: LeaveApplicationCreate): Promise<LeaveApplication> {
     const response = await axios.post(`${API_BASE_URL}/leave/applications`, data);
     return response.data;
   },
@@ -315,10 +356,36 @@ export const leaveApplicationApi = {
     return response.data;
   },
 
+  // Approve leave application (simplified)
+  async approveApplication(id: number, data: { remarks?: string }): Promise<LeaveApplication> {
+    const response = await axios.post(
+      `${API_BASE_URL}/leave/applications/${id}/approve`,
+      { action: 'APPROVE', ...data }
+    );
+    return response.data;
+  },
+
+  // Reject leave application (simplified)
+  async rejectApplication(id: number, data: { remarks: string }): Promise<LeaveApplication> {
+    const response = await axios.post(
+      `${API_BASE_URL}/leave/applications/${id}/approve`,
+      { action: 'REJECT', ...data }
+    );
+    return response.data;
+  },
+
   // Cancel leave application
   async cancel(id: string, cancellation_reason: string): Promise<LeaveApplication> {
     const response = await axios.post(`${API_BASE_URL}/leave/applications/${id}/cancel`, {
       cancellation_reason
+    });
+    return response.data;
+  },
+
+  // Cancel leave application (simplified)
+  async cancelApplication(id: number): Promise<LeaveApplication> {
+    const response = await axios.post(`${API_BASE_URL}/leave/applications/${id}/cancel`, {
+      cancellation_reason: 'Cancelled by user'
     });
     return response.data;
   },
@@ -437,13 +504,16 @@ export const leaveUtils = {
 };
 
 // Export all APIs
-export default {
+export const attendanceService = {
   shift: shiftApi,
   attendance: attendanceApi,
   biometric: biometricApi,
   leavePolicy: leavePolicyApi,
   leaveBalance: leaveBalanceApi,
   leaveApplication: leaveApplicationApi,
+  leave: leaveApplicationApi, // Alias for backward compatibility
   attendanceUtils,
   leaveUtils
 };
+
+export default attendanceService;

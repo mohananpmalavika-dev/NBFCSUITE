@@ -118,6 +118,18 @@ export const rbiReturnsService = {
     return response.data
   },
 
+  async approveStatutoryReturn(id: string) {
+    const response = await apiClient.post<StatutoryReturn>(`/rbi-returns/statutory/${id}/approve`)
+    return response.data
+  },
+
+  async submitStatutoryReturn(id: string, submissionReference: string) {
+    const response = await apiClient.post<StatutoryReturn>(`/rbi-returns/statutory/${id}/submit`, {
+      submission_reference: submissionReference,
+    })
+    return response.data
+  },
+
   // ============================================================================
   // XBRL DOCUMENTS
   // ============================================================================
