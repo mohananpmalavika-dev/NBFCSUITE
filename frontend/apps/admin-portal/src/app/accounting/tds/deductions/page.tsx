@@ -78,7 +78,27 @@ export default function TDSDeductionsPage() {
 
   const handleGenerateCertificate = async (deduction: TDSDeduction) => {
     try {
-      const pdfBlob = await tdsService.generateCertificate(deduction.id);
+      // Extract financial year and quarter from deduction date
+      const deductionDate = new Date(deduction.deduction_date);
+      const financial_year = deductionDate.getMonth() >= 3 
+        ? deductionDate.getFullYear() 
+        : deductionDate.getFullYear() - 1;
+      const quarter = Math.floor((deductionDate.getMonth() + 9) % 12 / 3) + 1;
+
+      const certificateData = {
+        financial_year,
+        quarter,
+        deductee_id: deduction.id,
+        deductee_type: 'vendor', // Default type, adjust as needed
+        deductee_name: deduction.deductee_name,
+        deductee_pan: deduction.deductee_pan || '',
+        deductee_address: '', // Not available in TDSDeduction
+        deductor_tan: '', // These should come from company settings
+        deductor_pan: '',
+        deductor_name: ''
+      };
+
+      const pdfBlob = await tdsService.generateCertificate(certificateData);
       const url = window.URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;

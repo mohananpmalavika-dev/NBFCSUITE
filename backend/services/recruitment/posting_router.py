@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-from backend.shared.database.database import get_db
+from backend.shared.database.connection import get_db
 from backend.shared.dependencies.auth import get_current_user, get_tenant_id
 from .posting_service import JobPostingService
 from .schemas import (

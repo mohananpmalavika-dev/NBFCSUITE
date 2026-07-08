@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from datetime import date
 
-from backend.shared.database.database import get_db
+from backend.shared.database.connection import get_db
 from backend.shared.dependencies.auth import get_current_user, get_tenant_id
 from .leave_service import LeavePolicyService, LeaveBalanceService, LeaveApplicationService
 from .schemas import (
