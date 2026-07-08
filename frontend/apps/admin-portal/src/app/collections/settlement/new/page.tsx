@@ -20,7 +20,7 @@ export default function NewSettlementPage() {
     settlement_amount: 0,
     waiver_amount: 0,
     waiver_percentage: 0,
-    payment_terms: 'lumpsum' as keyof typeof PaymentTerms,
+    payment_terms: 'lumpsum',
     number_of_installments: 1,
     installment_frequency: 'monthly',
     valid_until: '',
@@ -348,7 +348,7 @@ export default function NewSettlementPage() {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    payment_terms: e.target.value as keyof typeof PaymentTerms,
+                    payment_terms: e.target.value,
                   })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
