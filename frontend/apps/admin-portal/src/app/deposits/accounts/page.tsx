@@ -248,7 +248,7 @@ export default function DepositAccountsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={page === 1}
+                  disabled={!data.data.has_prev}
                   onClick={() => setPage(page - 1)}
                 >
                   Previous
@@ -256,7 +256,7 @@ export default function DepositAccountsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={page >= (data.data.pages || 1)}
+                  disabled={!data.data.has_next}
                   onClick={() => setPage(page + 1)}
                 >
                   Next
