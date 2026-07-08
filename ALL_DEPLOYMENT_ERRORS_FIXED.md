@@ -2,6 +2,34 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #48) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/leave/page.tsx`
+
+**Error**: 
+```
+Type error: Property 'PENDING_REPORTING_MANAGER' does not exist on type 'typeof LeaveStatus'.
+```
+
+**Root Cause**: Code using non-existent LeaveStatus enum values (`PENDING_REPORTING_MANAGER`, `PENDING_HR`) and incorrect property names from LeaveApplication type.
+
+**Fixes Applied**:
+1. Removed non-existent enum values from `getStatusBadgeClass()`:
+   - Removed: `PENDING_REPORTING_MANAGER`, `PENDING_HR`
+   - Added: `WITHDRAWN`, `DRAFT` (actual enum values)
+2. Fixed status filter dropdown to use only actual enum values
+3. Changed ID parameter type from `number` to `string` in handlers: `handleApprove()`, `handleReject()`, `handleCancel()`
+4. Fixed LeaveApplication property accesses:
+   - `start_date` → `from_date`
+   - `end_date` → `to_date`
+   - `leave_type_name` / `leave_type_id` → `leave_type` (enum value)
+   - `is_half_day` → check `from_period !== 'FULL_DAY' || to_period !== 'FULL_DAY'`
+5. Simplified action button logic to only check for `LeaveStatus.PENDING`
+
+**Status**: ✅ **FIXED** - All enum values and property accesses corrected
+
+---
+
 ## Latest Fix (Build #47) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/leave/balance/page.tsx`

@@ -46,7 +46,7 @@ export default function LeaveApplicationsPage() {
     }
   };
 
-  const handleApprove = async (id: number) => {
+  const handleApprove = async (id: string) => {
     if (!confirm('Approve this leave application?')) return;
 
     try {
@@ -60,7 +60,7 @@ export default function LeaveApplicationsPage() {
     }
   };
 
-  const handleReject = async (id: number) => {
+  const handleReject = async (id: string) => {
     const remarks = prompt('Enter rejection reason:');
     if (!remarks) return;
 
@@ -75,7 +75,7 @@ export default function LeaveApplicationsPage() {
     }
   };
 
-  const handleCancel = async (id: number) => {
+  const handleCancel = async (id: string) => {
     if (!confirm('Cancel this leave application?')) return;
 
     try {
@@ -97,10 +97,10 @@ export default function LeaveApplicationsPage() {
         return 'bg-red-100 text-red-800';
       case LeaveStatus.CANCELLED:
         return 'bg-gray-100 text-gray-800';
-      case LeaveStatus.PENDING_REPORTING_MANAGER:
-        return 'bg-blue-100 text-blue-800';
-      case LeaveStatus.PENDING_HR:
-        return 'bg-indigo-100 text-indigo-800';
+      case LeaveStatus.WITHDRAWN:
+        return 'bg-purple-100 text-purple-800';
+      case LeaveStatus.DRAFT:
+        return 'bg-gray-100 text-gray-600';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -161,12 +161,12 @@ export default function LeaveApplicationsPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Status</option>
+              <option value={LeaveStatus.DRAFT}>Draft</option>
               <option value={LeaveStatus.PENDING}>Pending</option>
-              <option value={LeaveStatus.PENDING_REPORTING_MANAGER}>Pending - Manager</option>
-              <option value={LeaveStatus.PENDING_HR}>Pending - HR</option>
               <option value={LeaveStatus.APPROVED}>Approved</option>
               <option value={LeaveStatus.REJECTED}>Rejected</option>
               <option value={LeaveStatus.CANCELLED}>Cancelled</option>
+              <option value={LeaveStatus.WITHDRAWN}>Withdrawn</option>
             </select>
           </div>
 
@@ -234,24 +234,24 @@ export default function LeaveApplicationsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {app.leave_type_name || `Type ${app.leave_type_id}`}
+                        {app.leave_type}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatDate(app.start_date)}
+                        {formatDate(app.from_date)}
                       </div>
                       <div className="text-xs text-gray-500">
-                        to {formatDate(app.end_date)}
+                        to {formatDate(app.to_date)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         {app.total_days}
                       </div>
-                      {app.is_half_day && (
-                        <div className="text-xs text-gray-500">(Half Day)</div>
-                      )}
+                      <div className="text-xs text-gray-500">
+                        {app.from_period !== 'FULL_DAY' || app.to_period !== 'FULL_DAY' ? '(Partial Day)' : ''}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(app.status)}`}>
@@ -259,9 +259,7 @@ export default function LeaveApplicationsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {app.status === LeaveStatus.PENDING || 
-                       app.status === LeaveStatus.PENDING_REPORTING_MANAGER || 
-                       app.status === LeaveStatus.PENDING_HR ? (
+                      {app.status === LeaveStatus.PENDING ? (
                         <>
                           <button
                             onClick={() => handleApprove(app.id)}
