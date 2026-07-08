@@ -299,12 +299,12 @@ export default function AdvancedOperationsPage() {
         <div>
           <h1 className="text-3xl font-bold">Advanced Operations</h1>
           <p className="text-gray-600 mt-2">
-            Account: {account?.account_number} - {account?.customer_name}
+            Account: {account?.data?.account_number} - {account?.data?.customer_name}
           </p>
         </div>
 
         {/* Account Status Alert */}
-        {account?.is_frozen && (
+        {account?.data?.is_frozen && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
             <AlertTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
@@ -382,15 +382,15 @@ export default function AdvancedOperationsPage() {
                   </div>
                 </div>
 
-                {account?.is_frozen ? (
+                {account?.data?.is_frozen ? (
                   <div className="space-y-4">
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                       <h4 className="font-semibold text-yellow-900">Account is Currently Frozen</h4>
                       <p className="text-yellow-700 text-sm mt-1">
-                        Frozen on: {new Date(account.frozen_at || '').toLocaleDateString()}
+                        Frozen on: {new Date(account.data.frozen_at || '').toLocaleDateString()}
                       </p>
                       <p className="text-yellow-700 text-sm">
-                        Reason: {account.freeze_reason || 'Not specified'}
+                        Reason: {account.data.freeze_reason || 'Not specified'}
                       </p>
                     </div>
                     <Button
@@ -555,12 +555,12 @@ export default function AdvancedOperationsPage() {
             </Card>
 
             {/* Active Liens */}
-            {account?.liens && account.liens.length > 0 && (
+            {account?.data?.liens && account.data.liens.length > 0 && (
               <Card>
                 <div className="p-6">
                   <h4 className="font-semibold text-gray-900 mb-4">Active Liens</h4>
                   <div className="space-y-3">
-                    {account.liens.map((lien: any) => (
+                    {account.data.liens.map((lien: any) => (
                       <div key={lien.id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
