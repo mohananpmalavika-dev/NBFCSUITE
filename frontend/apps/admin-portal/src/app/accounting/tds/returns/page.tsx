@@ -53,15 +53,17 @@ export default function TDSReturnsPage() {
     
     try {
       setPreparingReturn(true);
-      const returnData = await tdsService.prepareReturn({
-        financial_year: formData.financial_year,
-        quarter: formData.quarter,
+      const response = await tdsService.prepareReturn({
+        financial_year: parseInt(formData.financial_year),
+        quarter: parseInt(formData.quarter.replace('Q', '')),
         return_type: formData.return_type
       });
 
+      const returnData = response.data;
+      
       toast({
         title: "Success",
-        description: `Form ${formData.return_type} prepared successfully with ${returnData.total_deductions} deductions`
+        description: `Form ${formData.return_type} prepared successfully with ${returnData.total_deductions || 0} deductions`
       });
       
       setIsDialogOpen(false);
