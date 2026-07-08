@@ -158,7 +158,8 @@ export default function StatementGenerationPage() {
       depositService.getAnnualStatement(accountId, {
         financial_year: financialYear,
       }),
-    onSuccess: (blob) => {
+    onSuccess: (response) => {
+      const blob = response.data
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url

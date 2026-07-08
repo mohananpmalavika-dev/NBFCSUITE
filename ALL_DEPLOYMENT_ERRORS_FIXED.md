@@ -144,3 +144,37 @@ All errors have been fixed and verified. The application should deploy successfu
 - No breaking changes introduced
 - Only added missing fields and fixed incorrect references
 - Code quality maintained throughout fixes
+
+
+---
+
+## LATEST FIXES (Build #43)
+
+### Fix #43 - Blob Extraction in Statement Mutations ✅
+**File**: `frontend/apps/admin-portal/src/app/deposits/statements/[accountId]/page.tsx`
+**Lines**: 73, 130, 157
+
+**Error**: 
+```
+Type error: Argument of type 'AxiosResponse<any, any, {}>' is not assignable to parameter of type 'Blob | MediaSource'.
+```
+
+**Root Cause**: 
+- Three mutations (`generateStatementMutation`, `generateQuarterlyMutation`, `generateAnnualMutation`) receive `AxiosResponse` from the service methods
+- The `onSuccess` callbacks expected a `Blob` parameter directly, but axios wraps the blob in `response.data`
+- Attempting to use the AxiosResponse as a Blob caused TypeScript compilation error
+
+**Fix Applied**:
+Changed all three mutations' `onSuccess` callbacks:
+- `onSuccess: (blob) =>` → `onSuccess: (response) =>`
+- Added `const blob = response.data` at start of each callback
+- Applied to:
+  * `generateStatementMutation` (line 73)
+  * `generateQuarterlyMutation` (line 130)  
+  * `generateAnnualMutation` (line 157)
+
+**Status**: ✅ **FIXED** - Awaiting build verification
+
+---
+
+## BUILD STATUS: ⏳ Waiting for next build result...
