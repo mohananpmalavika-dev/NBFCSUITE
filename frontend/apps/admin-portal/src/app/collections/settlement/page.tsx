@@ -27,7 +27,7 @@ export default function SettlementPage() {
   const loadProposals = async () => {
     try {
       setLoading(true);
-      const data = await settlementApi.getProposals(
+      const data = await settlementApi.listProposals(
         filter === 'all' ? undefined : filter
       );
       setProposals(data);
