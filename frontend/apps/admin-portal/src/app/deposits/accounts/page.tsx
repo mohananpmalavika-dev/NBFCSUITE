@@ -104,7 +104,7 @@ export default function DepositAccountsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <StatCard
             label="Total Accounts"
-            value={data?.metadata?.total || 0}
+            value={data?.data?.total || 0}
             icon={PiggyBank}
             color="blue"
           />
@@ -242,13 +242,13 @@ export default function DepositAccountsPage() {
           {data?.data && data.data.items.length > 0 && (
             <div className="flex items-center justify-between px-6 py-4 border-t">
               <p className="text-sm text-gray-600">
-                Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.metadata?.total || 0)} of {data.metadata?.total || 0} accounts
+                Showing {((page - 1) * 20) + 1} to {Math.min(page * 20, data.data.total || 0)} of {data.data.total || 0} accounts
               </p>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!data.metadata?.has_prev}
+                  disabled={page === 1}
                   onClick={() => setPage(page - 1)}
                 >
                   Previous
@@ -256,7 +256,7 @@ export default function DepositAccountsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={!data.metadata?.has_next}
+                  disabled={page >= (data.data.pages || 1)}
                   onClick={() => setPage(page + 1)}
                 >
                   Next
