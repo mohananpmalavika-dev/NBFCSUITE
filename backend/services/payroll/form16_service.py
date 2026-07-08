@@ -11,12 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from backend.shared.database.payroll_models import (
-    Form16, Form16Status, PayrollRun, Payslip, StatutoryCompliance, StatutoryType
+    PayrollRun, Payslip, StatutoryCompliance, StatutoryType
 )
 from backend.shared.database.hrms_models import Employee
-from backend.services.payroll.schemas import (
-    Form16Create, Form16Update, Form16Response, Form16List
-)
 
 
 class Form16Service:

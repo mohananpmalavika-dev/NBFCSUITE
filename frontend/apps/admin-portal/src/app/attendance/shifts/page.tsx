@@ -71,7 +71,7 @@ export default function ShiftManagementPage() {
     e.preventDefault();
     try {
       if (editingShift) {
-        await attendanceService.shift.update(editingShift.id, formData);
+        await attendanceService.shift.update(String(editingShift.id), formData);
       } else {
         await attendanceService.shift.create(formData);
       }
@@ -110,7 +110,7 @@ export default function ShiftManagementPage() {
     if (!confirm('Are you sure you want to delete this shift?')) return;
     
     try {
-      await attendanceService.shift.delete(id);
+      await attendanceService.shift.delete(String(id));
       loadShifts();
     } catch (err: any) {
       alert(err.message || 'Failed to delete shift');
@@ -119,7 +119,7 @@ export default function ShiftManagementPage() {
 
   const handleToggleActive = async (shift: Shift) => {
     try {
-      await attendanceService.shift.update(shift.id, {
+      await attendanceService.shift.update(String(shift.id), {
         ...shift,
         is_active: !shift.is_active,
       });
