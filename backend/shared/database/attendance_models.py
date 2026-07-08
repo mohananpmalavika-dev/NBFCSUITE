@@ -155,7 +155,7 @@ class EmployeeShift(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee and Shift
-    employee_id = Column(String(36), ForeignKey("employees.id"), nullable=False, index=True)
+    employee_id = Column(String(36), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     shift_id = Column(String(36), ForeignKey("shifts.id"), nullable=False, index=True)
     
     # Effective Period
@@ -194,7 +194,7 @@ class Attendance(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee and Date
-    employee_id = Column(String(36), ForeignKey("employees.id"), nullable=False, index=True)
+    employee_id = Column(String(36), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     attendance_date = Column(Date, nullable=False, index=True)
     
     # Shift Information
@@ -262,7 +262,7 @@ class BiometricLog(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee
-    employee_id = Column(String(36), ForeignKey("employees.id"), nullable=False, index=True)
+    employee_id = Column(String(36), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     biometric_id = Column(String(50))  # Employee's biometric ID/enrollment number
     
     # Log Details
@@ -307,7 +307,7 @@ class AttendanceRegularization(Base):
     
     # Reference
     attendance_id = Column(String(36), ForeignKey("attendance.id"), nullable=False, index=True)
-    employee_id = Column(String(36), ForeignKey("employees.id"), nullable=False, index=True)
+    employee_id = Column(String(36), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     
     # Requested Changes
     requested_check_in = Column(DateTime)
