@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { attendanceService } from '@/services/attendance.service';
 import { 
   AttendanceStatus, 
-  AttendanceStats, 
-  AttendanceRecord 
+  AttendanceDashboardStats, 
+  Attendance 
 } from '@/types/attendance.types';
 
 export default function AttendanceDashboardPage() {
-  const [stats, setStats] = useState<AttendanceStats | null>(null);
-  const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord[]>([]);
+  const [stats, setStats] = useState<AttendanceDashboardStats | null>(null);
+  const [todayAttendance, setTodayAttendance] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -189,10 +189,10 @@ export default function AttendanceDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm mb-1">Present</p>
-                <p className="text-3xl font-bold text-green-600">{stats.present_count}</p>
+                <p className="text-3xl font-bold text-green-600">{stats.present_today}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   {stats.total_employees > 0 
-                    ? `${((stats.present_count / stats.total_employees) * 100).toFixed(1)}%`
+                    ? `${((stats.present_today / stats.total_employees) * 100).toFixed(1)}%`
                     : '0%'}
                 </p>
               </div>
@@ -208,10 +208,10 @@ export default function AttendanceDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm mb-1">Absent</p>
-                <p className="text-3xl font-bold text-red-600">{stats.absent_count}</p>
+                <p className="text-3xl font-bold text-red-600">{stats.absent_today}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   {stats.total_employees > 0 
-                    ? `${((stats.absent_count / stats.total_employees) * 100).toFixed(1)}%`
+                    ? `${((stats.absent_today / stats.total_employees) * 100).toFixed(1)}%`
                     : '0%'}
                 </p>
               </div>
@@ -227,8 +227,8 @@ export default function AttendanceDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm mb-1">On Leave</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.on_leave_count}</p>
-                <p className="text-xs text-gray-500 mt-1">Late: {stats.late_count}</p>
+                <p className="text-3xl font-bold text-blue-600">{stats.on_leave_today}</p>
+                <p className="text-xs text-gray-500 mt-1">Late: {stats.late_arrivals}</p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                 <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -268,8 +268,7 @@ export default function AttendanceDashboardPage() {
               <option value={AttendanceStatus.PRESENT}>Present</option>
               <option value={AttendanceStatus.ABSENT}>Absent</option>
               <option value={AttendanceStatus.HALF_DAY}>Half Day</option>
-              <option value={AttendanceStatus.ON_LEAVE}>On Leave</option>
-              <option value={AttendanceStatus.LATE}>Late</option>
+              <option value={AttendanceStatus.LEAVE}>On Leave</option>
               <option value={AttendanceStatus.WEEK_OFF}>Week Off</option>
               <option value={AttendanceStatus.HOLIDAY}>Holiday</option>
             </select>
@@ -338,30 +337,30 @@ export default function AttendanceDashboardPage() {
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {record.employee_code}
+                        {record.employee_id}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatTime(record.check_in_time)}
+                        {formatTime(record.actual_check_in || null)}
                       </div>
-                      {record.is_late && (
+                      {record.late_by_minutes > 0 && (
                         <div className="text-xs text-orange-600">
-                          Late by {record.late_minutes}m
+                          Late by {record.late_by_minutes}m
                         </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatTime(record.check_out_time)}
+                        {formatTime(record.actual_check_out || null)}
                       </div>
-                      {record.is_early_departure && (
+                      {record.early_out_minutes > 0 && (
                         <div className="text-xs text-orange-600">Early departure</div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatDuration(record.total_hours_worked ? Math.round(record.total_hours_worked * 60) : null)}
+                        {formatDuration(record.total_work_hours ? Math.round(record.total_work_hours * 60) : null)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -371,7 +370,7 @@ export default function AttendanceDashboardPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {formatDuration(record.overtime_minutes)}
+                        {formatDuration(record.overtime_hours ? Math.round(record.overtime_hours * 60) : null)}
                       </div>
                     </td>
                   </tr>
