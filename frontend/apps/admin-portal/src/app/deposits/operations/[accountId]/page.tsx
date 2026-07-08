@@ -803,12 +803,12 @@ export default function AdvancedOperationsPage() {
             </Card>
 
             {/* Existing Joint Holders */}
-            {account?.joint_holders && account.joint_holders.length > 0 && (
+            {account?.data?.joint_holders && account.data.joint_holders.length > 0 && (
               <Card>
                 <div className="p-6">
                   <h4 className="font-semibold text-gray-900 mb-4">Current Joint Holders</h4>
                   <div className="space-y-3">
-                    {account.joint_holders.map((holder: any) => (
+                    {account.data.joint_holders.map((holder: any) => (
                       <div key={holder.id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
