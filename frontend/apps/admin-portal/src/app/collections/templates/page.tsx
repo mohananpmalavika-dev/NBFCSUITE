@@ -42,8 +42,8 @@ export default function TemplatesPage() {
     }
   };
 
-  const getActionTypeColor = (type: ActionType) => {
-    const colors: Record<ActionType, string> = {
+  const getActionTypeColor = (type: string) => {
+    const colors: Record<string, string> = {
       sms: 'bg-blue-100 text-blue-800',
       email: 'bg-purple-100 text-purple-800',
       call: 'bg-green-100 text-green-800',
@@ -54,7 +54,7 @@ export default function TemplatesPage() {
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
 
-  const actionTypes: Array<ActionType | 'all'> = [
+  const actionTypes = [
     'all',
     'sms',
     'email',
@@ -62,7 +62,7 @@ export default function TemplatesPage() {
     'field_visit',
     'legal_notice',
     'payment_link',
-  ];
+  ] as const;
 
   return (
     <div className="space-y-6">
