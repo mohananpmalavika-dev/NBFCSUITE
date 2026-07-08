@@ -21,7 +21,7 @@ import {
 
 export default function AdvancedOperationsPage() {
   const params = useParams();
-  const accountId = params.accountId as string;
+  const accountId = parseInt(params.accountId as string);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('freeze');
@@ -29,7 +29,7 @@ export default function AdvancedOperationsPage() {
   // Fetch account details
   const { data: account, isLoading: accountLoading } = useQuery({
     queryKey: ['deposit-account', accountId],
-    queryFn: () => depositService.getAccount(accountId),
+    queryFn: () => depositService.getAccount(accountId.toString()),
   });
 
   // Freeze/Unfreeze Account
@@ -58,7 +58,7 @@ export default function AdvancedOperationsPage() {
   });
 
   const unfreezeMutation = useMutation({
-    mutationFn: () => depositService.unfreezeAccount(accountId),
+    mutationFn: (data: { release_reason: string }) => depositService.unfreezeAccount(accountId, data),
     onSuccess: () => {
       toast({
         title: 'Success',
@@ -85,7 +85,7 @@ export default function AdvancedOperationsPage() {
   });
 
   const createLienMutation = useMutation({
-    mutationFn: (data: any) => depositService.createLien(accountId, data),
+    mutationFn: (data: any) => depositService.markLien(accountId, data),
     onSuccess: () => {
       toast({
         title: 'Success',
@@ -104,7 +104,7 @@ export default function AdvancedOperationsPage() {
   });
 
   const releaseLienMutation = useMutation({
-    mutationFn: (lienId: string) => depositService.releaseLien(accountId, lienId),
+    mutationFn: (lienId: number) => depositService.releaseLien(accountId, lienId, {}),
     onSuccess: () => {
       toast({
         title: 'Success',
