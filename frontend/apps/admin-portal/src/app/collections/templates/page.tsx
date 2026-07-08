@@ -155,29 +155,12 @@ export default function TemplatesPage() {
                 )}
 
                 <div className="bg-gray-50 rounded p-3 mb-3">
-                  {template.action_type === 'sms' && (
-                    <p className="text-xs text-gray-700 line-clamp-3 font-mono">
-                      {template.sms_content}
-                    </p>
-                  )}
-                  {template.action_type === 'email' && (
-                    <div className="text-xs text-gray-700">
-                      <p className="font-medium mb-1">Subject: {template.email_subject}</p>
-                      <p className="line-clamp-2">{template.email_body}</p>
-                    </div>
-                  )}
-                  {template.action_type === 'legal_notice' && (
-                    <div className="text-xs text-gray-700">
-                      <p className="font-medium mb-1">
-                        {template.notice_type?.replace('_', ' ').toUpperCase()}
-                      </p>
-                      <p className="line-clamp-2">{template.notice_content}</p>
-                    </div>
-                  )}
-                  {(template.action_type === 'call' ||
-                    template.action_type === 'field_visit') && (
-                    <p className="text-xs text-gray-700 line-clamp-3">
-                      {template.script_content || 'No script content'}
+                  <p className="text-xs text-gray-700 line-clamp-4 whitespace-pre-wrap">
+                    {template.content || 'No content'}
+                  </p>
+                  {template.subject && (
+                    <p className="text-xs text-gray-500 mt-1 font-medium">
+                      Subject: {template.subject}
                     </p>
                   )}
                 </div>
