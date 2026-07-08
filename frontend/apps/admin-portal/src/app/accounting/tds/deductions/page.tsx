@@ -46,7 +46,7 @@ export default function TDSDeductionsPage() {
         filtered = data.filter((d: TDSDeduction) => 
           d.deductee_name?.toLowerCase().includes(filters.search.toLowerCase()) ||
           d.deductee_pan?.toLowerCase().includes(filters.search.toLowerCase()) ||
-          d.voucher_number?.toLowerCase().includes(filters.search.toLowerCase())
+          d.deduction_number?.toLowerCase().includes(filters.search.toLowerCase())
         );
       }
       
