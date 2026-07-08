@@ -23,7 +23,7 @@ export default function NewStrategyPage() {
   });
 
   const [actions, setActions] = useState<Array<{
-    action_type: ActionType;
+    action_type: string;
     trigger_day: number;
     template_id?: string;
     description: string;
@@ -31,25 +31,25 @@ export default function NewStrategyPage() {
 
   const [showActionForm, setShowActionForm] = useState(false);
   const [newAction, setNewAction] = useState({
-    action_type: 'sms' as ActionType,
+    action_type: 'sms',
     trigger_day: 1,
     template_id: '',
     description: '',
   });
 
-  const actionTypes: ActionType[] = [
+  const actionTypes = [
     'sms',
     'email',
     'call',
     'field_visit',
     'legal_notice',
     'payment_link',
-  ];
+  ] as const;
 
   const handleAddAction = () => {
     setActions([...actions, { ...newAction }]);
     setNewAction({
-      action_type: 'sms' as ActionType,
+      action_type: 'sms',
       trigger_day: 1,
       template_id: '',
       description: '',
