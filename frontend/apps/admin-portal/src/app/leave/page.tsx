@@ -50,7 +50,7 @@ export default function LeaveApplicationsPage() {
     if (!confirm('Approve this leave application?')) return;
 
     try {
-      await attendanceService.leave.approveApplication(id, {
+      await attendanceService.leave.approveApplication(parseInt(id), {
         remarks: 'Approved',
       });
       loadApplications();
@@ -65,7 +65,7 @@ export default function LeaveApplicationsPage() {
     if (!remarks) return;
 
     try {
-      await attendanceService.leave.rejectApplication(id, {
+      await attendanceService.leave.rejectApplication(parseInt(id), {
         remarks,
       });
       loadApplications();
@@ -79,7 +79,7 @@ export default function LeaveApplicationsPage() {
     if (!confirm('Cancel this leave application?')) return;
 
     try {
-      await attendanceService.leave.cancelApplication(id);
+      await attendanceService.leave.cancelApplication(parseInt(id));
       loadApplications();
       alert('Leave application cancelled');
     } catch (err: any) {

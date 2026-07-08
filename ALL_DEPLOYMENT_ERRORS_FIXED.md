@@ -2,6 +2,27 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #49) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/leave/page.tsx`
+
+**Error**: 
+```
+Type error: Argument of type 'string' is not assignable to parameter of type 'number'.
+Line 53: await attendanceService.leave.approveApplication(id, {
+```
+
+**Root Cause**: Type mismatch - `LeaveApplication.id` is type `string` but the service methods (`approveApplication`, `rejectApplication`, `cancelApplication`) expect `number`.
+
+**Fix Applied**: Added `parseInt()` conversion when calling service methods:
+- `approveApplication(parseInt(id), ...)`
+- `rejectApplication(parseInt(id), ...)`
+- `cancelApplication(parseInt(id))`
+
+**Status**: ✅ **FIXED** - ID converted from string to number when calling service methods
+
+---
+
 ## Latest Fix (Build #48) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/leave/page.tsx`
