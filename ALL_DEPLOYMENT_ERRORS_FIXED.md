@@ -2,6 +2,34 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #45) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/leave/apply/page.tsx`
+
+**Error**: 
+```
+Type error: '"@/types/attendance.types"' has no exported member named 'LeavePolicyMaster'. Did you mean 'LeavePolicyCreate'?
+```
+
+**Root Cause**: Incorrect type imports - types `LeavePolicyMaster` and `EmployeeLeaveBalance` don't exist in the attendance types. The actual types are `LeavePolicy` and `LeaveBalance`.
+
+**Fixes Applied**:
+1. Changed import: `LeavePolicyMaster` → `LeavePolicy`
+2. Changed import: `EmployeeLeaveBalance` → `LeaveBalance`
+3. Updated state types to use correct types
+4. Fixed property accesses to match actual type structure:
+   - `leave_type_id` → `leave_policy_id` (and changed from number to string)
+   - `leave_type_name` → `policy_name`
+   - `leave_type_code` → `policy_code`
+   - `available_balance` → `current_balance`
+   - Updated `getAvailableBalance()` to use `leave_policy_id` and `current_balance`
+5. Fixed form data structure to use `leave_policy_id: ''` instead of `leave_type_id: 0`
+6. Fixed select dropdown to use policy properties
+
+**Status**: ✅ **FIXED** - All type imports and property accesses corrected
+
+---
+
 ## Latest Fix (Build #44) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/deposits/statements/[accountId]/page.tsx`

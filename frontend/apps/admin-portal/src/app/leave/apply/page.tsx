@@ -3,18 +3,18 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { attendanceService } from '@/services/attendance.service';
-import { LeavePolicyMaster, EmployeeLeaveBalance } from '@/types/attendance.types';
+import { LeavePolicy, LeaveBalance } from '@/types/attendance.types';
 
 export default function ApplyLeavePage() {
   const router = useRouter();
-  const [leaveTypes, setLeaveTypes] = useState<LeavePolicyMaster[]>([]);
-  const [balances, setBalances] = useState<EmployeeLeaveBalance[]>([]);
+  const [leaveTypes, setLeaveTypes] = useState<LeavePolicy[]>([]);
+  const [balances, setBalances] = useState<LeaveBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    leave_type_id: 0,
+    leave_policy_id: '',
     start_date: '',
     end_date: '',
     is_half_day: false,
@@ -61,7 +61,7 @@ export default function ApplyLeavePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.leave_type_id) {
+    if (!formData.leave_policy_id) {
       alert('Please select a leave type');
       return;
     }
@@ -88,9 +88,9 @@ export default function ApplyLeavePage() {
     }
   };
 
-  const getAvailableBalance = (leaveTypeId: number) => {
-    const balance = balances.find(b => b.leave_type_id === leaveTypeId);
-    return balance?.available_balance || 0;
+  const getAvailableBalance = (policyId: string) => {
+    const balance = balances.find(b => b.leave_policy_id === policyId);
+    return balance?.current_balance || 0;
   };
 
   const calculateDays = () => {
@@ -143,10 +143,10 @@ export default function ApplyLeavePage() {
             {balances.map((balance) => (
               <div key={balance.id} className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <div className="text-sm text-gray-600 mb-1">
-                  {balance.leave_type_name || `Type ${balance.leave_type_id}`}
+                  {balance.leave_type}
                 </div>
                 <div className="text-2xl font-bold text-blue-600">
-                  {balance.available_balance}
+                  {balance.current_balance}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   Total: {balance.opening_balance + balance.accrued} | Used: {balance.availed}
@@ -166,15 +166,15 @@ export default function ApplyLeavePage() {
             </label>
             <select
               required
-              value={formData.leave_type_id}
-              onChange={(e) => setFormData({ ...formData, leave_type_id: parseInt(e.target.value) })}
+              value={formData.leave_policy_id}
+              onChange={(e) => setFormData({ ...formData, leave_policy_id: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value={0}>Select leave type</option>
-              {leaveTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.leave_type_name} - {type.leave_type_code} 
-                  (Available: {getAvailableBalance(type.id)} days)
+              <option value="">Select leave type</option>
+              {leaveTypes.map((policy) => (
+                <option key={policy.id} value={policy.id}>
+                  {policy.policy_name} - {policy.policy_code} 
+                  (Available: {getAvailableBalance(policy.id)} days)
                 </option>
               ))}
             </select>
@@ -260,9 +260,9 @@ export default function ApplyLeavePage() {
                 <span className="text-sm font-medium text-gray-700">Total Leave Days:</span>
                 <span className="text-xl font-bold text-blue-600">{calculateDays()}</span>
               </div>
-              {formData.leave_type_id > 0 && (
+              {formData.leave_policy_id && (
                 <div className="mt-2 text-xs text-gray-600">
-                  Available Balance: {getAvailableBalance(formData.leave_type_id)} days
+                  Available Balance: {getAvailableBalance(formData.leave_policy_id)} days
                 </div>
               )}
             </div>
