@@ -41,8 +41,8 @@ export default function PremiumsPage() {
     try {
       setLoading(true)
       const response = await bancassuranceService.getPremiums({
-        skip: (page - 1) * limit,
-        limit,
+        page,
+        page_size: limit,
         premium_status: statusFilter || undefined,
         policy_id: policyIdFilter || undefined,
       })

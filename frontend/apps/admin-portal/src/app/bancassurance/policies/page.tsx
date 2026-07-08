@@ -40,8 +40,8 @@ export default function PoliciesPage() {
     try {
       setLoading(true)
       const response = await bancassuranceService.getPolicies({
-        skip: (page - 1) * limit,
-        limit,
+        page,
+        page_size: limit,
         policy_type: policyType || undefined,
         policy_status: policyStatus || undefined,
       })
