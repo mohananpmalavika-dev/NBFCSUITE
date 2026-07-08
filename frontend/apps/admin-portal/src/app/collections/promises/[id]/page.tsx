@@ -186,7 +186,7 @@ export default function PromiseDetailPage() {
         </div>
       )}
 
-      {promise.status === 'pending' && isDueSoon && (
+      {promise.promise_status === 'pending' && isDueSoon && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -199,7 +199,7 @@ export default function PromiseDetailPage() {
         </div>
       )}
 
-      {promise.status === 'pending' && !isPastDue && !isDueSoon && (
+      {promise.promise_status === 'pending' && !isPastDue && !isDueSoon && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -306,7 +306,7 @@ export default function PromiseDetailPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Quick Actions */}
-          {promise.status === 'pending' && (
+          {promise.promise_status === 'pending' && (
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
               <div className="space-y-2">

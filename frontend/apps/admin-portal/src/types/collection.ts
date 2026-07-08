@@ -301,6 +301,7 @@ export interface PaymentPromise {
   promise_date: string;
   promised_on_date: string;
   promised_by: string;
+  promise_source: string;
   promise_status: string;
   actual_payment_amount?: number;
   actual_payment_date?: string;
