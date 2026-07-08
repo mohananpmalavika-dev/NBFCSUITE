@@ -14,6 +14,9 @@ from backend.services.payroll.schemas import (
     PayrollRunProcessRequest, PayrollRunApproveRequest,
     PayslipListResponse, PayslipResponse,
     PayrollDashboardStats, PayrollSummary,
+    StatutoryComplianceCreate, StatutoryComplianceUpdate, StatutoryComplianceResponse, StatutoryComplianceListResponse,
+    Form16Create, Form16Update, Form16Response, Form16ListResponse,
+    PaymentFileCreate, PaymentFileUpdate, PaymentFileResponse, PaymentFileListResponse,
     ComponentType, PayrollStatus, StatutoryType, PaymentStatus, PaymentMode
 )
 from backend.services.payroll.salary_component_service import SalaryComponentService
@@ -23,7 +26,7 @@ from backend.services.payroll.payroll_processing_service import PayrollProcessin
 from backend.services.payroll.statutory_compliance_service import StatutoryComplianceService
 from backend.services.payroll.form16_service import Form16Service
 from backend.services.payroll.payment_file_service import PaymentFileService
-from backend.shared.database.payroll_models import PayrollRun, Payslip
+from backend.shared.database.payroll_models import PayrollRun, Payslip, StatutoryCompliance, Form16, PaymentFile
 from sqlalchemy import and_
 
 router = APIRouter(prefix="/payroll", tags=["Payroll Management"])
@@ -631,7 +634,7 @@ async def create_statutory_compliance(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/compliance", response_model=StatutoryComplianceList)
+@router.get("/compliance", response_model=StatutoryComplianceListResponse)
 async def list_statutory_compliance(
     statutory_type: Optional[StatutoryType] = None,
     payment_status: Optional[PaymentStatus] = None,
@@ -776,11 +779,11 @@ async def create_form16(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/form16", response_model=Form16List)
+@router.get("/form16", response_model=Form16ListResponse)
 async def list_form16(
     employee_id: Optional[int] = None,
     financial_year: Optional[str] = None,
-    status: Optional[Form16Status] = None,
+    status: Optional[str] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -910,11 +913,11 @@ async def create_payment_file(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/payment-files", response_model=PaymentFileList)
+@router.get("/payment-files", response_model=PaymentFileListResponse)
 async def list_payment_files(
     payroll_run_id: Optional[int] = None,
-    file_format: Optional[PaymentFileFormat] = None,
-    status: Optional[PaymentFileStatus] = None,
+    file_format: Optional[str] = None,
+    status: Optional[str] = None,
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),

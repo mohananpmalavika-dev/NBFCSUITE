@@ -29,7 +29,7 @@ export default function FieldAgentDetailPage() {
   const loadAgentDetails = async () => {
     try {
       setLoading(true);
-      const data = await fieldAgentApi.getAgent(agentId);
+      const data = await fieldAgentApi.getAgent(parseInt(agentId));
       setAgent(data);
       
       // Load agent statistics

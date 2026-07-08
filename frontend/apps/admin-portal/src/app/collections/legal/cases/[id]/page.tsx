@@ -20,7 +20,7 @@ export default function LegalCaseDetailPage() {
   const loadCaseDetails = async () => {
     try {
       setLoading(true);
-      const data = await legalApi.getCase(caseId);
+      const data = await legalApi.getCase(parseInt(caseId));
       setLegalCase(data);
     } catch (error) {
       console.error('Failed to load case details:', error);
