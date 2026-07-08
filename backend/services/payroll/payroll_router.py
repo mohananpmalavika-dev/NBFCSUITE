@@ -145,7 +145,7 @@ async def create_salary_structure(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/structures", response_model=SalaryStructureList)
+@router.get("/structures", response_model=SalaryStructureListResponse)
 async def list_salary_structures(
     is_active: Optional[bool] = None,
     search: Optional[str] = None,
@@ -227,7 +227,7 @@ async def assign_employee_salary(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/employee-salaries", response_model=EmployeeSalaryList)
+@router.get("/employee-salaries", response_model=EmployeeSalaryListResponse)
 async def list_employee_salaries(
     employee_id: Optional[int] = None,
     structure_id: Optional[int] = None,
@@ -503,7 +503,7 @@ async def get_dashboard_stats(
     from datetime import datetime
     from sqlalchemy import func
     from backend.shared.database.payroll_models import (
-        SalaryStructure, EmployeeSalary, StatutoryCompliance, Form16, PaymentFile
+        SalaryStructure, EmployeeSalary
     )
     
     current_month = datetime.now().month

@@ -37,8 +37,8 @@ export default function ClaimsPage() {
     try {
       setLoading(true)
       const response = await bancassuranceService.getClaims({
-        skip: (page - 1) * limit,
-        limit,
+        page: page,
+        page_size: limit,
         claim_status: statusFilter || undefined,
         claim_type: typeFilter || undefined,
       })
