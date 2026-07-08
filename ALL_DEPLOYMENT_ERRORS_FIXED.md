@@ -2,6 +2,33 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #47) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/leave/balance/page.tsx`
+
+**Error**: 
+```
+Type error: Module '"@/types/attendance.types"' has no exported member 'EmployeeLeaveBalance'.
+```
+
+**Root Cause**: Same as Build #45 - incorrect type imports `EmployeeLeaveBalance` and `LeavePolicyMaster` which don't exist.
+
+**Fixes Applied**:
+1. Changed imports: `EmployeeLeaveBalance` → `LeaveBalance`, `LeavePolicyMaster` → `LeavePolicy`
+2. Updated state types to use correct types
+3. Fixed property accesses throughout:
+   - `leave_type_id` (number) → `leave_policy_id` (string)
+   - `leave_type_name` → `policy_name`
+   - `leave_type_code` → `policy_code`
+   - `available_balance` → `current_balance`
+   - `year` → `financial_year`
+4. Updated helper functions: `getLeaveTypeName()`, `getLeaveTypeCode()`, `getStatusColor()` to use correct property names
+5. Fixed all property accesses in JSX to use `balance.current_balance`, `balance.leave_policy_id`, `balance.financial_year`
+
+**Status**: ✅ **FIXED** - All type imports and property accesses corrected
+
+---
+
 ## Latest Fix (Build #46) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/leave/apply/page.tsx`

@@ -3,12 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { attendanceService } from '@/services/attendance.service';
-import { EmployeeLeaveBalance, LeavePolicyMaster } from '@/types/attendance.types';
+import { LeaveBalance, LeavePolicy } from '@/types/attendance.types';
 
 export default function LeaveBalancePage() {
   const router = useRouter();
-  const [balances, setBalances] = useState<EmployeeLeaveBalance[]>([]);
-  const [leaveTypes, setLeaveTypes] = useState<LeavePolicyMaster[]>([]);
+  const [balances, setBalances] = useState<LeaveBalance[]>([]);
+  const [leaveTypes, setLeaveTypes] = useState<LeavePolicy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -43,28 +43,28 @@ export default function LeaveBalancePage() {
     }
   };
 
-  const getLeaveTypeName = (leaveTypeId: number) => {
-    const type = leaveTypes.find(t => t.id === leaveTypeId);
-    return type?.leave_type_name || `Leave Type ${leaveTypeId}`;
+  const getLeaveTypeName = (policyId: string) => {
+    const policy = leaveTypes.find(t => t.id === policyId);
+    return policy?.policy_name || `Leave Policy ${policyId}`;
   };
 
-  const getLeaveTypeCode = (leaveTypeId: number) => {
-    const type = leaveTypes.find(t => t.id === leaveTypeId);
-    return type?.leave_type_code || '';
+  const getLeaveTypeCode = (policyId: string) => {
+    const policy = leaveTypes.find(t => t.id === policyId);
+    return policy?.policy_code || '';
   };
 
-  const getTotalBalance = (balance: EmployeeLeaveBalance) => {
+  const getTotalBalance = (balance: LeaveBalance) => {
     return balance.opening_balance + balance.accrued;
   };
 
-  const getUtilizationPercentage = (balance: EmployeeLeaveBalance) => {
+  const getUtilizationPercentage = (balance: LeaveBalance) => {
     const total = getTotalBalance(balance);
     if (total === 0) return 0;
     return Math.round((balance.availed / total) * 100);
   };
 
-  const getStatusColor = (balance: EmployeeLeaveBalance) => {
-    const available = balance.available_balance;
+  const getStatusColor = (balance: LeaveBalance) => {
+    const available = balance.current_balance;
     const total = getTotalBalance(balance);
     const percentage = total > 0 ? (available / total) * 100 : 0;
 
@@ -138,7 +138,7 @@ export default function LeaveBalancePage() {
             </div>
           </div>
           <p className="text-3xl font-bold text-green-600">
-            {balances.reduce((sum, b) => sum + b.available_balance, 0).toFixed(1)}
+            {balances.reduce((sum, b) => sum + b.current_balance, 0).toFixed(1)}
           </p>
           <p className="text-xs text-gray-500 mt-1">days</p>
         </div>
@@ -192,17 +192,17 @@ export default function LeaveBalancePage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        {getLeaveTypeName(balance.leave_type_id)}
+                        {getLeaveTypeName(balance.leave_policy_id)}
                       </h3>
                       <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded">
-                        {getLeaveTypeCode(balance.leave_type_id)}
+                        {getLeaveTypeCode(balance.leave_policy_id)}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500">Year: {balance.year}</p>
+                    <p className="text-sm text-gray-500">Year: {balance.financial_year}</p>
                   </div>
                   <div className="text-right">
                     <div className={`text-3xl font-bold ${getStatusColor(balance)}`}>
-                      {balance.available_balance}
+                      {balance.current_balance}
                     </div>
                     <div className="text-xs text-gray-500">days available</div>
                   </div>
