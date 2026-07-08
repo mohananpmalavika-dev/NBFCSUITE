@@ -114,6 +114,7 @@ export interface ShiftCreate {
   week_off_2?: string;
   allow_overtime?: boolean;
   overtime_start_after_minutes?: number;
+  is_active?: boolean;
   effective_from?: string;
   effective_to?: string;
   description?: string;

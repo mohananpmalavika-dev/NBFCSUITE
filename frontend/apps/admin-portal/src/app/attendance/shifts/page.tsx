@@ -120,7 +120,6 @@ export default function ShiftManagementPage() {
   const handleToggleActive = async (shift: Shift) => {
     try {
       await attendanceService.shift.update(String(shift.id), {
-        ...shift,
         is_active: !shift.is_active,
       });
       loadShifts();
