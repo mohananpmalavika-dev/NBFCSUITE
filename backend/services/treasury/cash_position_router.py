@@ -10,13 +10,13 @@ from sqlalchemy.orm import Session
 
 from backend.shared.database.connection import get_db
 from backend.services.auth.dependencies import get_current_user, get_tenant_id
-from .cash_position_service import CashPositionService
+from .cash_position_service import TreasuryCashPositionService
 from .cash_position_schemas import (
-    CashPositionCreate,
-    CashPositionUpdate,
-    CashPositionResponse,
-    CashPositionListResponse,
-    CashPositionStatistics,
+    TreasuryCashPositionCreate,
+    TreasuryCashPositionUpdate,
+    TreasuryCashPositionResponse,
+    TreasuryCashPositionListResponse,
+    TreasuryCashPositionStatistics,
     BranchCashSummary,
     CashMovementSummary,
     CashAlertResponse,
@@ -33,9 +33,9 @@ router = APIRouter(prefix="/cash-position", tags=["Treasury - Cash Position"])
 # CRUD Endpoints
 # ============================================
 
-@router.post("/", response_model=CashPositionResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=TreasuryCashPositionResponse, status_code=status.HTTP_201_CREATED)
 async def create_cash_position(
-    data: CashPositionCreate,
+    data: TreasuryCashPositionCreate,
     db: Session = Depends(get_db),
     tenant_id: int = Depends(get_tenant_id),
     current_user: dict = Depends(get_current_user)
@@ -49,12 +49,12 @@ async def create_cash_position(
     - Bank deposits and withdrawals
     - Denomination breakup
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     position = await service.create_cash_position(data, current_user["id"])
     return position
 
 
-@router.get("/{position_id}", response_model=CashPositionResponse)
+@router.get("/{position_id}", response_model=TreasuryCashPositionResponse)
 async def get_cash_position(
     position_id: int,
     db: Session = Depends(get_db),
@@ -69,12 +69,12 @@ async def get_cash_position(
     - Denomination details
     - Verification status
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     position = await service.get_cash_position(position_id)
     return position
 
 
-@router.get("/", response_model=CashPositionListResponse)
+@router.get("/", response_model=TreasuryCashPositionListResponse)
 async def list_cash_positions(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Items per page"),
@@ -94,7 +94,7 @@ async def list_cash_positions(
     - Status
     - Date range
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     positions, total = await service.list_cash_positions(
         page=page,
         page_size=page_size,
@@ -106,7 +106,7 @@ async def list_cash_positions(
     
     pages = (total + page_size - 1) // page_size
     
-    return CashPositionListResponse(
+    return TreasuryCashPositionListResponse(
         items=positions,
         total=total,
         page=page,
@@ -115,10 +115,10 @@ async def list_cash_positions(
     )
 
 
-@router.patch("/{position_id}", response_model=CashPositionResponse)
+@router.patch("/{position_id}", response_model=TreasuryCashPositionResponse)
 async def update_cash_position(
     position_id: int,
-    data: CashPositionUpdate,
+    data: TreasuryCashPositionUpdate,
     db: Session = Depends(get_db),
     tenant_id: int = Depends(get_tenant_id),
     current_user: dict = Depends(get_current_user)
@@ -129,7 +129,7 @@ async def update_cash_position(
     Cannot update finalized positions
     Automatically recalculates closing balance
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     position = await service.update_cash_position(position_id, data, current_user["id"])
     return position
 
@@ -146,7 +146,7 @@ async def delete_cash_position(
     
     Cannot delete finalized positions
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     await service.delete_cash_position(position_id, current_user["id"])
     return None
 
@@ -155,7 +155,7 @@ async def delete_cash_position(
 # Business Operations
 # ============================================
 
-@router.post("/{position_id}/verify", response_model=CashPositionResponse)
+@router.post("/{position_id}/verify", response_model=TreasuryCashPositionResponse)
 async def verify_cash_position(
     position_id: int,
     db: Session = Depends(get_db),
@@ -168,12 +168,12 @@ async def verify_cash_position(
     Marks position as verified by current user
     Required before finalization
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     position = await service.verify_cash_position(position_id, current_user["id"])
     return position
 
 
-@router.post("/{position_id}/finalize", response_model=CashPositionResponse)
+@router.post("/{position_id}/finalize", response_model=TreasuryCashPositionResponse)
 async def finalize_cash_position(
     position_id: int,
     db: Session = Depends(get_db),
@@ -186,12 +186,12 @@ async def finalize_cash_position(
     Makes position immutable
     Requires prior verification
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     position = await service.finalize_cash_position(position_id, current_user["id"])
     return position
 
 
-@router.get("/current/today", response_model=CashPositionResponse)
+@router.get("/current/today", response_model=TreasuryCashPositionResponse)
 async def get_current_position(
     branch_id: Optional[int] = Query(None, description="Branch ID"),
     db: Session = Depends(get_db),
@@ -204,7 +204,7 @@ async def get_current_position(
     Returns today's position for specified branch
     If no branch specified, returns consolidated position
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     position = await service.get_current_position(branch_id)
     
     if not position:
@@ -216,7 +216,7 @@ async def get_current_position(
     return position
 
 
-@router.get("/date/{position_date}", response_model=CashPositionResponse)
+@router.get("/date/{position_date}", response_model=TreasuryCashPositionResponse)
 async def get_position_by_date(
     position_date: date,
     branch_id: Optional[int] = Query(None, description="Branch ID"),
@@ -229,7 +229,7 @@ async def get_position_by_date(
     
     Returns position for the specified date and branch
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     position = await service.get_position_by_date(position_date, branch_id)
     
     if not position:
@@ -245,7 +245,7 @@ async def get_position_by_date(
 # Statistics & Reports
 # ============================================
 
-@router.get("/statistics/summary", response_model=CashPositionStatistics)
+@router.get("/statistics/summary", response_model=TreasuryCashPositionStatistics)
 async def get_cash_statistics(
     db: Session = Depends(get_db),
     tenant_id: int = Depends(get_tenant_id),
@@ -260,7 +260,7 @@ async def get_cash_statistics(
     - Daily movements
     - Alerts and warnings
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     stats = await service.get_statistics()
     return stats
 
@@ -277,7 +277,7 @@ async def get_branch_summary(
     
     Returns current cash position and alerts for branch
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     summary = await service.get_branch_summary(branch_id)
     
     if not summary:
@@ -306,7 +306,7 @@ async def get_cash_movement(
     - Receipts and payments
     - Bank transactions
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     movements = await service.get_cash_movement(start_date, end_date, branch_id)
     return movements
 
@@ -326,7 +326,7 @@ async def get_cash_alerts(
     - Cash discrepancies
     - Pending verifications
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     alerts = await service.get_alerts()
     return alerts
 
@@ -371,7 +371,7 @@ async def bulk_create_cash_positions(
     Creates multiple cash position records at once
     Useful for end-of-day batch processing
     """
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     created_ids, errors = await service.bulk_create_positions(
         data.positions,
         current_user["id"]
@@ -389,7 +389,7 @@ async def bulk_create_cash_positions(
 # History & Audit
 # ============================================
 
-@router.get("/history/{branch_id}", response_model=List[CashPositionResponse])
+@router.get("/history/{branch_id}", response_model=List[TreasuryCashPositionResponse])
 async def get_position_history(
     branch_id: int,
     days: int = Query(30, ge=1, le=365, description="Number of days of history"),
@@ -407,7 +407,7 @@ async def get_position_history(
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
     
-    service = CashPositionService(db, tenant_id)
+    service = TreasuryCashPositionService(db, tenant_id)
     movements = await service.get_cash_movement(start_date, end_date, branch_id)
     
     # Convert to response format

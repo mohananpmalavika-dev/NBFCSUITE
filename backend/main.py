@@ -141,10 +141,28 @@ from backend.shared.database.hrms_models import (
     Employee, ReportingHierarchy
 )
 
-# 14. Risk Management models (NEW - Risk Management & Credit Policy Module)
+# 15. Recruitment & Onboarding models (NEW - HRMS Recruitment Module)
+from backend.shared.database.recruitment_models import (
+    JobRequisition, JobPosting, JobApplication, Interview,
+    Onboarding, BackgroundVerification
+)
+
+# 16. Attendance & Leave Management models (NEW - HRMS Attendance Module)
+from backend.shared.database.attendance_models import (
+    Shift, EmployeeShift, Attendance, BiometricLog, AttendanceRegularization,
+    LeavePolicyMaster, EmployeeLeaveBalance, LeaveApplication, LeaveEncashment
+)
+
+# 17. Risk Management models (NEW - Risk Management & Credit Policy Module)
 from backend.shared.database.risk_models import (
     CreditPolicy, RiskPricingRule, ExposureLimit, ExposureTransaction,
     RiskRating, EarlyWarningSignal, EarlyWarningAlert
+)
+
+# 18. Insurance & Bancassurance models (NEW - Insurance Module)
+from backend.services.insurance.models import (
+    InsuranceAgent, InsurancePolicy, InsurancePremium,
+    InsuranceClaim, InsuranceCommission
 )
 
 # Configure logging
@@ -313,6 +331,14 @@ app = FastAPI(
         {"name": "HRMS - Departments", "description": "Department hierarchy and management"},
         {"name": "HRMS - Designations", "description": "Job titles and designation management"},
         {"name": "HRMS - Organizations", "description": "Organization/company entity management"},
+        {"name": "HRMS - Recruitment - Requisitions", "description": "Job requisition management and approval workflow"},
+        {"name": "HRMS - Recruitment - Postings", "description": "Job posting and career portal management"},
+        {"name": "HRMS - Recruitment - Applications", "description": "Applicant tracking system (ATS)"},
+        {"name": "HRMS - Recruitment - Interviews", "description": "Interview scheduling and feedback management"},
+        {"name": "HRMS - Recruitment - Onboarding", "description": "Employee onboarding and background verification"},
+        {"name": "HRMS - Attendance - Shifts", "description": "Shift management and employee shift assignments"},
+        {"name": "HRMS - Attendance - Tracking", "description": "Attendance tracking, check-in/out, and biometric integration"},
+        {"name": "HRMS - Leave Management", "description": "Leave policies, applications, balance, and approval workflow"},
     ]
 )
 
@@ -591,6 +617,14 @@ from backend.services.lms.nach_router import router as nach_router
 from backend.services.lms.restructuring_router import router as restructuring_router
 from backend.services.lms.insurance_router import router as insurance_router
 
+# NEW: Insurance & Bancassurance Module (Complete Implementation)
+from backend.services.insurance import (
+    policy_router as insurance_policy_router,
+    premium_router as insurance_premium_router,
+    claim_router as insurance_claim_router,
+    commission_router as insurance_commission_router
+)
+
 # NEW: Compliance & Regulatory Reporting Routers (CRILC & SMA)
 from backend.services.compliance.router import router as compliance_router
 
@@ -625,6 +659,20 @@ from backend.services.hrms import (
     designation_router, 
     organization_router as hrms_organization_router
 )
+
+# NEW: HRMS Recruitment & Onboarding Routers
+from backend.services.recruitment import (
+    requisition_router,
+    posting_router,
+    application_router,
+    interview_router,
+    onboarding_router
+)
+
+# NEW: HRMS Attendance & Leave Management Routers
+from backend.services.attendance.shift_router import router as shift_router
+from backend.services.attendance.attendance_router import router as attendance_router
+from backend.services.attendance.leave_router import router as leave_router
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -714,6 +762,15 @@ app.include_router(restructuring_router, prefix="/api/v1", tags=["Loan Restructu
 app.include_router(insurance_router, prefix="/api/v1", tags=["Loan Insurance"])
 
 # ============================================================================
+# NEW: INSURANCE & BANCASSURANCE MODULE
+# Policy Management, Premium Collection, Claims Processing, Commission Tracking
+# ============================================================================
+app.include_router(insurance_policy_router, prefix="/api/v1", tags=["Insurance - Policies"])
+app.include_router(insurance_premium_router, prefix="/api/v1", tags=["Insurance - Premiums"])
+app.include_router(insurance_claim_router, prefix="/api/v1", tags=["Insurance - Claims"])
+app.include_router(insurance_commission_router, prefix="/api/v1", tags=["Insurance - Commissions"])
+
+# ============================================================================
 # NEW: COMPLIANCE & REGULATORY REPORTING ROUTERS
 # CRILC (Large Credits) & SMA (Special Mention Accounts) Reporting
 # ============================================================================
@@ -757,6 +814,24 @@ app.include_router(employee_router, prefix="/api/v1", tags=["HRMS - Employees"])
 app.include_router(department_router, prefix="/api/v1", tags=["HRMS - Departments"])
 app.include_router(designation_router, prefix="/api/v1", tags=["HRMS - Designations"])
 app.include_router(hrms_organization_router, prefix="/api/v1", tags=["HRMS - Organizations"])
+
+# ============================================================================
+# NEW: HRMS RECRUITMENT & ONBOARDING ROUTERS
+# Job Requisitions, Applicant Tracking, Interview Scheduling, Onboarding Workflow
+# ============================================================================
+app.include_router(requisition_router, prefix="/api/v1/recruitment/requisitions", tags=["HRMS - Recruitment - Requisitions"])
+app.include_router(posting_router, prefix="/api/v1/recruitment/postings", tags=["HRMS - Recruitment - Postings"])
+app.include_router(application_router, prefix="/api/v1/recruitment/applications", tags=["HRMS - Recruitment - Applications"])
+app.include_router(interview_router, prefix="/api/v1/recruitment/interviews", tags=["HRMS - Recruitment - Interviews"])
+app.include_router(onboarding_router, prefix="/api/v1/recruitment/onboarding", tags=["HRMS - Recruitment - Onboarding"])
+
+# ============================================================================
+# NEW: HRMS ATTENDANCE & LEAVE MANAGEMENT ROUTERS
+# Shift Management, Attendance Tracking, Biometric Integration, Leave Management
+# ============================================================================
+app.include_router(shift_router, prefix="/api/v1/attendance/shifts", tags=["HRMS - Attendance - Shifts"])
+app.include_router(attendance_router, prefix="/api/v1/attendance", tags=["HRMS - Attendance - Tracking"])
+app.include_router(leave_router, prefix="/api/v1/leave", tags=["HRMS - Leave Management"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

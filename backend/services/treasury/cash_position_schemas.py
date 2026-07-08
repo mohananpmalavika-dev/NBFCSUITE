@@ -35,12 +35,12 @@ class CashPositionBase(BaseModel):
     status: str = Field(default="draft", description="Status: draft, verified, finalized")
 
 
-class CashPositionCreate(CashPositionBase):
+class TreasuryCashPositionCreate(CashPositionBase):
     """Schema for creating cash position"""
     pass
 
 
-class CashPositionUpdate(BaseModel):
+class TreasuryCashPositionUpdate(BaseModel):
     """Schema for updating cash position"""
     opening_balance: Optional[Decimal] = Field(None, ge=0)
     cash_received: Optional[Decimal] = Field(None, ge=0)
@@ -58,7 +58,7 @@ class CashPositionUpdate(BaseModel):
     status: Optional[str] = None
 
 
-class CashPositionResponse(CashPositionBase):
+class TreasuryCashPositionResponse(CashPositionBase):
     """Schema for cash position response"""
     id: int
     tenant_id: int
@@ -71,9 +71,9 @@ class CashPositionResponse(CashPositionBase):
         from_attributes = True
 
 
-class CashPositionListResponse(BaseModel):
+class TreasuryCashPositionListResponse(BaseModel):
     """Schema for paginated cash position list"""
-    items: List[CashPositionResponse]
+    items: List[TreasuryCashPositionResponse]
     total: int
     page: int
     page_size: int
@@ -170,7 +170,7 @@ class CashTransferResponse(BaseModel):
 # Statistics & Reports Schemas
 # ============================================
 
-class CashPositionStatistics(BaseModel):
+class TreasuryCashPositionStatistics(BaseModel):
     """Schema for cash position statistics"""
     total_cash_on_hand: Decimal
     total_branches: int

@@ -11,7 +11,7 @@ from sqlalchemy import func, and_, or_, desc
 from fastapi import HTTPException, status
 
 from backend.shared.database.treasury_models import (
-    TreasuryTreasuryCashPosition,
+    TreasuryCashPosition,
     TreasuryBankAccount
 )
 from .cash_position_schemas import (
@@ -42,16 +42,16 @@ class TreasuryCashPositionService:
         self,
         data: TreasuryCashPositionCreate,
         user_id: int
-    ) -> TreasuryTreasuryCashPosition:
+    ) -> TreasuryCashPosition:
         """Create new cash position record"""
         
         # Check if position already exists for this date and branch
-        existing = self.db.query(TreasuryTreasuryCashPosition).filter(
+        existing = self.db.query(TreasuryCashPosition).filter(
             and_(
-                TreasuryTreasuryCashPosition.tenant_id == self.tenant_id,
-                TreasuryTreasuryCashPosition.position_date == data.position_date,
-                TreasuryTreasuryCashPosition.branch_id == data.branch_id,
-                TreasuryTreasuryCashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.position_date == data.position_date,
+                TreasuryCashPosition.branch_id == data.branch_id,
+                TreasuryCashPosition.is_deleted == False
             )
         ).first()
         
@@ -71,7 +71,7 @@ class TreasuryCashPositionService:
         )
         
         # Create position record
-        position = TreasuryTreasuryCashPosition(
+        position = TreasuryCashPosition(
             tenant_id=self.tenant_id,
             position_date=data.position_date,
             branch_id=data.branch_id,
@@ -101,13 +101,13 @@ class TreasuryCashPositionService:
         
         return position
     
-    async def get_cash_position(self, position_id: int) -> TreasuryTreasuryCashPosition:
+    async def get_cash_position(self, position_id: int) -> TreasuryCashPosition:
         """Get cash position by ID"""
-        position = self.db.query(TreasuryTreasuryCashPosition).filter(
+        position = self.db.query(TreasuryCashPosition).filter(
             and_(
-                TreasuryTreasuryCashPosition.id == position_id,
-                TreasuryTreasuryCashPosition.tenant_id == self.tenant_id,
-                TreasuryTreasuryCashPosition.is_deleted == False
+                TreasuryCashPosition.id == position_id,
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.is_deleted == False
             )
         ).first()
         
@@ -127,35 +127,35 @@ class TreasuryCashPositionService:
         status_filter: Optional[str] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None
-    ) -> Tuple[List[TreasuryTreasuryCashPosition], int]:
+    ) -> Tuple[List[TreasuryCashPosition], int]:
         """List cash positions with filters and pagination"""
         
-        query = self.db.query(TreasuryTreasuryCashPosition).filter(
+        query = self.db.query(TreasuryCashPosition).filter(
             and_(
-                TreasuryTreasuryCashPosition.tenant_id == self.tenant_id,
-                TreasuryTreasuryCashPosition.is_deleted == False
+                TreasuryCashPosition.tenant_id == self.tenant_id,
+                TreasuryCashPosition.is_deleted == False
             )
         )
         
         # Apply filters
         if branch_id:
-            query = query.filter(TreasuryTreasuryCashPosition.branch_id == branch_id)
+            query = query.filter(TreasuryCashPosition.branch_id == branch_id)
         
         if status_filter:
-            query = query.filter(TreasuryTreasuryCashPosition.status == status_filter)
+            query = query.filter(TreasuryCashPosition.status == status_filter)
         
         if start_date:
-            query = query.filter(TreasuryTreasuryCashPosition.position_date >= start_date)
+            query = query.filter(TreasuryCashPosition.position_date >= start_date)
         
         if end_date:
-            query = query.filter(TreasuryTreasuryCashPosition.position_date <= end_date)
+            query = query.filter(TreasuryCashPosition.position_date <= end_date)
         
         # Get total count
         total = query.count()
         
         # Apply pagination
         offset = (page - 1) * page_size
-        positions = query.order_by(desc(TreasuryTreasuryCashPosition.position_date)).offset(offset).limit(page_size).all()
+        positions = query.order_by(desc(TreasuryCashPosition.position_date)).offset(offset).limit(page_size).all()
         
         return positions, total
     
@@ -164,7 +164,7 @@ class TreasuryCashPositionService:
         position_id: int,
         data: TreasuryCashPositionUpdate,
         user_id: int
-    ) -> TreasuryTreasuryCashPosition:
+    ) -> TreasuryCashPosition:
         """Update cash position"""
         position = await self.get_cash_position(position_id)
         

@@ -112,6 +112,19 @@ const navigationItems = [
     ],
   },
   {
+    title: 'Risk Management',
+    href: '/risk',
+    icon: AlertTriangle,
+    children: [
+      { title: 'Dashboard', href: '/risk' },
+      { title: 'Credit Policies', href: '/risk/policies' },
+      { title: 'Risk Pricing', href: '/risk/pricing' },
+      { title: 'Exposure Limits', href: '/risk/exposure' },
+      { title: 'Risk Ratings', href: '/risk/ratings' },
+      { title: 'Early Warning Alerts', href: '/risk/alerts' },
+    ],
+  },
+  {
     title: 'Compliance',
     href: '/compliance',
     icon: Shield,

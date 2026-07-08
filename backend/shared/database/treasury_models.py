@@ -215,28 +215,43 @@ class TreasuryCashPosition(Base):
     
     # Bank account (if applicable)
     bank_account_id = Column(Integer, ForeignKey("treasury_bank_accounts.id"), nullable=True)
+    account_id = Column(Integer, nullable=True)  # Alias for bank_account_id for compatibility
     
     # Cash type (physical cash vs bank balance)
     is_physical_cash = Column(Boolean, default=False)
     
-    # Balances
+    # Balances - using both naming conventions for compatibility
     opening_balance = Column(Numeric(15, 2), default=0.00)
-    receipts = Column(Numeric(15, 2), default=0.00)
-    payments = Column(Numeric(15, 2), default=0.00)
+    receipts = Column(Numeric(15, 2), default=0.00)  # Legacy field
+    cash_received = Column(Numeric(15, 2), default=0.00)  # New field name
+    payments = Column(Numeric(15, 2), default=0.00)  # Legacy field
+    cash_paid = Column(Numeric(15, 2), default=0.00)  # New field name
+    bank_deposit = Column(Numeric(15, 2), default=0.00)  # Amount deposited to bank
+    bank_withdrawal = Column(Numeric(15, 2), default=0.00)  # Amount withdrawn from bank
     closing_balance = Column(Numeric(15, 2), nullable=False)
     
     # Denomination details (for physical cash)
     denomination_details = Column(JSON, nullable=True)  # {2000: 10, 500: 20, etc.}
+    
+    # Vault and recording details
+    vault_location = Column(String(100), nullable=True)
+    recorded_by = Column(Integer, nullable=True)
     
     # Cash movements
     cash_in_transit = Column(Numeric(15, 2), default=0.00)
     cash_transfers_out = Column(Numeric(15, 2), default=0.00)
     cash_transfers_in = Column(Numeric(15, 2), default=0.00)
     
-    # Reconciliation
+    # Reconciliation and verification
     is_reconciled = Column(Boolean, default=False)
     reconciled_by = Column(Integer, nullable=True)
     reconciled_at = Column(DateTime, nullable=True)
+    verified_by = Column(Integer, nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    
+    # Discrepancy tracking
+    discrepancy_amount = Column(Numeric(15, 2), default=0.00)
+    discrepancy_reason = Column(String(500), nullable=True)
     
     # Status
     status = Column(String(20), default="draft")  # draft, verified, finalized
@@ -245,6 +260,7 @@ class TreasuryCashPosition(Base):
     notes = Column(Text, nullable=True)
     
     # Audit fields
+    is_deleted = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by = Column(Integer, nullable=False)
