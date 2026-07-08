@@ -347,7 +347,7 @@ export default function NewStrategyPage() {
                   </label>
                   <select
                     value={newAction.action_type}
-                    onChange={(e) => setNewAction({ ...newAction, action_type: e.target.value as ActionType })}
+                    onChange={(e) => setNewAction({ ...newAction, action_type: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     {actionTypes.map((type) => (

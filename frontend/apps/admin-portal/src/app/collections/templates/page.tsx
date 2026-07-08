@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collectionApi } from '@/lib/api/collection';
+import { templateApi } from '@/lib/api/collection';
 import { CollectionTemplate, ActionType } from '@/types/collection';
 
 export default function TemplatesPage() {
@@ -18,7 +18,7 @@ export default function TemplatesPage() {
   const loadTemplates = async () => {
     try {
       setLoading(true);
-      const data = await collectionApi.getTemplates(
+      const data = await templateApi.list(
         filter === 'all' ? undefined : filter
       );
       setTemplates(data);
@@ -34,7 +34,7 @@ export default function TemplatesPage() {
     if (!confirmed) return;
 
     try {
-      await collectionApi.deleteTemplate(id);
+      await templateApi.update(id, { is_active: false });
       loadTemplates();
     } catch (error) {
       console.error('Failed to delete template:', error);

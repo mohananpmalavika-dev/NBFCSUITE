@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { collectionApi } from '@/lib/api/collection';
+import { templateApi } from '@/lib/api/collection';
 import { ActionType } from '@/types/collection';
 
 export default function NewTemplatePage() {
@@ -11,7 +11,7 @@ export default function NewTemplatePage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    action_type: 'sms' as ActionType,
+    action_type: 'sms',
     is_active: true,
     // SMS fields
     sms_content: '',
@@ -99,7 +99,7 @@ export default function NewTemplatePage() {
 
     setLoading(true);
     try {
-      const template = await collectionApi.createTemplate(formData);
+      const template = await templateApi.create(formData);
       router.push('/collections/templates');
     } catch (error) {
       console.error('Failed to create template:', error);
@@ -164,7 +164,7 @@ export default function NewTemplatePage() {
               <select
                 value={formData.action_type}
                 onChange={(e) =>
-                  setFormData({ ...formData, action_type: e.target.value as ActionType })
+                  setFormData({ ...formData, action_type: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
