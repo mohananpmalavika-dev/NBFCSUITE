@@ -176,7 +176,7 @@ export default function AdvancedOperationsPage() {
   });
 
   const removeJointHolderMutation = useMutation({
-    mutationFn: (holderId: string) => depositService.removeJointHolder(accountId, holderId),
+    mutationFn: (holderId: number) => depositService.removeJointHolder(accountId, holderId, { removal_reason: 'User requested removal' }),
     onSuccess: () => {
       toast({
         title: 'Success',
@@ -212,12 +212,16 @@ export default function AdvancedOperationsPage() {
       });
       return;
     }
-    freezeMutation.mutate(freezeData);
+    freezeMutation.mutate({
+      freeze_type: 'full',
+      reason: freezeData.reason,
+      reference_number: freezeData.notes,
+    });
   };
 
   const handleUnfreeze = () => {
     if (window.confirm('Are you sure you want to unfreeze this account?')) {
-      unfreezeMutation.mutate();
+      unfreezeMutation.mutate({ release_reason: 'Account unfrozen by admin' });
     }
   };
 
@@ -239,8 +243,10 @@ export default function AdvancedOperationsPage() {
       return;
     }
     createLienMutation.mutate({
-      ...lienData,
-      amount: parseFloat(lienData.amount),
+      lien_amount: parseFloat(lienData.amount),
+      lien_reason: lienData.reason,
+      reference_type: 'manual',
+      reference_number: lienData.reference_number || 'N/A',
     });
   };
 
