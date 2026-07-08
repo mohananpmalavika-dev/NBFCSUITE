@@ -33,6 +33,7 @@ export interface TDSDeduction {
   section_code: string
   deductee_name: string
   deductee_pan?: string
+  taxable_amount: number
   gross_amount: number
   tds_amount: number
   total_tds: number
