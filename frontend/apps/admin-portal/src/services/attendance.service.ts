@@ -127,6 +127,14 @@ export const attendanceApi = {
     return response.data;
   },
 
+  // Get stats for a specific date
+  async getStats(date: string): Promise<AttendanceDashboardStats> {
+    const response = await axios.get(`${API_BASE_URL}/attendance/stats`, {
+      params: { date }
+    });
+    return response.data;
+  },
+
   // Create manual attendance
   async createManual(data: {
     employee_id: string;
