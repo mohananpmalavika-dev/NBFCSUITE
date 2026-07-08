@@ -128,13 +128,13 @@ export default function TemplatesPage() {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">{template.name}</h3>
+                    <h3 className="font-semibold text-gray-900 mb-1">{template.template_name}</h3>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getActionTypeColor(
-                        template.action_type
+                        template.template_type
                       )}`}
                     >
-                      {template.action_type.replace('_', ' ').toUpperCase()}
+                      {template.template_type.replace('_', ' ').toUpperCase()}
                     </span>
                   </div>
                   <button
@@ -148,9 +148,9 @@ export default function TemplatesPage() {
                   </button>
                 </div>
 
-                {template.description && (
+                {template.category && (
                   <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {template.description}
+                    Category: {template.category}
                   </p>
                 )}
 
