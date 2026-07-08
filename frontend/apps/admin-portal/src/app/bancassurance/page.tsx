@@ -15,13 +15,13 @@ import {
   ArrowDownRight,
   Activity
 } from 'lucide-react';
-import { bancassuranceService } from '@/services/bancassurance.service';
-import type { 
-  InsurancePolicy, 
-  InsurancePremium, 
-  InsuranceClaim, 
-  InsuranceCommission 
-} from '@/types/bancassurance';
+import { 
+  bancassuranceService,
+  type InsurancePolicy, 
+  type InsurancePremium, 
+  type InsuranceClaim, 
+  type InsuranceCommission 
+} from '@/services/bancassurance.service';
 import { 
   PolicyStatus, 
   PremiumStatus, 
@@ -95,19 +95,25 @@ export default function BancassuranceDashboard() {
       setError(null);
 
       // Fetch all data in parallel
-      const [policies, premiums, claims, commissions] = await Promise.all([
-        bancassuranceService.listPolicies(),
-        bancassuranceService.listPremiums(),
-        bancassuranceService.listClaims(),
-        bancassuranceService.listCommissions()
+      const [policiesRes, premiumsRes, claimsRes, commissionsRes] = await Promise.all([
+        bancassuranceService.getPolicies(),
+        bancassuranceService.getPremiums(),
+        bancassuranceService.getClaims(),
+        bancassuranceService.getCommissions()
       ]);
+
+      // Extract data from responses
+      const policies = policiesRes.data.data.policies;
+      const premiums = premiumsRes.data.data.premiums;
+      const claims = claimsRes.data.data.claims;
+      const commissions = commissionsRes.data.data.commissions;
 
       // Calculate policy stats
       const policyStats = {
         total: policies.length,
-        active: policies.filter(p => p.status === PolicyStatus.ACTIVE).length,
-        lapsed: policies.filter(p => p.status === PolicyStatus.LAPSED).length,
-        matured: policies.filter(p => p.status === PolicyStatus.MATURED).length,
+        active: policies.filter(p => p.policy_status === 'active').length,
+        lapsed: policies.filter(p => p.policy_status === 'lapsed').length,
+        matured: policies.filter(p => p.policy_status === 'matured').length,
         totalSumAssured: policies.reduce((sum, p) => sum + (p.sum_assured || 0), 0),
         recentChange: 12.5 // Placeholder for month-over-month growth
       };
@@ -115,37 +121,37 @@ export default function BancassuranceDashboard() {
       // Calculate premium stats
       const premiumStats = {
         total: premiums.length,
-        paid: premiums.filter(p => p.status === PremiumStatus.PAID).length,
-        pending: premiums.filter(p => p.status === PremiumStatus.PENDING).length,
-        overdue: premiums.filter(p => isOverdue(p.due_date, p.status)).length,
+        paid: premiums.filter(p => p.premium_status === 'paid').length,
+        pending: premiums.filter(p => p.premium_status === 'due').length,
+        overdue: premiums.filter(p => p.premium_status === 'overdue').length,
         totalCollected: premiums
-          .filter(p => p.status === PremiumStatus.PAID)
-          .reduce((sum, p) => sum + (p.amount || 0), 0),
+          .filter(p => p.premium_status === 'paid')
+          .reduce((sum, p) => sum + (p.premium_amount || 0), 0),
         recentChange: 8.3
       };
 
       // Calculate claim stats
       const claimStats = {
         total: claims.length,
-        registered: claims.filter(c => c.status === ClaimStatus.REGISTERED).length,
-        assessed: claims.filter(c => c.status === ClaimStatus.ASSESSED).length,
-        approved: claims.filter(c => c.status === ClaimStatus.APPROVED).length,
-        settled: claims.filter(c => c.status === ClaimStatus.SETTLED).length,
+        registered: claims.filter(c => c.claim_status === 'registered').length,
+        assessed: claims.filter(c => c.claim_status === 'assessment_complete').length,
+        approved: claims.filter(c => c.claim_status === 'approved').length,
+        settled: claims.filter(c => c.claim_status === 'settled').length,
         totalAmount: claims
-          .filter(c => c.status === ClaimStatus.SETTLED)
-          .reduce((sum, c) => sum + (c.settled_amount || 0), 0),
+          .filter(c => c.claim_status === 'settled')
+          .reduce((sum, c) => sum + (c.settlement_amount || 0), 0),
         recentChange: -3.2
       };
 
       // Calculate commission stats
       const commissionStats = {
         total: commissions.length,
-        pending: commissions.filter(c => c.status === CommissionStatus.PENDING).length,
-        approved: commissions.filter(c => c.status === CommissionStatus.APPROVED).length,
-        paid: commissions.filter(c => c.status === CommissionStatus.PAID).length,
+        pending: commissions.filter(c => c.commission_status === 'pending').length,
+        approved: commissions.filter(c => c.commission_status === 'approved').length,
+        paid: commissions.filter(c => c.commission_status === 'paid').length,
         totalAmount: commissions
-          .filter(c => c.status === CommissionStatus.PAID)
-          .reduce((sum, c) => sum + (c.amount || 0), 0),
+          .filter(c => c.commission_status === 'paid')
+          .reduce((sum, c) => sum + (c.commission_amount || 0), 0),
         recentChange: 15.7
       };
 
@@ -165,16 +171,16 @@ export default function BancassuranceDashboard() {
           id: `policy-${p.id}`,
           type: 'policy',
           title: `Policy ${p.policy_number}`,
-          description: `${p.policy_type} policy ${p.status.toLowerCase()}`,
+          description: `${p.policy_type} policy ${p.policy_status.toLowerCase()}`,
           timestamp: p.updated_at || p.created_at,
-          status: p.status,
+          status: p.policy_status,
           amount: p.sum_assured
         });
       });
 
       // Add recent premiums
       premiums
-        .filter(p => p.status === PremiumStatus.PAID)
+        .filter(p => p.premium_status === 'paid')
         .slice(0, 3)
         .forEach(p => {
           activities.push({
@@ -182,9 +188,9 @@ export default function BancassuranceDashboard() {
             type: 'premium',
             title: `Premium Payment`,
             description: `Policy ${p.policy_id} premium paid`,
-            timestamp: p.paid_date || p.created_at,
-            status: p.status,
-            amount: p.amount
+            timestamp: p.payment_date || p.created_at,
+            status: p.premium_status,
+            amount: p.premium_amount
           });
         });
 
@@ -194,10 +200,10 @@ export default function BancassuranceDashboard() {
           id: `claim-${c.id}`,
           type: 'claim',
           title: `Claim ${c.claim_number}`,
-          description: `${c.claim_type} claim ${c.status.toLowerCase()}`,
+          description: `${c.claim_type} claim ${c.claim_status.toLowerCase()}`,
           timestamp: c.updated_at || c.created_at,
-          status: c.status,
-          amount: c.claimed_amount
+          status: c.claim_status,
+          amount: c.claim_amount
         });
       });
 
@@ -207,10 +213,10 @@ export default function BancassuranceDashboard() {
           id: `commission-${c.id}`,
           type: 'commission',
           title: 'Commission',
-          description: `Agent ${c.agent_id} commission ${c.status.toLowerCase()}`,
+          description: `Agent ${c.agent_id} commission ${c.commission_status.toLowerCase()}`,
           timestamp: c.updated_at || c.created_at,
-          status: c.status,
-          amount: c.amount
+          status: c.commission_status,
+          amount: c.commission_amount
         });
       });
 

@@ -10,8 +10,10 @@ from backend.services.payroll.schemas import (
     SalaryComponentCreate, SalaryComponentUpdate, SalaryComponentResponse, SalaryComponentListResponse,
     SalaryStructureCreate, SalaryStructureUpdate, SalaryStructureResponse, SalaryStructureListResponse,
     EmployeeSalaryCreate, EmployeeSalaryUpdate, EmployeeSalaryResponse, EmployeeSalaryListResponse,
-    PayrollRunResponse, PayrollRunListResponse,
+    PayrollRunCreate, PayrollRunResponse, PayrollRunListResponse,
+    PayrollRunProcessRequest, PayrollRunApproveRequest,
     PayslipListResponse, PayslipResponse,
+    PayrollDashboardStats, PayrollSummary,
     ComponentType, PayrollStatus, StatutoryType, PaymentStatus, PaymentMode
 )
 from backend.services.payroll.salary_component_service import SalaryComponentService
