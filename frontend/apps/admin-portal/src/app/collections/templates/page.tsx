@@ -29,12 +29,12 @@ export default function TemplatesPage() {
     }
   };
 
-  const handleDeleteTemplate = async (id: string) => {
+  const handleDeleteTemplate = async (id: number) => {
     const confirmed = window.confirm('Are you sure you want to delete this template?');
     if (!confirmed) return;
 
     try {
-      await templateApi.update(parseInt(id), { is_active: false });
+      await templateApi.update(id, { is_active: false });
       loadTemplates();
     } catch (error) {
       console.error('Failed to delete template:', error);
