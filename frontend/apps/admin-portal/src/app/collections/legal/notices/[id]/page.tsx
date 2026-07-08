@@ -109,8 +109,8 @@ export default function LegalNoticeDetailPage() {
           <p className="text-gray-600 mt-1">{notice.notice_number}</p>
         </div>
         <div className="flex gap-3">
-          <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(notice.status)}`}>
-            {notice.status.toUpperCase()}
+          <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(notice.delivery_status)}`}>
+            {notice.delivery_status.toUpperCase()}
           </span>
         </div>
       </div>
@@ -293,7 +293,7 @@ export default function LegalNoticeDetailPage() {
               >
                 📧 Send Notice
               </button>
-              {notice.status === 'sent' && (
+              {notice.delivery_status === 'sent' && (
                 <button
                   onClick={() => alert('Track delivery functionality')}
                   className="w-full px-4 py-2 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 text-left"
@@ -380,8 +380,8 @@ export default function LegalNoticeDetailPage() {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Current Status</span>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(notice.status)}`}>
-                  {notice.status.toUpperCase()}
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(notice.delivery_status)}`}>
+                  {notice.delivery_status.toUpperCase()}
                 </span>
               </div>
               {notice.response_deadline && (

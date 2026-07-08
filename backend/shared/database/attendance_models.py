@@ -457,7 +457,7 @@ class LeaveApplication(Base):
     
     # Application Details
     application_code = Column(String(50), nullable=False, unique=True)
-    employee_id = Column(String(36), ForeignKey("employees.id"), nullable=False, index=True)
+    employee_id = Column(String(36), nullable=False, index=True)  # References employees.id (table not yet created)
     leave_policy_id = Column(String(36), ForeignKey("leave_policies.id"), nullable=False)
     leave_type = Column(SQLEnum(LeaveType), nullable=False, index=True)
     
