@@ -69,7 +69,8 @@ export default function PassbookPage() {
   // Download PDF mutation
   const downloadPDFMutation = useMutation({
     mutationFn: () => depositService.generatePassbookPDF(accountId),
-    onSuccess: (blob) => {
+    onSuccess: (response) => {
+      const blob = response.data
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
