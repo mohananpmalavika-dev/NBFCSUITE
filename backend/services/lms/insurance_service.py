@@ -11,7 +11,7 @@ from decimal import Decimal
 import logging
 
 from backend.shared.database.lms_extended_models import (
-    LoanInsurancePolicy, InsurancePremiumPayment, InsuranceClaim,
+    LoanInsurancePolicy, InsurancePremiumPayment, LoanInsuranceClaim,
     InsurancePolicyType, InsurancePolicyStatus
 )
 from backend.shared.database.loan_models import LoanAccount
@@ -96,10 +96,10 @@ class InsuranceService:
         loan_account_id: int,
         claim_data: dict,
         user_id: str
-    ) -> InsuranceClaim:
+    ) -> LoanInsuranceClaim:
         """Create insurance claim"""
         
-        claim = InsuranceClaim(
+        claim = LoanInsuranceClaim(
             tenant_id=self.tenant_id,
             policy_id=policy_id,
             loan_account_id=loan_account_id,

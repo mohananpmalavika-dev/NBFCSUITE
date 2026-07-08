@@ -65,7 +65,6 @@ export default function StatutoryReturnsPage() {
 
   // Create form state
   const [returnType, setReturnType] = useState('')
-  const [returnNumber, setReturnNumber] = useState('')
   const [reportingPeriod, setReportingPeriod] = useState('')
   const [periodStartDate, setPeriodStartDate] = useState('')
   const [periodEndDate, setPeriodEndDate] = useState('')
@@ -132,7 +131,7 @@ export default function StatutoryReturnsPage() {
   })
 
   const handleCreate = () => {
-    if (!returnType || !returnNumber || !reportingPeriod || !dueDate || !returnData) {
+    if (!returnType || !reportingPeriod || !dueDate || !returnData) {
       toast({
         title: 'Validation Error',
         description: 'Please fill all required fields',
@@ -157,7 +156,6 @@ export default function StatutoryReturnsPage() {
     const request: CreateStatutoryReturnRequest = {
       return_master_id: '', // Will be handled by backend
       return_type: returnType,
-      return_number: returnNumber,
       reporting_period: reportingPeriod,
       period_start_date: periodStartDate,
       period_end_date: periodEndDate,
@@ -190,7 +188,6 @@ export default function StatutoryReturnsPage() {
 
   const resetCreateForm = () => {
     setReturnType('')
-    setReturnNumber('')
     setReportingPeriod('')
     setPeriodStartDate('')
     setPeriodEndDate('')
