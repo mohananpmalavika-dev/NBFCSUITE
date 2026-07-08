@@ -38,7 +38,10 @@ export default function PromiseDetailPage() {
 
     setActionLoading(true);
     try {
-      await promiseApi.fulfillPromise(promise.id);
+      await promiseApi.updateStatus(promise.id, {
+        new_status: 'kept',
+        remarks: 'Promise fulfilled manually'
+      });
       loadPromiseDetails();
     } catch (error) {
       console.error('Failed to fulfill promise:', error);
@@ -56,7 +59,11 @@ export default function PromiseDetailPage() {
 
     setActionLoading(true);
     try {
-      await promiseApi.breakPromise(promise.id, reason);
+      await promiseApi.updateStatus(promise.id, {
+        new_status: 'broken',
+        broken_reason: reason,
+        remarks: reason
+      });
       loadPromiseDetails();
     } catch (error) {
       console.error('Failed to break promise:', error);
@@ -153,13 +160,13 @@ export default function PromiseDetailPage() {
           <h1 className="text-2xl font-bold text-gray-900">Payment Promise</h1>
           <p className="text-gray-600 mt-1">Loan: {promise.loan_account_id}</p>
         </div>
-        <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(promise.status)}`}>
-          {promise.status.replace('_', ' ').toUpperCase()}
+        <span className={`px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(promise.promise_status)}`}>
+          {promise.promise_status.replace('_', ' ').toUpperCase()}
         </span>
       </div>
 
       {/* Alert Banner */}
-      {promise.status === 'pending' && isPastDue && (
+      {promise.promise_status === 'pending' && isPastDue && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -224,70 +231,48 @@ export default function PromiseDetailPage() {
                 <p className="font-medium text-gray-900">{promise.loan_account_id}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Customer Name</p>
-                <p className="font-medium text-gray-900">{promise.customer_name || 'N/A'}</p>
+                <p className="text-sm text-gray-600">Customer ID</p>
+                <p className="font-medium text-gray-900">{promise.customer_id}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Promised Amount</p>
-                <p className="text-xl font-bold text-blue-600">{formatCurrency(promise.promised_amount)}</p>
+                <p className="text-xl font-bold text-blue-600">{formatCurrency(promise.promise_amount)}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Promise Date</p>
                 <p className="font-medium text-gray-900">{formatDate(promise.promise_date)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Promise Type</p>
-                <p className="font-medium text-gray-900 capitalize">{promise.promise_type.replace('_', ' ')}</p>
+                <p className="text-sm text-gray-600">Promised By</p>
+                <p className="font-medium text-gray-900">{promise.promised_by}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Created On</p>
-                <p className="font-medium text-gray-900">{formatDateTime(promise.created_at)}</p>
+                <p className="text-sm text-gray-600">Promise Source</p>
+                <p className="font-medium text-gray-900 capitalize">{promise.promise_source}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Created By</p>
-                <p className="font-medium text-gray-900">{promise.created_by}</p>
-              </div>
-              {promise.channel && (
-                <div>
-                  <p className="text-sm text-gray-600">Channel</p>
-                  <p className="font-medium text-gray-900 capitalize">{promise.channel}</p>
-                </div>
-              )}
             </div>
           </div>
 
           {/* Fulfillment Details */}
-          {(promise.fulfilled_amount > 0 || promise.status === 'fulfilled' || promise.status === 'partially_fulfilled') && (
+          {(promise.actual_payment_amount && promise.actual_payment_amount > 0) && (
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Fulfillment Details</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-600">Fulfilled Amount</p>
-                  <p className="text-xl font-bold text-green-600">{formatCurrency(promise.fulfilled_amount)}</p>
+                  <p className="text-sm text-gray-600">Actual Payment Amount</p>
+                  <p className="text-xl font-bold text-green-600">{formatCurrency(promise.actual_payment_amount)}</p>
                 </div>
-                {promise.fulfilled_date && (
+                {promise.actual_payment_date && (
                   <div>
-                    <p className="text-sm text-gray-600">Fulfilled Date</p>
-                    <p className="font-medium text-gray-900">{formatDate(promise.fulfilled_date)}</p>
-                  </div>
-                )}
-                {promise.payment_mode && (
-                  <div>
-                    <p className="text-sm text-gray-600">Payment Mode</p>
-                    <p className="font-medium text-gray-900 capitalize">{promise.payment_mode.replace('_', ' ')}</p>
-                  </div>
-                )}
-                {promise.reference_number && (
-                  <div>
-                    <p className="text-sm text-gray-600">Reference Number</p>
-                    <p className="font-medium text-gray-900">{promise.reference_number}</p>
+                    <p className="text-sm text-gray-600">Payment Date</p>
+                    <p className="font-medium text-gray-900">{formatDate(promise.actual_payment_date)}</p>
                   </div>
                 )}
               </div>
-              {promise.promised_amount > promise.fulfilled_amount && (
+              {promise.promise_amount > promise.actual_payment_amount && (
                 <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
                   <p className="text-sm text-yellow-800">
-                    <strong>Partial Fulfillment:</strong> Pending amount: {formatCurrency(promise.promised_amount - promise.fulfilled_amount)}
+                    <strong>Partial Fulfillment:</strong> Pending amount: {formatCurrency(promise.promise_amount - promise.actual_payment_amount)}
                   </p>
                 </div>
               )}
@@ -295,58 +280,27 @@ export default function PromiseDetailPage() {
           )}
 
           {/* Broken Promise Details */}
-          {promise.status === 'broken' && (
+          {promise.promise_status === 'broken' && promise.notes && (
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Broken Promise</h2>
               <div className="space-y-3">
-                {promise.broken_date && (
-                  <div>
-                    <p className="text-sm text-gray-600">Broken Date</p>
-                    <p className="font-medium text-gray-900">{formatDate(promise.broken_date)}</p>
-                  </div>
-                )}
-                {promise.broken_reason && (
-                  <div>
-                    <p className="text-sm text-gray-600">Reason</p>
-                    <p className="font-medium text-red-600">{promise.broken_reason}</p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-sm text-gray-600">Notes</p>
+                  <p className="font-medium text-red-600">{promise.notes}</p>
+                </div>
               </div>
             </div>
           )}
 
           {/* Notes */}
-          {promise.notes && (
+          {promise.notes && promise.promise_status !== 'broken' && (
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Notes</h2>
               <p className="text-gray-700 whitespace-pre-wrap">{promise.notes}</p>
             </div>
           )}
 
-          {/* Follow-up Actions */}
-          {promise.follow_up_actions && promise.follow_up_actions.length > 0 && (
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Follow-up Actions</h2>
-              <div className="space-y-3">
-                {promise.follow_up_actions.map((action, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{action.action}</p>
-                        <p className="text-sm text-gray-600 mt-1">{action.description}</p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Due: {formatDate(action.due_date)}
-                        </p>
-                      </div>
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${action.completed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {action.completed ? 'Completed' : 'Pending'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Remove follow-up actions section - not in PaymentPromise type */}
         </div>
 
         {/* Sidebar */}
@@ -395,27 +349,17 @@ export default function PromiseDetailPage() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">Promise Created</p>
                   <p className="text-xs text-gray-600">{formatDateTime(promise.created_at)}</p>
-                  <p className="text-xs text-gray-500">by {promise.created_by}</p>
+                  <p className="text-xs text-gray-500">by {promise.promised_by}</p>
                 </div>
               </div>
-              {promise.fulfilled_date && (
+              {promise.actual_payment_date && (
                 <div className="flex items-start gap-3">
                   <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Fulfilled</p>
-                    <p className="text-xs text-gray-600">{formatDateTime(promise.fulfilled_date)}</p>
-                    <p className="text-xs text-green-600">{formatCurrency(promise.fulfilled_amount)}</p>
-                  </div>
-                </div>
-              )}
-              {promise.broken_date && (
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-red-600 rounded-full mt-2"></div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Promise Broken</p>
-                    <p className="text-xs text-gray-600">{formatDateTime(promise.broken_date)}</p>
-                    {promise.broken_reason && (
-                      <p className="text-xs text-red-600">{promise.broken_reason}</p>
+                    <p className="text-sm font-medium text-gray-900">Payment Received</p>
+                    <p className="text-xs text-gray-600">{formatDateTime(promise.actual_payment_date)}</p>
+                    {promise.actual_payment_amount && (
+                      <p className="text-xs text-green-600">{formatCurrency(promise.actual_payment_amount)}</p>
                     )}
                   </div>
                 </div>
@@ -433,12 +377,14 @@ export default function PromiseDetailPage() {
                   {isPastDue ? `${Math.abs(daysUntilDue)} days overdue` : `${daysUntilDue} days`}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Fulfillment %</span>
-                <span className="font-semibold text-gray-900">
-                  {((promise.fulfilled_amount / promise.promised_amount) * 100).toFixed(0)}%
-                </span>
-              </div>
+              {promise.actual_payment_amount && (
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Fulfillment %</span>
+                  <span className="font-semibold text-gray-900">
+                    {((promise.actual_payment_amount / promise.promise_amount) * 100).toFixed(0)}%
+                  </span>
+                </div>
+              )}
               {promise.reminder_sent && (
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Reminder Sent</span>
