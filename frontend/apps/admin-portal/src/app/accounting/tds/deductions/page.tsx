@@ -65,8 +65,8 @@ export default function TDSDeductionsPage() {
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       'deducted': 'default',
-      'paid': 'success',
-      'deposited': 'success',
+      'paid': 'default',
+      'deposited': 'default',
       'pending': 'secondary'
     };
     return <Badge variant={variants[status] || 'default'}>{status.toUpperCase()}</Badge>;

@@ -10,7 +10,7 @@ from typing import Optional, List, Tuple
 from datetime import datetime, date
 
 from backend.shared.database.recruitment_models import (
-    JobPosting, JobRequisition, PostingStatus, PostingChannel
+    JobPosting, JobRequisition, PostingStatus
 )
 from .schemas import (
     JobPostingCreate, JobPostingUpdate, PostingStatusEnum
