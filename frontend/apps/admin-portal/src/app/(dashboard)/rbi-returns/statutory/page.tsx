@@ -503,19 +503,6 @@ export default function StatutoryReturnsPage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="return_number">
-                  Return Number <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="return_number"
-                  placeholder="ALM-2024-06"
-                  value={returnNumber}
-                  onChange={(e) => setReturnNumber(e.target.value)}
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="reporting_period">
                 Reporting Period <span className="text-red-500">*</span>

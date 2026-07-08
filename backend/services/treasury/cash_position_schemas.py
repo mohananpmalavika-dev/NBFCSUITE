@@ -225,7 +225,7 @@ class CashAlertResponse(BaseModel):
 
 class BulkCashPositionCreate(BaseModel):
     """Schema for bulk cash position creation"""
-    positions: List[CashPositionCreate] = Field(..., min_items=1, max_items=100)
+    positions: List[TreasuryCashPositionCreate] = Field(..., min_items=1, max_items=100)
 
 
 class BulkCashPositionResponse(BaseModel):
