@@ -75,7 +75,8 @@ export default function AlertsPage() {
 
   const filteredAlerts = alerts.filter(alert =>
     alert.alert_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    alert.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    alert.alert_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    alert.customer_id?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
