@@ -303,20 +303,7 @@ export default function AdvancedOperationsPage() {
           </p>
         </div>
 
-        {/* Account Status Alert */}
-        {/* Temporarily disabled - is_frozen not in DepositAccount type
-        {account?.data?.is_frozen && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-            <AlertTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-red-900">Account is Frozen</h3>
-              <p className="text-red-700 text-sm mt-1">
-                This account is currently frozen. No transactions can be performed until unfrozen.
-              </p>
-            </div>
-          </div>
-        )}
-        */}
+        {/* Account Status Alert - Disabled: is_frozen not in DepositAccount type */}
 
         {/* Tabs */}
         <div className="border-b border-gray-200">
@@ -384,29 +371,8 @@ export default function AdvancedOperationsPage() {
                   </div>
                 </div>
 
-                {/* Temporarily disabled - is_frozen not in DepositAccount type */}
-                {false ? (
-                  <div className="space-y-4">
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-yellow-900">Account is Currently Frozen</h4>
-                      <p className="text-yellow-700 text-sm mt-1">
-                        Frozen on: N/A
-                      </p>
-                      <p className="text-yellow-700 text-sm">
-                        Reason: Not specified
-                      </p>
-                    </div>
-                    <Button
-                      onClick={handleUnfreeze}
-                      disabled={unfreezeMutation.isPending}
-                      className="w-full"
-                    >
-                      <CheckCircleIcon className="h-5 w-5 mr-2" />
-                      {unfreezeMutation.isPending ? 'Unfreezing...' : 'Unfreeze Account'}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
+                {/* Freeze status check disabled - is_frozen not in DepositAccount type */}
+                <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Reason for Freezing *
@@ -449,8 +415,7 @@ export default function AdvancedOperationsPage() {
                       {freezeMutation.isPending ? 'Freezing...' : 'Freeze Account'}
                     </Button>
                   </div>
-                )}
-              </div>
+                </div>
             </Card>
           </div>
         )}
@@ -557,54 +522,7 @@ export default function AdvancedOperationsPage() {
               </div>
             </Card>
 
-            {/* Active Liens */}
-            {/* Temporarily disabled - liens not in DepositAccount type */}
-            {false && account?.data?.liens && account.data.liens.length > 0 && (
-              <Card>
-                <div className="p-6">
-                  <h4 className="font-semibold text-gray-900 mb-4">Active Liens</h4>
-                  <div className="space-y-3">
-                    {account.data.liens.map((lien: any) => (
-                      <div key={lien.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-gray-900">
-                                ₹{parseFloat(lien.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                              </span>
-                              <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded">
-                                {lien.reason}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Created: {new Date(lien.created_at).toLocaleDateString()}
-                            </p>
-                            {lien.expiry_date && (
-                              <p className="text-sm text-gray-600">
-                                Expires: {new Date(lien.expiry_date).toLocaleDateString()}
-                              </p>
-                            )}
-                            {lien.reference_number && (
-                              <p className="text-sm text-gray-600">
-                                Ref: {lien.reference_number}
-                              </p>
-                            )}
-                          </div>
-                          <Button
-                            onClick={() => releaseLienMutation.mutate(lien.id)}
-                            disabled={releaseLienMutation.isPending}
-                            variant="secondary"
-                            size="sm"
-                          >
-                            Release
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            )}
+            {/* Active Liens section disabled - liens property not in DepositAccount type */}
           </div>
         )}
 
@@ -806,57 +724,7 @@ export default function AdvancedOperationsPage() {
               </div>
             </Card>
 
-            {/* Existing Joint Holders */}
-            {/* Temporarily disabled - joint_holders not in DepositAccount type */}
-            {false && account?.data?.joint_holders && account.data.joint_holders.length > 0 && (
-              <Card>
-                <div className="p-6">
-                  <h4 className="font-semibold text-gray-900 mb-4">Current Joint Holders</h4>
-                  <div className="space-y-3">
-                    {account.data.joint_holders.map((holder: any) => (
-                      <div key={holder.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-gray-900">{holder.customer_name}</span>
-                              {holder.is_primary && (
-                                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                                  Primary
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">
-                              Customer ID: {holder.customer_id}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Relationship: {holder.relationship}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              Holding Pattern: {holder.holding_pattern}
-                            </p>
-                            {holder.nomination_percentage && (
-                              <p className="text-sm text-gray-600">
-                                Share: {holder.nomination_percentage}%
-                              </p>
-                            )}
-                          </div>
-                          {!holder.is_primary && (
-                            <Button
-                              onClick={() => removeJointHolderMutation.mutate(holder.id)}
-                              disabled={removeJointHolderMutation.isPending}
-                              variant="danger"
-                              size="sm"
-                            >
-                              Remove
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            )}
+            {/* Existing Joint Holders section disabled - joint_holders property not in DepositAccount type */}
           </div>
         )}
       </div>
