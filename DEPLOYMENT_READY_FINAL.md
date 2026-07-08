@@ -21,7 +21,7 @@ All backend and frontend errors have been systematically fixed and verified.
 3. ✅ `frontend/apps/admin-portal/src/app/collections/settlement/[id]/page.tsx` - Fixed type conversion
 4. ✅ `frontend/apps/admin-portal/src/lib/api/collection.ts` - Added approveProposal/rejectProposal methods
 5. ✅ `frontend/apps/admin-portal/src/types/collection.ts` - Fixed SettlementProposal property names
-6. ✅ `frontend/apps/admin-portal/src/app/collections/settlement/new/page.tsx` - Fixed PaymentTerm → PaymentTerms
+6. ✅ `frontend/apps/admin-portal/src/app/collections/settlement/new/page.tsx` - Fixed PaymentTerms + loan_account_id type conversion
 
 ---
 
@@ -266,6 +266,8 @@ payment_terms: 'lumpsum' as keyof typeof PaymentTerms,
 
 **Error Resolved**: `'"@/types/collection"' has no exported member named 'PaymentTerm'`
 
+**Also Fixed**: Type conversion for loan_account_id (string → number)
+
 ---
 
 ## 🧪 Verification Status
@@ -328,6 +330,12 @@ Property 'original_outstanding' does not exist on type 'SettlementProposal'
 ```
 '"@/types/collection"' has no exported member named 'PaymentTerm'
 → Fixed: Changed PaymentTerm to PaymentTerms (correct enum name)
+```
+
+### Error 8 (Frontend)
+```
+Type 'string' is not assignable to type 'number' (loan_account_id in payload)
+→ Fixed: Added parseInt() conversion and customer_id field to formData
 ```
 
 ---
