@@ -68,11 +68,13 @@ export interface TDSReturn {
   financial_year: number
   quarter: number
   return_type: string
+  preparation_date: string
   filing_date?: string
   acknowledgement_number?: string
   status: string
   total_deductions: number
   total_amount: number
+  total_tds_amount: number
   created_at: string
 }
 
@@ -369,6 +371,10 @@ export const tdsService = {
     return_type?: string
   }) {
     return apiClient.post('/accounting/tds/returns/prepare', data)
+  },
+
+  async updateReturn(id: number, data: { status?: string }) {
+    return apiClient.put(`/accounting/tds/returns/${id}`, data)
   },
 
   // TDS Reports

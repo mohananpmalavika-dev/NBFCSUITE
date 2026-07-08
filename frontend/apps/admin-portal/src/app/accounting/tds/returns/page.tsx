@@ -35,8 +35,8 @@ export default function TDSReturnsPage() {
   const loadReturns = async () => {
     try {
       setLoading(true);
-      const data = await tdsService.getReturns();
-      setReturns(data);
+      const response = await tdsService.getReturns();
+      setReturns(response.data.data || []);
     } catch (error) {
       toast({
         title: "Error",
