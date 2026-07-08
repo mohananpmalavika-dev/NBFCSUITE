@@ -37,8 +37,8 @@ export default function CommissionsPage() {
     try {
       setLoading(true)
       const response = await bancassuranceService.getCommissions({
-        skip: (page - 1) * limit,
-        limit,
+        page,
+        page_size: limit,
         commission_status: statusFilter || undefined,
         commission_type: typeFilter || undefined,
       })
