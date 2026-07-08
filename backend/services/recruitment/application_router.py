@@ -12,8 +12,7 @@ from backend.shared.dependencies.auth import get_current_user, get_tenant_id
 from .application_service import ApplicationService
 from .schemas import (
     JobApplicationCreate, JobApplicationUpdate, JobApplicationResponse,
-    JobApplicationListResponse, ApplicationStatusEnum, ApplicationSourceEnum,
-    ApplicationStatusChange, ApplicationBulkAction
+    PaginatedApplicationResponse, ApplicationStatusEnum, ApplicationSourceEnum
 )
 
 
@@ -42,7 +41,7 @@ async def create_application(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=JobApplicationListResponse)
+@router.get("/", response_model=PaginatedApplicationResponse)
 async def get_applications(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),

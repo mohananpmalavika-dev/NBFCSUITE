@@ -12,7 +12,7 @@ from backend.shared.dependencies.auth import get_current_user, get_tenant_id
 from .posting_service import JobPostingService
 from .schemas import (
     JobPostingCreate, JobPostingUpdate, JobPostingResponse,
-    JobPostingListResponse, PostingStatusEnum
+    PaginatedPostingResponse, PostingStatusEnum
 )
 
 
@@ -41,7 +41,7 @@ async def create_posting(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=JobPostingListResponse)
+@router.get("/", response_model=PaginatedPostingResponse)
 async def get_postings(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -73,7 +73,7 @@ async def get_postings(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/public", response_model=JobPostingListResponse)
+@router.get("/public", response_model=PaginatedPostingResponse)
 async def get_public_postings(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),

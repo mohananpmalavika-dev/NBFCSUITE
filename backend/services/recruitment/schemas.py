@@ -626,6 +626,15 @@ class PaginatedOnboardingResponse(BaseModel):
     pages: int
 
 
+class PaginatedVerificationResponse(BaseModel):
+    """Paginated background verification response"""
+    items: List[BackgroundVerificationListItem]
+    total: int
+    page: int
+    page_size: int
+    pages: int
+
+
 # ============================================================================
 # DASHBOARD & STATISTICS
 # ============================================================================

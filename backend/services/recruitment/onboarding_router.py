@@ -12,10 +12,10 @@ from backend.shared.dependencies.auth import get_current_user, get_tenant_id
 from .onboarding_service import OnboardingService, BackgroundVerificationService
 from .schemas import (
     OnboardingCreate, OnboardingUpdate, OnboardingResponse,
-    OnboardingListResponse, OnboardingStatusEnum,
-    OnboardingChecklistItemUpdate, BackgroundVerificationCreate,
+    PaginatedOnboardingResponse, OnboardingStatusEnum,
+    BackgroundVerificationCreate,
     BackgroundVerificationUpdate, BackgroundVerificationResponse,
-    BackgroundVerificationListResponse, VerificationStatusEnum
+    PaginatedVerificationResponse, VerificationStatusEnum
 )
 
 
@@ -55,7 +55,7 @@ async def create_onboarding(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=OnboardingListResponse)
+@router.get("/", response_model=PaginatedOnboardingResponse)
 async def get_onboardings(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -191,7 +191,7 @@ async def create_verification(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/verifications", response_model=BackgroundVerificationListResponse)
+@router.get("/verifications", response_model=PaginatedVerificationResponse)
 async def get_verifications(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),

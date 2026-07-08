@@ -13,8 +13,8 @@ from backend.shared.dependencies.auth import get_current_user, get_tenant_id
 from .interview_service import InterviewService
 from .schemas import (
     InterviewCreate, InterviewUpdate, InterviewResponse,
-    InterviewListResponse, InterviewStatusEnum, InterviewTypeEnum,
-    InterviewFeedbackSubmit, InterviewReschedule
+    PaginatedInterviewResponse, InterviewStatusEnum, InterviewTypeEnum,
+    InterviewFeedback
 )
 
 
@@ -43,7 +43,7 @@ async def create_interview(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/", response_model=InterviewListResponse)
+@router.get("/", response_model=PaginatedInterviewResponse)
 async def get_interviews(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
