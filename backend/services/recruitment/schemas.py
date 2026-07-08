@@ -494,6 +494,12 @@ class OnboardingUpdate(BaseModel):
     documents_verified: Optional[bool] = None
 
 
+class OnboardingChecklistItemUpdate(BaseModel):
+    """Update onboarding checklist item"""
+    item_key: str
+    completed: bool
+
+
 class OnboardingResponse(OnboardingBase):
     """Onboarding response"""
     id: int

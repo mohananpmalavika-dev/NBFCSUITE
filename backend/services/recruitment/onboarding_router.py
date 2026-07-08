@@ -13,6 +13,7 @@ from .onboarding_service import OnboardingService, BackgroundVerificationService
 from .schemas import (
     OnboardingCreate, OnboardingUpdate, OnboardingResponse,
     PaginatedOnboardingResponse, OnboardingStatusEnum,
+    OnboardingChecklistItemUpdate,
     BackgroundVerificationCreate,
     BackgroundVerificationUpdate, BackgroundVerificationResponse,
     PaginatedVerificationResponse, VerificationStatusEnum
