@@ -70,7 +70,8 @@ export default function StatementGenerationPage() {
         })
       }
     },
-    onSuccess: (blob) => {
+    onSuccess: (response) => {
+      const blob = response.data
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -126,7 +127,8 @@ export default function StatementGenerationPage() {
         year: quarterYear,
         quarter: quarter,
       }),
-    onSuccess: (blob) => {
+    onSuccess: (response) => {
+      const blob = response.data
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
