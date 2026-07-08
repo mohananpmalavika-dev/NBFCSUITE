@@ -348,7 +348,7 @@ export default function NewSettlementPage() {
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    payment_terms: e.target.value as PaymentTerm,
+                    payment_terms: e.target.value as keyof typeof PaymentTerms,
                   })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
