@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { templateApi } from '@/lib/api/collection';
-import { CollectionTemplate, ActionType } from '@/types/collection';
+import { CommunicationTemplate, ActionType } from '@/types/collection';
 
 export default function TemplatesPage() {
   const router = useRouter();
-  const [templates, setTemplates] = useState<CollectionTemplate[]>([]);
+  const [templates, setTemplates] = useState<CommunicationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ActionType | 'all'>('all');
 
