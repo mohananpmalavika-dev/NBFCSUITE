@@ -96,7 +96,10 @@ export default function ShiftManagementPage() {
       grace_period_minutes: shift.grace_period_minutes,
       half_day_hours: shift.half_day_hours,
       full_day_hours: shift.full_day_hours,
-      week_off_days: shift.week_off_days,
+      week_off_days: [shift.week_off_1, shift.week_off_2].filter(Boolean).map(day => {
+        const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+        return days.indexOf(day || '');
+      }).filter(d => d >= 0),
       is_active: shift.is_active,
       description: shift.description || '',
     });
