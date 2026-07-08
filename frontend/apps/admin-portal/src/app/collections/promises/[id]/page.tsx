@@ -21,7 +21,7 @@ export default function PromiseDetailPage() {
   const loadPromiseDetails = async () => {
     try {
       setLoading(true);
-      const data = await promiseApi.getPromise(promiseId);
+      const data = await promiseApi.get(parseInt(promiseId));
       setPromise(data);
     } catch (error) {
       console.error('Failed to load promise details:', error);
