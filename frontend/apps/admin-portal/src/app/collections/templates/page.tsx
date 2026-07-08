@@ -19,9 +19,9 @@ export default function TemplatesPage() {
     try {
       setLoading(true);
       const data = await templateApi.list(
-        filter === 'all' ? undefined : filter
+        filter === 'all' ? undefined : { template_type: filter }
       );
-      setTemplates(data);
+      setTemplates(data.items || data);
     } catch (error) {
       console.error('Failed to load templates:', error);
     } finally {
