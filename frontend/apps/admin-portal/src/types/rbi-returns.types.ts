@@ -141,8 +141,11 @@ export interface NBS7Return {
   net_loans_advances: number
   total_investments: number
   fixed_assets_net: number
+  cash_bank_balances: number
   total_assets: number
   
+  share_capital: number
+  reserves_surplus: number
   total_capital_reserves: number
   total_borrowings: number
   public_deposits: number
@@ -151,6 +154,7 @@ export interface NBS7Return {
   total_income: number
   total_expenditure: number
   profit_before_tax: number
+  tax_provision: number
   profit_after_tax: number
   
   gross_npa: number

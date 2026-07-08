@@ -9,7 +9,7 @@ from datetime import datetime, date, time
 import enum
 import uuid
 
-from .database import Base
+from .connection import Base
 
 
 # ============================================================================
