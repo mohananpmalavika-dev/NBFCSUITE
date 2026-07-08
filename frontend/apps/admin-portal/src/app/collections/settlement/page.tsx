@@ -111,34 +111,40 @@ export default function SettlementPage() {
           title="Total Proposals"
           value={stats.total.toString()}
           icon={FileText}
+          color="blue"
         />
         <CollectionStatCard
           title="Pending Approval"
           value={stats.pending.toString()}
           icon={Clock}
+          color="yellow"
           trend="warning"
         />
         <CollectionStatCard
           title="Approved"
           value={stats.approved.toString()}
           icon={CheckCircle}
+          color="green"
           trend="success"
         />
         <CollectionStatCard
           title="Rejected"
           value={stats.rejected.toString()}
           icon={XCircle}
+          color="red"
           trend="danger"
         />
         <CollectionStatCard
           title="Total Outstanding"
           value={formatCurrency(stats.totalOsAmount)}
           icon={DollarSign}
+          color="purple"
         />
         <CollectionStatCard
           title="Settlement Amount"
           value={formatCurrency(stats.totalSettlement)}
           icon={TrendingUp}
+          color="green"
           trend="success"
         />
       </div>
