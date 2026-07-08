@@ -2,6 +2,51 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #44) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/deposits/statements/[accountId]/page.tsx`
+
+**Error**: 
+```
+Type error: This expression is not callable.
+No constituent of type '"pdf" | "excel"' is callable.
+Line 252: setStartDate(format(start, 'yyyy-MM-dd'))
+```
+
+**Root Cause**: Naming collision - the state variable `format` (type: 'pdf' | 'excel') was conflicting with the `format` function imported from `date-fns`, making TypeScript think we were trying to call a string as a function.
+
+**Fix Applied**: Renamed the import to avoid collision:
+- FROM: `import { format } from 'date-fns'`
+- TO: `import { format as formatDate } from 'date-fns'`
+- Updated all usages: `format(date, ...)` → `formatDate(date, ...)`
+
+**Status**: ✅ **FIXED** - Import renamed, all date formatting calls updated to use `formatDate()`
+
+---
+
+## Latest Fix (Build #43) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/deposits/statements/[accountId]/page.tsx`
+
+**Error**: 
+```
+Type error: Argument of type 'AxiosResponse' is not assignable to parameter of type 'Blob | MediaSource'.
+Line 162: const url = window.URL.createObjectURL(blob)
+```
+
+**Root Cause**: Three mutations were trying to use AxiosResponse directly as a Blob:
+- `generateStatementMutation` (line 73)
+- `generateQuarterlyMutation` (line 130)  
+- `generateAnnualMutation` (line 162)
+
+**Fix Applied**: Changed ALL THREE mutation onSuccess callbacks:
+- FROM: `onSuccess: (blob) => { const url = window.URL.createObjectURL(blob) ...`
+- TO: `onSuccess: (response) => { const blob = response.data; const url = window.URL.createObjectURL(blob) ...`
+
+**Status**: ✅ **FIXED** - All three mutations now correctly extract blob from response.data
+
+---
+
 ## Overview
 Fixed all backend and frontend deployment errors for successful production build.
 

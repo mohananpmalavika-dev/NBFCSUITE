@@ -28,7 +28,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { depositService } from '@/services/deposit.service'
 import { useToast } from '@/hooks/use-toast'
-import { format } from 'date-fns'
+import { format as formatDate } from 'date-fns'
 
 export default function StatementGenerationPage() {
   const params = useParams()
@@ -249,8 +249,8 @@ export default function StatementGenerationPage() {
         break
     }
 
-    setStartDate(format(start, 'yyyy-MM-dd'))
-    setEndDate(format(today, 'yyyy-MM-dd'))
+    setStartDate(formatDate(start, 'yyyy-MM-dd'))
+    setEndDate(formatDate(today, 'yyyy-MM-dd'))
   }
 
   return (
@@ -350,7 +350,7 @@ export default function StatementGenerationPage() {
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       min={startDate || undefined}
-                      max={format(new Date(), 'yyyy-MM-dd')}
+                      max={formatDate(new Date(), 'yyyy-MM-dd')}
                     />
                   </div>
                 </div>
@@ -443,7 +443,7 @@ export default function StatementGenerationPage() {
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       min={startDate || undefined}
-                      max={format(new Date(), 'yyyy-MM-dd')}
+                      max={formatDate(new Date(), 'yyyy-MM-dd')}
                     />
                   </div>
                 </div>
