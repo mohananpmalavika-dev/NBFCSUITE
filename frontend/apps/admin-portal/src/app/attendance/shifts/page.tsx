@@ -531,9 +531,10 @@ export default function ShiftManagementPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-xs text-gray-600">
-                        {shift.week_off_days.length > 0
-                          ? shift.week_off_days.map(d => getDayName(d).slice(0, 3)).join(', ')
-                          : 'None'}
+                        {[shift.week_off_1, shift.week_off_2]
+                          .filter(Boolean)
+                          .map(day => day?.slice(0, 3))
+                          .join(', ') || 'None'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
