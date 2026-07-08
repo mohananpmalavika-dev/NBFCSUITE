@@ -182,16 +182,14 @@ async def cancel_interview(
 @router.post("/{interview_id}/feedback", response_model=InterviewResponse)
 async def submit_feedback(
     interview_id: str,
-    feedback: InterviewFeedbackSubmit,
+    feedback: InterviewFeedback,
     service: InterviewService = Depends(get_interview_service)
 ):
     """Submit interview feedback"""
     try:
         interview = await service.submit_feedback(
             interview_id,
-            feedback.rating,
-            feedback.feedback_notes,
-            feedback.recommendation
+            feedback
         )
         return interview
     except ValueError as e:

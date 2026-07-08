@@ -21,8 +21,8 @@ export default function TDSSectionsPage() {
     section_code: '',
     section_name: '',
     description: '',
-    rate_percentage: 0,
-    threshold_amount: 0,
+    tds_rate: 0,
+    threshold_limit: 0,
     is_active: true
   });
 
@@ -33,8 +33,9 @@ export default function TDSSectionsPage() {
   const loadSections = async () => {
     try {
       setLoading(true);
-      const data = await tdsService.getSections();
-      setSections(data);
+      const currentYear = new Date().getFullYear();
+      const response = await tdsService.getSections(currentYear);
+      setSections(response.data.data.sections || []);
     } catch (error) {
       toast({
         title: "Error",
@@ -80,8 +81,8 @@ export default function TDSSectionsPage() {
       section_code: section.section_code,
       section_name: section.section_name,
       description: section.description || '',
-      rate_percentage: section.rate_percentage,
-      threshold_amount: section.threshold_amount || 0,
+      tds_rate: section.tds_rate,
+      threshold_limit: section.threshold_limit || 0,
       is_active: section.is_active
     });
     setIsDialogOpen(true);
@@ -111,8 +112,8 @@ export default function TDSSectionsPage() {
       section_code: '',
       section_name: '',
       description: '',
-      rate_percentage: 0,
-      threshold_amount: 0,
+      tds_rate: 0,
+      threshold_limit: 0,
       is_active: true
     });
     setEditingSection(null);
@@ -158,13 +159,13 @@ export default function TDSSectionsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="rate_percentage">Rate (%) *</Label>
+                    <Label htmlFor="tds_rate">Rate (%) *</Label>
                     <Input
-                      id="rate_percentage"
+                      id="tds_rate"
                       type="number"
                       step="0.01"
-                      value={formData.rate_percentage}
-                      onChange={(e) => setFormData({ ...formData, rate_percentage: parseFloat(e.target.value) })}
+                      value={formData.tds_rate}
+                      onChange={(e) => setFormData({ ...formData, tds_rate: parseFloat(e.target.value) })}
                       required
                     />
                   </div>
@@ -189,13 +190,13 @@ export default function TDSSectionsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="threshold_amount">Threshold Amount (₹)</Label>
+                  <Label htmlFor="threshold_limit">Threshold Amount (₹)</Label>
                   <Input
-                    id="threshold_amount"
+                    id="threshold_limit"
                     type="number"
                     step="0.01"
-                    value={formData.threshold_amount}
-                    onChange={(e) => setFormData({ ...formData, threshold_amount: parseFloat(e.target.value) })}
+                    value={formData.threshold_limit}
+                    onChange={(e) => setFormData({ ...formData, threshold_limit: parseFloat(e.target.value) })}
                   />
                 </div>
                 <div className="flex items-center space-x-2">
@@ -258,9 +259,9 @@ export default function TDSSectionsPage() {
                       <TableCell className="font-medium">{section.section_code}</TableCell>
                       <TableCell>{section.section_name}</TableCell>
                       <TableCell className="max-w-xs truncate">{section.description}</TableCell>
-                      <TableCell className="text-right">{section.rate_percentage.toFixed(2)}%</TableCell>
+                      <TableCell className="text-right">{section.tds_rate.toFixed(2)}%</TableCell>
                       <TableCell className="text-right">
-                        {section.threshold_amount?.toLocaleString('en-IN') || '-'}
+                        {section.threshold_limit?.toLocaleString('en-IN') || '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={section.is_active ? "success" : "secondary"}>

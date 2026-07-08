@@ -277,6 +277,14 @@ export const tdsService = {
     return apiClient.post('/accounting/tds/sections', data)
   },
 
+  async updateSection(id: number, data: Partial<TDSSection>) {
+    return apiClient.put(`/accounting/tds/sections/${id}`, data)
+  },
+
+  async deleteSection(id: number) {
+    return apiClient.delete(`/accounting/tds/sections/${id}`)
+  },
+
   // TDS Calculation
   async calculateTDS(data: {
     section_code: string

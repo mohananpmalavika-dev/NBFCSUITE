@@ -14,7 +14,7 @@ from backend.shared.database.recruitment_models import (
 )
 from .schemas import (
     InterviewCreate, InterviewUpdate, InterviewFeedback,
-    InterviewStatusEnum
+    InterviewStatusEnum, InterviewResultEnum
 )
 
 
@@ -207,7 +207,7 @@ class InterviewService:
         interview.updated_by = self.user_id
         
         # Update application status based on result
-        app_query = select(JobApplication).where(Interview.application_id == interview.application_id)
+        app_query = select(JobApplication).where(JobApplication.application_id == interview.application_id)
         app_result = await self.db.execute(app_query)
         application = app_result.scalar_one_or_none()
         if application:
@@ -215,6 +215,21 @@ class InterviewService:
                 application.status = "interviewed"
             elif feedback.result == InterviewResultEnum.REJECTED:
                 application.status = "rejected"
+        
+        await self.db.commit()
+        await self.db.refresh(interview)
+        
+        return interview
+    
+    async def complete_interview(self, interview_id: str) -> Interview:
+        """Mark interview as completed without feedback"""
+        interview = await self.get_interview(interview_id)
+        if not interview:
+            raise ValueError("Interview not found")
+        
+        interview.status = InterviewStatus.COMPLETED
+        interview.completed_date = datetime.utcnow()
+        interview.updated_by = self.user_id
         
         await self.db.commit()
         await self.db.refresh(interview)
