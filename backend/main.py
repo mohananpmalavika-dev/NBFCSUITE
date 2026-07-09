@@ -17,7 +17,7 @@ import os
 from pathlib import Path
 from typing import Dict, Any
 
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from backend.shared.config import settings
 from backend.shared.database.connection import engine, Base
@@ -226,12 +226,33 @@ async def lifespan(app: FastAPI):
     
     # Verify tables exist
     try:
-        async with engine.connect() as conn:            
-            existing_tables = await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_table_names())
+        async with engine.connect() as conn:
+            # Get all table names from public schema
+            def get_tables(sync_conn):
+                inspector = inspect(sync_conn)
+                # Get tables from public schema (default)
+                tables = inspector.get_table_names(schema='public')
+                logger.info(f"📋 Tables in 'public' schema: {tables[:10] if len(tables) > 10 else tables}")
+                return tables
+            
+            existing_tables = await conn.run_sync(get_tables)
             
         logger.info(f"✅ Database tables ready. Existing tables: {len(existing_tables)}")
+        
+        # Check for users table
         if "users" not in existing_tables:
-            logger.error("❌ Database created, but users table is still missing")
+            logger.error(f"❌ Database created, but users table is still missing")
+            logger.error(f"Available tables: {existing_tables[:20]}")  # Show first 20
+            
+            # Try a direct query to see if table exists but not visible
+            try:
+                async with engine.connect() as conn:
+                    result = await conn.execute(text("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='users' AND table_schema='public'"))
+                    count = result.scalar()
+                    logger.error(f"Direct query for users table: {count} found")
+            except Exception as query_error:
+                logger.error(f"Could not query information_schema: {query_error}")
+            
             raise RuntimeError("Database created, but users table is still missing")
     except Exception as e:
         logger.error(f"❌ Failed to verify tables: {e}")
