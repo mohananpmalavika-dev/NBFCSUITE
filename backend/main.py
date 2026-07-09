@@ -208,7 +208,13 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.connect() as conn:
             async with conn.begin():
-                await conn.run_sync(Base.metadata.create_all, checkfirst=True)
+                # Force table creation
+                def create_tables_sync(sync_conn):
+                    logger.info("Creating tables with Base.metadata.create_all...")
+                    Base.metadata.create_all(bind=sync_conn, checkfirst=True)
+                    logger.info("Base.metadata.create_all completed")
+                
+                await conn.run_sync(create_tables_sync)
                 logger.info("✅ Tables created/verified")
     except Exception as create_error:
         # Ignore duplicate index/table errors - tables already exist
@@ -224,7 +230,9 @@ async def lifespan(app: FastAPI):
             logger.error(f"❌ Unexpected error creating tables: {create_error}")
             raise
     
-    # Verify tables exist
+    # Verify tables exist - wait a moment for database to sync
+    await asyncio.sleep(1)
+    
     try:
         async with engine.connect() as conn:
             # Get all table names from public schema
@@ -232,29 +240,40 @@ async def lifespan(app: FastAPI):
                 inspector = inspect(sync_conn)
                 # Get tables from public schema (default)
                 tables = inspector.get_table_names(schema='public')
-                logger.info(f"📋 Tables in 'public' schema: {tables[:10] if len(tables) > 10 else tables}")
+                print(f"[DEBUG] Found {len(tables)} tables in public schema")
+                if tables:
+                    print(f"[DEBUG] First 10 tables: {tables[:10]}")
                 return tables
             
             existing_tables = await conn.run_sync(get_tables)
-            
-        logger.info(f"✅ Database tables ready. Existing tables: {len(existing_tables)}")
+        
+        logger.info(f"✅ Database has {len(existing_tables)} tables")
+        logger.info(f"📋 Sample tables: {existing_tables[:10] if existing_tables else 'NONE'}")
         
         # Check for users table
-        if "users" not in existing_tables:
-            logger.error(f"❌ Database created, but users table is still missing")
-            logger.error(f"Available tables: {existing_tables[:20]}")  # Show first 20
+        if not existing_tables:
+            logger.error(f"❌ No tables found in database!")
+            logger.error("This indicates table creation failed silently or a schema mismatch")
             
-            # Try a direct query to see if table exists but not visible
+            # Try direct query
             try:
                 async with engine.connect() as conn:
-                    result = await conn.execute(text("SELECT COUNT(*) FROM information_schema.tables WHERE table_name='users' AND table_schema='public'"))
-                    count = result.scalar()
-                    logger.error(f"Direct query for users table: {count} found")
+                    result = await conn.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public' LIMIT 10"))
+                    rows = result.fetchall()
+                    logger.error(f"Direct query found {len(rows)} tables: {[r[0] for r in rows]}")
             except Exception as query_error:
                 logger.error(f"Could not query information_schema: {query_error}")
             
+            raise RuntimeError("No tables found in database after creation attempt")
+        
+        if "users" not in existing_tables:
+            logger.error(f"❌ Users table missing from {len(existing_tables)} tables")
+            logger.error(f"Available tables: {existing_tables[:20]}")
             raise RuntimeError("Database created, but users table is still missing")
+            
     except Exception as e:
+        if "No tables found" in str(e) or "users table" in str(e):
+            raise
         logger.error(f"❌ Failed to verify tables: {e}")
         import traceback
         logger.error(traceback.format_exc())
