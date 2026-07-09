@@ -137,7 +137,7 @@ from backend.shared.database.branch_models import (
 
 # 14. HRMS (Human Resource Management System) models (NEW - HRMS Module)
 from backend.shared.database.hrms_models import (
-    Organization as HRMSOrganization, Department, Designation, 
+    HRMSOrganization, Department, Designation, 
     Employee, ReportingHierarchy
 )
 
