@@ -2,6 +2,33 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #51) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/loans/applications/page.tsx`
+
+**Error**: 
+```
+Type error: Property 'metadata' does not exist on type 'NoInfer<AxiosResponse<PaginatedResponse<LoanApplication>, any, {}>>'.
+Line 96: value={data?.metadata?.total || 0}
+```
+
+**Root Cause**: Incorrect pagination data access. Query returns `AxiosResponse<PaginatedResponse<...>>`, so pagination data is at `data.data.*`, not `data.metadata.*`.
+
+**Fixes Applied**:
+1. Changed `data?.metadata?.total` → `data?.data?.total` (2 occurrences)
+2. Changed `data.metadata?.has_prev` → `data?.data?.has_prev`
+3. Changed `data.metadata?.has_next` → `data?.data?.has_next`
+
+**Pattern**: `AxiosResponse<PaginatedResponse<T>>` structure:
+- Total count: `data.data.total`
+- Items: `data.data.items`
+- Pagination: `data.data.has_prev`, `data.data.has_next`
+- Page info: `data.data.page`, `data.data.page_size`
+
+**Status**: ✅ **FIXED** - All pagination property accesses corrected
+
+---
+
 ## Latest Fix (Build #50) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/loans/applications/new/page.tsx`
