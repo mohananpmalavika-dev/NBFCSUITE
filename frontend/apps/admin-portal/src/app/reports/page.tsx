@@ -1,572 +1,267 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Calendar, Download, FileText, TrendingUp, TrendingDown, Users, PiggyBank, DollarSign } from 'lucide-react'
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useState } from "react";
+import Link from "next/link";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Skeleton } from '@/components/ui/skeleton'
-import { reportsService } from '@/services/reports.service'
-import { formatCurrency, formatDate } from '@/lib/utils'
+  FileText,
+  BarChart3,
+  Layout,
+  Brain,
+  Plus,
+  TrendingUp,
+  FileSpreadsheet,
+  PieChart,
+  Activity,
+  Calendar,
+  Download,
+  Filter
+} from "lucide-react";
 
 export default function ReportsPage() {
-  const [reportType, setReportType] = useState<'loan' | 'deposit' | 'customer' | 'performance'>('loan')
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState(new Date().toISOString().split('T')[0])
+  const [stats] = useState({
+    totalReports: 124,
+    reportsGenerated: 1847,
+    dashboards: 12,
+    mlModels: 8
+  });
+
+  const quickAccessReports = [
+    {
+      id: 1,
+      name: "Portfolio Summary",
+      category: "Portfolio",
+      icon: PieChart,
+      color: "bg-blue-500",
+      lastRun: "2 hours ago"
+    },
+    {
+      id: 2,
+      name: "Collection Efficiency",
+      category: "Collection",
+      icon: TrendingUp,
+      color: "bg-green-500",
+      lastRun: "Today 9:00 AM"
+    },
+    {
+      id: 3,
+      name: "NPA Analysis",
+      category: "Risk",
+      icon: Activity,
+      color: "bg-red-500",
+      lastRun: "Yesterday"
+    },
+    {
+      id: 4,
+      name: "Disbursement Report",
+      category: "Operational",
+      icon: FileSpreadsheet,
+      color: "bg-purple-500",
+      lastRun: "3 hours ago"
+    }
+  ];
+
+  const modules = [
+    {
+      title: "Report Templates",
+      description: "Access 100+ pre-built reports across all modules",
+      icon: FileText,
+      href: "/reports/templates",
+      color: "bg-blue-500",
+      count: "124 Reports"
+    },
+    {
+      title: "Generate Reports",
+      description: "Generate reports with custom parameters and filters",
+      icon: FileSpreadsheet,
+      href: "/reports/generate",
+      color: "bg-green-500",
+      count: "Quick Access"
+    },
+    {
+      title: "Custom Report Builder",
+      description: "Build custom reports with drag-and-drop interface",
+      icon: Plus,
+      href: "/reports/builder",
+      color: "bg-purple-500",
+      count: "Drag & Drop"
+    },
+    {
+      title: "Executive Dashboards",
+      description: "Real-time dashboards with KPIs and visualizations",
+      icon: Layout,
+      href: "/reports/dashboards",
+      color: "bg-orange-500",
+      count: "12 Dashboards"
+    },
+    {
+      title: "Predictive Analytics",
+      description: "ML-powered predictions for risk, churn, and more",
+      icon: Brain,
+      href: "/reports/analytics",
+      color: "bg-pink-500",
+      count: "8 Models"
+    },
+    {
+      title: "Scheduled Reports",
+      description: "Automate report generation and delivery",
+      icon: Calendar,
+      href: "/reports/scheduled",
+      color: "bg-indigo-500",
+      count: "Automation"
+    },
+    {
+      title: "Report History",
+      description: "View and download previously generated reports",
+      icon: Download,
+      href: "/reports/history",
+      color: "bg-gray-500",
+      count: "1,847 Reports"
+    },
+    {
+      title: "Report Analytics",
+      description: "Track report usage and performance metrics",
+      icon: BarChart3,
+      href: "/reports/usage",
+      color: "bg-teal-500",
+      count: "Insights"
+    }
+  ];
+
+  const reportCategories = [
+    { name: "Portfolio Reports", count: 20, color: "bg-blue-100 text-blue-700" },
+    { name: "Collection Reports", count: 15, color: "bg-green-100 text-green-700" },
+    { name: "Risk & NPA", count: 12, color: "bg-red-100 text-red-700" },
+    { name: "Financial Reports", count: 18, color: "bg-yellow-100 text-yellow-700" },
+    { name: "Regulatory & Compliance", count: 15, color: "bg-purple-100 text-purple-700" },
+    { name: "Operational", count: 10, color: "bg-indigo-100 text-indigo-700" },
+    { name: "Customer", count: 8, color: "bg-pink-100 text-pink-700" },
+    { name: "Treasury", count: 8, color: "bg-orange-100 text-orange-700" },
+    { name: "Deposit", count: 6, color: "bg-teal-100 text-teal-700" },
+    { name: "Branch & HR", count: 10, color: "bg-gray-100 text-gray-700" }
+  ];
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
-            <p className="text-gray-600 mt-1">Generate comprehensive business reports</p>
-          </div>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export All
-          </Button>
-        </div>
-
-        {/* Report Tabs */}
-        <Tabs value={reportType} onValueChange={(v: any) => setReportType(v)}>
-          <TabsList className="grid w-full md:w-auto grid-cols-4">
-            <TabsTrigger value="loan">Loan Reports</TabsTrigger>
-            <TabsTrigger value="deposit">Deposit Reports</TabsTrigger>
-            <TabsTrigger value="customer">Customer Reports</TabsTrigger>
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-          </TabsList>
-
-          {/* Loan Reports */}
-          <TabsContent value="loan" className="space-y-6">
-            <LoanReports fromDate={fromDate} toDate={toDate} setFromDate={setFromDate} setToDate={setToDate} />
-          </TabsContent>
-
-          {/* Deposit Reports */}
-          <TabsContent value="deposit" className="space-y-6">
-            <DepositReports fromDate={fromDate} toDate={toDate} setFromDate={setFromDate} setToDate={setToDate} />
-          </TabsContent>
-
-          {/* Customer Reports */}
-          <TabsContent value="customer" className="space-y-6">
-            <CustomerReports fromDate={fromDate} toDate={toDate} setFromDate={setFromDate} setToDate={setToDate} />
-          </TabsContent>
-
-          {/* Performance Reports */}
-          <TabsContent value="performance" className="space-y-6">
-            <PerformanceReports fromDate={fromDate} toDate={toDate} setFromDate={setFromDate} setToDate={setToDate} />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </DashboardLayout>
-  )
-}
-
-function LoanReports({ fromDate, toDate, setFromDate, setToDate }: any) {
-  const portfolioQuery = useQuery({
-    queryKey: ['loan-portfolio', fromDate, toDate],
-    queryFn: () => reportsService.getLoanPortfolioReport({ from_date: fromDate, to_date: toDate }),
-    enabled: !!toDate,
-  })
-
-  const npaQuery = useQuery({
-    queryKey: ['npa-report', toDate],
-    queryFn: () => reportsService.getNPAReport({ as_of_date: toDate }),
-    enabled: !!toDate,
-  })
-
-  return (
-    <>
-      {/* Date Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Report Parameters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>From Date</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="date"
-                  className="pl-10"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>To Date</Label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="date"
-                  className="pl-10"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex items-end">
-              <Button className="w-full">Generate Reports</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Portfolio Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Portfolio"
-          value={formatCurrency(portfolioQuery.data?.data?.total_portfolio || 0)}
-          icon={DollarSign}
-          color="blue"
-          loading={portfolioQuery.isLoading}
-        />
-        <StatCard
-          label="Active Loans"
-          value={portfolioQuery.data?.data?.active_loans || 0}
-          icon={FileText}
-          color="green"
-          loading={portfolioQuery.isLoading}
-        />
-        <StatCard
-          label="Disbursed This Month"
-          value={formatCurrency(portfolioQuery.data?.data?.monthly_disbursement || 0)}
-          icon={TrendingUp}
-          color="purple"
-          loading={portfolioQuery.isLoading}
-        />
-        <StatCard
-          label="NPA Ratio"
-          value={`${npaQuery.data?.data?.npa_ratio || 0}%`}
-          icon={TrendingDown}
-          color="red"
-          loading={npaQuery.isLoading}
-        />
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Reporting & Analytics
+        </h1>
+        <p className="text-gray-600">
+          Comprehensive reporting suite with 100+ pre-built reports, custom builder, dashboards, and AI-powered analytics
+        </p>
       </div>
 
-      {/* Detailed Reports */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Loan Portfolio by Product</CardTitle>
-              <Button variant="ghost" size="sm">
-                <Download className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {portfolioQuery.isLoading ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : portfolioQuery.data?.data?.by_product ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Count</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {portfolioQuery.data.data.by_product.map((item: any, i: number) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-medium">{item.product_name}</TableCell>
-                      <TableCell className="text-right">{item.count}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatCurrency(item.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-center text-gray-500 py-8">No data available</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>NPA Analysis</CardTitle>
-              <Button variant="ghost" size="sm">
-                <Download className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {npaQuery.isLoading ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : npaQuery.data?.data?.breakdown ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Count</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {npaQuery.data.data.breakdown.map((item: any, i: number) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-medium">{item.category}</TableCell>
-                      <TableCell className="text-right">{item.count}</TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {formatCurrency(item.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-center text-gray-500 py-8">No data available</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </>
-  )
-}
-
-function DepositReports({ fromDate, toDate, setFromDate, setToDate }: any) {
-  const portfolioQuery = useQuery({
-    queryKey: ['deposit-portfolio', fromDate, toDate],
-    queryFn: () => reportsService.getDepositPortfolioReport({ from_date: fromDate, to_date: toDate }),
-    enabled: !!toDate,
-  })
-
-  return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Report Parameters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>From Date</Label>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>To Date</Label>
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button className="w-full">Generate Reports</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Deposits"
-          value={formatCurrency(portfolioQuery.data?.data?.total_deposits || 0)}
-          icon={PiggyBank}
-          color="green"
-          loading={portfolioQuery.isLoading}
-        />
-        <StatCard
-          label="Active Accounts"
-          value={portfolioQuery.data?.data?.active_accounts || 0}
-          icon={FileText}
-          color="blue"
-          loading={portfolioQuery.isLoading}
-        />
-        <StatCard
-          label="New Deposits"
-          value={formatCurrency(portfolioQuery.data?.data?.new_deposits || 0)}
-          icon={TrendingUp}
-          color="purple"
-          loading={portfolioQuery.isLoading}
-        />
-        <StatCard
-          label="Matured This Month"
-          value={portfolioQuery.data?.data?.matured_count || 0}
-          icon={FileText}
-          color="orange"
-          loading={portfolioQuery.isLoading}
-        />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Deposit Portfolio by Type</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {portfolioQuery.isLoading ? (
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : portfolioQuery.data?.data?.by_type ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Count</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {portfolioQuery.data.data.by_type.map((item: any, i: number) => (
-                  <TableRow key={i}>
-                    <TableCell className="font-medium">{item.type}</TableCell>
-                    <TableCell className="text-right">{item.count}</TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatCurrency(item.amount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-center text-gray-500 py-8">No data available</p>
-          )}
-        </CardContent>
-      </Card>
-    </>
-  )
-}
-
-function CustomerReports({ fromDate, toDate, setFromDate, setToDate }: any) {
-  const acquisitionQuery = useQuery({
-    queryKey: ['customer-acquisition', fromDate, toDate],
-    queryFn: () => reportsService.getCustomerAcquisitionReport({ from_date: fromDate, to_date: toDate }),
-    enabled: !!toDate,
-  })
-
-  return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Report Parameters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>From Date</Label>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>To Date</Label>
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button className="w-full">Generate Reports</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Customers"
-          value={acquisitionQuery.data?.data?.total_customers || 0}
-          icon={Users}
-          color="blue"
-          loading={acquisitionQuery.isLoading}
-        />
-        <StatCard
-          label="New Customers"
-          value={acquisitionQuery.data?.data?.new_customers || 0}
-          icon={TrendingUp}
-          color="green"
-          loading={acquisitionQuery.isLoading}
-        />
-        <StatCard
-          label="Active Customers"
-          value={acquisitionQuery.data?.data?.active_customers || 0}
-          icon={Users}
-          color="purple"
-          loading={acquisitionQuery.isLoading}
-        />
-        <StatCard
-          label="Growth Rate"
-          value={`${acquisitionQuery.data?.data?.growth_rate || 0}%`}
-          icon={TrendingUp}
-          color="orange"
-          loading={acquisitionQuery.isLoading}
-        />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Customer Acquisition Trend</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-center text-gray-500 py-8">
-            Chart visualization will be displayed here
-          </p>
-        </CardContent>
-      </Card>
-    </>
-  )
-}
-
-function PerformanceReports({ fromDate, toDate, setFromDate, setToDate }: any) {
-  const metricsQuery = useQuery({
-    queryKey: ['performance-metrics', fromDate, toDate],
-    queryFn: () => reportsService.getPerformanceMetrics({ from_date: fromDate, to_date: toDate }),
-    enabled: !!toDate,
-  })
-
-  return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Report Parameters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>From Date</Label>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>To Date</Label>
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button className="w-full">Generate Reports</Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard
-          label="Collection Efficiency"
-          value={`${metricsQuery.data?.data?.collection_efficiency || 0}%`}
-          icon={TrendingUp}
-          color="green"
-          loading={metricsQuery.isLoading}
-        />
-        <StatCard
-          label="ROA"
-          value={`${metricsQuery.data?.data?.roa || 0}%`}
-          icon={DollarSign}
-          color="blue"
-          loading={metricsQuery.isLoading}
-        />
-        <StatCard
-          label="ROE"
-          value={`${metricsQuery.data?.data?.roe || 0}%`}
-          icon={DollarSign}
-          color="purple"
-          loading={metricsQuery.isLoading}
-        />
-        <StatCard
-          label="Net Profit Margin"
-          value={`${metricsQuery.data?.data?.net_profit_margin || 0}%`}
-          icon={TrendingUp}
-          color="orange"
-          loading={metricsQuery.isLoading}
-        />
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Key Performance Indicators</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-center text-gray-500 py-8">
-            Performance metrics visualization will be displayed here
-          </p>
-        </CardContent>
-      </Card>
-    </>
-  )
-}
-
-function StatCard({ 
-  label, 
-  value, 
-  icon: Icon,
-  color = 'blue',
-  loading = false
-}: { 
-  label: string
-  value: string | number
-  icon: any
-  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'orange'
-  loading?: boolean
-}) {
-  const colors = {
-    blue: 'bg-blue-100 text-blue-600',
-    green: 'bg-green-100 text-green-600',
-    yellow: 'bg-yellow-100 text-yellow-600',
-    red: 'bg-red-100 text-red-600',
-    purple: 'bg-purple-100 text-purple-600',
-    orange: 'bg-orange-100 text-orange-600',
-  }
-
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        {loading ? (
-          <Skeleton className="h-20 w-full" />
-        ) : (
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-1">{label}</p>
-              <p className="text-2xl font-bold text-gray-900">{value}</p>
+              <p className="text-sm font-medium text-gray-600">Total Reports</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalReports}</p>
             </div>
-            <div className={`h-12 w-12 rounded-lg ${colors[color]} flex items-center justify-center`}>
-              <Icon className="h-6 w-6" />
-            </div>
+            <FileText className="h-10 w-10 text-blue-500" />
           </div>
-        )}
-      </CardContent>
-    </Card>
-  )
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Reports Generated</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.reportsGenerated.toLocaleString()}</p>
+            </div>
+            <BarChart3 className="h-10 w-10 text-green-500" />
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Dashboards</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.dashboards}</p>
+            </div>
+            <Layout className="h-10 w-10 text-purple-500" />
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">ML Models</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.mlModels}</p>
+            </div>
+            <Brain className="h-10 w-10 text-pink-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Access Reports */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Access Reports</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {quickAccessReports.map((report) => (
+            <Link
+              key={report.id}
+              href={`/reports/templates/${report.id}`}
+              className="bg-white p-4 rounded-lg shadow border border-gray-200 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className={`p-2 rounded-lg ${report.color} bg-opacity-10`}>
+                  <report.icon className={`h-6 w-6 ${report.color.replace('bg-', 'text-')}`} />
+                </div>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-1">{report.name}</h3>
+              <p className="text-sm text-gray-600 mb-2">{report.category}</p>
+              <p className="text-xs text-gray-500">Last run: {report.lastRun}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Modules */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Reporting Modules</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {modules.map((module, index) => (
+            <Link
+              key={index}
+              href={module.href}
+              className="bg-white p-6 rounded-lg shadow border border-gray-200 hover:shadow-lg transition-all hover:scale-105"
+            >
+              <div className={`w-12 h-12 rounded-lg ${module.color} bg-opacity-10 flex items-center justify-center mb-4`}>
+                <module.icon className={`h-6 w-6 ${module.color.replace('bg-', 'text-')}`} />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {module.title}
+              </h3>
+              <p className="text-sm text-gray-600 mb-3">
+                {module.description}
+              </p>
+              <span className={`inline-block text-xs font-medium px-3 py-1 rounded-full ${module.color} bg-opacity-10 ${module.color.replace('bg-', 'text-')}`}>
+                {module.count}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Report Categories */}
+      <div>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Report Categories</h2>
+        <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {reportCategories.map((category, index) => (
+              <Link
+                key={index}
+                href={`/reports/templates?category=${category.name.toLowerCase().replace(/ /g, '_')}`}
+                className="flex flex-col items-center p-4 rounded-lg border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all"
+              >
+                <span className={`text-sm font-medium px-3 py-1 rounded-full ${category.color} mb-2`}>
+                  {category.count} reports
+                </span>
+                <p className="text-sm text-center text-gray-700">{category.name}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
