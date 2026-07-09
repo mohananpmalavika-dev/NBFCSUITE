@@ -196,9 +196,9 @@ class LoanNACHMandate(BaseModel):
     transactions = relationship("LoanMandateTransaction", back_populates="mandate", cascade="all, delete-orphan")
     
     __table_args__ = (
-        Index('idx_mandate_loan', 'tenant_id', 'loan_account_id'),
-        Index('idx_mandate_customer', 'tenant_id', 'customer_id'),
-        Index('idx_mandate_status', 'tenant_id', 'mandate_status'),
+        Index('idx_loan_mandate_loan', 'tenant_id', 'loan_account_id'),
+        Index('idx_loan_mandate_customer', 'tenant_id', 'customer_id'),
+        Index('idx_loan_mandate_status', 'tenant_id', 'mandate_status'),
     )
 
 
@@ -310,8 +310,8 @@ class LoanRestructuringRequest(BaseModel):
     moratorium_periods = relationship("LoanMoratoriumPeriod", back_populates="restructuring_request", cascade="all, delete-orphan")
     
     __table_args__ = (
-        Index('idx_restructuring_loan', 'tenant_id', 'loan_account_id'),
-        Index('idx_restructuring_status', 'tenant_id', 'status'),
+        Index('idx_loan_restructuring_loan', 'tenant_id', 'loan_account_id'),
+        Index('idx_loan_restructuring_status', 'tenant_id', 'status'),
     )
 
 
@@ -482,6 +482,6 @@ class LoanInsuranceClaim(BaseModel):
     loan_account = relationship("LoanAccount", foreign_keys=[loan_account_id])
     
     __table_args__ = (
-        Index('idx_claim_policy', 'policy_id', 'claim_date'),
-        Index('idx_claim_status', 'tenant_id', 'claim_status'),
+        Index('idx_loan_insurance_claim_policy', 'policy_id', 'claim_date'),
+        Index('idx_loan_insurance_claim_status', 'tenant_id', 'claim_status'),
     )

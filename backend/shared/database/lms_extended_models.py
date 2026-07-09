@@ -153,9 +153,9 @@ class NACHMandate(Base):
     
     # Indexes
     __table_args__ = (
-        Index('idx_mandate_tenant_loan', 'tenant_id', 'loan_account_id'),
-        Index('idx_mandate_status', 'tenant_id', 'status'),
-        Index('idx_mandate_dates', 'start_date', 'end_date'),
+        Index('idx_lms_mandate_tenant_loan', 'tenant_id', 'loan_account_id'),
+        Index('idx_lms_mandate_status', 'tenant_id', 'status'),
+        Index('idx_lms_mandate_dates', 'start_date', 'end_date'),
     )
 
 
@@ -366,9 +366,9 @@ class LoanRestructuring(Base):
     
     # Indexes
     __table_args__ = (
-        Index('idx_restructuring_tenant_loan', 'tenant_id', 'loan_account_id'),
-        Index('idx_restructuring_status', 'tenant_id', 'status'),
-        Index('idx_restructuring_date', 'tenant_id', 'request_date'),
+        Index('idx_lms_restructuring_tenant_loan', 'tenant_id', 'loan_account_id'),
+        Index('idx_lms_restructuring_status', 'tenant_id', 'status'),
+        Index('idx_lms_restructuring_date', 'tenant_id', 'request_date'),
     )
 
 
@@ -626,7 +626,7 @@ class LoanInsuranceClaim(Base):
     
     # Indexes
     __table_args__ = (
-        Index('idx_claim_tenant_policy', 'tenant_id', 'policy_id'),
-        Index('idx_claim_status', 'tenant_id', 'claim_status'),
-        Index('idx_claim_date', 'tenant_id', 'claim_date'),
+        Index('idx_lms_insurance_claim_tenant_policy', 'tenant_id', 'policy_id'),
+        Index('idx_lms_insurance_claim_status', 'tenant_id', 'claim_status'),
+        Index('idx_lms_insurance_claim_date', 'tenant_id', 'claim_date'),
     )

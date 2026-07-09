@@ -437,8 +437,8 @@ class VehicleInsuranceClaim(Base):
     
     # Indexes
     __table_args__ = (
-        Index('idx_claim_tenant_insurance', 'tenant_id', 'insurance_id'),
-        Index('idx_claim_status', 'tenant_id', 'claim_status'),
+        Index('idx_vehicle_insurance_claim_tenant_insurance', 'tenant_id', 'insurance_id'),
+        Index('idx_vehicle_insurance_claim_status', 'tenant_id', 'claim_status'),
     )
 
 

@@ -579,7 +579,7 @@ class BranchAuditLog(BaseModel):
     event_timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
     __table_args__ = (
-        Index('idx_audit_branch', 'tenant_id', 'branch_id', 'event_timestamp'),
-        Index('idx_audit_event', 'tenant_id', 'event_type', 'event_timestamp'),
-        Index('idx_audit_user', 'tenant_id', 'user_id', 'event_timestamp'),
+        Index('idx_branch_audit_branch', 'tenant_id', 'branch_id', 'event_timestamp'),
+        Index('idx_branch_audit_event', 'tenant_id', 'event_type', 'event_timestamp'),
+        Index('idx_branch_audit_user', 'tenant_id', 'user_id', 'event_timestamp'),
     )

@@ -468,8 +468,8 @@ class ComplianceAlert(BaseModel):
     loan_account = relationship("LoanAccount", foreign_keys=[loan_account_id])
     
     __table_args__ = (
-        Index('idx_alert_status', 'tenant_id', 'status'),
-        Index('idx_alert_type', 'tenant_id', 'alert_type'),
+        Index('idx_compliance_alert_status', 'tenant_id', 'status'),
+        Index('idx_compliance_alert_type', 'tenant_id', 'alert_type'),
     )
 
 

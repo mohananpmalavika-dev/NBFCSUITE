@@ -253,8 +253,8 @@ class AMLAlert(BaseModel):
     str_report = relationship("AMLSTRReport", foreign_keys=[str_id])
     
     __table_args__ = (
-        Index('idx_alert_status', 'tenant_id', 'status'),
-        Index('idx_alert_assigned', 'tenant_id', 'assigned_to', 'status'),
+        Index('idx_aml_alert_status', 'tenant_id', 'status'),
+        Index('idx_aml_alert_assigned', 'tenant_id', 'assigned_to', 'status'),
     )
 
 
@@ -698,7 +698,7 @@ class AMLAuditLog(BaseModel):
     error_message = Column(Text)
     
     __table_args__ = (
-        Index('idx_audit_event', 'tenant_id', 'event_type', 'event_date'),
-        Index('idx_audit_user', 'tenant_id', 'user_id', 'event_date'),
-        Index('idx_audit_reference', 'tenant_id', 'reference_type', 'reference_id'),
+        Index('idx_aml_audit_event', 'tenant_id', 'event_type', 'event_date'),
+        Index('idx_aml_audit_user', 'tenant_id', 'user_id', 'event_date'),
+        Index('idx_aml_audit_reference', 'tenant_id', 'reference_type', 'reference_id'),
     )
