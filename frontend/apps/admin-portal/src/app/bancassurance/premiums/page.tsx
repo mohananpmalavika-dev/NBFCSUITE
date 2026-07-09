@@ -8,74 +8,16 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { DollarSign, Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
-import { bancassuranceService } from '@/lib/api/bancassurance'
-
-// Types
-interface InsurancePremium {
-  id: number
-  premium_number: string
-  policy_id: number
-  policy_number: string
-  premium_amount: number
-  premium_due_date: string
-  premium_status: string
-  installment_number: number
-  premium_frequency: string
-  late_fee?: number
-  discount_amount?: number
-  payment_date?: string
-  payment_method?: string
-  payment_reference?: string
-  transaction_id?: string
-}
-
-type PremiumStatus = 'draft' | 'due' | 'overdue' | 'paid' | 'waived' | 'cancelled'
-
-const PREMIUM_STATUS_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  due: 'Due',
-  overdue: 'Overdue',
-  paid: 'Paid',
-  waived: 'Waived',
-  cancelled: 'Cancelled',
-}
-
-const PREMIUM_STATUS_COLORS: Record<string, string> = {
-  draft: 'gray',
-  due: 'yellow',
-  overdue: 'red',
-  paid: 'green',
-  waived: 'gray',
-  cancelled: 'gray',
-}
-
-// Utility functions
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-  }).format(amount)
-}
-
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-const isOverdue = (dueDate: string) => {
-  return new Date(dueDate) < new Date()
-}
-
-const getDaysRemaining = (dueDate: string) => {
-  const today = new Date()
-  const due = new Date(dueDate)
-  const diffTime = due.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays
-}
+import { bancassuranceService, type InsurancePremium } from '@/services/bancassurance.service'
+import {
+  PREMIUM_STATUS_LABELS,
+  PREMIUM_STATUS_COLORS,
+  formatCurrency,
+  formatDate,
+  getDaysRemaining,
+  isOverdue,
+  type PremiumStatus
+} from '@/types/bancassurance'
 
 export default function PremiumsPage() {
   const router = useRouter()
@@ -230,7 +172,7 @@ export default function PremiumsPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {premiums.map((premium) => (
-                  <tr key={premium.id} className="hover:bg-gray-50">
+                  <tr key={premium.id.toString()} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-gray-900">{premium.premium_number}</span>
