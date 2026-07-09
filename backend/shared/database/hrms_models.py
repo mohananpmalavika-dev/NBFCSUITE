@@ -86,7 +86,7 @@ class DepartmentType(str, enum.Enum):
 # ORGANIZATION STRUCTURE
 # ============================================================================
 
-class Organization(BaseModel):
+class HRMSOrganization(BaseModel):
     """
     Organization/Company entity
     Represents the parent company or holding company
@@ -173,7 +173,7 @@ class Department(BaseModel):
     is_active = Column(Boolean, default=True, nullable=False)
     
     # Relationships
-    organization = relationship("Organization", back_populates="departments")
+    organization = relationship("HRMSOrganization", back_populates="departments")
     parent_department = relationship("Department", remote_side="Department.id", foreign_keys=[parent_department_id])
     employees = relationship("Employee", back_populates="department", foreign_keys="Employee.department_id", lazy="select")
     hod = relationship("Employee", foreign_keys=[hod_employee_id], post_update=True)
