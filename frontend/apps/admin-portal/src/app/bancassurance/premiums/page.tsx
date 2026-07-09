@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { DollarSign, Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { bancassuranceService, type InsurancePremium } from '@/services/bancassurance.service'
@@ -19,7 +19,7 @@ import {
   type PremiumStatus
 } from '@/types/bancassurance'
 
-export default function PremiumsPage() {
+function PremiumsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const policyIdFilter = searchParams.get('policy_id')
@@ -519,5 +519,20 @@ function PremiumStatusBadge({ status }: { status: PremiumStatus }) {
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClasses[color]}`}>
       {label}
     </span>
+  )
+}
+
+// Main export with Suspense wrapper
+export default function PremiumsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    }>
+      <PremiumsContent />
+    </Suspense>
   )
 }
