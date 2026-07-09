@@ -419,10 +419,15 @@ app = FastAPI(
 # ============================================
 
 # CORS
+cors_origins = settings.CORS_ORIGINS.split(",")
+# In production, if CORS_ORIGINS contains "*", allow all origins
+if "*" in cors_origins:
+    cors_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS.split(","),
-    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    allow_origins=cors_origins,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS if "*" not in cors_origins else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
