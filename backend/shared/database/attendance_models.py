@@ -4,6 +4,7 @@ Database models for attendance tracking, shift management, and leave management
 """
 
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Date, Time, Text, Float, ForeignKey, Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime, date, time
 import enum
@@ -155,7 +156,7 @@ class EmployeeShift(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee and Shift
-    employee_id = Column(String(36), ForeignKey("hrms_employees.id"), nullable=False, index=True)
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     shift_id = Column(String(36), ForeignKey("shifts.id"), nullable=False, index=True)
     
     # Effective Period
@@ -194,7 +195,7 @@ class Attendance(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee and Date
-    employee_id = Column(String(36), ForeignKey("hrms_employees.id"), nullable=False, index=True)
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     attendance_date = Column(Date, nullable=False, index=True)
     
     # Shift Information
@@ -233,7 +234,7 @@ class Attendance(Base):
     
     # Approval
     is_approved = Column(Boolean, default=False)
-    approved_by = Column(String(36))
+    approved_by = Column(UUID(as_uuid=True))
     approved_at = Column(DateTime)
     
     # Audit Fields
@@ -262,7 +263,7 @@ class BiometricLog(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee
-    employee_id = Column(String(36), ForeignKey("hrms_employees.id"), nullable=False, index=True)
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     biometric_id = Column(String(50))  # Employee's biometric ID/enrollment number
     
     # Log Details
@@ -307,7 +308,7 @@ class AttendanceRegularization(Base):
     
     # Reference
     attendance_id = Column(String(36), ForeignKey("attendance.id"), nullable=False, index=True)
-    employee_id = Column(String(36), ForeignKey("hrms_employees.id"), nullable=False, index=True)
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     
     # Requested Changes
     requested_check_in = Column(DateTime)
@@ -319,7 +320,7 @@ class AttendanceRegularization(Base):
     status = Column(SQLEnum(LeaveStatus), nullable=False, default=LeaveStatus.PENDING)
     
     # Approval
-    approved_by = Column(String(36))
+    approved_by = Column(UUID(as_uuid=True))
     approved_at = Column(DateTime)
     rejection_reason = Column(Text)
     
@@ -412,7 +413,7 @@ class EmployeeLeaveBalance(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee and Leave Type
-    employee_id = Column(String(36), nullable=False, index=True)  # References employees.id (table not yet created)
+    employee_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # References hrms_employees.id
     leave_policy_id = Column(String(36), ForeignKey("leave_policies.id"), nullable=False, index=True)
     leave_type = Column(SQLEnum(LeaveType), nullable=False, index=True)
     
@@ -457,7 +458,7 @@ class LeaveApplication(Base):
     
     # Application Details
     application_code = Column(String(50), nullable=False, unique=True)
-    employee_id = Column(String(36), nullable=False, index=True)  # References employees.id (table not yet created)
+    employee_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # References hrms_employees.id
     leave_policy_id = Column(String(36), ForeignKey("leave_policies.id"), nullable=False)
     leave_type = Column(SQLEnum(LeaveType), nullable=False, index=True)
     
@@ -479,17 +480,17 @@ class LeaveApplication(Base):
     applied_date = Column(Date)
     
     # Approval Chain
-    reporting_manager_id = Column(String(36))
+    reporting_manager_id = Column(UUID(as_uuid=True))
     reporting_manager_status = Column(String(20))
     reporting_manager_remarks = Column(Text)
     reporting_manager_date = Column(DateTime)
     
-    hr_approver_id = Column(String(36))
+    hr_approver_id = Column(UUID(as_uuid=True))
     hr_approver_status = Column(String(20))
     hr_approver_remarks = Column(Text)
     hr_approver_date = Column(DateTime)
     
-    final_approver_id = Column(String(36))
+    final_approver_id = Column(UUID(as_uuid=True))
     final_approver_status = Column(String(20))
     final_approver_remarks = Column(Text)
     final_approver_date = Column(DateTime)
@@ -499,7 +500,7 @@ class LeaveApplication(Base):
     
     # Cancellation
     is_cancelled = Column(Boolean, default=False)
-    cancelled_by = Column(String(36))
+    cancelled_by = Column(UUID(as_uuid=True))
     cancellation_reason = Column(Text)
     cancelled_at = Column(DateTime)
     
@@ -530,7 +531,7 @@ class LeaveEncashment(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee and Leave Type
-    employee_id = Column(String(36), nullable=False, index=True)  # References employees.id (table not yet created)
+    employee_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # References hrms_employees.id
     leave_policy_id = Column(String(36), ForeignKey("leave_policies.id"), nullable=False)
     leave_type = Column(SQLEnum(LeaveType), nullable=False)
     
@@ -549,7 +550,7 @@ class LeaveEncashment(Base):
     status = Column(SQLEnum(LeaveStatus), nullable=False, default=LeaveStatus.PENDING)
     
     # Approval
-    approved_by = Column(String(36))
+    approved_by = Column(UUID(as_uuid=True))
     approved_at = Column(DateTime)
     rejection_reason = Column(Text)
     
