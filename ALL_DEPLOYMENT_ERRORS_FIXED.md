@@ -2,6 +2,29 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #54) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/payroll/compliance/page.tsx`
+
+**Error**: 
+```
+Type error: Argument of type '"PF"' is not assignable to parameter of type 'StatutoryType | (() => StatutoryType)'.
+Line 10: const [activeTab, setActiveTab] = useState<StatutoryType>('PF');
+```
+
+**Root Cause**: Using string literal `'PF'` instead of enum value `StatutoryType.PF`. When importing as `type`, the enum isn't available at runtime.
+
+**Fixes Applied**:
+1. Changed import from `import type { ..., StatutoryType }` to separate imports:
+   - `import type { StatutoryCompliance }` (type-only)
+   - `import { StatutoryType }` (value import for enum)
+2. Changed `useState<StatutoryType>('PF')` → `useState<StatutoryType>(StatutoryType.PF)`
+3. Changed tabs array: `['PF', 'ESI', 'PT', 'TDS']` → `[StatutoryType.PF, StatutoryType.ESI, StatutoryType.PT, StatutoryType.TDS]`
+
+**Status**: ✅ **FIXED** - Using enum values instead of string literals
+
+---
+
 ## Latest Fix (Build #53) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/notifications/templates/page.tsx`

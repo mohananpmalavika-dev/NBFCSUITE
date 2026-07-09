@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { StatutoryComplianceService } from '@/services/payroll.service';
-import type { StatutoryCompliance, StatutoryType } from '@/types/payroll.types';
+import type { StatutoryCompliance } from '@/types/payroll.types';
+import { StatutoryType } from '@/types/payroll.types';
 
 export default function StatutoryCompliancePage() {
   const [compliance, setCompliance] = useState<StatutoryCompliance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<StatutoryType>('PF');
+  const [activeTab, setActiveTab] = useState<StatutoryType>(StatutoryType.PF);
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth() + 1);
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,7 +37,7 @@ export default function StatutoryCompliancePage() {
     }
   };
 
-  const tabs: StatutoryType[] = ['PF', 'ESI', 'PT', 'TDS'];
+  const tabs: StatutoryType[] = [StatutoryType.PF, StatutoryType.ESI, StatutoryType.PT, StatutoryType.TDS];
 
   return (
     <div className="space-y-6">
