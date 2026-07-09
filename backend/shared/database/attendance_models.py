@@ -413,7 +413,7 @@ class EmployeeLeaveBalance(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee and Leave Type
-    employee_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # References hrms_employees.id
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     leave_policy_id = Column(String(36), ForeignKey("leave_policies.id"), nullable=False, index=True)
     leave_type = Column(SQLEnum(LeaveType), nullable=False, index=True)
     
@@ -458,7 +458,7 @@ class LeaveApplication(Base):
     
     # Application Details
     application_code = Column(String(50), nullable=False, unique=True)
-    employee_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # References hrms_employees.id
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     leave_policy_id = Column(String(36), ForeignKey("leave_policies.id"), nullable=False)
     leave_type = Column(SQLEnum(LeaveType), nullable=False, index=True)
     
@@ -531,7 +531,7 @@ class LeaveEncashment(Base):
     tenant_id = Column(String(50), nullable=False, index=True)
     
     # Employee and Leave Type
-    employee_id = Column(UUID(as_uuid=True), nullable=False, index=True)  # References hrms_employees.id
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id"), nullable=False, index=True)
     leave_policy_id = Column(String(36), ForeignKey("leave_policies.id"), nullable=False)
     leave_type = Column(SQLEnum(LeaveType), nullable=False)
     
