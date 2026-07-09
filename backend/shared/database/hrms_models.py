@@ -423,7 +423,7 @@ class Employee(BaseModel):
     # RELATIONSHIPS
     # ========================================
     
-    organization = relationship("Organization", back_populates="employees")
+    organization = relationship("HRMSOrganization", back_populates="employees")
     department = relationship("Department", back_populates="employees", foreign_keys=[department_id])
     designation = relationship("Designation", back_populates="employees")
     reporting_manager = relationship("Employee", remote_side="Employee.id", foreign_keys=[reporting_manager_id])
