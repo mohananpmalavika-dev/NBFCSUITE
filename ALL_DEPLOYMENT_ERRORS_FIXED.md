@@ -2,6 +2,27 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #53) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/notifications/templates/page.tsx`
+
+**Error**: 
+```
+Type error: Property 'metadata' does not exist on type 'AxiosResponse<PaginatedResponse<NotificationTemplate>, any, {}>'.
+Line 100: data.metadata?.total
+```
+
+**Root Cause**: Same pagination metadata access issue.
+
+**Fixes Applied**:
+1. `data.metadata?.total` → `data.data?.total` (2 occurrences)
+2. `data.metadata?.has_prev` → `data?.data?.has_prev`
+3. `data.metadata?.has_next` → `data?.data?.has_next`
+
+**Status**: ✅ **FIXED**
+
+---
+
 ## Latest Fix (Build #52) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/notifications/page.tsx`
