@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react';
 import { SalaryComponentService } from '@/services/payroll.service';
 import type { 
   SalaryComponent, 
-  SalaryComponentCreate,
-  ComponentType,
-  CalculationType 
+  SalaryComponentCreate
 } from '@/types/payroll.types';
+import { ComponentType, CalculationType } from '@/types/payroll.types';
 
 export default function SalaryComponentsPage() {
   const [components, setComponents] = useState<SalaryComponent[]>([]);
@@ -23,8 +22,8 @@ export default function SalaryComponentsPage() {
   const [formData, setFormData] = useState<SalaryComponentCreate>({
     component_name: '',
     component_code: '',
-    component_type: 'EARNING',
-    calculation_type: 'FIXED',
+    component_type: ComponentType.EARNING,
+    calculation_type: CalculationType.FIXED,
     calculation_value: 0,
     is_statutory: false,
     is_taxable: true,
@@ -105,8 +104,8 @@ export default function SalaryComponentsPage() {
     setFormData({
       component_name: '',
       component_code: '',
-      component_type: 'EARNING',
-      calculation_type: 'FIXED',
+      component_type: ComponentType.EARNING,
+      calculation_type: CalculationType.FIXED,
       calculation_value: 0,
       is_statutory: false,
       is_taxable: true,

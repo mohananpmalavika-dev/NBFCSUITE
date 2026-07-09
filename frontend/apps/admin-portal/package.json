@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "node check-env.js && next build",
+    "build": "node check-env.js && node build-next.js",
     "start": "next start -p 3000",
     "lint": "next lint",
     "type-check": "tsc --noEmit"
