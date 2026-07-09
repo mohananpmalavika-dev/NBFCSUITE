@@ -23,8 +23,8 @@ class OrganizationService:
     async def generate_organization_code(self) -> str:
         """Generate unique organization code: ORG-XXXX"""
         # Get count of organizations
-        count_query = select(func.count(Organization.id)).where(
-            Organization.tenant_id == self.tenant_id
+        count_query = select(func.count(HRMSOrganization.id)).where(
+            HRMSOrganization.tenant_id == self.tenant_id
         )
         result = await self.db.execute(count_query)
         count = result.scalar() or 0
@@ -33,14 +33,14 @@ class OrganizationService:
         sequence = str(count + 1).zfill(4)
         return f"ORG-{sequence}"
     
-    async def create_organization(self, data: OrganizationCreate) -> Organization:
+    async def create_organization(self, data: OrganizationCreate) -> HRMSOrganization:
         """Create new organization with auto-generated code"""
         
         # Generate organization code
         organization_code = await self.generate_organization_code()
         
         # Create organization
-        organization = Organization(
+        organization = HRMSOrganization(
             tenant_id=self.tenant_id,
             organization_code=organization_code,
             organization_name=data.organization_name,
@@ -70,26 +70,26 @@ class OrganizationService:
         
         return organization
     
-    async def get_organization(self, organization_id: str) -> Optional[Organization]:
+    async def get_organization(self, organization_id: str) -> Optional[HRMSOrganization]:
         """Get organization by ID"""
-        query = select(Organization).where(
+        query = select(HRMSOrganization).where(
             and_(
-                Organization.id == organization_id,
-                Organization.tenant_id == self.tenant_id,
-                Organization.is_deleted == False
+                HRMSOrganization.id == organization_id,
+                HRMSOrganization.tenant_id == self.tenant_id,
+                HRMSOrganization.is_deleted == False
             )
         )
         
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
     
-    async def get_organization_by_code(self, organization_code: str) -> Optional[Organization]:
+    async def get_organization_by_code(self, organization_code: str) -> Optional[HRMSOrganization]:
         """Get organization by code"""
-        query = select(Organization).where(
+        query = select(HRMSOrganization).where(
             and_(
-                Organization.organization_code == organization_code,
-                Organization.tenant_id == self.tenant_id,
-                Organization.is_deleted == False
+                HRMSOrganization.organization_code == organization_code,
+                HRMSOrganization.tenant_id == self.tenant_id,
+                HRMSOrganization.is_deleted == False
             )
         )
         result = await self.db.execute(query)
@@ -101,14 +101,14 @@ class OrganizationService:
         page_size: int = 20,
         search: Optional[str] = None,
         is_active: Optional[bool] = None
-    ) -> Tuple[List[Organization], int]:
+    ) -> Tuple[List[HRMSOrganization], int]:
         """Get paginated list of organizations with filters"""
         
         # Base query
-        query = select(Organization).where(
+        query = select(HRMSOrganization).where(
             and_(
-                Organization.tenant_id == self.tenant_id,
-                Organization.is_deleted == False
+                HRMSOrganization.tenant_id == self.tenant_id,
+                HRMSOrganization.is_deleted == False
             )
         )
         
@@ -117,14 +117,14 @@ class OrganizationService:
             search_term = f"%{search}%"
             query = query.where(
                 or_(
-                    Organization.organization_name.ilike(search_term),
-                    Organization.organization_code.ilike(search_term),
-                    Organization.short_name.ilike(search_term)
+                    HRMSOrganization.organization_name.ilike(search_term),
+                    HRMSOrganization.organization_code.ilike(search_term),
+                    HRMSOrganization.short_name.ilike(search_term)
                 )
             )
         
         if is_active is not None:
-            query = query.where(Organization.is_active == is_active)
+            query = query.where(HRMSOrganization.is_active == is_active)
         
         # Get total count
         count_query = select(func.count()).select_from(query.subquery())
@@ -132,7 +132,7 @@ class OrganizationService:
         total = total_result.scalar()
         
         # Apply pagination and sorting
-        query = query.order_by(Organization.organization_name)
+        query = query.order_by(HRMSOrganization.organization_name)
         query = query.offset((page - 1) * page_size).limit(page_size)
         
         # Execute query
@@ -141,7 +141,7 @@ class OrganizationService:
         
         return organizations, total
     
-    async def update_organization(self, organization_id: str, data: OrganizationUpdate) -> Organization:
+    async def update_organization(self, organization_id: str, data: OrganizationUpdate) -> HRMSOrganization:
         """Update organization details"""
         organization = await self.get_organization(organization_id)
         if not organization:
@@ -199,15 +199,15 @@ class OrganizationService:
         await self.db.commit()
         return True
     
-    async def get_all_active(self) -> List[Organization]:
+    async def get_all_active(self) -> List[HRMSOrganization]:
         """Get all active organizations (for dropdowns)"""
-        query = select(Organization).where(
+        query = select(HRMSOrganization).where(
             and_(
-                Organization.tenant_id == self.tenant_id,
-                Organization.is_deleted == False,
-                Organization.is_active == True
+                HRMSOrganization.tenant_id == self.tenant_id,
+                HRMSOrganization.is_deleted == False,
+                HRMSOrganization.is_active == True
             )
-        ).order_by(Organization.organization_name)
+        ).order_by(HRMSOrganization.organization_name)
         
         result = await self.db.execute(query)
         return result.scalars().all()
