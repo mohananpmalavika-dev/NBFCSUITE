@@ -205,34 +205,56 @@ async def lifespan(app: FastAPI):
             logger.warning(f"Could not drop tables: {drop_error}")
     
     # Create tables - use connect() with manual transaction control for better error handling
+    logger.info("🔧 Attempting to create database tables...")
+    
     try:
-        async with engine.connect() as conn:
-            async with conn.begin():
-                # Force table creation
-                def create_tables_sync(sync_conn):
-                    logger.info("Creating tables with Base.metadata.create_all...")
+        async with engine.begin() as conn:
+            # Use begin() instead of connect() to auto-commit on success
+            def create_tables_sync(sync_conn):
+                logger.info("Executing Base.metadata.create_all...")
+                try:
                     Base.metadata.create_all(bind=sync_conn, checkfirst=True)
-                    logger.info("Base.metadata.create_all completed")
-                
-                await conn.run_sync(create_tables_sync)
-                logger.info("✅ Tables created/verified")
+                    logger.info("✅ Base.metadata.create_all completed successfully")
+                except Exception as e:
+                    logger.error(f"Error during create_all: {e}")
+                    # Don't re-raise here, let the outer handler deal with it
+                    raise
+            
+            await conn.run_sync(create_tables_sync)
+            
+        logger.info("✅ Table creation transaction committed")
+        
     except Exception as create_error:
-        # Ignore duplicate index/table errors - tables already exist
+        # Check the type of error
         error_msg = str(create_error).lower()
+        
+        # Log the full error for debugging
+        logger.error(f"⚠️ Exception during table creation: {create_error}")
+        logger.error(f"Exception type: {type(create_error).__name__}")
+        
         if 'already exists' in error_msg or 'duplicate' in error_msg:
-            logger.info("⚠️ Some tables/indexes already exist, skipping creation (this is normal)")
+            # This shouldn't happen with checkfirst=True, but if it does,
+            # the tables DO exist, so this is OK
+            logger.warning(f"⚠️ Got 'already exists' error - tables may already exist")
+            logger.info("⚠️ Continuing despite 'already exists' message...")
+            # Do NOT raise - continue to verification
         elif 'cannot be implemented' in error_msg or 'incompatible types' in error_msg:
-            # Schema mismatch - suggest dropping tables
+            # Schema mismatch - this is a real error
             logger.error(f"❌ Schema mismatch detected: {create_error}")
             logger.error("💡 Set environment variable DROP_ALL_TABLES=true to recreate tables")
             raise
         else:
-            logger.error(f"❌ Unexpected error creating tables: {create_error}")
+            # Unknown error - treat as fatal
+            logger.error(f"❌ Unexpected error creating tables")
+            import traceback
+            logger.error(traceback.format_exc())
             raise
     
     # Verify tables exist - wait a moment for database to sync
-    await asyncio.sleep(1)
+    logger.info("🔍 Waiting for database to sync...")
+    await asyncio.sleep(2)
     
+    logger.info("🔍 Verifying tables were created...")
     try:
         async with engine.connect() as conn:
             # Get all table names from public schema
@@ -243,6 +265,8 @@ async def lifespan(app: FastAPI):
                 print(f"[DEBUG] Found {len(tables)} tables in public schema")
                 if tables:
                     print(f"[DEBUG] First 10 tables: {tables[:10]}")
+                else:
+                    print("[DEBUG] NO TABLES FOUND!")
                 return tables
             
             existing_tables = await conn.run_sync(get_tables)
