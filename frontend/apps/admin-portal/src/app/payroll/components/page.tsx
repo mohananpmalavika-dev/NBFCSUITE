@@ -24,7 +24,7 @@ export default function SalaryComponentsPage() {
     component_code: '',
     component_type: ComponentType.EARNING,
     calculation_type: CalculationType.FIXED,
-    calculation_value: 0,
+    default_value: 0,
     is_statutory: false,
     is_taxable: true,
     is_active: true,
@@ -78,7 +78,7 @@ export default function SalaryComponentsPage() {
       component_code: component.component_code,
       component_type: component.component_type,
       calculation_type: component.calculation_type,
-      calculation_value: component.calculation_value,
+      default_value: component.default_value,
       is_statutory: component.is_statutory,
       is_taxable: component.is_taxable,
       is_active: component.is_active,
@@ -106,7 +106,7 @@ export default function SalaryComponentsPage() {
       component_code: '',
       component_type: ComponentType.EARNING,
       calculation_type: CalculationType.FIXED,
-      calculation_value: 0,
+      default_value: 0,
       is_statutory: false,
       is_taxable: true,
       is_active: true,
@@ -224,8 +224,8 @@ export default function SalaryComponentsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {component.calculation_type.includes('PERCENTAGE') 
-                      ? `${component.calculation_value}%` 
-                      : `₹${component.calculation_value}`
+                      ? `${component.default_value}%` 
+                      : `₹${component.default_value}`
                     }
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -358,8 +358,8 @@ export default function SalaryComponentsPage() {
                     <input
                       type="number"
                       step="0.01"
-                      value={formData.calculation_value}
-                      onChange={(e) => setFormData({...formData, calculation_value: parseFloat(e.target.value)})}
+                      value={formData.default_value}
+                      onChange={(e) => setFormData({...formData, default_value: parseFloat(e.target.value)})}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                       required
                     />
