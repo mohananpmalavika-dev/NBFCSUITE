@@ -2,6 +2,26 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #55) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/payroll/compliance/page.tsx`
+
+**Error**: 
+```
+Type error: Object literal may only specify known properties, and 'statutory_type' does not exist in type 'PayrollFilterParams'.
+Line 27: statutory_type: activeTab,
+```
+
+**Root Cause**: `PayrollFilterParams` interface doesn't include `statutory_type` property. The service's `list()` method accepts `PayrollFilterParams` which only supports: `component_type`, `is_active`, `is_statutory`, `status`, `year`, `month`, `employee_id`, `search`, `page`, `page_size`.
+
+**Fix Applied**: Removed `statutory_type` parameter from service call and added comment explaining it's not supported. The page likely filters by statutory type client-side using the tabs.
+
+**Note**: If server-side filtering by statutory type is needed, `PayrollFilterParams` interface would need to be extended to include `statutory_type?: StatutoryType`.
+
+**Status**: ✅ **FIXED** - Removed unsupported parameter
+
+---
+
 ## Latest Fix (Build #54) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/payroll/compliance/page.tsx`

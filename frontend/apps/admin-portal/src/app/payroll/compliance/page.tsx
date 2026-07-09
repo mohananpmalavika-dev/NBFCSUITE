@@ -24,7 +24,7 @@ export default function StatutoryCompliancePage() {
       const response = await StatutoryComplianceService.list({
         page: currentPage,
         page_size: 20,
-        statutory_type: activeTab,
+        // statutory_type filter not supported by PayrollFilterParams
         month: filterMonth,
         year: filterYear
       });
