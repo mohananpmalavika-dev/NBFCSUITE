@@ -6,11 +6,13 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios";
 
 // Get API base URL from environment variable or use default
+// Add /api/v1 prefix to all API calls
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_V1_BASE_URL = `${API_BASE_URL}/api/v1`;
 
 // Create axios instance
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_V1_BASE_URL,
   timeout: 30000,
   headers: {
     "Content-Type": "application/json",
