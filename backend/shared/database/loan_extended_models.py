@@ -446,8 +446,8 @@ class InsurancePremiumPayment(BaseModel):
     loan_account = relationship("LoanAccount", foreign_keys=[loan_account_id])
     
     __table_args__ = (
-        Index('idx_premium_policy', 'policy_id', 'due_date'),
-        Index('idx_premium_status', 'tenant_id', 'status'),
+        Index('idx_loan_insurance_premium_policy', 'policy_id', 'due_date'),
+        Index('idx_loan_insurance_premium_status', 'tenant_id', 'status'),
     )
 
 

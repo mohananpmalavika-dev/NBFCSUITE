@@ -186,11 +186,11 @@ class InsurancePolicy(BaseModel):
     
     # Indexes
     __table_args__ = (
-        Index('idx_insurance_customer', 'tenant_id', 'customer_id'),
-        Index('idx_insurance_agent', 'tenant_id', 'agent_id'),
-        Index('idx_insurance_status', 'tenant_id', 'policy_status', 'is_active'),
-        Index('idx_insurance_dates', 'tenant_id', 'policy_start_date', 'policy_end_date'),
-        Index('idx_insurance_company', 'tenant_id', 'insurance_company'),
+        Index('idx_insurance_policy_customer', 'tenant_id', 'customer_id'),
+        Index('idx_insurance_policy_agent', 'tenant_id', 'agent_id'),
+        Index('idx_insurance_policy_status', 'tenant_id', 'policy_status', 'is_active'),
+        Index('idx_insurance_policy_dates', 'tenant_id', 'policy_start_date', 'policy_end_date'),
+        Index('idx_insurance_policy_company', 'tenant_id', 'insurance_company'),
     )
     
     # Relationships
@@ -250,9 +250,9 @@ class InsurancePremium(BaseModel):
     
     # Indexes
     __table_args__ = (
-        Index('idx_premium_policy', 'tenant_id', 'policy_id'),
-        Index('idx_premium_status', 'tenant_id', 'premium_status'),
-        Index('idx_premium_due_date', 'tenant_id', 'premium_due_date'),
+        Index('idx_insurance_premium_policy', 'tenant_id', 'policy_id'),
+        Index('idx_insurance_premium_status', 'tenant_id', 'premium_status'),
+        Index('idx_insurance_premium_due_date', 'tenant_id', 'premium_due_date'),
         Index('idx_premium_payment_date', 'tenant_id', 'payment_date'),
     )
     
@@ -339,10 +339,10 @@ class InsuranceClaim(BaseModel):
     
     # Indexes
     __table_args__ = (
-        Index('idx_claim_policy', 'tenant_id', 'policy_id'),
-        Index('idx_claim_status', 'tenant_id', 'claim_status'),
-        Index('idx_claim_type', 'tenant_id', 'claim_type'),
-        Index('idx_claim_dates', 'tenant_id', 'claimed_date'),
+        Index('idx_insurance_claim_policy', 'tenant_id', 'policy_id'),
+        Index('idx_insurance_claim_status', 'tenant_id', 'claim_status'),
+        Index('idx_insurance_claim_type', 'tenant_id', 'claim_type'),
+        Index('idx_insurance_claim_dates', 'tenant_id', 'claimed_date'),
     )
     
     # Relationship

@@ -365,9 +365,9 @@ class VehicleInsurance(Base):
     
     # Indexes
     __table_args__ = (
-        Index('idx_insurance_tenant_vehicle', 'tenant_id', 'vehicle_loan_id'),
-        Index('idx_insurance_expiry', 'tenant_id', 'policy_end_date', 'status'),
-        Index('idx_insurance_customer', 'tenant_id', 'customer_id'),
+        Index('idx_vehicle_insurance_customer', 'tenant_id', 'customer_id'),
+        Index('idx_vehicle_insurance_tenant_vehicle', 'tenant_id', 'vehicle_loan_id'),
+        Index('idx_vehicle_insurance_expiry', 'tenant_id', 'policy_end_date', 'status'),
     )
 
 
