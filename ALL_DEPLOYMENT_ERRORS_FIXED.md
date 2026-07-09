@@ -2,6 +2,35 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #57) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/payroll/compliance/page.tsx`
+
+**Error**: 
+```
+Type error: Property 'compliance_code' does not exist on type 'StatutoryCompliance'. Did you mean 'compliance_year'?
+Line 125: {record.compliance_code}
+```
+
+**Root Cause**: Multiple incorrect property names. The code was using properties that don't exist in `StatutoryCompliance` interface.
+
+**Fixes Applied**:
+1. `record.compliance_code` → `record.statutory_type` (show compliance type instead)
+2. `record.month` → `record.compliance_month`
+3. `record.year` → `record.compliance_year`
+4. `record.payment_status === 'PAID'` → `record.is_paid` (boolean, not enum)
+5. Changed payment status display logic to use boolean `is_paid` instead of string `payment_status`
+6. `record.payment_status === 'PENDING'` → `!record.is_paid`
+
+**Corrected Properties**:
+- Type identifier: `statutory_type` (StatutoryType enum)
+- Period: `compliance_month`, `compliance_year` (numbers)
+- Payment: `is_paid` (boolean), not `payment_status` (string)
+
+**Status**: ✅ **FIXED** - All property accesses corrected to match interface
+
+---
+
 ## Latest Fix (Build #56) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/payroll/compliance/page.tsx`

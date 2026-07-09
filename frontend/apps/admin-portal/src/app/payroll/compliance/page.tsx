@@ -122,8 +122,8 @@ export default function StatutoryCompliancePage() {
             ) : (
               compliance.map((record) => (
                 <tr key={record.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{record.compliance_code}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{record.month}/{record.year}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{record.statutory_type}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{record.compliance_month}/{record.compliance_year}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     ₹{(record.employee_contribution || 0).toLocaleString('en-IN')}
                   </td>
@@ -135,20 +135,18 @@ export default function StatutoryCompliancePage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 rounded text-xs ${
-                      record.payment_status === 'PAID'
+                      record.is_paid
                         ? 'bg-green-100 text-green-700'
-                        : record.payment_status === 'PENDING'
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {record.payment_status}
+                      {record.is_paid ? 'PAID' : 'PENDING'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {record.due_date ? new Date(record.due_date).toLocaleDateString() : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-2">
-                    {record.payment_status === 'PENDING' && (
+                    {!record.is_paid && (
                       <button className="text-green-600 hover:text-green-900">Update Payment</button>
                     )}
                     <button className="text-blue-600 hover:text-blue-900">View</button>
