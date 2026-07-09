@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from typing import Optional, List, Tuple
 from datetime import datetime
 
-from backend.shared.database.hrms_models import Department, Employee, Organization
+from backend.shared.database.hrms_models import Department, Employee, HRMSOrganization
 from .schemas import DepartmentCreate, DepartmentUpdate, DepartmentTreeNode, DepartmentStats
 
 

@@ -8,7 +8,7 @@ from sqlalchemy import select, func, and_, or_
 from typing import Optional, List, Tuple
 from datetime import datetime
 
-from backend.shared.database.hrms_models import Organization, Department, Employee
+from backend.shared.database.hrms_models import HRMSOrganization, Department, Employee
 from .schemas import OrganizationCreate, OrganizationUpdate
 
 

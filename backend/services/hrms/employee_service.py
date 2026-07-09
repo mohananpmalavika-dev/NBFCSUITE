@@ -11,7 +11,7 @@ from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 
 from backend.shared.database.hrms_models import (
-    Employee, Department, Designation, Organization, ReportingHierarchy,
+    Employee, Department, Designation, HRMSOrganization, ReportingHierarchy,
     EmploymentType, EmploymentStatus
 )
 from .schemas import (
