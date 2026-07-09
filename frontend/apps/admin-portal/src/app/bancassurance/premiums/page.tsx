@@ -1,21 +1,10 @@
-'use client'
-
 /**
  * Premium Collection Page
  * Manage premium payments and tracking
  */
 
-import { Suspense, useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { 
-  DollarSign, Search, Calendar, CheckCircle, AlertCircle,
-  XCircle, Filter, TrendingUp, Clock
-} from 'lucide-react'
-import { bancassuranceService, type InsurancePremium } from '@/services/bancassurance.service'
-import { 
-  PremiumStatus, PREMIUM_STATUS_LABELS, PREMIUM_STATUS_COLORS,
-  formatCurrency, formatDate, getDaysRemaining, isOverdue 
-} from '@/types/bancassurance'
+import { Suspense } from 'react'
+import PremiumsContent from './PremiumsContent'
 
 export default function PremiumsPage() {
   return (
@@ -24,8 +13,6 @@ export default function PremiumsPage() {
     </Suspense>
   )
 }
-
-function PremiumsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const policyIdFilter = searchParams.get('policy_id')

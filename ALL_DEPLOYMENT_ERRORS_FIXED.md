@@ -2,6 +2,31 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #58) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/payroll/components/page.tsx`
+
+**Error**: 
+```
+Type error: Object literal may only specify known properties, and 'calculation_value' does not exist in type 'SalaryComponentCreate'.
+Line 27: calculation_value: 0,
+```
+
+**Root Cause**: Wrong property name. `SalaryComponentCreate` uses `default_value` for FIXED calculation type and `percentage` for PERCENTAGE calculation type, not `calculation_value`.
+
+**Fixes Applied**:
+1. Changed imports: moved `ComponentType` and `CalculationType` from type imports to value imports (needed for enum usage)
+2. Changed `component_type: 'EARNING'` → `component_type: ComponentType.EARNING`
+3. Changed `calculation_type: 'FIXED'` → `calculation_type: CalculationType.FIXED`
+4. Changed `calculation_value: 0` → `default_value: 0`
+5. Applied same fixes to resetForm() function
+
+**Note**: Build cache might need clearing if error persists after fix.
+
+**Status**: ✅ **FIXED** - Using correct property names and enum values
+
+---
+
 ## Latest Fix (Build #57) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/payroll/compliance/page.tsx`
