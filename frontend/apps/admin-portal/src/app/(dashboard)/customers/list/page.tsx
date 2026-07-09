@@ -5,7 +5,7 @@
  * Advanced customer listing with search, filters, pagination, and bulk actions
  */
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -54,6 +54,14 @@ import { KYCStatusEnum, RiskRatingEnum } from "@/types/customer.types";
 import type { CustomerFilters } from "@/types/customer.types";
 
 export default function CustomerListPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading customers...</div>}>
+      <CustomerListContent />
+    </Suspense>
+  );
+}
+
+function CustomerListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();

@@ -5,7 +5,7 @@
  * Manage premium payments and tracking
  */
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { 
   DollarSign, Search, Calendar, CheckCircle, AlertCircle,
@@ -18,6 +18,14 @@ import {
 } from '@/types/bancassurance'
 
 export default function PremiumsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 p-6 text-sm text-gray-600">Loading premiums...</div>}>
+      <PremiumsContent />
+    </Suspense>
+  )
+}
+
+function PremiumsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const policyIdFilter = searchParams.get('policy_id')
