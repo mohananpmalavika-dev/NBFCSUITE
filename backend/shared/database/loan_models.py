@@ -173,6 +173,10 @@ class LoanApplication(Base):
     workflows = relationship("LoanApprovalWorkflow", back_populates="application")
     loan_account = relationship("LoanAccount", back_populates="application", uselist=False)
     bank_analyses = relationship("BankStatementAnalysis", back_populates="application")
+    
+    # Loan type specific relationships
+    vehicle_details = relationship("VehicleLoanDetails", back_populates="loan_application", uselist=False)
+    property_details = relationship("PropertyLoanDetails", back_populates="loan_application", uselist=False)
 
 
 class LoanApplicationCoApplicant(Base):
