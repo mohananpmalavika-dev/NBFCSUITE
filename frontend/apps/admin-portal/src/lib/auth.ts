@@ -5,7 +5,7 @@
 import { apiClient } from './api-client'
 import type { User, LoginRequest, LoginResponse } from '@/types'
 
-const AUTH_TOKEN_KEY = 'auth_token'
+const AUTH_TOKEN_KEY = 'access_token'  // Match what apiClient expects
 const USER_KEY = 'user'
 const TENANT_ID_KEY = 'tenant_id'
 
@@ -16,16 +16,19 @@ export class AuthService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const response = await apiClient.post<LoginResponse>('/auth/login', credentials)
     
-    if (response.success && response.data) {
-      this.setToken(response.data.access_token)
-      this.setUser(response.data.user)
-      if (response.data.user.tenant_id) {
-        this.setTenantId(response.data.user.tenant_id)
+    // Axios wraps the response in response.data
+    const apiResponse = response.data as any
+    
+    if (apiResponse.success && apiResponse.data) {
+      this.setToken(apiResponse.data.access_token)
+      this.setUser(apiResponse.data.user)
+      if (apiResponse.data.user.tenant_id) {
+        this.setTenantId(apiResponse.data.user.tenant_id)
       }
-      return response.data
+      return apiResponse.data
     }
     
-    throw new Error(response.error?.message || 'Login failed')
+    throw new Error(apiResponse.error?.message || 'Login failed')
   }
 
   /**
@@ -80,8 +83,6 @@ export class AuthService {
     
     // Also set as cookie for middleware
     document.cookie = `auth_token=${token}; path=/; max-age=86400; SameSite=Lax`
-    
-    apiClient.setToken(token)
   }
 
   /**
@@ -98,7 +99,6 @@ export class AuthService {
   setTenantId(tenantId: string): void {
     if (typeof window === 'undefined') return
     localStorage.setItem(TENANT_ID_KEY, tenantId)
-    apiClient.setTenantId(tenantId)
   }
 
   /**
@@ -127,8 +127,10 @@ export class AuthService {
   async refreshToken(): Promise<void> {
     try {
       const response = await apiClient.post<{ access_token: string }>('/auth/refresh')
-      if (response.success && response.data) {
-        this.setToken(response.data.access_token)
+      const apiResponse = response.data as any
+      
+      if (apiResponse.success && apiResponse.data) {
+        this.setToken(apiResponse.data.access_token)
       }
     } catch (error) {
       console.error('Token refresh failed:', error)
