@@ -148,7 +148,7 @@ export default function NewLoanApplicationPage() {
                 required
               >
                 <option value="">Select a customer</option>
-                {customers?.data?.items?.map((customer: any) => (
+                {customers?.items?.map((customer: any) => (
                   <option key={customer.id} value={customer.id}>
                     {customer.full_name} - {customer.customer_code}
                   </option>

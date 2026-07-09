@@ -2,6 +2,28 @@
 
 ## Date: 2026-07-08
 
+## Latest Fix (Build #50) - CRITICAL
+
+**File**: `frontend/apps/admin-portal/src/app/loans/applications/new/page.tsx`
+
+**Error**: 
+```
+Type error: Property 'data' does not exist on type 'NoInfer<PaginatedCustomerResponse>'.
+Line 151: {customers?.data?.items?.map((customer: any) => (
+```
+
+**Root Cause**: Incorrect data access pattern. `customerService.getCustomers()` returns `Promise<PaginatedCustomerResponse>` (unwrapped), not `AxiosResponse<PaginatedCustomerResponse>`. The service already extracts `response.data` before returning.
+
+**Fix Applied**: Changed data access from `customers?.data?.items` to `customers?.items`
+
+**Note**: `loanService.getProducts()` still returns `AxiosResponse`, so `products?.data?.items` is correct. There's an inconsistency in the service layer:
+- `customerService.getCustomers()` returns unwrapped data
+- `loanService.getProducts()` returns AxiosResponse
+
+**Status**: ✅ **FIXED** - Customers data access corrected
+
+---
+
 ## Latest Fix (Build #49) - CRITICAL
 
 **File**: `frontend/apps/admin-portal/src/app/leave/page.tsx`
