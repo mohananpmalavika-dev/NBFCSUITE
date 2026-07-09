@@ -197,6 +197,10 @@ class Customer(BaseModel):
     timeline = relationship("CustomerTimeline", back_populates="customer", cascade="all, delete-orphan")
     bureau_history = relationship("CustomerBureauHistory", back_populates="customer", cascade="all, delete-orphan")
     
+    # Integration relationships
+    bureau_reports = relationship("BureauReport", back_populates="customer")
+    bureau_consents = relationship("BureauConsent", back_populates="customer")
+    
     # Loan relationships
     loan_applications = relationship("LoanApplication", back_populates="customer")
     loan_accounts = relationship("LoanAccount", back_populates="customer")
