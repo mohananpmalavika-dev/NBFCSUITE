@@ -200,6 +200,9 @@ class Customer(BaseModel):
     # Integration relationships
     bureau_reports = relationship("BureauReport", back_populates="customer")
     bureau_consents = relationship("BureauConsent", back_populates="customer")
+    bank_analyses = relationship("BankStatementAnalysis", back_populates="customer")
+    ekyc_records = relationship("EKYCRecord", back_populates="customer")
+    digilocker_documents = relationship("DigiLockerDocument", back_populates="customer")
     
     # Loan relationships
     loan_applications = relationship("LoanApplication", back_populates="customer")
@@ -318,6 +321,7 @@ class CustomerDocument(BaseModel):
     # Relationships
     customer = relationship("Customer", back_populates="documents")
     document_type = relationship("DocumentType")
+    ocr_result = relationship("DocumentOCRResult", back_populates="document", uselist=False)
     
     __table_args__ = (
         Index('idx_doc_customer_type', 'customer_id', 'document_type_id'),
