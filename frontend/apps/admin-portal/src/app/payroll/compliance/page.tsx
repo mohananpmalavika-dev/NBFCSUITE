@@ -29,7 +29,9 @@ export default function StatutoryCompliancePage() {
         year: filterYear
       });
       setCompliance(response.items);
-      setTotalPages(response.pages);
+      // Calculate total pages from total and page_size
+      const calculatedPages = Math.ceil(response.total / (response.page_size || 20));
+      setTotalPages(calculatedPages);
     } catch (error) {
       console.error('Failed to load compliance:', error);
     } finally {
