@@ -3,16 +3,81 @@
  * Manage premium payments and tracking
  */
 
-import { Suspense } from 'react'
-import PremiumsContent from './PremiumsContent'
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { DollarSign, Clock, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+import { bancassuranceService } from '@/lib/api/bancassurance'
+
+// Types
+interface InsurancePremium {
+  id: number
+  premium_number: string
+  policy_id: number
+  policy_number: string
+  premium_amount: number
+  premium_due_date: string
+  premium_status: string
+  installment_number: number
+  premium_frequency: string
+  late_fee?: number
+  discount_amount?: number
+  payment_date?: string
+  payment_method?: string
+  payment_reference?: string
+  transaction_id?: string
+}
+
+type PremiumStatus = 'draft' | 'due' | 'overdue' | 'paid' | 'waived' | 'cancelled'
+
+const PREMIUM_STATUS_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  due: 'Due',
+  overdue: 'Overdue',
+  paid: 'Paid',
+  waived: 'Waived',
+  cancelled: 'Cancelled',
+}
+
+const PREMIUM_STATUS_COLORS: Record<string, string> = {
+  draft: 'gray',
+  due: 'yellow',
+  overdue: 'red',
+  paid: 'green',
+  waived: 'gray',
+  cancelled: 'gray',
+}
+
+// Utility functions
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+  }).format(amount)
+}
+
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+const isOverdue = (dueDate: string) => {
+  return new Date(dueDate) < new Date()
+}
+
+const getDaysRemaining = (dueDate: string) => {
+  const today = new Date()
+  const due = new Date(dueDate)
+  const diffTime = due.getTime() - today.getTime()
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  return diffDays
+}
 
 export default function PremiumsPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 p-6 text-sm text-gray-600">Loading premiums...</div>}>
-      <PremiumsContent />
-    </Suspense>
-  )
-}
   const router = useRouter()
   const searchParams = useSearchParams()
   const policyIdFilter = searchParams.get('policy_id')
