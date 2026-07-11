@@ -1,266 +1,443 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { assetService, type FixedAsset, type AssetCategory, type AssetStatus } from '@/services/accounting.service';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/components/ui/use-toast';
-import { Plus, Search, Eye } from 'lucide-react';
-import { format } from 'date-fns';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { 
+  Search,
+  Filter,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  MapPin,
+  User,
+  Calendar,
+  TrendingDown,
+  MoreVertical
+} from "lucide-react";
 
-export default function AssetsListPage() {
-  const router = useRouter();
-  const [assets, setAssets] = useState<FixedAsset[]>([]);
-  const [total, setTotal] = useState(0);
+interface Asset {
+  id: number;
+  asset_code: string;
+  asset_name: string;
+  asset_category: string;
+  asset_status: string;
+  purchase_cost: number;
+  total_cost: number;
+  accumulated_depreciation: number;
+  net_book_value: number;
+  location_name: string;
+  custodian_name: string;
+  acquisition_date: string;
+  depreciation_method: string;
+  last_verification_date: string;
+}
+
+export default function AssetListPage() {
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    search: '',
-    category: 'all',
-    status: 'all',
-    location: ''
-  });
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize] = useState(20);
+  
+  // Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [locationFilter, setLocationFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    loadAssets();
-  }, [filters.category, filters.status]);
+    fetchAssets();
+  }, [page, searchQuery, categoryFilter, statusFilter, locationFilter]);
 
-  const loadAssets = async () => {
+  const fetchAssets = async () => {
     try {
       setLoading(true);
-      const params: any = {};
-      if (filters.category !== 'all') params.category = filters.category;
-      if (filters.status !== 'all') params.status = filters.status;
-      if (filters.location) params.location = filters.location;
-
-      const response = await assetService.getAssets(params);
       
-      // Client-side search
-      let filtered = response.data.items;
-      if (filters.search) {
-        filtered = response.data.items.filter((asset: FixedAsset) =>
-          asset.asset_name.toLowerCase().includes(filters.search.toLowerCase()) ||
-          asset.asset_code.toLowerCase().includes(filters.search.toLowerCase()) ||
-          asset.location?.toLowerCase().includes(filters.search.toLowerCase())
-        );
-      }
-
-      setAssets(filtered);
-      setTotal(filtered.length);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load assets",
-        variant: "destructive"
+      const params = new URLSearchParams({
+        page: page.toString(),
+        page_size: pageSize.toString(),
+        ...(searchQuery && { search_query: searchQuery }),
+        ...(categoryFilter && { category: categoryFilter }),
+        ...(statusFilter && { status: statusFilter }),
+        ...(locationFilter && { location_id: locationFilter }),
       });
+
+      const response = await fetch(`/api/v1/fixed-assets/assets?${params}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAssets(data.items || []);
+        setTotalPages(data.total_pages || 1);
+      }
+    } catch (error) {
+      console.error("Error fetching assets:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
-      'ACTIVE': 'success',
-      'UNDER_MAINTENANCE': 'warning',
-      'DISPOSED': 'secondary',
-      'SOLD': 'secondary'
-    };
-    return <Badge variant={variants[status] || 'default'}>{status.replace('_', ' ')}</Badge>;
-  };
+  const handleDelete = async (assetId: number) => {
+    if (!confirm("Are you sure you want to delete this asset?")) return;
 
-  const getCategoryLabel = (category: string) => {
-    return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    try {
+      const response = await fetch(`/api/v1/fixed-assets/assets/${assetId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        fetchAssets();
+      }
+    } catch (error) {
+      console.error("Error deleting asset:", error);
+    }
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(value);
+    return `₹${value.toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { color: string; label: string }> = {
+      active: { color: "bg-green-100 text-green-800", label: "Active" },
+      in_maintenance: { color: "bg-orange-100 text-orange-800", label: "In Maintenance" },
+      under_repair: { color: "bg-red-100 text-red-800", label: "Under Repair" },
+      idle: { color: "bg-gray-100 text-gray-800", label: "Idle" },
+      disposed: { color: "bg-purple-100 text-purple-800", label: "Disposed" },
+      transferred: { color: "bg-blue-100 text-blue-800", label: "Transferred" },
+    };
+
+    const statusInfo = statusMap[status] || { color: "bg-gray-100 text-gray-800", label: status };
+
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusInfo.color}`}>
+        {statusInfo.label}
+      </span>
+    );
+  };
+
+  const getCategoryLabel = (category: string) => {
+    return category.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Fixed Assets</h1>
-          <p className="text-muted-foreground">Complete list of all fixed assets</p>
+    <div>
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Asset Register</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Complete list of all fixed assets
+            </p>
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {/* Export functionality */}}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+            >
+              <Download className="h-5 w-5 mr-2" />
+              Export
+            </button>
+            <Link
+              href="/accounting/assets/new"
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Asset
+            </Link>
+          </div>
         </div>
-        <Button onClick={() => router.push('/accounting/assets/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Asset
-        </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="relative">
-              <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search assets..."
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                className="pl-8"
-              />
-            </div>
-            <Select
-              value={filters.category}
-              onValueChange={(value) => setFilters({ ...filters, category: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="LAND">Land</SelectItem>
-                <SelectItem value="BUILDING">Building</SelectItem>
-                <SelectItem value="PLANT_MACHINERY">Plant & Machinery</SelectItem>
-                <SelectItem value="FURNITURE_FIXTURES">Furniture & Fixtures</SelectItem>
-                <SelectItem value="OFFICE_EQUIPMENT">Office Equipment</SelectItem>
-                <SelectItem value="COMPUTERS">Computers</SelectItem>
-                <SelectItem value="VEHICLES">Vehicles</SelectItem>
-                <SelectItem value="SOFTWARE">Software</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={filters.status}
-              onValueChange={(value) => setFilters({ ...filters, status: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="UNDER_MAINTENANCE">Under Maintenance</SelectItem>
-                <SelectItem value="DISPOSED">Disposed</SelectItem>
-                <SelectItem value="SOLD">Sold</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              placeholder="Location"
-              value={filters.location}
-              onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+      {/* Search and Filters */}
+      <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <div className="flex items-center space-x-4">
+          {/* Search */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by asset code, name, serial number, barcode..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <Button variant="outline" onClick={loadAssets}>
-              Refresh
-            </Button>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center px-4 py-2 border rounded-lg ${
+              showFilters ? "bg-blue-50 border-blue-300 text-blue-700" : "border-gray-300 text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <Filter className="h-5 w-5 mr-2" />
+            Filters
+          </button>
+        </div>
+
+        {/* Expanded Filters */}
+        {showFilters && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Category Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Categories</option>
+                  <option value="land">Land</option>
+                  <option value="building">Building</option>
+                  <option value="plant_machinery">Plant & Machinery</option>
+                  <option value="furniture_fixtures">Furniture & Fixtures</option>
+                  <option value="vehicles">Vehicles</option>
+                  <option value="computer_equipment">Computer Equipment</option>
+                  <option value="office_equipment">Office Equipment</option>
+                  <option value="leasehold_improvements">Leasehold Improvements</option>
+                  <option value="intangible_assets">Intangible Assets</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="in_maintenance">In Maintenance</option>
+                  <option value="under_repair">Under Repair</option>
+                  <option value="idle">Idle</option>
+                  <option value="disposed">Disposed</option>
+                  <option value="transferred">Transferred</option>
+                </select>
+              </div>
+
+              {/* Location Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Location
+                </label>
+                <select
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All Locations</option>
+                  {/* Populate from API */}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between">
+              <button
+                onClick={() => {
+                  setCategoryFilter("");
+                  setStatusFilter("");
+                  setLocationFilter("");
+                  setSearchQuery("");
+                }}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Clear All Filters
+              </button>
+              <div className="text-sm text-gray-500">
+                Showing {assets.length} of {totalPages * pageSize} assets
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Assets Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Assets List</CardTitle>
-          <CardDescription>{total} assets found</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-8">Loading...</div>
-          ) : (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">Loading assets...</div>
+          </div>
+        ) : assets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64">
+            <Package className="h-12 w-12 text-gray-400 mb-4" />
+            <p className="text-gray-500 mb-2">No assets found</p>
+            <Link
+              href="/accounting/assets/new"
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+            >
+              Add your first asset
+            </Link>
+          </div>
+        ) : (
+          <>
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Asset Code</TableHead>
-                    <TableHead>Asset Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Purchase Date</TableHead>
-                    <TableHead className="text-right">Cost (₹)</TableHead>
-                    <TableHead className="text-right">WDV (₹)</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assets.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                        No assets found. Click "Add Asset" to create one.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    assets.map((asset) => (
-                      <TableRow key={asset.id}>
-                        <TableCell className="font-medium font-mono text-xs">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Asset Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Asset Details
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Purchase Cost
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Net Book Value
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {assets.map((asset) => (
+                    <tr key={asset.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Link
+                          href={`/accounting/assets/${asset.id}`}
+                          className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                        >
                           {asset.asset_code}
-                        </TableCell>
-                        <TableCell>{asset.asset_name}</TableCell>
-                        <TableCell>{getCategoryLabel(asset.category)}</TableCell>
-                        <TableCell>
-                          {format(new Date(asset.purchase_date), 'dd MMM yyyy')}
-                        </TableCell>
-                        <TableCell className="text-right">
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">{asset.asset_name}</div>
+                          <div className="text-gray-500 flex items-center mt-1">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {new Date(asset.acquisition_date).toLocaleDateString("en-IN", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-900">
+                          {getCategoryLabel(asset.asset_category)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getStatusBadge(asset.asset_status)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <span className="text-sm font-medium text-gray-900">
                           {formatCurrency(asset.purchase_cost)}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {formatCurrency(asset.written_down_value)}
-                        </TableCell>
-                        <TableCell>{asset.location || '-'}</TableCell>
-                        <TableCell>{getStatusBadge(asset.status)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => router.push(`/accounting/assets/${asset.id}`)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">
+                            {formatCurrency(asset.net_book_value)}
+                          </div>
+                          <div className="text-xs text-gray-500 flex items-center justify-end">
+                            <TrendingDown className="h-3 w-3 mr-1" />
+                            {formatCurrency(asset.accumulated_depreciation)}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm">
+                          {asset.location_name && (
+                            <div className="flex items-center text-gray-900">
+                              <MapPin className="h-3 w-3 mr-1" />
+                              {asset.location_name}
+                            </div>
+                          )}
+                          {asset.custodian_name && (
+                            <div className="flex items-center text-gray-500 mt-1">
+                              <User className="h-3 w-3 mr-1" />
+                              {asset.custodian_name}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <Link
+                            href={`/accounting/assets/${asset.id}`}
+                            className="text-blue-600 hover:text-blue-700"
+                            title="View Details"
                           >
                             <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                          </Link>
+                          <Link
+                            href={`/accounting/assets/${asset.id}/edit`}
+                            className="text-green-600 hover:text-green-700"
+                            title="Edit"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                          <button
+                            onClick={() => handleDelete(asset.id)}
+                            className="text-red-600 hover:text-red-700"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Total Assets</p>
-              <p className="text-2xl font-bold">{total}</p>
+            {/* Pagination */}
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-500">
+                Page {page} of {totalPages}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setPage(page + 1)}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Purchase Cost</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(assets.reduce((sum, a) => sum + a.purchase_cost, 0))}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Current WDV</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(assets.reduce((sum, a) => sum + a.written_down_value, 0))}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Depreciation</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(assets.reduce((sum, a) => sum + a.accumulated_depreciation, 0))}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </>
+        )}
+      </div>
     </div>
   );
 }

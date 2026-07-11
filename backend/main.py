@@ -192,6 +192,17 @@ from backend.shared.database.asset_models import (
     AssetVerification, AssetVerificationCycle
 )
 
+# 23. CRM Lead Management models (NEW - Multi-channel Lead Capture & Management)
+from backend.shared.database.crm_lead_models import (
+    Lead, LeadFollowUp, LeadActivity, LeadScoringRule, LeadAssignmentRule
+)
+
+# 24. Property & Rent Management models (NEW - Property Master, Lease, Rent Collection, Utilities, Space Allocation)
+from backend.shared.database.property_rent_models import (
+    Property, PropertySpace, Lease, SpaceAllocation, RentPayment,
+    UtilityBill, PropertyMaintenance
+)
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -436,6 +447,12 @@ app = FastAPI(
         {"name": "HRMS - Training & Development", "description": "Training calendar, courses, sessions, assessments, certifications, LMS integration, skill matrix"},
         {"name": "HRMS - Performance Management", "description": "Goal setting (KRA/KPI), appraisal cycles, 360-degree feedback, ratings & increment, Individual Development Plans (IDP)"},
         {"name": "HRMS - Exit Management", "description": "Resignation workflow, clearance process, full & final settlement, experience/relieving letters"},
+        {"name": "Property Management - Properties", "description": "Property master data, ownership details, amenities, and valuations"},
+        {"name": "Property Management - Leases", "description": "Lease agreements, tenant management, and contract tracking"},
+        {"name": "Property Management - Rent Collection", "description": "Rent payment tracking, receipts, and outstanding management"},
+        {"name": "Property Management - Utilities", "description": "Utility bill management (electricity, water, gas) and tenant allocation"},
+        {"name": "Property Management - Spaces", "description": "Space/unit management, allocation, and occupancy tracking"},
+        {"name": "Property Management - Maintenance", "description": "Property maintenance requests, vendor management, and service tracking"},
     ]
 )
 
@@ -793,6 +810,9 @@ from backend.services.reporting import (
     builder_router as reporting_builder_router
 )
 
+# NEW: CRM Lead Management Module (Multi-channel Capture, Scoring, Assignment, Follow-up Tracking)
+from backend.services.crm.router import router as crm_router
+
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["Dashboard"])
@@ -996,6 +1016,31 @@ app.include_router(reporting_generation_router, prefix="/api/v1", tags=["Reporti
 app.include_router(reporting_dashboard_router, prefix="/api/v1", tags=["Reporting - Dashboards"])
 app.include_router(reporting_analytics_router, prefix="/api/v1", tags=["Reporting - Analytics"])
 app.include_router(reporting_builder_router, prefix="/api/v1", tags=["Reporting - Custom Builder"])
+
+# ============================================================================
+# NEW: CRM LEAD MANAGEMENT MODULE
+# Multi-Channel Lead Capture, Intelligent Scoring, Assignment & Routing, Follow-up Tracking
+# ============================================================================
+app.include_router(crm_router, tags=["CRM - Lead Management"])
+
+# ============================================================================
+# NEW: PROPERTY & RENT MANAGEMENT MODULE
+# Property Master, Lease Tracking, Rent Collection, Utilities, Space Allocation, Maintenance
+# ============================================================================
+from backend.services.property import (
+    property_router,
+    lease_router,
+    rent_router,
+    utility_router,
+    space_router,
+    maintenance_router
+)
+app.include_router(property_router, tags=["Property Management - Properties"])
+app.include_router(lease_router, tags=["Property Management - Leases"])
+app.include_router(rent_router, tags=["Property Management - Rent Collection"])
+app.include_router(utility_router, tags=["Property Management - Utilities"])
+app.include_router(space_router, tags=["Property Management - Spaces"])
+app.include_router(maintenance_router, tags=["Property Management - Maintenance"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

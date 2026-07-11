@@ -149,6 +149,20 @@ const navigationItems = [
     ],
   },
   {
+    title: 'Property Management',
+    href: '/property-management',
+    icon: Building,
+    children: [
+      { title: 'Dashboard', href: '/property-management' },
+      { title: 'Properties', href: '/property-management/properties' },
+      { title: 'Leases', href: '/property-management/leases' },
+      { title: 'Rent Collection', href: '/property-management/rent' },
+      { title: 'Utilities', href: '/property-management/utilities' },
+      { title: 'Spaces', href: '/property-management/spaces' },
+      { title: 'Maintenance', href: '/property-management/maintenance' },
+    ],
+  },
+  {
     title: 'Reports',
     href: '/reports',
     icon: BarChart3,
