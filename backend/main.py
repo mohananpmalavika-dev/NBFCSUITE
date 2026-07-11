@@ -186,6 +186,12 @@ from backend.shared.database.training_models import (
     Skill, EmployeeSkill
 )
 
+# 22. Fixed Asset Management models (NEW - Complete Asset Lifecycle Management)
+from backend.shared.database.asset_models import (
+    FixedAsset, AssetDepreciation, AssetMaintenance, AssetTransfer,
+    AssetVerification, AssetVerificationCycle
+)
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -405,6 +411,7 @@ app = FastAPI(
         {"name": "Deposits", "description": "Deposit management (Nidhi)"},
         {"name": "Gold Loans", "description": "Gold loan management with ornament tracking"},
         {"name": "Accounting", "description": "Accounting and finance"},
+        {"name": "Fixed Assets", "description": "Fixed asset management with depreciation, maintenance, transfer & verification"},
         {"name": "Workflow", "description": "Enterprise workflow engine"},
         {"name": "Rules", "description": "Business rules engine"},
         {"name": "Decision", "description": "Instant decision engine"},
@@ -744,6 +751,9 @@ from backend.services.accounting.tds_router import router as tds_router
 from backend.services.accounting.gst_router import router as gst_router
 from backend.services.accounting.asset_router import router as asset_router
 
+# NEW: Fixed Asset Management (Complete Module)
+from backend.services.fixed_assets.router import router as fixed_assets_router
+
 # NEW: Risk Management & Credit Policy Router
 from backend.services.risk.router import router as risk_router
 
@@ -802,6 +812,9 @@ app.include_router(accounting_router, prefix="/api/v1", tags=["Accounting"])
 app.include_router(tds_router, prefix="/api/v1/accounting/tds", tags=["Accounting - TDS"])
 app.include_router(gst_router, prefix="/api/v1/accounting/gst", tags=["Accounting - GST"])
 app.include_router(asset_router, prefix="/api/v1/accounting/assets", tags=["Accounting - Assets"])
+
+# Fixed Asset Management (Complete Module)
+app.include_router(fixed_assets_router, prefix="/api/v1", tags=["Fixed Assets"])
 
 # Deposit Management Routers
 app.include_router(product_router, prefix="/api/v1", tags=["Deposit Products"])
