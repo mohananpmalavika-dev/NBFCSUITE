@@ -5,6 +5,9 @@
 // Export customer types
 export * from './customer.types'
 
+// Export exit management types
+export * from './exit.types'
+
 // ============================================
 // Common Types
 // ============================================

@@ -1,31 +1,28 @@
 """
-Notification Service Module
+Notification & Communication Engine
 
-Multi-channel notification system with template management and delivery tracking.
-
-Services:
-- Notification Service: Send and manage notifications
-- Template Service: Template management with variables
-
-Router:
-- Notification Router: REST API endpoints for notifications and templates
+Complete multi-channel notification system with TRAI DLT compliance,
+event-driven triggers, and provider integration.
 
 Features:
-- Multi-channel support (SMS, Email, WhatsApp)
-- Template management with variable substitution
-- Delivery tracking and retry mechanism
-- Priority-based queuing
-- Bulk notification support
-- Complete audit trail
+- Multi-channel support (SMS, Email, WhatsApp, Push)
+- Template management with Jinja2 rendering
+- TRAI DLT compliance for India SMS
+- Event-driven notification triggers
+- Provider management with failover
+- Delivery tracking and analytics
+- Scheduled and recurring notifications
 """
 
-from .notification_service import NotificationService
-from .template_service import TemplateService
-from .router import router
+from backend.services.notification.router import router
+from backend.services.notification.notification_service import NotificationService
+from backend.services.notification.dlt_compliance_service import DLTComplianceService
+from backend.services.notification.trigger_engine import TriggerEngine, EventTypes
 
 __all__ = [
-    "NotificationService",
-    "TemplateService",
     "router",
+    "NotificationService",
+    "DLTComplianceService",
+    "TriggerEngine",
+    "EventTypes",
 ]
-

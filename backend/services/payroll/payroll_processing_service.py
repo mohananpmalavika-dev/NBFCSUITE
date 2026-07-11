@@ -14,6 +14,7 @@ from backend.shared.database.payroll_models import (
     EmployeeSalaryComponent, SalaryComponent, StatutoryCompliance,
     PayrollStatus, PaymentMode, PaymentStatus, ComponentType, StatutoryType
 )
+from backend.shared.database.loan_models import LoanEMISchedule, EMIStatus
 from backend.services.payroll.schemas import (
     PayrollRunCreate, PayrollRunResponse, PayrollSummary
 )
@@ -350,6 +351,37 @@ class PayrollProcessingService:
         total_deductions += pt_amount
         total_deductions += tds_amount
         
+        # Get pending EMI deductions for this month
+        first_day = date(payroll_run.payroll_year, payroll_run.payroll_month, 1)
+        last_day = date(payroll_run.payroll_year, payroll_run.payroll_month, calendar.monthrange(payroll_run.payroll_year, payroll_run.payroll_month)[1])
+        
+        pending_emis = db.query(LoanEMISchedule).join(
+            LoanEMISchedule.loan
+        ).filter(
+            and_(
+                LoanEMISchedule.tenant_id == payroll_run.tenant_id,
+                LoanEMISchedule.loan.has(employee_id=emp_salary.employee_id),
+                LoanEMISchedule.emi_due_date >= first_day,
+                LoanEMISchedule.emi_due_date <= last_day,
+                LoanEMISchedule.status == EMIStatus.PENDING,
+                LoanEMISchedule.is_deleted == False
+            )
+        ).all()
+        
+        # Add EMI deductions
+        total_emi_amount = Decimal("0.00")
+        for emi in pending_emis:
+            total_emi_amount += emi.emi_amount
+            deductions_list.append({
+                "component_id": 0,  # System component
+                "component_code": f"LOAN_EMI_{emi.loan.loan_code}",
+                "component_name": f"Loan EMI - {emi.loan.loan_type.value.title()}",
+                "amount": emi.emi_amount,
+                "emi_schedule_id": emi.id
+            })
+        
+        total_deductions += total_emi_amount
+        
         # Calculate net salary
         net_salary = gross_earnings - total_deductions
         
@@ -416,6 +448,35 @@ class PayrollProcessingService:
                 amount=deduction["amount"]
             )
             db.add(component)
+            
+            # Mark EMI as paid if this is an EMI deduction
+            if "emi_schedule_id" in deduction:
+                emi = db.query(LoanEMISchedule).filter(
+                    LoanEMISchedule.id == deduction["emi_schedule_id"]
+                ).first()
+                if emi:
+                    emi.status = EMIStatus.PAID
+                    emi.payment_date = payroll_run.pay_date
+                    emi.amount_paid = deduction["amount"]
+                    emi.principal_paid = emi.principal_component
+                    emi.interest_paid = emi.interest_component
+                    emi.payment_reference = payslip_number
+                    emi.payroll_run_id = payroll_run.id
+                    
+                    # Update loan outstanding
+                    loan = emi.loan
+                    loan.principal_outstanding -= emi.principal_component
+                    loan.interest_outstanding -= emi.interest_component
+                    loan.total_outstanding = loan.principal_outstanding + loan.interest_outstanding
+                    loan.principal_paid += emi.principal_component
+                    loan.interest_paid += emi.interest_component
+                    loan.total_paid += deduction["amount"]
+                    
+                    # Check if loan is fully repaid
+                    if loan.total_outstanding <= Decimal("0.01"):
+                        loan.status = "closed"
+                        loan.closure_date = payroll_run.pay_date
+                        loan.closure_reason = "fully_paid"
         
         # Add statutory components
         statutory_components = [

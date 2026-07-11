@@ -172,6 +172,20 @@ from backend.services.insurance.models import (
     InsuranceClaim, InsuranceCommission
 )
 
+# 20. Reporting & Analytics models (NEW - Reporting Module)
+from backend.shared.database.reporting_models import (
+    ReportTemplate, CustomReportBuilder, GeneratedReport, ScheduledReport,
+    Dashboard, DashboardWidget, PredictiveModel, ModelPrediction,
+    ReportAnalytics, UserReportPreference
+)
+
+# 21. Training & Development models (NEW - HRMS Training Module)
+from backend.shared.database.training_models import (
+    TrainingCourse, TrainingSession, TrainingParticipant,
+    TrainingAssessment, AssessmentResult, TrainingCertification,
+    Skill, EmployeeSkill
+)
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL),
@@ -402,6 +416,7 @@ app = FastAPI(
         {"name": "HRMS - Departments", "description": "Department hierarchy and management"},
         {"name": "HRMS - Designations", "description": "Job titles and designation management"},
         {"name": "HRMS - Organizations", "description": "Organization/company entity management"},
+        {"name": "HRMS - Employee Self Service", "description": "Employee self-service portal: payslips, leave, investments, reimbursements, profile"},
         {"name": "HRMS - Recruitment - Requisitions", "description": "Job requisition management and approval workflow"},
         {"name": "HRMS - Recruitment - Postings", "description": "Job posting and career portal management"},
         {"name": "HRMS - Recruitment - Applications", "description": "Applicant tracking system (ATS)"},
@@ -411,6 +426,9 @@ app = FastAPI(
         {"name": "HRMS - Attendance - Tracking", "description": "Attendance tracking, check-in/out, and biometric integration"},
         {"name": "HRMS - Leave Management", "description": "Leave policies, applications, balance, and approval workflow"},
         {"name": "HRMS - Payroll", "description": "Salary structure, statutory compliance (PF/ESI/PT/TDS), payroll processing, Form 16, payment files"},
+        {"name": "HRMS - Training & Development", "description": "Training calendar, courses, sessions, assessments, certifications, LMS integration, skill matrix"},
+        {"name": "HRMS - Performance Management", "description": "Goal setting (KRA/KPI), appraisal cycles, 360-degree feedback, ratings & increment, Individual Development Plans (IDP)"},
+        {"name": "HRMS - Exit Management", "description": "Resignation workflow, clearance process, full & final settlement, experience/relieving letters"},
     ]
 )
 
@@ -736,6 +754,8 @@ from backend.services.hrms import (
     designation_router, 
     organization_router as hrms_organization_router
 )
+from backend.services.hrms.training_router import router as training_router
+from backend.services.hrms.ess_router import router as ess_router
 
 # NEW: HRMS Recruitment & Onboarding Routers
 from backend.services.recruitment import (
@@ -753,6 +773,15 @@ from backend.services.attendance.leave_router import router as leave_router
 
 # NEW: HRMS Payroll Management Router
 from backend.services.payroll.payroll_router import router as payroll_router
+
+# NEW: Reporting & Analytics Module (100+ Reports, Dashboards, Predictive Analytics)
+from backend.services.reporting import (
+    template_router as reporting_template_router,
+    generation_router as reporting_generation_router,
+    dashboard_router as reporting_dashboard_router,
+    analytics_router as reporting_analytics_router,
+    builder_router as reporting_builder_router
+)
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -896,6 +925,12 @@ app.include_router(designation_router, prefix="/api/v1", tags=["HRMS - Designati
 app.include_router(hrms_organization_router, prefix="/api/v1", tags=["HRMS - Organizations"])
 
 # ============================================================================
+# NEW: HRMS EMPLOYEE SELF-SERVICE ROUTER
+# Payslip Download, Leave Application, Investment Declaration, Reimbursement Claims, Profile Update
+# ============================================================================
+app.include_router(ess_router, tags=["HRMS - Employee Self Service"])
+
+# ============================================================================
 # NEW: HRMS RECRUITMENT & ONBOARDING ROUTERS
 # Job Requisitions, Applicant Tracking, Interview Scheduling, Onboarding Workflow
 # ============================================================================
@@ -918,6 +953,36 @@ app.include_router(leave_router, prefix="/api/v1/leave", tags=["HRMS - Leave Man
 # Salary Components, Structures, Processing, Statutory Compliance, Form 16, Payment Files
 # ============================================================================
 app.include_router(payroll_router, prefix="/api/v1/payroll", tags=["HRMS - Payroll"])
+
+# ============================================================================
+# NEW: HRMS TRAINING & DEVELOPMENT ROUTER
+# Training Calendar, Courses, Sessions, Assessments, Certifications, LMS Integration, Skill Matrix
+# ============================================================================
+app.include_router(training_router, prefix="/api/v1", tags=["HRMS - Training & Development"])
+
+# ============================================================================
+# NEW: HRMS PERFORMANCE MANAGEMENT ROUTER
+# Goal Setting (KRA/KPI), Appraisal Cycles, 360-Degree Feedback, Ratings, IDP
+# ============================================================================
+from backend.services.hrms.routes.performance_routes import router as performance_router
+app.include_router(performance_router, prefix="/api/v1/hrms/performance", tags=["HRMS - Performance Management"])
+
+# ============================================================================
+# NEW: HRMS EXIT MANAGEMENT ROUTER
+# Resignation Workflow, Clearance Process, Full & Final Settlement, Exit Documents
+# ============================================================================
+from backend.services.hrms.routes.exit_routes import router as exit_router
+app.include_router(exit_router, prefix="/api/v1/hrms/exit", tags=["HRMS - Exit Management"])
+
+# ============================================================================
+# NEW: REPORTING & ANALYTICS MODULE
+# 100+ Pre-built Reports, Custom Report Builder, Executive Dashboards, Predictive Analytics
+# ============================================================================
+app.include_router(reporting_template_router, prefix="/api/v1", tags=["Reporting - Templates"])
+app.include_router(reporting_generation_router, prefix="/api/v1", tags=["Reporting - Generation"])
+app.include_router(reporting_dashboard_router, prefix="/api/v1", tags=["Reporting - Dashboards"])
+app.include_router(reporting_analytics_router, prefix="/api/v1", tags=["Reporting - Analytics"])
+app.include_router(reporting_builder_router, prefix="/api/v1", tags=["Reporting - Custom Builder"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

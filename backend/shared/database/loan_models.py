@@ -1,450 +1,413 @@
 """
-Loan Management Models
-Complete loan lifecycle from products to repayments
+HRMS Loan & Advances Database Models
+Employee loans, advances, EMI schedule, and repayment tracking
 """
-
-from sqlalchemy import (
-    Column, Integer, String, Text, Numeric, Boolean, Date, 
-    DateTime, ForeignKey, ARRAY, Index
-)
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Integer, Date, DateTime, Boolean, Text, ForeignKey, Numeric, Enum as SQLEnum, Index
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from .connection import Base
+from sqlalchemy.dialects.postgresql import UUID
+from datetime import datetime, date
+from decimal import Decimal
+import enum
+
+from backend.shared.database.models import BaseModel
 
 
-class LoanProduct(Base):
-    """Loan Product Configuration"""
-    __tablename__ = "loan_products"
+# ============================================================================
+# ENUMS
+# ============================================================================
+
+class LoanType(str, enum.Enum):
+    """Loan type"""
+    PERSONAL = "personal"
+    VEHICLE = "vehicle"
+    HOME = "home"
+    EDUCATION = "education"
+    MEDICAL = "medical"
+    MARRIAGE = "marriage"
+    SALARY_ADVANCE = "salary_advance"
+    EMERGENCY = "emergency"
+    FESTIVAL_ADVANCE = "festival_advance"
+    OTHER = "other"
+
+
+class LoanStatus(str, enum.Enum):
+    """Loan application status"""
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    PENDING_APPROVAL = "pending_approval"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    DISBURSED = "disbursed"
+    ACTIVE = "active"
+    CLOSED = "closed"
+    CANCELLED = "cancelled"
+    WRITTEN_OFF = "written_off"
+
+
+class RepaymentFrequency(str, enum.Enum):
+    """Repayment frequency"""
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    HALF_YEARLY = "half_yearly"
+    ANNUAL = "annual"
+    BULLET = "bullet"  # One-time repayment
+
+
+class EMIStatus(str, enum.Enum):
+    """EMI payment status"""
+    PENDING = "pending"
+    PAID = "paid"
+    OVERDUE = "overdue"
+    PARTIALLY_PAID = "partially_paid"
+    WAIVED = "waived"
+
+
+class TransactionType(str, enum.Enum):
+    """Loan transaction type"""
+    DISBURSEMENT = "disbursement"
+    EMI_PAYMENT = "emi_payment"
+    PREPAYMENT = "prepayment"
+    FORECLOSURE = "foreclosure"
+    WAIVER = "waiver"
+    ADJUSTMENT = "adjustment"
+    REVERSAL = "reversal"
+
+
+# ============================================================================
+# LOAN POLICY CONFIGURATION
+# ============================================================================
+
+class LoanPolicy(BaseModel):
+    """
+    Loan Policy Configuration
+    Defines eligibility criteria and limits for different loan types
+    """
+    __tablename__ = "hrms_loan_policies"
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
-    
-    # Product Identification
-    product_code = Column(String(50), unique=True, nullable=False, index=True)
-    product_name = Column(String(200), nullable=False)
-    product_type = Column(String(50), nullable=False, index=True)
-    # personal, business, gold, vehicle, home, education, agriculture
-    loan_category = Column(String(50), nullable=False)  # secured, unsecured
-    
-    # Interest Configuration
-    interest_rate_type = Column(String(50), nullable=False)  # flat, reducing, compound
-    min_interest_rate = Column(Numeric(5, 2), nullable=False)
-    max_interest_rate = Column(Numeric(5, 2), nullable=False)
-    default_interest_rate = Column(Numeric(5, 2), nullable=False)
-    
-    # Loan Amount
-    min_loan_amount = Column(Numeric(15, 2), nullable=False)
-    max_loan_amount = Column(Numeric(15, 2), nullable=False)
-    
-    # Tenure
-    min_tenure_months = Column(Integer, nullable=False)
-    max_tenure_months = Column(Integer, nullable=False)
-    allowed_tenures = Column(ARRAY(Integer))  # [6, 12, 18, 24, 36, 48, 60]
-    
-    # Fees & Charges
-    processing_fee_type = Column(String(50), nullable=False)  # fixed, percentage
-    processing_fee_value = Column(Numeric(15, 2), nullable=False)
-    documentation_charges = Column(Numeric(15, 2))
-    insurance_applicable = Column(Boolean, default=False)
-    insurance_percentage = Column(Numeric(5, 2))
-    
-    # Penal Interest
-    penal_interest_rate = Column(Numeric(5, 2), nullable=False)
-    grace_period_days = Column(Integer, default=3)
+    # Policy Identification
+    policy_code = Column(String(50), nullable=False, index=True)
+    policy_name = Column(String(200), nullable=False)
+    loan_type = Column(SQLEnum(LoanType), nullable=False, index=True)
     
     # Eligibility Criteria
-    min_age = Column(Integer, default=21)
-    max_age = Column(Integer, default=65)
-    min_monthly_income = Column(Numeric(15, 2))
-    min_cibil_score = Column(Integer, default=650)
-    employment_types = Column(ARRAY(String))  # ['salaried', 'self_employed', 'business']
+    min_service_months = Column(Integer, nullable=False, default=6)  # Minimum service required
+    min_employment_type = Column(String(50), nullable=True)  # permanent, contract
+    allowed_employment_statuses = Column(Text, nullable=True)  # JSON array: ["active"]
+    allowed_designations = Column(Text, nullable=True)  # JSON array of designation IDs
+    allowed_departments = Column(Text, nullable=True)  # JSON array of department IDs
     
-    # Documentation
-    required_documents = Column(ARRAY(Integer))  # Document type IDs
+    # Loan Limits
+    min_loan_amount = Column(Numeric(15, 2), nullable=False, default=Decimal("10000.00"))
+    max_loan_amount = Column(Numeric(15, 2), nullable=False, default=Decimal("500000.00"))
+    
+    # Salary-based limits
+    max_loan_as_salary_multiple = Column(Numeric(5, 2), nullable=True)  # e.g., 3x of monthly salary
+    max_emi_as_salary_percentage = Column(Numeric(5, 2), nullable=False, default=Decimal("40.00"))  # 40% of salary
+    
+    # Interest & Tenure
+    interest_rate = Column(Numeric(5, 2), nullable=False, default=Decimal("0.00"))  # Annual rate
+    min_tenure_months = Column(Integer, nullable=False, default=6)
+    max_tenure_months = Column(Integer, nullable=False, default=60)
+    
+    # Repayment Configuration
+    repayment_frequency = Column(SQLEnum(RepaymentFrequency), nullable=False, default=RepaymentFrequency.MONTHLY)
+    processing_fee_percentage = Column(Numeric(5, 2), default=Decimal("0.00"))
+    prepayment_allowed = Column(Boolean, default=True)
+    prepayment_penalty_percentage = Column(Numeric(5, 2), default=Decimal("0.00"))
+    
+    # Restrictions
+    max_active_loans_per_employee = Column(Integer, default=1)
+    min_gap_between_loans_months = Column(Integer, default=0)
+    
+    # Approval Workflow
+    requires_manager_approval = Column(Boolean, default=True)
+    requires_hr_approval = Column(Boolean, default=True)
+    requires_finance_approval = Column(Boolean, default=True)
+    auto_approve_below_amount = Column(Numeric(15, 2), nullable=True)
+    
+    # Documents Required
+    required_documents = Column(Text, nullable=True)  # JSON array: ["salary_slip", "id_proof"]
     
     # Status
-    is_active = Column(Boolean, default=True, index=True)
-    is_featured = Column(Boolean, default=False)
-    display_order = Column(Integer, default=0)
-    
-    # Description
-    description = Column(Text)
-    features = Column(ARRAY(String))
-    terms_and_conditions = Column(Text)
-    
-    # Audit
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by = Column(UUID(as_uuid=True))
-    updated_by = Column(UUID(as_uuid=True))
-    is_deleted = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    effective_from = Column(Date, nullable=True)
+    effective_to = Column(Date, nullable=True)
+    description = Column(Text, nullable=True)
     
     # Relationships
-    applications = relationship("LoanApplication", back_populates="loan_product")
+    loans = relationship("EmployeeLoan", back_populates="policy", lazy="select")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_tenant_loan_policy_code', 'tenant_id', 'policy_code', unique=True),
+        Index('idx_loan_policy_type', 'tenant_id', 'loan_type', 'is_active'),
+    )
+    
+    def __repr__(self):
+        return f"<LoanPolicy(code={self.policy_code}, type={self.loan_type})>"
 
 
-class LoanApplication(Base):
-    """Loan Application"""
-    __tablename__ = "loan_applications"
+# ============================================================================
+# EMPLOYEE LOAN APPLICATION
+# ============================================================================
+
+class EmployeeLoan(BaseModel):
+    """
+    Employee Loan Application & Management
+    Tracks complete lifecycle from application to closure
+    """
+    __tablename__ = "hrms_employee_loans"
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
-    application_number = Column(String(50), unique=True, nullable=False, index=True)
+    # Loan Identification
+    loan_code = Column(String(50), nullable=False, index=True)
     
-    # Customer & Product
-    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
-    loan_product_id = Column(Integer, ForeignKey("loan_products.id"), nullable=False)
+    # Employee & Policy
+    employee_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id", ondelete="CASCADE"), nullable=False)
+    policy_id = Column(UUID(as_uuid=True), ForeignKey("hrms_loan_policies.id", ondelete="RESTRICT"), nullable=False)
+    loan_type = Column(SQLEnum(LoanType), nullable=False, index=True)
     
     # Loan Details
-    requested_amount = Column(Numeric(15, 2), nullable=False)
-    approved_amount = Column(Numeric(15, 2))
+    loan_amount = Column(Numeric(15, 2), nullable=False)
+    interest_rate = Column(Numeric(5, 2), nullable=False, default=Decimal("0.00"))
     tenure_months = Column(Integer, nullable=False)
-    interest_rate = Column(Numeric(5, 2), nullable=False)
+    repayment_frequency = Column(SQLEnum(RepaymentFrequency), nullable=False, default=RepaymentFrequency.MONTHLY)
     
     # EMI Calculation
-    emi_amount = Column(Numeric(15, 2))
-    total_interest = Column(Numeric(15, 2))
-    total_repayment = Column(Numeric(15, 2))
+    emi_amount = Column(Numeric(15, 2), nullable=False)
+    total_interest = Column(Numeric(15, 2), default=Decimal("0.00"))
+    total_repayment_amount = Column(Numeric(15, 2), nullable=False)
+    processing_fee = Column(Numeric(15, 2), default=Decimal("0.00"))
     
-    # Purpose
-    loan_purpose_id = Column(UUID(as_uuid=True), ForeignKey("loan_purposes.id"))
-    purpose_description = Column(Text)
-    
-    # Status
-    status = Column(String(50), nullable=False, default="draft", index=True)
-    # draft, submitted, under_review, credit_assessment, 
-    # pending_approval, approved, rejected, disbursed, cancelled
-    sub_status = Column(String(100))
-    status_reason = Column(Text)
-    
-    # Workflow
-    current_approver_id = Column(Integer)
-    approval_level = Column(Integer, default=0)
-    
-    # Dates
-    application_date = Column(Date, nullable=False, index=True)
-    submission_date = Column(Date)
-    approval_date = Column(Date)
-    rejection_date = Column(Date)
-    disbursement_date = Column(Date)
-    
-    # Credit Assessment
-    credit_score = Column(Integer)
-    debt_to_income_ratio = Column(Numeric(5, 2))
-    monthly_income = Column(Numeric(15, 2))
-    monthly_obligations = Column(Numeric(15, 2))
-    risk_rating = Column(String(50))  # low, medium, high, very_high
-    
-    # Documents
-    documents_verified = Column(Boolean, default=False)
-    kyc_verified = Column(Boolean, default=False)
-    
-    # Fees
-    processing_fee = Column(Numeric(15, 2))
-    documentation_charges = Column(Numeric(15, 2))
-    insurance_amount = Column(Numeric(15, 2))
-    other_charges = Column(Numeric(15, 2))
-    total_deductions = Column(Numeric(15, 2))
-    net_disbursement = Column(Numeric(15, 2))
+    # Application Details
+    application_date = Column(Date, nullable=False, default=date.today)
+    purpose = Column(Text, nullable=False)
+    reason_for_loan = Column(Text, nullable=True)
+    attachment_urls = Column(Text, nullable=True)  # JSON array of document URLs
     
     # Disbursement Details
-    disbursement_bank_account_id = Column(UUID(as_uuid=True), ForeignKey("customer_bank_accounts.id"))
-    disbursement_mode = Column(String(50))  # neft, rtgs, imps, cheque
-    disbursement_reference = Column(String(100))
+    disbursement_date = Column(Date, nullable=True)
+    disbursement_mode = Column(String(20), nullable=True)  # bank_transfer, cheque, cash
+    disbursement_reference = Column(String(100), nullable=True)
+    disbursed_amount = Column(Numeric(15, 2), nullable=True)
     
-    # Notes
-    applicant_remarks = Column(Text)
-    internal_notes = Column(Text)
-    rejection_reason = Column(Text)
+    # Repayment Details
+    repayment_start_date = Column(Date, nullable=True)
+    first_emi_date = Column(Date, nullable=True)
+    last_emi_date = Column(Date, nullable=True)
     
-    # Audit
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by = Column(UUID(as_uuid=True))
-    updated_by = Column(UUID(as_uuid=True))
-    is_deleted = Column(Boolean, default=False)
+    # Outstanding Balance
+    principal_outstanding = Column(Numeric(15, 2), default=Decimal("0.00"))
+    interest_outstanding = Column(Numeric(15, 2), default=Decimal("0.00"))
+    total_outstanding = Column(Numeric(15, 2), default=Decimal("0.00"))
     
-    # Relationships
-    customer = relationship("Customer", back_populates="loan_applications")
-    loan_product = relationship("LoanProduct", back_populates="applications")
-    co_applicants = relationship("LoanApplicationCoApplicant", back_populates="application")
-    documents = relationship("LoanApplicationDocument", back_populates="application")
-    workflows = relationship("LoanApprovalWorkflow", back_populates="application")
-    loan_account = relationship("LoanAccount", back_populates="application", uselist=False)
-    bank_analyses = relationship("BankStatementAnalysis", back_populates="application")
+    # Repayment Summary
+    principal_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
+    interest_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
+    total_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
     
-    # Loan type specific relationships
-    vehicle_details = relationship("VehicleLoanDetails", back_populates="loan_application", uselist=False)
-    property_details = relationship("PropertyLoanDetails", back_populates="loan_application", uselist=False)
-
-
-class LoanApplicationCoApplicant(Base):
-    """Loan Application Co-Applicants/Guarantors"""
-    __tablename__ = "loan_application_co_applicants"
+    # Status & Workflow
+    status = Column(SQLEnum(LoanStatus), nullable=False, default=LoanStatus.DRAFT, index=True)
+    submitted_date = Column(DateTime, nullable=True)
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
-    loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
-    family_member_id = Column(UUID(as_uuid=True), ForeignKey("customer_family.id"), nullable=False)  # UUID because CustomerFamily uses BaseModel
+    # Manager Approval
+    manager_approver_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id", ondelete="SET NULL"), nullable=True)
+    manager_approval_status = Column(String(20), nullable=True)  # pending, approved, rejected
+    manager_approval_date = Column(DateTime, nullable=True)
+    manager_comments = Column(Text, nullable=True)
     
-    co_applicant_type = Column(String(50), nullable=False)  # co_applicant, guarantor
-    is_primary = Column(Boolean, default=False)
-    family_relationship = Column(String(100))
-    monthly_income = Column(Numeric(15, 2))
-    occupation = Column(String(200))
+    # HR Approval
+    hr_approver_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id", ondelete="SET NULL"), nullable=True)
+    hr_approval_status = Column(String(20), nullable=True)
+    hr_approval_date = Column(DateTime, nullable=True)
+    hr_comments = Column(Text, nullable=True)
     
-    consent_given = Column(Boolean, default=False)
-    consent_date = Column(Date)
+    # Finance Approval
+    finance_approver_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id", ondelete="SET NULL"), nullable=True)
+    finance_approval_status = Column(String(20), nullable=True)
+    finance_approval_date = Column(DateTime, nullable=True)
+    finance_comments = Column(Text, nullable=True)
     
-    # Audit
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    is_deleted = Column(Boolean, default=False)
+    # Final Approval/Rejection
+    approved_date = Column(DateTime, nullable=True)
+    approved_by = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id", ondelete="SET NULL"), nullable=True)
+    rejected_date = Column(DateTime, nullable=True)
+    rejected_by = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id", ondelete="SET NULL"), nullable=True)
+    rejection_reason = Column(Text, nullable=True)
     
-    # Relationships
-    application = relationship("LoanApplication", back_populates="co_applicants")
-
-
-class LoanApplicationDocument(Base):
-    """Loan Application Documents"""
-    __tablename__ = "loan_application_documents"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
-    loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
-    document_type_id = Column(UUID(as_uuid=True), ForeignKey("document_types.id"), nullable=False)
-    customer_document_id = Column(UUID(as_uuid=True), ForeignKey("customer_documents.id"))
-    
-    document_number = Column(String(100))
-    file_path = Column(String(500))
-    file_url = Column(String(500))
-    
-    status = Column(String(50), default="pending")  # pending, verified, rejected
-    verified_by = Column(Integer)
-    verified_at = Column(DateTime(timezone=True))
-    remarks = Column(Text)
-    
-    # Audit
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    is_deleted = Column(Boolean, default=False)
-    
-    # Relationships
-    application = relationship("LoanApplication", back_populates="documents")
-
-
-class LoanApprovalWorkflow(Base):
-    """Loan Approval Workflow"""
-    __tablename__ = "loan_approval_workflows"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
-    loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False, index=True)
-    
-    approval_level = Column(Integer, nullable=False)
-    approver_role = Column(String(100), nullable=False)  # credit_officer, manager, senior_manager
-    approver_id = Column(Integer, index=True)
-    
-    status = Column(String(50), nullable=False, default="pending", index=True)
-    # pending, approved, rejected, returned, escalated
-    
-    action_date = Column(DateTime(timezone=True))
-    decision = Column(String(50))  # approve, reject, return, request_more_info
-    comments = Column(Text)
-    conditions = Column(ARRAY(String))  # Approval conditions
-    
-    # Limits
-    max_approval_amount = Column(Numeric(15, 2))
-    
-    # Audit
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    
-    # Relationships
-    application = relationship("LoanApplication", back_populates="workflows")
-
-
-class LoanAccount(Base):
-    """Active Loan Account"""
-    __tablename__ = "loan_accounts"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
-    loan_account_number = Column(String(50), unique=True, nullable=False, index=True)
-    
-    # Application Link
-    loan_application_id = Column(Integer, ForeignKey("loan_applications.id"), nullable=False)
-    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True)
-    loan_product_id = Column(Integer, ForeignKey("loan_products.id"), nullable=False)
-    
-    # Loan Details
-    sanctioned_amount = Column(Numeric(15, 2), nullable=False)
-    disbursed_amount = Column(Numeric(15, 2), nullable=False)
-    outstanding_principal = Column(Numeric(15, 2), nullable=False)
-    outstanding_interest = Column(Numeric(15, 2), nullable=False)
-    outstanding_charges = Column(Numeric(15, 2), default=0)
-    total_outstanding = Column(Numeric(15, 2), nullable=False)
-    
-    # Terms
-    tenure_months = Column(Integer, nullable=False)
-    interest_rate = Column(Numeric(5, 2), nullable=False)
-    emi_amount = Column(Numeric(15, 2), nullable=False)
-    emi_day = Column(Integer, nullable=False)  # Day of month for EMI
-    
-    # Dates
-    disbursement_date = Column(Date, nullable=False)
-    first_emi_date = Column(Date, nullable=False)
-    last_emi_date = Column(Date, nullable=False)
-    maturity_date = Column(Date, nullable=False)
-    closure_date = Column(Date)
-    
-    # Status
-    status = Column(String(50), nullable=False, default="active", index=True)
-    # active, overdue, npa, closed, settled, written_off
-    overdue_days = Column(Integer, default=0, index=True)
-    dpd = Column(Integer, default=0)  # Days Past Due
-    
-    # Collections
-    last_payment_date = Column(Date)
-    last_payment_amount = Column(Numeric(15, 2))
-    next_due_date = Column(Date)
-    next_due_amount = Column(Numeric(15, 2))
-    
-    # NPA Classification
-    npa_status = Column(String(50))  # standard, sub_standard, doubtful, loss
-    npa_date = Column(Date)
+    # Closure Details
+    closure_date = Column(Date, nullable=True)
+    closure_reason = Column(String(50), nullable=True)  # fully_paid, foreclosed, written_off
+    closure_remarks = Column(Text, nullable=True)
     
     # Prepayment
-    prepayment_allowed = Column(Boolean, default=True)
-    prepayment_charges_percentage = Column(Numeric(5, 2))
+    prepayment_allowed_after_months = Column(Integer, default=0)
+    prepayment_penalty_percentage = Column(Numeric(5, 2), default=Decimal("0.00"))
     
-    # Penal Interest
-    penal_interest_outstanding = Column(Numeric(15, 2), default=0)
+    # Bank Details (for disbursement)
+    bank_name = Column(String(100), nullable=True)
+    bank_account_number = Column(String(30), nullable=True)
+    bank_ifsc_code = Column(String(11), nullable=True)
     
-    # Accounting
-    interest_accrued = Column(Numeric(15, 2), default=0)
-    interest_received = Column(Numeric(15, 2), default=0)
-    principal_received = Column(Numeric(15, 2), default=0)
+    # Guarantor Information (optional)
+    guarantor_employee_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employees.id", ondelete="SET NULL"), nullable=True)
+    guarantor_name = Column(String(200), nullable=True)
+    guarantor_relation = Column(String(50), nullable=True)
+    guarantor_contact = Column(String(20), nullable=True)
     
-    # Notes
-    internal_notes = Column(Text)
-    
-    # Audit
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by = Column(UUID(as_uuid=True))
-    updated_by = Column(UUID(as_uuid=True))
-    is_deleted = Column(Boolean, default=False)
+    # Flags
+    is_deducting_from_salary = Column(Boolean, default=True)
+    is_overdue = Column(Boolean, default=False)
+    days_overdue = Column(Integer, default=0)
     
     # Relationships
-    application = relationship("LoanApplication", back_populates="loan_account")
-    customer = relationship("Customer", back_populates="loan_accounts")
-    loan_product = relationship("LoanProduct")
-    emi_schedules = relationship("LoanEMISchedule", back_populates="loan_account")
-    repayments = relationship("LoanRepayment", back_populates="loan_account")
-
-
-class LoanEMISchedule(Base):
-    """EMI Schedule for Loan"""
-    __tablename__ = "loan_emi_schedules"
+    employee = relationship("Employee", foreign_keys=[employee_id], back_populates="loans")
+    policy = relationship("LoanPolicy", back_populates="loans")
+    manager_approver = relationship("Employee", foreign_keys=[manager_approver_id])
+    hr_approver = relationship("Employee", foreign_keys=[hr_approver_id])
+    finance_approver = relationship("Employee", foreign_keys=[finance_approver_id])
+    guarantor = relationship("Employee", foreign_keys=[guarantor_employee_id])
     
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
-    loan_account_id = Column(Integer, ForeignKey("loan_accounts.id"), nullable=False, index=True)
+    emi_schedule = relationship("LoanEMISchedule", back_populates="loan", cascade="all, delete-orphan")
+    transactions = relationship("LoanTransaction", back_populates="loan", cascade="all, delete-orphan")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_tenant_loan_code', 'tenant_id', 'loan_code', unique=True),
+        Index('idx_tenant_loan_emp', 'tenant_id', 'employee_id', 'status'),
+        Index('idx_loan_status', 'tenant_id', 'status', 'is_deleted'),
+        Index('idx_loan_type', 'tenant_id', 'loan_type', 'status'),
+        Index('idx_loan_disbursement', 'tenant_id', 'disbursement_date'),
+    )
+    
+    def __repr__(self):
+        return f"<EmployeeLoan(code={self.loan_code}, employee_id={self.employee_id}, amount={self.loan_amount})>"
+
+
+# ============================================================================
+# EMI SCHEDULE
+# ============================================================================
+
+class LoanEMISchedule(BaseModel):
+    """
+    Loan EMI Schedule
+    Detailed repayment schedule for each installment
+    """
+    __tablename__ = "hrms_loan_emi_schedule"
+    
+    # Loan Reference
+    loan_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employee_loans.id", ondelete="CASCADE"), nullable=False)
     
     # EMI Details
-    installment_number = Column(Integer, nullable=False)
-    due_date = Column(Date, nullable=False, index=True)
+    emi_number = Column(Integer, nullable=False)  # 1, 2, 3, ...
+    emi_due_date = Column(Date, nullable=False, index=True)
     
     # Amount Breakdown
     emi_amount = Column(Numeric(15, 2), nullable=False)
     principal_component = Column(Numeric(15, 2), nullable=False)
     interest_component = Column(Numeric(15, 2), nullable=False)
     
-    # Balance
-    opening_principal = Column(Numeric(15, 2), nullable=False)
-    closing_principal = Column(Numeric(15, 2), nullable=False)
-    
-    # Payment Status
-    status = Column(String(50), nullable=False, default="pending", index=True)
-    # pending, paid, partially_paid, overdue, waived
-    
-    paid_amount = Column(Numeric(15, 2), default=0)
-    paid_principal = Column(Numeric(15, 2), default=0)
-    paid_interest = Column(Numeric(15, 2), default=0)
-    payment_date = Column(Date)
-    
-    # Overdue
-    overdue_days = Column(Integer, default=0, index=True)
-    penal_interest = Column(Numeric(15, 2), default=0)
-    
-    # Audit
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
-    # Relationships
-    loan_account = relationship("LoanAccount", back_populates="emi_schedules")
-    
-    __table_args__ = (
-        Index('idx_emi_loan_installment', 'loan_account_id', 'installment_number', unique=True),
-    )
-
-
-class LoanRepayment(Base):
-    """Loan Repayment/Payment"""
-    __tablename__ = "loan_repayments"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False)
-    loan_account_id = Column(Integer, ForeignKey("loan_accounts.id"), nullable=False, index=True)
-    
-    receipt_number = Column(String(50), unique=True, nullable=False, index=True)
+    # Outstanding Before Payment
+    opening_principal_balance = Column(Numeric(15, 2), nullable=False)
+    closing_principal_balance = Column(Numeric(15, 2), nullable=False)
     
     # Payment Details
-    payment_date = Column(Date, nullable=False, index=True)
-    payment_amount = Column(Numeric(15, 2), nullable=False)
-    payment_mode = Column(String(50), nullable=False)  # cash, cheque, neft, rtgs, upi
-    
-    # Allocation
-    allocated_to_principal = Column(Numeric(15, 2), nullable=False)
-    allocated_to_interest = Column(Numeric(15, 2), nullable=False)
-    allocated_to_penal_interest = Column(Numeric(15, 2), default=0)
-    allocated_to_charges = Column(Numeric(15, 2), default=0)
-    
-    # Reference
-    reference_number = Column(String(100))
-    bank_name = Column(String(200))
-    transaction_date = Column(Date)
+    payment_date = Column(Date, nullable=True)
+    amount_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
+    principal_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
+    interest_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
     
     # Status
-    status = Column(String(50), nullable=False, default="success")
-    # success, pending, failed, reversed
-    reversal_reason = Column(Text)
-    reversed_at = Column(DateTime(timezone=True))
-    reversed_by = Column(Integer)
+    status = Column(SQLEnum(EMIStatus), nullable=False, default=EMIStatus.PENDING, index=True)
+    is_overdue = Column(Boolean, default=False)
+    days_overdue = Column(Integer, default=0)
+    penalty_amount = Column(Numeric(15, 2), default=Decimal("0.00"))
     
-    # Receipt
-    receipt_generated = Column(Boolean, default=False)
-    receipt_url = Column(String(500))
+    # Payment Reference
+    payment_reference = Column(String(100), nullable=True)
+    payroll_run_id = Column(UUID(as_uuid=True), nullable=True)  # Link to payroll if deducted from salary
+    transaction_id = Column(UUID(as_uuid=True), nullable=True)
     
-    # EMI Links
-    emi_schedule_ids = Column(ARRAY(Integer))  # Which EMIs this payment covers
+    # Waiver
+    is_waived = Column(Boolean, default=False)
+    waived_amount = Column(Numeric(15, 2), default=Decimal("0.00"))
+    waiver_reason = Column(Text, nullable=True)
+    waived_by = Column(UUID(as_uuid=True), nullable=True)
+    waived_date = Column(DateTime, nullable=True)
     
-    # Notes
-    remarks = Column(Text)
-    collected_by = Column(Integer)
-    
-    # Audit
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    created_by = Column(UUID(as_uuid=True))
+    # Remarks
+    remarks = Column(Text, nullable=True)
     
     # Relationships
-    loan_account = relationship("LoanAccount", back_populates="repayments")
+    loan = relationship("EmployeeLoan", back_populates="emi_schedule")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_tenant_emi_loan', 'tenant_id', 'loan_id', 'emi_number'),
+        Index('idx_emi_due_date', 'tenant_id', 'emi_due_date', 'status'),
+        Index('idx_emi_status', 'tenant_id', 'status', 'is_overdue'),
+    )
+    
+    def __repr__(self):
+        return f"<LoanEMISchedule(loan_id={self.loan_id}, emi_number={self.emi_number}, due_date={self.emi_due_date})>"
 
 
-# Create indexes
-Index('idx_loan_products_tenant', LoanProduct.tenant_id)
-Index('idx_loan_products_type', LoanProduct.product_type)
-Index('idx_applications_tenant', LoanApplication.tenant_id)
-Index('idx_applications_customer', LoanApplication.customer_id)
-Index('idx_loan_accounts_tenant', LoanAccount.tenant_id)
-Index('idx_loan_accounts_customer', LoanAccount.customer_id)
+# ============================================================================
+# LOAN TRANSACTIONS
+# ============================================================================
+
+class LoanTransaction(BaseModel):
+    """
+    Loan Transaction History
+    Records all financial transactions related to the loan
+    """
+    __tablename__ = "hrms_loan_transactions"
+    
+    # Transaction Identification
+    transaction_code = Column(String(50), nullable=False, index=True)
+    
+    # Loan Reference
+    loan_id = Column(UUID(as_uuid=True), ForeignKey("hrms_employee_loans.id", ondelete="CASCADE"), nullable=False)
+    emi_schedule_id = Column(UUID(as_uuid=True), ForeignKey("hrms_loan_emi_schedule.id", ondelete="SET NULL"), nullable=True)
+    
+    # Transaction Details
+    transaction_type = Column(SQLEnum(TransactionType), nullable=False, index=True)
+    transaction_date = Column(Date, nullable=False, index=True)
+    
+    # Amount Details
+    transaction_amount = Column(Numeric(15, 2), nullable=False)
+    principal_amount = Column(Numeric(15, 2), default=Decimal("0.00"))
+    interest_amount = Column(Numeric(15, 2), default=Decimal("0.00"))
+    penalty_amount = Column(Numeric(15, 2), default=Decimal("0.00"))
+    
+    # Balances After Transaction
+    principal_outstanding = Column(Numeric(15, 2), nullable=False)
+    interest_outstanding = Column(Numeric(15, 2), nullable=False)
+    total_outstanding = Column(Numeric(15, 2), nullable=False)
+    
+    # Payment Details
+    payment_mode = Column(String(20), nullable=True)  # salary_deduction, bank_transfer, cash, cheque
+    payment_reference = Column(String(100), nullable=True)
+    payroll_run_id = Column(UUID(as_uuid=True), nullable=True)  # If deducted from payroll
+    
+    # Reversal
+    is_reversed = Column(Boolean, default=False)
+    reversed_by_transaction_id = Column(UUID(as_uuid=True), nullable=True)
+    reversal_reason = Column(Text, nullable=True)
+    reversal_date = Column(DateTime, nullable=True)
+    
+    # Remarks
+    remarks = Column(Text, nullable=True)
+    processed_by = Column(UUID(as_uuid=True), nullable=True)
+    
+    # Relationships
+    loan = relationship("EmployeeLoan", back_populates="transactions")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_tenant_txn_code', 'tenant_id', 'transaction_code', unique=True),
+        Index('idx_txn_loan', 'tenant_id', 'loan_id', 'transaction_date'),
+        Index('idx_txn_type', 'tenant_id', 'transaction_type', 'transaction_date'),
+    )
+    
+    def __repr__(self):
+        return f"<LoanTransaction(code={self.transaction_code}, type={self.transaction_type}, amount={self.transaction_amount})>"
