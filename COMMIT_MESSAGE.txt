@@ -20,6 +20,10 @@ CHANGES:
 
 4. Dependencies:
    - Added jinja2==3.1.2 to requirements.txt (required for notification templates)
+   - Added jinja2==3.1.2 to requirements.render.txt (Render deployment file)
+
+5. Pydantic v2 Compatibility:
+   - Fixed Field(regex=) → Field(pattern=) in loan_schemas.py and exit_schemas.py
 
 FIXES:
 - ImportError: cannot import name 'LoanAccount' from loan_models ✅
@@ -27,9 +31,9 @@ FIXES:
 - ImportError: cannot import name 'Notification' ✅
 - ModuleNotFoundError: No module named 'jinja2' ✅
 
-FILES MODIFIED: 7
+FILES MODIFIED: 10
 - Created: hrms_loan_models.py
-- Modified: loan_models.py, main.py, dashboard/router.py, hrms/loan_service.py, notification_models.py, requirements.txt
+- Modified: loan_models.py, main.py, dashboard/router.py, hrms/loan_service.py, notification_models.py, requirements.txt, requirements.render.txt, hrms/loan_schemas.py, hrms/schemas/exit_schemas.py (Pydantic v2 compatibility)
 
 DEPLOYMENT: Ready for production deployment on Render
 NO DATABASE MIGRATION NEEDED: Python-only changes

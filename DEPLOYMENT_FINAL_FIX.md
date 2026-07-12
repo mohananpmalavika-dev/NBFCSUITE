@@ -39,7 +39,9 @@ Jinja2 is required by the notification service for template rendering.
 ### Issue 3: Missing Python Package ✅ FIXED
 **Error:** `ModuleNotFoundError: No module named 'jinja2'`
 
-**Solution:** Added `jinja2==3.1.2` to `backend/requirements.txt`
+**Solution:** 
+- Added `jinja2==3.1.2` to `backend/requirements.txt`
+- Added `jinja2==3.1.2` to `backend/requirements.render.txt` (used by Render deployment)
 
 ---
 
@@ -55,6 +57,7 @@ Jinja2 is required by the notification service for template rendering.
 5. ✅ `backend/services/hrms/loan_service.py` - Updated imports to hrms_loan_models
 6. ✅ `backend/shared/database/notification_models.py` - Added 11 missing models
 7. ✅ `backend/requirements.txt` - Added jinja2 dependency
+8. ✅ `backend/requirements.render.txt` - Added jinja2 dependency (Render uses this file!)
 
 ---
 

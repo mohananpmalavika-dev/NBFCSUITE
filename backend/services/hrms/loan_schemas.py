@@ -193,7 +193,7 @@ class LoanApplicationUpdate(BaseModel):
 
 class LoanApprovalAction(BaseModel):
     """Approve or reject loan"""
-    action: str = Field(..., regex="^(approve|reject)$")
+    action: str = Field(..., pattern="^(approve|reject)$")
     comments: Optional[str] = Field(None, max_length=1000)
     approved_amount: Optional[Decimal] = None  # Can approve lesser amount
     approved_tenure: Optional[int] = None  # Can modify tenure
@@ -202,7 +202,7 @@ class LoanApprovalAction(BaseModel):
 class LoanDisbursementRequest(BaseModel):
     """Disburse approved loan"""
     disbursement_date: date
-    disbursement_mode: str = Field(..., regex="^(bank_transfer|cheque|cash)$")
+    disbursement_mode: str = Field(..., pattern="^(bank_transfer|cheque|cash)$")
     disbursement_reference: Optional[str] = None
     disbursed_amount: Optional[Decimal] = None  # If different from approved
     repayment_start_date: date
@@ -299,7 +299,7 @@ class LoanListItem(BaseModel):
 
 class LoanTransactionCreate(BaseModel):
     """Create loan transaction (prepayment, adjustment)"""
-    transaction_type: str = Field(..., regex="^(prepayment|adjustment|waiver)$")
+    transaction_type: str = Field(..., pattern="^(prepayment|adjustment|waiver)$")
     transaction_amount: Decimal = Field(..., gt=0)
     transaction_date: date
     payment_mode: Optional[str] = None
@@ -338,7 +338,7 @@ class LoanTransactionResponse(BaseModel):
 class LoanClosureRequest(BaseModel):
     """Close loan (foreclosure)"""
     closure_date: date
-    closure_reason: str = Field(..., regex="^(fully_paid|foreclosed|written_off)$")
+    closure_reason: str = Field(..., pattern="^(fully_paid|foreclosed|written_off)$")
     settlement_amount: Optional[Decimal] = None
     waiver_amount: Optional[Decimal] = None
     closure_remarks: Optional[str] = None
