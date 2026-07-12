@@ -3,7 +3,7 @@
  * API client for lead management operations
  */
 
-import api from './api';
+import { apiClient as api } from '@/lib/api-client';
 import {
   Lead,
   LeadCreate,

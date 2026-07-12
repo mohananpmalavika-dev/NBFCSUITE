@@ -3,7 +3,7 @@
  * API client for campaign management, segmentation, and landing pages
  */
 
-import api from './api';
+import { apiClient as api } from '@/lib/api-client';
 
 // ============================================================================
 // TYPES

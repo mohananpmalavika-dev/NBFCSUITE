@@ -3,7 +3,7 @@
  * API client for document management operations
  */
 
-import api from './api';
+import { apiClient as api } from '@/lib/api-client';
 import {
   Document,
   DocumentCreate,

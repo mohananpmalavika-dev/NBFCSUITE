@@ -3,7 +3,7 @@
  * API client for account, contact, and relationship operations
  */
 
-import api from './api';
+import { apiClient as api } from '@/lib/api-client';
 
 // ============================================================================
 // TYPES
