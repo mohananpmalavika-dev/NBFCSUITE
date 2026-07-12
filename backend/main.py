@@ -147,6 +147,13 @@ from backend.shared.database.recruitment_models import (
     Onboarding, BackgroundVerification
 )
 
+# 32. Inventory & Store Management models (NEW - Inventory Module)
+from backend.shared.database.inventory_models import (
+    ItemMaster, StockTransaction, StockLedger,
+    StockVerification, StockVerificationItem,
+    InventoryValuation, InventoryValuationItem
+)
+
 # 16. Attendance & Leave Management models (NEW - HRMS Attendance Module)
 from backend.shared.database.attendance_models import (
     Shift, EmployeeShift, Attendance, BiometricLog, AttendanceRegularization,
@@ -197,10 +204,72 @@ from backend.shared.database.crm_lead_models import (
     Lead, LeadFollowUp, LeadActivity, LeadScoringRule, LeadAssignmentRule
 )
 
-# 24. Property & Rent Management models (NEW - Property Master, Lease, Rent Collection, Utilities, Space Allocation)
+# 24. CRM Opportunity Management models (NEW - Sales Pipeline, Stage Tracking, Win/Loss Analysis)
+from backend.shared.database.crm_opportunity_models import (
+    CRMOpportunity, CRMOpportunityProduct, CRMOpportunityActivity, CRMPipelineStageConfig
+)
+
+# 24b. CRM Account Management models (NEW - Account 360, Contact Management, Relationship Tracking)
+from backend.shared.database.crm_account_models import (
+    CRMAccount, CRMContact, CRMAccountRelationship, CRMActivity
+)
+
+# 24c. CRM Marketing Automation models (NEW - Campaign Management, Segmentation, Landing Pages)
+from backend.shared.database.crm_marketing_models import (
+    MarketingCampaign, CustomerSegment, SegmentMember, LandingPage,
+    CampaignExecution, LandingPageSubmission, CampaignTemplate
+)
+
+# 24d. CRM Sales Automation models (NEW - Product Catalog, Quote Generation, Order Management)
+from backend.shared.database.crm_sales_models import (
+    Product, Quote, QuoteItem, Order, OrderItem
+)
+
+# 25. Property & Rent Management models (NEW - Property Master, Lease, Rent Collection, Utilities, Space Allocation)
 from backend.shared.database.property_rent_models import (
     Property, PropertySpace, Lease, SpaceAllocation, RentPayment,
     UtilityBill, PropertyMaintenance
+)
+
+# 26. Notification System models (NEW - Automated Email/SMS Notifications for Rent & Lease)
+from backend.shared.database.notification_models import (
+    NotificationTemplate, NotificationLog, NotificationPreference,
+    NotificationSchedule, NotificationQueue
+)
+
+# 27. Legal Contract Management models (NEW - Contract Repository, Lifecycle, Renewal, Version Control)
+from backend.shared.database.legal_models import (
+    Contract, ContractVersion, ContractRenewal, ContractDocument,
+    ContractParty, ContractTemplate,
+    LitigationCase, CaseHearing, LegalExpense, CaseParty, CaseDocument
+)
+
+# 28. Legal License Management models (NEW - License Register, Renewal Reminders, Compliance Tracking)
+from backend.services.legal.license_models import (
+    License, LicenseRenewal, LicenseComplianceCheck, LicenseDocument, LicenseReminder
+)
+
+# 29. CRM Customer Service models (NEW - Ticket Management, Knowledge Base, SLA Tracking)
+from backend.shared.database.crm_service_models import (
+    Ticket, TicketComment, TicketAttachment,
+    KnowledgeArticle, ArticleAttachment,
+    SLA, SLAViolation
+)
+
+# 30. Document Management System (DMS) models (NEW - Complete DMS with Version Control, Workflows, E-Signatures)
+from backend.shared.database.dms_models import (
+    Document, DocumentVersion, DocumentWorkflow, WorkflowTemplate,
+    DocumentApproval, DocumentPermission, DocumentSignature,
+    DocumentComment, DocumentAuditLog
+)
+
+# 31. Facility & Administration Management models (NEW - Building, Housekeeping, Cafeteria, Transport, Visitor Management)
+from backend.shared.database.facility_models import (
+    Building, Floor, Room,
+    HousekeepingTask, HousekeepingSupply,
+    CafeteriaMenu, CafeteriaOrder, CafeteriaOrderItem, CafeteriaInventory,
+    Vehicle, Trip, VehicleMaintenance,
+    Visitor, VisitorGroup
 )
 
 # Configure logging
@@ -393,10 +462,27 @@ async def lifespan(app: FastAPI):
     logger.info("✅ Database connection ready")
     logger.info("✅ Application startup complete")
     
+    # Start license reminder scheduler
+    try:
+        from backend.services.legal.license_scheduler import license_scheduler
+        license_scheduler.start()
+        logger.info("✅ License reminder scheduler started")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not start license scheduler: {e}")
+    
     yield
     
     # Shutdown
     logger.info("🛑 Shutting down NBFC Financial Suite API...")
+    
+    # Stop license scheduler
+    try:
+        from backend.services.legal.license_scheduler import license_scheduler
+        license_scheduler.stop()
+        logger.info("✅ License reminder scheduler stopped")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not stop license scheduler: {e}")
+    
     await engine.dispose()
     logger.info("✅ Application shutdown complete")
 
@@ -447,12 +533,25 @@ app = FastAPI(
         {"name": "HRMS - Training & Development", "description": "Training calendar, courses, sessions, assessments, certifications, LMS integration, skill matrix"},
         {"name": "HRMS - Performance Management", "description": "Goal setting (KRA/KPI), appraisal cycles, 360-degree feedback, ratings & increment, Individual Development Plans (IDP)"},
         {"name": "HRMS - Exit Management", "description": "Resignation workflow, clearance process, full & final settlement, experience/relieving letters"},
+        {"name": "CRM - Lead Management", "description": "Multi-channel lead capture, intelligent scoring, assignment & routing, follow-up tracking"},
+        {"name": "CRM - Opportunity Management", "description": "Sales pipeline, stage-wise tracking, win/loss analysis, revenue forecasting"},
+        {"name": "CRM - Account Management", "description": "Account 360 view, contact management, relationship tracking, business metrics"},
+        {"name": "CRM - Marketing Automation", "description": "Campaign management, email/SMS campaigns, landing pages, customer segmentation"},
         {"name": "Property Management - Properties", "description": "Property master data, ownership details, amenities, and valuations"},
         {"name": "Property Management - Leases", "description": "Lease agreements, tenant management, and contract tracking"},
         {"name": "Property Management - Rent Collection", "description": "Rent payment tracking, receipts, and outstanding management"},
         {"name": "Property Management - Utilities", "description": "Utility bill management (electricity, water, gas) and tenant allocation"},
         {"name": "Property Management - Spaces", "description": "Space/unit management, allocation, and occupancy tracking"},
         {"name": "Property Management - Maintenance", "description": "Property maintenance requests, vendor management, and service tracking"},
+        {"name": "Notifications - Property Management", "description": "Automated Email/SMS notifications for rent due, lease expiry, and payment alerts"},
+        {"name": "Legal - Contract Management", "description": "Contract repository, lifecycle management, renewal tracking, and version control"},
+        {"name": "Legal - Litigation Management", "description": "Case tracking, hearing management, and legal expense tracking"},
+        {"name": "Legal - License Management", "description": "License register, renewal reminders, and compliance tracking"},
+        {"name": "Facility - Building Management", "description": "Building, floor, and room management with amenities tracking"},
+        {"name": "Facility - Housekeeping", "description": "Housekeeping task scheduling, assignment, and supply inventory management"},
+        {"name": "Facility - Cafeteria", "description": "Menu management, order processing, and cafeteria inventory tracking"},
+        {"name": "Facility - Transport", "description": "Vehicle management, trip scheduling, and maintenance tracking"},
+        {"name": "Facility - Visitor Management", "description": "Visitor registration, check-in/out, passes, and security tracking"},
     ]
 )
 
@@ -801,6 +900,9 @@ from backend.services.attendance.leave_router import router as leave_router
 # NEW: HRMS Payroll Management Router
 from backend.services.payroll.payroll_router import router as payroll_router
 
+# NEW: Inventory & Store Management Router
+from backend.services.inventory.router import router as inventory_router
+
 # NEW: Reporting & Analytics Module (100+ Reports, Dashboards, Predictive Analytics)
 from backend.services.reporting import (
     template_router as reporting_template_router,
@@ -812,6 +914,36 @@ from backend.services.reporting import (
 
 # NEW: CRM Lead Management Module (Multi-channel Capture, Scoring, Assignment, Follow-up Tracking)
 from backend.services.crm.router import router as crm_router
+
+# NEW: CRM Opportunity Management Module (Sales Pipeline, Stage Tracking, Win/Loss Analysis)
+from backend.crm.routes.opportunity_routes import router as crm_opportunity_router
+
+# NEW: CRM Sales Automation Module (Product Catalog, Quote Generation, Order Management)
+from backend.crm.routes.sales_routes import (
+    product_router, quote_router, order_router
+)
+
+# NEW: CRM Customer Service Module (Ticket Management, Knowledge Base, SLA Tracking)
+from backend.crm.routes.service_routes import (
+    ticket_router, knowledge_router, sla_router
+)
+
+# NEW: Legal Contract Management Module (Contract Repository, Lifecycle, Renewal, Version Control)
+from backend.services.legal.router import router as legal_contract_router
+from backend.services.legal.litigation_router import router as litigation_router
+from backend.services.legal.license_router import router as license_router
+
+# NEW: Document Management System (DMS) Module (Complete DMS with Version Control, Workflows, E-Signatures)
+from backend.services.dms.router import router as dms_router
+
+# NEW: Facility & Administration Management Module (Building, Housekeeping, Cafeteria, Transport, Visitor Management)
+from backend.services.facility import (
+    building_router,
+    housekeeping_router,
+    cafeteria_router,
+    transport_router,
+    visitor_router
+)
 
 # Register routers
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
@@ -1024,6 +1156,42 @@ app.include_router(reporting_builder_router, prefix="/api/v1", tags=["Reporting 
 app.include_router(crm_router, tags=["CRM - Lead Management"])
 
 # ============================================================================
+# NEW: CRM OPPORTUNITY MANAGEMENT MODULE
+# Sales Pipeline, Stage-wise Tracking, Win/Loss Analysis, Revenue Forecasting
+# ============================================================================
+app.include_router(crm_opportunity_router, tags=["CRM - Opportunity Management"])
+
+# ============================================================================
+# NEW: CRM ACCOUNT MANAGEMENT MODULE
+# Account 360 View, Contact Management, Relationship Tracking
+# ============================================================================
+from backend.crm.routes.account_routes import router as crm_account_router
+app.include_router(crm_account_router, prefix="/api/v1", tags=["CRM - Account Management"])
+
+# ============================================================================
+# NEW: CRM MARKETING AUTOMATION MODULE
+# Campaign Management, Email/SMS Campaigns, Landing Pages, Segmentation
+# ============================================================================
+from backend.crm.routes.marketing_routes import router as crm_marketing_router
+app.include_router(crm_marketing_router, prefix="/api/v1", tags=["CRM - Marketing Automation"])
+
+# ============================================================================
+# NEW: CRM SALES AUTOMATION MODULE
+# Product Catalog, Quote Generation, Order Management
+# ============================================================================
+app.include_router(product_router, prefix="/api/v1", tags=["CRM - Product Catalog"])
+app.include_router(quote_router, prefix="/api/v1", tags=["CRM - Quote Generation"])
+app.include_router(order_router, prefix="/api/v1", tags=["CRM - Order Management"])
+
+# ============================================================================
+# NEW: CRM CUSTOMER SERVICE MODULE
+# Ticket Management, Knowledge Base, SLA Tracking
+# ============================================================================
+app.include_router(ticket_router, prefix="/api/v1", tags=["CRM - Ticket Management"])
+app.include_router(knowledge_router, prefix="/api/v1", tags=["CRM - Knowledge Base"])
+app.include_router(sla_router, prefix="/api/v1", tags=["CRM - SLA Management"])
+
+# ============================================================================
 # NEW: PROPERTY & RENT MANAGEMENT MODULE
 # Property Master, Lease Tracking, Rent Collection, Utilities, Space Allocation, Maintenance
 # ============================================================================
@@ -1041,6 +1209,59 @@ app.include_router(rent_router, tags=["Property Management - Rent Collection"])
 app.include_router(utility_router, tags=["Property Management - Utilities"])
 app.include_router(space_router, tags=["Property Management - Spaces"])
 app.include_router(maintenance_router, tags=["Property Management - Maintenance"])
+
+# ============================================================================
+# NEW: NOTIFICATION SYSTEM MODULE
+# Automated Email/SMS Notifications for Rent Due, Lease Expiry, Payment Alerts
+# ============================================================================
+from backend.services.notifications import notification_router
+app.include_router(notification_router, tags=["Notifications - Property Management"])
+
+# ============================================================================
+# NEW: LEGAL CONTRACT MANAGEMENT MODULE
+# Contract Repository, Lifecycle Management, Renewal Tracking, Version Control
+# ============================================================================
+app.include_router(legal_contract_router, tags=["Legal - Contract Management"])
+
+# ============================================================================
+# NEW: LEGAL LITIGATION MANAGEMENT MODULE
+# Case Tracking, Hearing Management, Legal Expense Tracking
+# ============================================================================
+app.include_router(litigation_router, tags=["Legal - Litigation Management"])
+
+# ============================================================================
+# NEW: LEGAL LICENSE MANAGEMENT MODULE
+# License Register, Renewal Reminders, Compliance Tracking
+# ============================================================================
+app.include_router(license_router, tags=["Legal - License Management"])
+
+# ============================================================================
+# NEW: DOCUMENT MANAGEMENT SYSTEM (DMS) MODULE
+# Document Repository, Version Control, Workflow & Approvals, E-Signature, Secure Storage
+# ============================================================================
+app.include_router(dms_router, prefix="/api/v1", tags=["Document Management"])
+
+# ============================================================================
+# NEW: FACILITY & ADMINISTRATION MANAGEMENT MODULE
+# Building Management, Housekeeping, Cafeteria, Transport, Visitor Management
+# ============================================================================
+app.include_router(building_router, prefix="/api/v1", tags=["Facility - Building Management"])
+app.include_router(housekeeping_router, prefix="/api/v1", tags=["Facility - Housekeeping"])
+app.include_router(cafeteria_router, prefix="/api/v1", tags=["Facility - Cafeteria"])
+app.include_router(transport_router, prefix="/api/v1", tags=["Facility - Transport"])
+app.include_router(visitor_router, prefix="/api/v1", tags=["Facility - Visitor Management"])
+
+# ============================================================================
+# NEW: INVENTORY & STORE MANAGEMENT MODULE
+# Item Master, Stock Transactions, Stock Verification, Inventory Valuation
+# ============================================================================
+app.include_router(inventory_router, prefix="/api/v1", tags=["Inventory & Store Management"])
+# ============================================================================
+app.include_router(building_router, prefix="/api/v1", tags=["Facility - Building Management"])
+app.include_router(housekeeping_router, prefix="/api/v1", tags=["Facility - Housekeeping"])
+app.include_router(cafeteria_router, prefix="/api/v1", tags=["Facility - Cafeteria"])
+app.include_router(transport_router, prefix="/api/v1", tags=["Facility - Transport"])
+app.include_router(visitor_router, prefix="/api/v1", tags=["Facility - Visitor Management"])
 
 # Bank Statement Analysis (Perfios/FinBox)
 app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])

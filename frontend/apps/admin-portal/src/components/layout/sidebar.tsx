@@ -20,7 +20,10 @@ import {
   Shield,
   AlertTriangle,
   Activity,
-  FileText
+  FileText,
+  Building,
+  Headphones,
+  FileCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -74,6 +77,20 @@ const navigationItems = [
     title: 'Collections',
     href: '/collections',
     icon: TrendingUp,
+  },
+  {
+    title: 'CRM',
+    href: '/crm',
+    icon: Headphones,
+    children: [
+      { title: 'Dashboard', href: '/crm' },
+      { title: 'Accounts', href: '/crm/accounts' },
+      { title: 'Contacts', href: '/crm/contacts' },
+      { title: 'Relationships', href: '/crm/relationships' },
+      { title: 'Leads', href: '/crm/leads' },
+      { title: 'Opportunities', href: '/crm/opportunities' },
+      { title: 'Marketing Automation', href: '/crm/marketing' },
+    ],
   },
   {
     title: 'Treasury',
@@ -160,6 +177,17 @@ const navigationItems = [
       { title: 'Utilities', href: '/property-management/utilities' },
       { title: 'Spaces', href: '/property-management/spaces' },
       { title: 'Maintenance', href: '/property-management/maintenance' },
+      { title: 'Notifications', href: '/property-management/notifications' },
+      { title: 'Notification History', href: '/property-management/notifications/history' },
+    ],
+  },
+  {
+    title: 'Legal',
+    href: '/legal',
+    icon: FileCheck,
+    children: [
+      { title: 'Contracts', href: '/legal/contracts' },
+      { title: 'New Contract', href: '/legal/contracts/new' },
     ],
   },
   {

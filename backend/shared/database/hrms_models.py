@@ -2001,3 +2001,13 @@ class ExitDocument(BaseModel):
 
 # Add these relationships to Employee model
 Employee.resignations = relationship("Resignation", foreign_keys="Resignation.employee_id", back_populates="employee", lazy="select")
+
+
+# ============================================================================
+# UPDATE EMPLOYEE MODEL WITH PROJECT MANAGEMENT RELATIONSHIPS
+# ============================================================================
+
+# Project Management Relationships - These will be added when project_management_models is imported
+# Employee.assigned_tasks = relationship("Task", foreign_keys="Task.assigned_to_id", back_populates="assigned_to", lazy="select")
+# Employee.time_entries = relationship("TimeEntry", foreign_keys="TimeEntry.employee_id", back_populates="employee", lazy="select")
+# Employee.resource_allocations = relationship("ResourceAllocation", foreign_keys="ResourceAllocation.employee_id", back_populates="employee", lazy="select")
