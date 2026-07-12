@@ -88,7 +88,7 @@ class FollowUpType(str, Enum):
 # LEAD MODEL
 # ============================================================================
 
-class Lead(Base):
+class Lead(Base, TenantMixin, TimestampMixin):
     """
     CRM Lead Management
     Captures leads from multiple channels with scoring and assignment
