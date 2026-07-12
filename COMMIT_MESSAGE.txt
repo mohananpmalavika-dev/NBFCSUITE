@@ -1,0 +1,35 @@
+Fix: Resolve all deployment import errors and missing dependencies
+
+BREAKING CHANGES:
+- Separated HRMS and NBFC loan models into distinct files
+
+CHANGES:
+1. Model Separation:
+   - Created backend/shared/database/hrms_loan_models.py for HRMS employee loans
+   - Recreated backend/shared/database/loan_models.py with NBFC loan models
+   - Added missing NBFC models: LoanAccount, LoanApplication, LoanApprovalWorkflow, LoanRepayment, etc.
+
+2. Import Fixes:
+   - Updated backend/main.py to import HRMS models from correct location
+   - Fixed backend/services/dashboard/router.py to use NBFC models
+   - Updated backend/services/hrms/loan_service.py imports
+
+3. Notification Models:
+   - Added 11 missing models to notification_models.py
+   - Includes: Notification, NotificationAnalytics, DLT models, etc.
+
+4. Dependencies:
+   - Added jinja2==3.1.2 to requirements.txt (required for notification templates)
+
+FIXES:
+- ImportError: cannot import name 'LoanAccount' from loan_models ✅
+- ImportError: cannot import name 'LoanApprovalWorkflow' ✅
+- ImportError: cannot import name 'Notification' ✅
+- ModuleNotFoundError: No module named 'jinja2' ✅
+
+FILES MODIFIED: 7
+- Created: hrms_loan_models.py
+- Modified: loan_models.py, main.py, dashboard/router.py, hrms/loan_service.py, notification_models.py, requirements.txt
+
+DEPLOYMENT: Ready for production deployment on Render
+NO DATABASE MIGRATION NEEDED: Python-only changes
