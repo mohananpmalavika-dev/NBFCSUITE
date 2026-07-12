@@ -534,8 +534,8 @@ class DocumentAuditLog(BaseModel):
     old_values = Column(JSONB, nullable=True)
     new_values = Column(JSONB, nullable=True)
     
-    # Metadata
-    metadata = Column(JSONB, nullable=True)  # Additional context
+    # Additional Data
+    additional_data = Column(JSONB, nullable=True)  # Additional context (renamed from metadata to avoid SQLAlchemy conflict)
     
     # Timestamp
     timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)

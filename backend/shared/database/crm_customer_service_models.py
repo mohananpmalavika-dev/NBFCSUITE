@@ -243,7 +243,7 @@ class TicketActivity(Base):
     description = Column(Text, nullable=False)
     old_value = Column(Text)
     new_value = Column(Text)
-    metadata = Column(JSON)  # Additional context
+    additional_data = Column(JSON)  # Additional context (renamed from metadata to avoid SQLAlchemy conflict)
     
     # Audit
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)

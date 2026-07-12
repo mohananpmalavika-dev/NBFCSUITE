@@ -88,7 +88,7 @@ class FollowUpType(str, Enum):
 # LEAD MODEL
 # ============================================================================
 
-class Lead(Base, TenantMixin, TimestampMixin):
+class Lead(Base):
     """
     CRM Lead Management
     Captures leads from multiple channels with scoring and assignment
@@ -174,7 +174,7 @@ class Lead(Base, TenantMixin, TimestampMixin):
     referrer_url = Column(String(500), nullable=True)
     ip_address = Column(String(50), nullable=True)
     user_agent = Column(String(500), nullable=True)
-    metadata = Column(JSON, nullable=True)
+    additional_data = Column(JSON, nullable=True)  # Renamed from metadata to avoid SQLAlchemy conflict
     
     # Audit Fields
     is_active = Column(Boolean, default=True, index=True)
@@ -297,7 +297,7 @@ class LeadActivity(Base, TenantMixin, TimestampMixin):
     new_value = Column(JSON, nullable=True)
     
     # Additional Context
-    metadata = Column(JSON, nullable=True)
+    additional_data = Column(JSON, nullable=True)  # Renamed from metadata to avoid SQLAlchemy conflict
     is_system_generated = Column(Boolean, default=False)
     
     # Relationships
