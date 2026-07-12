@@ -2,6 +2,7 @@
   "name": "@nbfc-suite/admin-portal",
   "version": "2.0.0",
   "private": true,
+  "version": "2.0.1",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "node check-env.js && node build-next.js",
