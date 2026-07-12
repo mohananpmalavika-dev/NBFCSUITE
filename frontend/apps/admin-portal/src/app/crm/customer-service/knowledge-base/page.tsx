@@ -55,11 +55,11 @@ export default function KnowledgeBasePage() {
         page_size: pagination.pageSize
       });
 
-      setArticles(response.articles);
+      setArticles(response.articles || []);
       setPagination({
         ...pagination,
-        total: response.total,
-        totalPages: response.total_pages
+        total: response.total || 0,
+        totalPages: response.total_pages || 0
       });
     } catch (error) {
       toast({
@@ -83,10 +83,10 @@ export default function KnowledgeBasePage() {
     try {
       setLoading(true);
       const response = await customerServiceApi.searchKnowledgeBase(searchQuery, selectedCategory);
-      setArticles(response.articles);
+      setArticles(response.articles || []);
       setPagination({
         ...pagination,
-        total: response.total,
+        total: response.total || 0,
         totalPages: 1
       });
     } catch (error) {

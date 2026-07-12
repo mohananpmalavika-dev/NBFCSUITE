@@ -7,7 +7,7 @@ from sqlalchemy import Column, String, Integer, Text, DateTime, Boolean, Foreign
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
-from backend.shared.database.base import Base
+from backend.shared.database.models import Base
 
 
 # ==================== ENUMS ====================

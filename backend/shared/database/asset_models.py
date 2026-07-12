@@ -8,7 +8,7 @@ from decimal import Decimal
 from enum import Enum
 from sqlalchemy import Column, Integer, String, Numeric, DateTime, Date, Boolean, Text, ForeignKey, Index, Enum as SQLEnum
 from sqlalchemy.orm import relationship
-from backend.shared.database.base import Base
+from backend.shared.database.models import Base
 
 
 class AssetCategory(str, Enum):

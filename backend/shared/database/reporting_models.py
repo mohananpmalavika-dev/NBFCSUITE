@@ -13,7 +13,7 @@ from datetime import datetime
 import uuid
 import enum
 
-from backend.shared.database.base import BaseModel
+from backend.shared.database.models import BaseModel
 
 
 # ============================================

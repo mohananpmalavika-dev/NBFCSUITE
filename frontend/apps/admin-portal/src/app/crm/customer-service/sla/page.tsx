@@ -36,7 +36,7 @@ export default function SLAManagementPage() {
     try {
       setLoading(true);
       const data = await customerServiceApi.listSLAPolicies();
-      setPolicies(data);
+      setPolicies(Array.isArray(data) ? data : []);
     } catch (error) {
       toast({
         title: "Error",
@@ -51,7 +51,15 @@ export default function SLAManagementPage() {
   const fetchMetrics = async () => {
     try {
       const data = await customerServiceApi.getSLAMetrics();
-      setMetrics(data);
+      setMetrics(data || {
+        total_tickets: 0,
+        within_sla: 0,
+        approaching_breach: 0,
+        breached: 0,
+        average_first_response_time: 0,
+        average_resolution_time: 0,
+        sla_compliance_rate: 0
+      });
     } catch (error) {
       console.error("Failed to fetch SLA metrics", error);
     }

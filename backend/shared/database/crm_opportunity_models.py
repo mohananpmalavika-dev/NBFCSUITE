@@ -10,7 +10,7 @@ from datetime import datetime
 import uuid
 import enum
 
-from backend.shared.database.base import Base
+from backend.shared.database.models import Base
 
 
 class OpportunityStage(str, enum.Enum):
