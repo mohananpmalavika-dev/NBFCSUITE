@@ -3,7 +3,7 @@ CRM Opportunity Management Models
 Database models for opportunity tracking, sales pipeline, and win/loss analysis
 """
 
-from sqlalchemy import Column, String, Numeric, Text, DateTime, Boolean, ForeignKey, Index, Enum as SQLEnum
+from sqlalchemy import Column, String, Numeric, Text, DateTime, Boolean, Integer, ForeignKey, Index, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from datetime import datetime
