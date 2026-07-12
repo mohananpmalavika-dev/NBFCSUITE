@@ -393,19 +393,19 @@ class AssetService:
         asset_id: Optional[int] = None,
         financial_year: Optional[int] = None,
         month: Optional[int] = None
-    ) -> List[AssetDepreciationSchedule]:
+    ) -> List[AssetDepreciation]:
         """Get depreciation schedule"""
-        conditions = [AssetDepreciationSchedule.tenant_id == self.tenant_id]
+        conditions = [AssetDepreciation.tenant_id == self.tenant_id]
         
         if asset_id:
-            conditions.append(AssetDepreciationSchedule.asset_id == asset_id)
+            conditions.append(AssetDepreciation.asset_id == asset_id)
         if financial_year:
-            conditions.append(AssetDepreciationSchedule.financial_year == financial_year)
+            conditions.append(AssetDepreciation.financial_year == financial_year)
         if month:
-            conditions.append(AssetDepreciationSchedule.month == month)
+            conditions.append(AssetDepreciation.month == month)
         
-        query = select(AssetDepreciationSchedule).where(and_(*conditions)).order_by(
-            AssetDepreciationSchedule.depreciation_date
+        query = select(AssetDepreciation).where(and_(*conditions)).order_by(
+            AssetDepreciation.depreciation_date
         )
         
         result = await self.db.execute(query)
