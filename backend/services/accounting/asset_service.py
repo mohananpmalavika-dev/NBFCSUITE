@@ -12,7 +12,7 @@ from dateutil.relativedelta import relativedelta
 
 from backend.shared.database.asset_models import (
     FixedAsset,
-    AssetDepreciationSchedule,
+    AssetDepreciation,  # Note: This is called AssetDepreciation, not AssetDepreciationSchedule
     AssetTransfer,
     AssetMaintenance
 )
@@ -187,7 +187,7 @@ class AssetService:
         asset_id: int,
         depreciation_date: date,
         journal_entry_id: Optional[int] = None
-    ) -> AssetDepreciationSchedule:
+    ) -> AssetDepreciation:
         """Post depreciation for an asset"""
         
         asset = await self.get_asset(asset_id)
@@ -196,10 +196,10 @@ class AssetService:
         
         # Check if already posted for this period
         existing = await self.db.execute(
-            select(AssetDepreciationSchedule).where(
+            select(AssetDepreciation).where(
                 and_(
-                    AssetDepreciationSchedule.asset_id == asset_id,
-                    AssetDepreciationSchedule.depreciation_date == depreciation_date
+                    AssetDepreciation.asset_id == asset_id,
+                    AssetDepreciation.depreciation_date == depreciation_date
                 )
             )
         )
@@ -213,7 +213,7 @@ class AssetService:
         closing_wdv = asset.purchase_cost - new_accumulated
         
         # Create schedule entry
-        schedule = AssetDepreciationSchedule(
+        schedule = AssetDepreciation(
             tenant_id=self.tenant_id,
             asset_id=asset_id,
             depreciation_date=depreciation_date,
