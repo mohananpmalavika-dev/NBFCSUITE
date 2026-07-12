@@ -379,7 +379,7 @@ async def get_asset_maintenance(
 ):
     """Get maintenance history for an asset"""
     from sqlalchemy import select, and_
-    from backend.shared.database.accounting_extended_models import AssetMaintenance
+    from backend.shared.database.asset_models import AssetMaintenance
     
     query = select(AssetMaintenance).where(
         and_(
@@ -401,7 +401,7 @@ async def get_asset_dashboard(
 ):
     """Get asset dashboard summary"""
     from sqlalchemy import select, func, and_
-    from backend.shared.database.accounting_extended_models import FixedAsset
+    from backend.shared.database.asset_models import FixedAsset
     
     # Total assets
     total_query = select(func.count(FixedAsset.id)).where(

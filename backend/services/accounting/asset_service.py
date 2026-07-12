@@ -10,11 +10,13 @@ from sqlalchemy import select, and_, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from dateutil.relativedelta import relativedelta
 
-from backend.shared.database.accounting_extended_models import (
+from backend.shared.database.asset_models import (
     FixedAsset,
     AssetDepreciationSchedule,
     AssetTransfer,
-    AssetMaintenance,
+    AssetMaintenance
+)
+from backend.shared.database.accounting_extended_models import (
     AssetCategory,
     DepreciationMethod,
     AssetStatus
