@@ -8,7 +8,7 @@ from typing import Optional
 from datetime import date
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from backend.shared.schemas import SuccessResponse, PaginatedResponse
 from .housekeeping_service import HousekeepingService
 from .schemas import (

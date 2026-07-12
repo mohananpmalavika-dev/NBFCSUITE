@@ -12,7 +12,7 @@ from typing import Optional, List
 from datetime import date
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user, require_employee
+from backend.services.auth.dependencies import get_current_user, require_employee
 from backend.shared.schemas import SuccessResponse, ErrorResponse
 from backend.shared.database.hrms_models import InvestmentDeclaration, ReimbursementClaim
 from .ess_service import ESSService

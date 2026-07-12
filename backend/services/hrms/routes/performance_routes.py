@@ -9,7 +9,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from backend.services.hrms.services.performance_service import PerformanceManagementService
 from backend.services.hrms.schemas.performance_schemas import (
     # Appraisal Cycle

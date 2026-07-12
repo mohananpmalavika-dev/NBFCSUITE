@@ -1,4 +1,4 @@
-﻿"""
+"""
 Deposit Management Pydantic Schemas
 
 Comprehensive schemas for all deposit operations including:

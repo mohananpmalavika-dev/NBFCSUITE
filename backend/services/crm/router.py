@@ -9,7 +9,7 @@ from typing import List, Optional
 from datetime import datetime, date
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user, get_current_tenant
+from backend.services.auth.dependencies import get_current_user, get_current_tenant
 from .service import CRMLeadService
 from .schemas import (
     LeadCreate, LeadUpdate, LeadResponse, LeadListItem,

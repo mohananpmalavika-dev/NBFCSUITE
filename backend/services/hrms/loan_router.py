@@ -9,7 +9,7 @@ from typing import Optional, List
 from datetime import date
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user, get_current_active_user
+from backend.services.auth.dependencies import get_current_user, get_current_active_user
 from backend.shared.models.user import User
 from .loan_service import LoanService
 from .loan_schemas import (

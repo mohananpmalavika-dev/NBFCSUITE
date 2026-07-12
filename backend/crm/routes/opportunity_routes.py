@@ -10,7 +10,7 @@ from uuid import UUID
 from datetime import datetime
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from backend.shared.schemas.crm_opportunity_schemas import (
     CRMOpportunityCreate, CRMOpportunityUpdate,
     CRMOpportunityActivityCreate, CRMOpportunityActivityUpdate,

@@ -9,7 +9,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user, check_permission
+from backend.services.auth.dependencies import get_current_user, check_permission
 from backend.crm.services.customer_service import CustomerServiceService
 from backend.crm.schemas.customer_service_schemas import (
     TicketCreate, TicketUpdate, TicketResponse, TicketDetailResponse,

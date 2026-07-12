@@ -9,7 +9,7 @@ from datetime import date
 from uuid import UUID
 
 from backend.shared.database.session import get_db
-from backend.shared.auth.dependencies import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from backend.shared.database.models import User
 
 from backend.services.aml import (

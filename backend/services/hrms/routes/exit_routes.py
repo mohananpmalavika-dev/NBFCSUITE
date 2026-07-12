@@ -9,7 +9,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user, get_current_tenant
+from backend.services.auth.dependencies import get_current_user, get_current_tenant
 from backend.services.hrms.services.exit_service import ExitManagementService
 from backend.services.hrms.schemas.exit_schemas import (
     # Resignation schemas

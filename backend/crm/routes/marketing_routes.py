@@ -9,7 +9,7 @@ from typing import Optional
 from uuid import UUID
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user, get_tenant_id
+from backend.services.auth.dependencies import get_current_user, get_tenant_id
 from backend.shared.schemas.crm_marketing_schemas import (
     MarketingCampaignCreate, MarketingCampaignUpdate,
     CustomerSegmentCreate, CustomerSegmentUpdate,

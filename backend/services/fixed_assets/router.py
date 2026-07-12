@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from backend.shared.database.connection import get_db
-from backend.shared.auth.dependencies import get_current_user
+from backend.services.auth.dependencies import get_current_user
 from backend.services.fixed_assets.schemas import *
 from backend.services.fixed_assets.asset_service import AssetService
 from backend.services.fixed_assets.depreciation_service import DepreciationService

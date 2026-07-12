@@ -1,140 +1,93 @@
-# Final Deployment Fix - All Issues Resolved ✅
+# Deployment Fixes - Asset Model Import Errors
 
-## Latest Error Fixed
-```
-ModuleNotFoundError: No module named 'jinja2'
-```
+## Issue 1: Duplicate Table Definition
+**Error:** `sqlalchemy.exc.InvalidRequestError: Table 'fixed_assets' is already defined`
 
-## Solution Applied
-Added `jinja2==3.1.2` to `backend/requirements.txt`
-
-Jinja2 is required by the notification service for template rendering.
-
----
-
-## Complete Fix Summary
-
-### Issue 1: Loan Models Import Error ✅ FIXED
-**Error:** `cannot import name 'LoanAccount' from 'backend.shared.database.loan_models'`
-
-**Root Cause:** HRMS loan models were in the NBFC loan models file
+**Root Cause:** Asset models were defined in two locations:
+- `backend/shared/database/asset_models.py` (comprehensive)
+- `backend/shared/database/accounting_extended_models.py` (duplicate)
 
 **Solution:**
-1. Created `backend/shared/database/hrms_loan_models.py` for HRMS models
-2. Recreated `backend/shared/database/loan_models.py` with NBFC models
-3. Added missing models:
-   - `LoanAccount`, `LoanApplication`, `LoanApplicationCoApplicant`
-   - `LoanApplicationDocument`, `LoanApprovalWorkflow`, `LoanRepayment`
-   - `LoanProduct`, `LoanEMISchedule`
-4. Fixed imports in `backend/main.py` and service files
+- Commented out duplicate model classes in `accounting_extended_models.py`:
+  - `FixedAsset`
+  - `AssetDepreciationSchedule`
+  - `AssetTransfer`
+  - `AssetMaintenance`
+- Kept enum definitions for backward compatibility
 
-### Issue 2: Notification Models Missing ✅ FIXED
-**Error:** `cannot import name 'Notification' from 'backend.shared.database.notification_models'`
-
-**Solution:** Added missing models to `backend/shared/database/notification_models.py`:
-- `Notification`, `NotificationAnalytics`, `NotificationProvider`
-- `NotificationProviderLog`, `NotificationDeliveryReport`, `NotificationTrigger`
-- `DLTEntity`, `DLTTemplate`, `DLTConsent`
-
-### Issue 3: Missing Python Package ✅ FIXED
-**Error:** `ModuleNotFoundError: No module named 'jinja2'`
-
-**Solution:** 
-- Added `jinja2==3.1.2` to `backend/requirements.txt`
-- Added `jinja2==3.1.2` to `backend/requirements.render.txt` (used by Render deployment)
+**Commit:** 637998d
 
 ---
 
-## Files Modified
+## Issue 2: Import Errors After Commenting Out Models
+**Error:** `ImportError: cannot import name 'FixedAsset' from 'backend.shared.database.accounting_extended_models'`
 
-### Created:
-1. ✅ `backend/shared/database/hrms_loan_models.py` - HRMS employee loan models
+**Root Cause:** Services were still importing asset models from the old location
 
-### Modified:
-2. ✅ `backend/shared/database/loan_models.py` - Recreated with NBFC models
-3. ✅ `backend/main.py` - Fixed HRMS loan imports (line 52)
-4. ✅ `backend/services/dashboard/router.py` - Uses NBFC loan models
-5. ✅ `backend/services/hrms/loan_service.py` - Updated imports to hrms_loan_models
-6. ✅ `backend/shared/database/notification_models.py` - Added 11 missing models
-7. ✅ `backend/requirements.txt` - Added jinja2 dependency
-8. ✅ `backend/requirements.render.txt` - Added jinja2 dependency (Render uses this file!)
+**Files Updated:**
+1. `backend/services/accounting/asset_service.py`
+   - Changed imports from `accounting_extended_models` to `asset_models`
+   - Models: `FixedAsset`, `AssetDepreciationSchedule`, `AssetTransfer`, `AssetMaintenance`
+   - Kept enum imports: `AssetCategory`, `DepreciationMethod`, `AssetStatus`
 
----
+2. `backend/services/accounting/asset_router.py`
+   - Updated two local imports inside functions:
+     - Line 404: `FixedAsset` import in `get_asset_dashboard()`
+     - Line 382: `AssetMaintenance` import in maintenance history function
 
-## Deployment Checklist
+**Solution:**
+```python
+# Before
+from backend.shared.database.accounting_extended_models import (
+    FixedAsset, AssetDepreciationSchedule, AssetTransfer, AssetMaintenance
+)
 
-### Pre-Deployment Verification ✅
-- [x] All Python model imports resolved
-- [x] Main module can be imported
-- [x] All required packages in requirements.txt
-- [x] No syntax errors in modified files
+# After
+from backend.shared.database.asset_models import (
+    FixedAsset, AssetDepreciationSchedule, AssetTransfer, AssetMaintenance
+)
+from backend.shared.database.accounting_extended_models import (
+    AssetCategory, DepreciationMethod, AssetStatus  # Enums stay here
+)
+```
 
-### Deploy to Render
-1. Commit all changes to Git:
-   ```bash
-   git add .
-   git commit -m "Fix: Separate HRMS and NBFC loan models, add missing notification models, add jinja2"
-   git push origin main
-   ```
-
-2. Render will automatically:
-   - Detect the changes
-   - Install dependencies from requirements.txt
-   - Start the application
-
-### Post-Deployment Verification
-After deployment succeeds, verify:
-- [ ] `/` root endpoint returns app info
-- [ ] `/health` endpoint returns healthy status
-- [ ] `/docs` Swagger UI loads without errors
-- [ ] `/dashboard/stats` returns dashboard data
-- [ ] No import errors in deployment logs
+**Commit:** 957dcb5
 
 ---
 
-## Expected Deployment Outcome
+## Issue 3: Incorrect Class Name in Imports
+**Error:** `ImportError: cannot import name 'AssetDepreciationSchedule' from 'backend.shared.database.asset_models'`
 
-🟢 **DEPLOYMENT SHOULD NOW SUCCEED**
+**Root Cause:** The class in `asset_models.py` is named `AssetDepreciation`, not `AssetDepreciationSchedule`
 
-All import structure issues and missing dependencies have been resolved. The application should start successfully on Render.
+**Files Updated:**
+1. `backend/services/accounting/asset_service.py`
+   - Changed import from `AssetDepreciationSchedule` to `AssetDepreciation`
+   - Updated return type annotation in `post_depreciation()` method
+   - Updated all references in the depreciation posting logic
+   - Updated return type annotation in `get_depreciation_schedule()` method
+   - Updated all query references in `get_depreciation_schedule()` method
 
-### If Any Errors Persist:
-They will likely be:
-1. **Environment variables missing** - Check Render environment variables match `.env.example`
-2. **Database connection issues** - Verify `DATABASE_URL` is correctly set
-3. **Other missing packages** - Check error message and add to requirements.txt
+**Solution:**
+```python
+# Correct class name in asset_models.py
+from backend.shared.database.asset_models import (
+    FixedAsset,
+    AssetDepreciation,  # Not AssetDepreciationSchedule
+    AssetTransfer,
+    AssetMaintenance
+)
+```
 
----
-
-## Technical Details
-
-### Model Separation Strategy
-- **HRMS models** (`hrms_loan_models.py`) - Employee loans, advances, payroll deductions
-- **NBFC models** (`loan_models.py`) - Customer loans, applications, disbursement, repayment
-
-This separation prevents namespace conflicts and maintains clear boundaries between HR and financial operations.
-
-### Import Path Changes
-| Old Import | New Import |
-|------------|------------|
-| `from backend.shared.database.loan_models import EmployeeLoan` | `from backend.shared.database.hrms_loan_models import EmployeeLoan` |
-| `from backend.shared.database.loan_models import LoanAccount` | `from backend.shared.database.loan_models import LoanAccount` (NBFC) |
-
-### Database Impact
-**No database migrations needed** - These are Python-only changes. Existing database tables are not affected.
+**Commit:** 25e2192, 841e038
 
 ---
 
-## Support
+## Status
+✅ Fixed and deployed
+- Duplicate table definitions removed
+- All import statements updated
+- Correct class names used throughout
 
-If deployment still fails after these fixes:
-1. Check the full error traceback in Render logs
-2. Verify all files were committed and pushed
-3. Check that requirements.txt changes were deployed
-4. Confirm DATABASE_URL and other env vars are set
-
----
-
-**Status:** ✅ All known issues fixed. Ready for deployment.
-**Last Updated:** Now
-**Changes:** 7 files modified/created
+## Next Steps
+Monitor Render deployment logs for any remaining import errors.
