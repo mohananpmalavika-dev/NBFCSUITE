@@ -20,7 +20,7 @@ from backend.shared.schemas.crm_marketing_schemas import (
     LandingPageSubmissionCreate,
     CampaignTemplateCreate, CampaignTemplateUpdate
 )
-from backend.shared.common.response import create_response, error_response
+from backend.shared.common.response import success_response, error_response
 
 
 class MarketingCampaignService:
@@ -70,7 +70,7 @@ class MarketingCampaignService:
             db.commit()
             db.refresh(campaign)
             
-            return create_response(
+            return success_response(
                 data=campaign.dict(),
                 message="Campaign created successfully"
             )
@@ -97,7 +97,7 @@ class MarketingCampaignService:
             if not campaign:
                 return error_response(message="Campaign not found", status_code=404)
             
-            return create_response(data=campaign.dict())
+            return success_response(data=campaign.dict())
             
         except Exception as e:
             return error_response(message=f"Failed to get campaign: {str(e)}")
@@ -142,7 +142,7 @@ class MarketingCampaignService:
             total = query.count()
             campaigns = query.order_by(MarketingCampaign.created_at.desc()).offset(skip).limit(limit).all()
             
-            return create_response(
+            return success_response(
                 data={
                     "total": total,
                     "page": skip // limit + 1,
@@ -184,7 +184,7 @@ class MarketingCampaignService:
             db.commit()
             db.refresh(campaign)
             
-            return create_response(
+            return success_response(
                 data=campaign.dict(),
                 message="Campaign updated successfully"
             )
@@ -217,7 +217,7 @@ class MarketingCampaignService:
             
             db.commit()
             
-            return create_response(message="Campaign deleted successfully")
+            return success_response(message="Campaign deleted successfully")
             
         except Exception as e:
             db.rollback()
@@ -250,7 +250,7 @@ class MarketingCampaignService:
             
             db.commit()
             
-            return create_response(message="Campaign launched successfully")
+            return success_response(message="Campaign launched successfully")
             
         except Exception as e:
             db.rollback()
@@ -303,7 +303,7 @@ class CustomerSegmentService:
             db.commit()
             db.refresh(segment)
             
-            return create_response(
+            return success_response(
                 data=segment.dict(),
                 message="Segment created successfully"
             )
@@ -330,7 +330,7 @@ class CustomerSegmentService:
             if not segment:
                 return error_response(message="Segment not found", status_code=404)
             
-            return create_response(data=segment.dict())
+            return success_response(data=segment.dict())
             
         except Exception as e:
             return error_response(message=f"Failed to get segment: {str(e)}")
@@ -366,7 +366,7 @@ class CustomerSegmentService:
             total = query.count()
             segments = query.order_by(CustomerSegment.created_at.desc()).offset(skip).limit(limit).all()
             
-            return create_response(
+            return success_response(
                 data={
                     "total": total,
                     "page": skip // limit + 1,
@@ -429,7 +429,7 @@ class LandingPageService:
             db.commit()
             db.refresh(page)
             
-            return create_response(
+            return success_response(
                 data=page.dict(),
                 message="Landing page created successfully"
             )
@@ -463,7 +463,7 @@ class LandingPageService:
             
             db.commit()
             
-            return create_response(message="Landing page published successfully")
+            return success_response(message="Landing page published successfully")
             
         except Exception as e:
             db.rollback()

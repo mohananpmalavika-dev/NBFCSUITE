@@ -244,8 +244,8 @@ def get_marketing_stats(
             MarketingCampaign.is_deleted == False
         ).group_by(MarketingCampaign.status).all()
         
-        from backend.shared.common.response import create_response
-        return create_response(
+        from backend.shared.common.response import success_response
+        return success_response(
             data={
                 "total_campaigns": total_campaigns,
                 "active_campaigns": active_campaigns,

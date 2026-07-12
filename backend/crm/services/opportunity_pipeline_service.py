@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from backend.shared.database.crm_opportunity_models import CRMOpportunity, OpportunityStage
-from backend.shared.common.response import create_response, error_response
+from backend.shared.common.response import success_response, error_response
 import logging
 
 logger = logging.getLogger(__name__)
@@ -104,7 +104,7 @@ class CRMPipelineService:
             
             avg_deal_size = total_value / Decimal(str(total_opportunities)) if total_opportunities > 0 else Decimal("0")
             
-            return create_response(data={
+            return success_response(data={
                 "total_opportunities": total_opportunities,
                 "total_value": float(total_value),
                 "weighted_pipeline_value": float(weighted_pipeline_value),
@@ -240,7 +240,7 @@ class CRMPipelineService:
             
             win_rate = (Decimal(str(won_count)) / Decimal(str(total_closed)) * Decimal("100")) if total_closed > 0 else Decimal("0")
             
-            return create_response(data={
+            return success_response(data={
                 "total_closed": total_closed,
                 "won_count": won_count,
                 "lost_count": lost_count,

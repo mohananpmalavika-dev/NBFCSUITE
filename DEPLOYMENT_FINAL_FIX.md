@@ -197,3 +197,40 @@ def check_permission(permission: str):
 
 ## Next Steps
 Monitor Render deployment logs for successful deployment.
+
+## Issue 7: Incorrect Utils Module Path
+**Error:** `ModuleNotFoundError: No module named 'backend.shared.utils'`
+
+**Root Cause:** Files were importing from non-existent `backend.shared.utils` module. The correct module is `backend.shared.common`
+
+**Files Updated:**
+- `backend/crm/services/opportunity_service.py`
+- `backend/crm/services/opportunity_pipeline_service.py`
+- `backend/crm/routes/marketing_routes.py`
+- `backend/crm/services/marketing_service.py`
+
+**Solution:**
+```python
+# Before (incorrect)
+from backend.shared.utils.response import create_response, error_response
+from backend.shared.utils.logger import logger
+
+# After (correct)
+from backend.shared.common.response import create_response, error_response
+import logging
+logger = logging.getLogger(__name__)
+```
+
+**Commits:** be9dc0d, f979b93
+
+---
+
+## Updated Summary
+All 7 deployment issues have been resolved:
+1. ✅ Duplicate Asset Models
+2. ✅ Wrong Import Paths (asset models)
+3. ✅ Wrong Class Names (AssetDepreciation)
+4. ✅ Auth Module Path corrections (22 files)
+5. ✅ Pydantic v2 Compatibility
+6. ✅ Missing Auth Functions
+7. ✅ Utils Module Path correction

@@ -19,7 +19,7 @@ from backend.shared.schemas.crm_opportunity_schemas import (
     CRMOpportunityCreate, CRMOpportunityUpdate,
     CRMOpportunityProductCreate, CRMOpportunityActivityCreate
 )
-from backend.shared.common.response import create_response, error_response
+from backend.shared.common.response import success_response, error_response
 import logging
 
 logger = logging.getLogger(__name__)
@@ -171,7 +171,7 @@ class CRMOpportunityService:
             
             logger.info(f"Opportunity created: {opportunity_number} for tenant {tenant_id}")
             
-            return create_response(
+            return success_response(
                 data={
                     "id": str(new_opportunity.id),
                     "opportunity_number": new_opportunity.opportunity_number,
@@ -270,7 +270,7 @@ class CRMOpportunityService:
                     "created_at": opp.created_at.isoformat()
                 })
             
-            return create_response(data={
+            return success_response(data={
                 "items": items,
                 "total": total,
                 "skip": skip,
@@ -350,7 +350,7 @@ class CRMOpportunityService:
                 "updated_at": opportunity.updated_at.isoformat() if opportunity.updated_at else None
             }
             
-            return create_response(data=data)
+            return success_response(data=data)
         
         except Exception as e:
             logger.error(f"Error getting opportunity: {str(e)}")
@@ -412,7 +412,7 @@ class CRMOpportunityService:
             db.commit()
             db.refresh(opportunity)
             
-            return create_response(
+            return success_response(
                 data={
                     "id": str(opportunity.id),
                     "opportunity_number": opportunity.opportunity_number,
@@ -451,7 +451,7 @@ class CRMOpportunityService:
             
             db.commit()
             
-            return create_response(message="Opportunity deleted successfully")
+            return success_response(message="Opportunity deleted successfully")
         
         except Exception as e:
             db.rollback()
