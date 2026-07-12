@@ -6,8 +6,9 @@ workflow approvals, e-signatures, and secure storage
 
 from sqlalchemy import (
     Column, String, Integer, Boolean, Text, ForeignKey, 
-    DateTime, Enum, BigInteger, JSON, Index, func
+    DateTime, Enum, BigInteger, JSON, Index
 )
+from sqlalchemy import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from datetime import datetime
