@@ -3,7 +3,7 @@
  * Ticket Management, Knowledge Base, SLA Tracking
  */
 
-import { apiClient } from './apiClient'
+import { apiClient } from '@/lib/api-client'
 
 // ============================================================================
 // TYPES & INTERFACES

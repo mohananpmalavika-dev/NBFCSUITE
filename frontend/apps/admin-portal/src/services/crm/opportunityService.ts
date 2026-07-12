@@ -3,7 +3,7 @@
  * API calls for opportunity tracking, sales pipeline, and analytics
  */
 
-import api from '../api';
+import { apiClient as api } from '@/lib/api-client';
 
 export interface Opportunity {
   id: string;
