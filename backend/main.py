@@ -76,8 +76,8 @@ from backend.shared.database.decision_models import (
     DecisionCache, DecisionAnalytics, DecisionLimit
 )
 from backend.shared.database.notification_models import (
-    NotificationTemplate, Notification, NotificationQueue,
-    NotificationLog, NotificationAnalytics
+    NotificationTemplate, NotificationLog, NotificationQueue,
+    NotificationPreference, NotificationSchedule
 )
 from backend.shared.database.gold_loan_models import (
     GoldLoanProduct, GoldOrnament, GoldLoanAccount,
@@ -228,12 +228,6 @@ from backend.shared.database.crm_sales_models import (
 from backend.shared.database.property_rent_models import (
     Property, PropertySpace, Lease, SpaceAllocation, RentPayment,
     UtilityBill, PropertyMaintenance
-)
-
-# 26. Notification System models (NEW - Automated Email/SMS Notifications for Rent & Lease)
-from backend.shared.database.notification_models import (
-    NotificationTemplate, NotificationLog, NotificationPreference,
-    NotificationSchedule, NotificationQueue
 )
 
 # 27. Legal Contract Management models (NEW - Contract Repository, Lifecycle, Renewal, Version Control)
