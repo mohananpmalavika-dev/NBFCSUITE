@@ -331,3 +331,213 @@ class NotificationQueue(Base):
     
     def __repr__(self):
         return f"<NotificationQueue {self.id} - {self.status}>"
+
+
+
+class Notification(Base):
+    """
+    Notification Model (Alias for Notification Log for backward compatibility)
+    """
+    __tablename__ = "notifications"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    # Notification Details
+    template_id = Column(Integer, ForeignKey("notification_templates.id"), index=True, nullable=True)
+    channel = Column(Enum(NotificationChannel), nullable=True, index=True)
+    notification_type = Column(Enum(NotificationType), nullable=False, index=True)
+    
+    # Recipient Details
+    recipient_id = Column(String(100))
+    recipient_email = Column(String(200))
+    recipient_phone = Column(String(20))
+    
+    # Content
+    subject = Column(String(500))
+    body = Column(Text)
+    
+    # Status
+    status = Column(Enum(NotificationStatus), default=NotificationStatus.PENDING, index=True)
+    sent_at = Column(DateTime, index=True)
+    
+    # Audit Fields
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    is_deleted = Column(Boolean, default=False, index=True)
+    
+    def __repr__(self):
+        return f"<Notification {self.id} - {self.notification_type}>"
+
+
+class NotificationAnalytics(Base):
+    """Notification Analytics for tracking delivery metrics"""
+    __tablename__ = "notification_analytics"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    date = Column(DateTime, nullable=False, index=True)
+    channel = Column(Enum(NotificationChannel), index=True)
+    notification_type = Column(Enum(NotificationType), index=True)
+    
+    # Metrics
+    total_sent = Column(Integer, default=0)
+    total_delivered = Column(Integer, default=0)
+    total_failed = Column(Integer, default=0)
+    total_opened = Column(Integer, default=0)
+    total_clicked = Column(Integer, default=0)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<NotificationAnalytics {self.date}>"
+
+
+class NotificationProvider(Base):
+    """Notification Provider Configuration"""
+    __tablename__ = "notification_providers"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    provider_name = Column(String(100), nullable=False)
+    provider_type = Column(Enum(NotificationType), nullable=False)
+    api_key = Column(Text)
+    api_secret = Column(Text)
+    configuration = Column(JSON)
+    is_active = Column(Boolean, default=True)
+    priority = Column(Integer, default=1)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<NotificationProvider {self.provider_name}>"
+
+
+class NotificationProviderLog(Base):
+    """Notification Provider API Call Logs"""
+    __tablename__ = "notification_provider_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    provider_id = Column(Integer, ForeignKey("notification_providers.id"))
+    notification_log_id = Column(Integer, ForeignKey("notification_logs.id"))
+    
+    request_data = Column(JSON)
+    response_data = Column(JSON)
+    status_code = Column(Integer)
+    is_success = Column(Boolean)
+    error_message = Column(Text)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<NotificationProviderLog {self.id}>"
+
+
+class NotificationDeliveryReport(Base):
+    """Notification Delivery Report from providers"""
+    __tablename__ = "notification_delivery_reports"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    notification_log_id = Column(Integer, ForeignKey("notification_logs.id"))
+    external_message_id = Column(String(200))
+    
+    delivery_status = Column(String(50))
+    delivered_at = Column(DateTime)
+    opened_at = Column(DateTime)
+    clicked_at = Column(DateTime)
+    bounced_at = Column(DateTime)
+    
+    provider_data = Column(JSON)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<NotificationDeliveryReport {self.id}>"
+
+
+class NotificationTrigger(Base):
+    """Notification Trigger Configuration"""
+    __tablename__ = "notification_triggers"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    trigger_name = Column(String(200), nullable=False)
+    trigger_event = Column(String(100), nullable=False)
+    template_id = Column(Integer, ForeignKey("notification_templates.id"))
+    
+    is_active = Column(Boolean, default=True)
+    conditions = Column(JSON)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<NotificationTrigger {self.trigger_name}>"
+
+
+
+class DLTEntity(Base):
+    """DLT Entity Registration"""
+    __tablename__ = "dlt_entities"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    entity_id = Column(String(100), unique=True, nullable=False)
+    entity_name = Column(String(200), nullable=False)
+    telecom_operator = Column(String(100))
+    registration_date = Column(DateTime)
+    is_active = Column(Boolean, default=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<DLTEntity {self.entity_name}>"
+
+
+class DLTTemplate(Base):
+    """DLT Template Registration"""
+    __tablename__ = "dlt_templates"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    template_id = Column(String(100), unique=True, nullable=False)
+    template_content = Column(Text, nullable=False)
+    template_type = Column(String(50))
+    entity_id = Column(Integer, ForeignKey("dlt_entities.id"))
+    is_active = Column(Boolean, default=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<DLTTemplate {self.template_id}>"
+
+
+class DLTConsent(Base):
+    """DLT Consent Records"""
+    __tablename__ = "dlt_consents"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id"))
+    phone_number = Column(String(20), nullable=False)
+    consent_given = Column(Boolean, default=False)
+    consent_date = Column(DateTime)
+    consent_source = Column(String(100))
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<DLTConsent {self.phone_number}>"

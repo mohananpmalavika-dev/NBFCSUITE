@@ -1,0 +1,26 @@
+﻿python : Traceback (most recent call last):
+At line:1 char:1
++ python -c "import backend.main; 
+print('SUCCESS')" 2>&1 | Out-File -Fi ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          : NotSpecified: (Trace 
+   back (most recent call last)::String) [], Remo  
+  teException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "<string>", line 1, in <module>
+    import backend.main; print('SUCCESS')
+    ^^^^^^^^^^^^^^^^^^^
+  File "C:\NBFCSUITE\backend\main.py", line 817, 
+in <module>
+    from 
+backend.services.integration.bureau_router import 
+router as bureau_integration_router
+  File "C:\NBFCSUITE\backend\services\integration\_
+_init__.py", line 18, in <module>
+    from .ocr_service import OCRService
+  File "C:\NBFCSUITE\backend\services\integration\o
+cr_service.py", line 14, in <module>
+    import boto3
+ModuleNotFoundError: No module named 'boto3'

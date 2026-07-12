@@ -248,6 +248,55 @@ class LoanApplicationDocument(BaseModel):
 
 
 # ============================================================================
+# LOAN APPROVAL WORKFLOW
+# ============================================================================
+
+class LoanApprovalWorkflow(BaseModel):
+    """
+    Loan Approval Workflow
+    Tracks multi-level approval process for loan applications
+    """
+    __tablename__ = "loan_approval_workflows"
+    
+    # Application Reference
+    application_id = Column(UUID(as_uuid=True), ForeignKey("loan_applications.id", ondelete="CASCADE"), nullable=False)
+    
+    # Approval Level
+    approval_level = Column(Integer, nullable=False)  # 1, 2, 3, etc.
+    approver_role = Column(String(50), nullable=False)  # credit_officer, manager, senior_manager
+    approver_id = Column(UUID(as_uuid=True), nullable=True)
+    
+    # Status
+    status = Column(String(20), nullable=False, default="pending")  # pending, approved, rejected, skipped
+    
+    # Decision Details
+    decision_date = Column(DateTime, nullable=True)
+    comments = Column(Text, nullable=True)
+    recommended_amount = Column(Numeric(15, 2), nullable=True)
+    recommended_interest_rate = Column(Numeric(5, 2), nullable=True)
+    recommended_tenure = Column(Integer, nullable=True)
+    
+    # Conditions
+    conditions = Column(Text, nullable=True)  # JSON array of conditions
+    
+    # Sequence
+    sequence_number = Column(Integer, nullable=False)
+    is_mandatory = Column(Boolean, default=True)
+    
+    # Relationships
+    application = relationship("LoanApplication")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_approval_application', 'tenant_id', 'application_id', 'approval_level'),
+        Index('idx_approval_status', 'tenant_id', 'status'),
+    )
+    
+    def __repr__(self):
+        return f"<LoanApprovalWorkflow(application_id={self.application_id}, level={self.approval_level})>"
+
+
+# ============================================================================
 # LOAN ACCOUNT
 # ============================================================================
 
@@ -368,3 +417,72 @@ class LoanEMISchedule(BaseModel):
     
     def __repr__(self):
         return f"<LoanEMISchedule(loan_id={self.loan_account_id}, emi_number={self.emi_number})>"
+
+
+# ============================================================================
+# LOAN REPAYMENT / TRANSACTION
+# ============================================================================
+
+class LoanRepayment(BaseModel):
+    """
+    Loan Repayment Transaction
+    Records all payment transactions against a loan account
+    """
+    __tablename__ = "loan_repayments"
+    
+    # Loan Reference
+    loan_account_id = Column(UUID(as_uuid=True), ForeignKey("loan_accounts.id", ondelete="CASCADE"), nullable=False)
+    emi_schedule_id = Column(UUID(as_uuid=True), ForeignKey("loan_emi_schedules.id", ondelete="SET NULL"), nullable=True)
+    
+    # Transaction Details
+    transaction_number = Column(String(50), nullable=False, index=True)
+    transaction_date = Column(Date, nullable=False, index=True)
+    transaction_time = Column(DateTime, nullable=False, default=datetime.utcnow)
+    
+    # Payment Details
+    payment_amount = Column(Numeric(15, 2), nullable=False)
+    payment_mode = Column(String(50), nullable=False)  # cash, cheque, neft, rtgs, upi, etc.
+    payment_reference = Column(String(100), nullable=True)
+    
+    # Amount Allocation
+    principal_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
+    interest_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
+    penalty_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
+    charges_paid = Column(Numeric(15, 2), default=Decimal("0.00"))
+    
+    # Outstanding After Payment
+    principal_outstanding = Column(Numeric(15, 2), nullable=False)
+    interest_outstanding = Column(Numeric(15, 2), nullable=False)
+    total_outstanding = Column(Numeric(15, 2), nullable=False)
+    
+    # Receipt Details
+    receipt_number = Column(String(50), nullable=True)
+    receipt_generated = Column(Boolean, default=False)
+    
+    # Bank Details (for non-cash payments)
+    bank_name = Column(String(100), nullable=True)
+    branch_name = Column(String(100), nullable=True)
+    
+    # Status
+    is_reversed = Column(Boolean, default=False)
+    reversal_date = Column(DateTime, nullable=True)
+    reversal_reason = Column(Text, nullable=True)
+    reversed_by = Column(UUID(as_uuid=True), nullable=True)
+    
+    # Notes
+    remarks = Column(Text, nullable=True)
+    collected_by = Column(UUID(as_uuid=True), nullable=True)
+    
+    # Relationships
+    loan_account = relationship("LoanAccount")
+    emi_schedule = relationship("LoanEMISchedule")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_tenant_repayment_txn', 'tenant_id', 'transaction_number', unique=True),
+        Index('idx_repayment_loan', 'tenant_id', 'loan_account_id', 'transaction_date'),
+        Index('idx_repayment_date', 'tenant_id', 'transaction_date'),
+    )
+    
+    def __repr__(self):
+        return f"<LoanRepayment(txn={self.transaction_number}, amount={self.payment_amount})>"
