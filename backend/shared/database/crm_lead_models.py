@@ -11,7 +11,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from enum import Enum
 
-from .base import Base, TimestampMixin, TenantMixin
+from backend.shared.database.models import Base
 
 
 # ============================================================================
