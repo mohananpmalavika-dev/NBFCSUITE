@@ -160,8 +160,8 @@ class NotificationLog(Base):
     opened_count = Column(Integer, default=0)
     clicked_count = Column(Integer, default=0)
     
-    # Metadata
-    metadata = Column(JSON)  # Additional context data
+    # Additional Data
+    additional_data = Column(JSON)  # Additional context data (renamed from metadata to avoid SQLAlchemy conflict)
     variables_used = Column(JSON)  # Variable values used in template
     
     # Audit Fields

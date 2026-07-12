@@ -2,10 +2,10 @@ import ArticleDetail from '@/components/crm/ArticleDetail'
 
 interface ArticleDetailPageProps {
   params: {
-    slug: string
+    id: string
   }
 }
 
 export default function ArticleDetailPage({ params }: ArticleDetailPageProps) {
-  return <ArticleDetail slug={params.slug} />
+  return <ArticleDetail slug={params.id} />
 }
