@@ -617,6 +617,13 @@ class GSTReturn(Base):
 # ============================================================================
 # Fixed Asset Management Models
 # ============================================================================
+# NOTE: FixedAsset models are now defined in asset_models.py
+# This section is commented out to avoid duplicate table definition
+# The comprehensive asset management models should be imported from:
+# backend.shared.database.asset_models
+
+# Keeping enums for backward compatibility
+
 
 class AssetCategory(str, enum.Enum):
     """Asset Categories"""
@@ -650,205 +657,210 @@ class AssetStatus(str, enum.Enum):
     SOLD = "sold"
 
 
-class FixedAsset(Base):
-    """Fixed Asset Register"""
-    __tablename__ = "fixed_assets"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    
-    # Asset identification
-    asset_code = Column(String(50), nullable=False, unique=True, index=True)
-    asset_name = Column(String(200), nullable=False)
-    description = Column(Text, nullable=True)
-    
-    # Category
-    category = Column(Enum(AssetCategory), nullable=False, index=True)
-    sub_category = Column(String(100), nullable=True)
-    
-    # Purchase details
-    purchase_date = Column(Date, nullable=False, index=True)
-    purchase_cost = Column(Numeric(15, 2), nullable=False)
-    vendor_name = Column(String(200), nullable=True)
-    invoice_number = Column(String(100), nullable=True)
-    invoice_date = Column(Date, nullable=True)
-    
-    # Location and allocation
-    location = Column(String(200), nullable=True)
-    department = Column(String(100), nullable=True)
-    custodian = Column(String(200), nullable=True)
-    
-    # Depreciation configuration
-    depreciation_method = Column(Enum(DepreciationMethod), nullable=False)
-    depreciation_rate = Column(Numeric(5, 2), nullable=False)  # Annual rate %
-    useful_life_years = Column(Integer, nullable=False)
-    useful_life_months = Column(Integer, default=0)
-    salvage_value = Column(Numeric(15, 2), default=0.00)
-    
-    # Current values
-    accumulated_depreciation = Column(Numeric(15, 2), default=0.00)
-    written_down_value = Column(Numeric(15, 2), nullable=False)
-    last_depreciation_date = Column(Date, nullable=True)
-    
-    # Status
-    status = Column(Enum(AssetStatus), default=AssetStatus.ACTIVE, index=True)
-    
-    # Warranty
-    warranty_expiry_date = Column(Date, nullable=True)
-    
-    # Insurance
-    is_insured = Column(Boolean, default=False)
-    insurance_policy_number = Column(String(100), nullable=True)
-    insurance_expiry_date = Column(Date, nullable=True)
-    
-    # Disposal details
-    disposal_date = Column(Date, nullable=True)
-    disposal_amount = Column(Numeric(15, 2), nullable=True)
-    gain_loss_on_disposal = Column(Numeric(15, 2), nullable=True)
-    
-    # Notes
-    notes = Column(Text, nullable=True)
-    
-    # Audit
-    is_deleted = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by = Column(Integer, nullable=False)
-    
-    # Relationships
-    depreciation_schedule = relationship("AssetDepreciationSchedule", back_populates="asset")
-    transfers = relationship("AssetTransfer", back_populates="asset")
-    maintenance_records = relationship("AssetMaintenance", back_populates="asset")
-    
-    __table_args__ = (
-        Index("ix_asset_tenant_category", "tenant_id", "category"),
-        Index("ix_asset_status", "status"),
-    )
+# DEPRECATED: These models have been moved to backend.shared.database.asset_models
+# Commenting out to avoid duplicate table definitions
+# Import from asset_models instead:
+# from backend.shared.database.asset_models import FixedAsset, AssetDepreciationSchedule, AssetTransfer, AssetMaintenance
+
+# class FixedAsset(Base):
+#     """Fixed Asset Register"""
+#     __tablename__ = "fixed_assets"
+#     
+#     id = Column(Integer, primary_key=True, index=True)
+#     tenant_id = Column(Integer, nullable=False, index=True)
+#     
+#     # Asset identification
+#     asset_code = Column(String(50), nullable=False, unique=True, index=True)
+#     asset_name = Column(String(200), nullable=False)
+#     description = Column(Text, nullable=True)
+#     
+#     # Category
+#     category = Column(Enum(AssetCategory), nullable=False, index=True)
+#     sub_category = Column(String(100), nullable=True)
+#     
+#     # Purchase details
+#     purchase_date = Column(Date, nullable=False, index=True)
+#     purchase_cost = Column(Numeric(15, 2), nullable=False)
+#     vendor_name = Column(String(200), nullable=True)
+#     invoice_number = Column(String(100), nullable=True)
+#     invoice_date = Column(Date, nullable=True)
+#     
+#     # Location and allocation
+#     location = Column(String(200), nullable=True)
+#     department = Column(String(100), nullable=True)
+#     custodian = Column(String(200), nullable=True)
+#     
+#     # Depreciation configuration
+#     depreciation_method = Column(Enum(DepreciationMethod), nullable=False)
+#     depreciation_rate = Column(Numeric(5, 2), nullable=False)  # Annual rate %
+#     useful_life_years = Column(Integer, nullable=False)
+#     useful_life_months = Column(Integer, default=0)
+#     salvage_value = Column(Numeric(15, 2), default=0.00)
+#     
+#     # Current values
+#     accumulated_depreciation = Column(Numeric(15, 2), default=0.00)
+#     written_down_value = Column(Numeric(15, 2), nullable=False)
+#     last_depreciation_date = Column(Date, nullable=True)
+#     
+#     # Status
+#     status = Column(Enum(AssetStatus), default=AssetStatus.ACTIVE, index=True)
+#     
+#     # Warranty
+#     warranty_expiry_date = Column(Date, nullable=True)
+#     
+#     # Insurance
+#     is_insured = Column(Boolean, default=False)
+#     insurance_policy_number = Column(String(100), nullable=True)
+#     insurance_expiry_date = Column(Date, nullable=True)
+#     
+#     # Disposal details
+#     disposal_date = Column(Date, nullable=True)
+#     disposal_amount = Column(Numeric(15, 2), nullable=True)
+#     gain_loss_on_disposal = Column(Numeric(15, 2), nullable=True)
+#     
+#     # Notes
+#     notes = Column(Text, nullable=True)
+#     
+#     # Audit
+#     is_deleted = Column(Boolean, default=False)
+#     created_at = Column(DateTime, default=datetime.utcnow)
+#     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+#     created_by = Column(Integer, nullable=False)
+#     
+#     # Relationships
+#     depreciation_schedule = relationship("AssetDepreciationSchedule", back_populates="asset")
+#     transfers = relationship("AssetTransfer", back_populates="asset")
+#     maintenance_records = relationship("AssetMaintenance", back_populates="asset")
+#     
+#     __table_args__ = (
+#         Index("ix_asset_tenant_category", "tenant_id", "category"),
+#         Index("ix_asset_status", "status"),
+#     )
 
 
-class AssetDepreciationSchedule(Base):
-    """Asset Depreciation Schedule"""
-    __tablename__ = "asset_depreciation_schedule"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    
-    # Asset reference
-    asset_id = Column(Integer, ForeignKey("fixed_assets.id"), nullable=False, index=True)
-    
-    # Period
-    depreciation_date = Column(Date, nullable=False, index=True)
-    financial_year = Column(Integer, nullable=False)
-    month = Column(Integer, nullable=False)
-    
-    # Amounts
-    opening_wdv = Column(Numeric(15, 2), nullable=False)
-    depreciation_amount = Column(Numeric(15, 2), nullable=False)
-    accumulated_depreciation = Column(Numeric(15, 2), nullable=False)
-    closing_wdv = Column(Numeric(15, 2), nullable=False)
-    
-    # Posting reference
-    journal_entry_id = Column(Integer, nullable=True)
-    is_posted = Column(Boolean, default=False)
-    
-    # Audit
-    created_at = Column(DateTime, default=datetime.utcnow)
-    created_by = Column(Integer, nullable=False)
-    
-    # Relationships
-    asset = relationship("FixedAsset", back_populates="depreciation_schedule")
-    
-    __table_args__ = (
-        Index("ix_asset_dep_tenant_date", "tenant_id", "depreciation_date"),
-        Index("ix_asset_dep_asset_date", "asset_id", "depreciation_date", unique=True),
-    )
+# class AssetDepreciationSchedule(Base):
+#     """Asset Depreciation Schedule"""
+#     __tablename__ = "asset_depreciation_schedule"
+#     
+#     id = Column(Integer, primary_key=True, index=True)
+#     tenant_id = Column(Integer, nullable=False, index=True)
+#     
+#     # Asset reference
+#     asset_id = Column(Integer, ForeignKey("fixed_assets.id"), nullable=False, index=True)
+#     
+#     # Period
+#     depreciation_date = Column(Date, nullable=False, index=True)
+#     financial_year = Column(Integer, nullable=False)
+#     month = Column(Integer, nullable=False)
+#     
+#     # Amounts
+#     opening_wdv = Column(Numeric(15, 2), nullable=False)
+#     depreciation_amount = Column(Numeric(15, 2), nullable=False)
+#     accumulated_depreciation = Column(Numeric(15, 2), nullable=False)
+#     closing_wdv = Column(Numeric(15, 2), nullable=False)
+#     
+#     # Posting reference
+#     journal_entry_id = Column(Integer, nullable=True)
+#     is_posted = Column(Boolean, default=False)
+#     
+#     # Audit
+#     created_at = Column(DateTime, default=datetime.utcnow)
+#     created_by = Column(Integer, nullable=False)
+#     
+#     # Relationships
+#     asset = relationship("FixedAsset", back_populates="depreciation_schedule")
+#     
+#     __table_args__ = (
+#         Index("ix_asset_dep_tenant_date", "tenant_id", "depreciation_date"),
+#         Index("ix_asset_dep_asset_date", "asset_id", "depreciation_date", unique=True),
+#     )
 
 
-class AssetTransfer(Base):
-    """Asset Transfer Records"""
-    __tablename__ = "asset_transfers"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    
-    # Asset reference
-    asset_id = Column(Integer, ForeignKey("fixed_assets.id"), nullable=False, index=True)
-    
-    # Transfer details
-    transfer_number = Column(String(50), nullable=False, unique=True)
-    transfer_date = Column(Date, nullable=False, index=True)
-    
-    # From
-    from_location = Column(String(200), nullable=True)
-    from_department = Column(String(100), nullable=True)
-    from_custodian = Column(String(200), nullable=True)
-    
-    # To
-    to_location = Column(String(200), nullable=True)
-    to_department = Column(String(100), nullable=True)
-    to_custodian = Column(String(200), nullable=True)
-    
-    # Reason
-    transfer_reason = Column(Text, nullable=True)
-    
-    # Approval
-    approved_by = Column(Integer, nullable=True)
-    approved_at = Column(DateTime, nullable=True)
-    
-    # Audit
-    created_at = Column(DateTime, default=datetime.utcnow)
-    created_by = Column(Integer, nullable=False)
-    
-    # Relationships
-    asset = relationship("FixedAsset", back_populates="transfers")
-    
-    __table_args__ = (
-        Index("ix_asset_transfer_asset_date", "asset_id", "transfer_date"),
-    )
+# class AssetTransfer(Base):
+#     """Asset Transfer Records"""
+#     __tablename__ = "asset_transfers"
+#     
+#     id = Column(Integer, primary_key=True, index=True)
+#     tenant_id = Column(Integer, nullable=False, index=True)
+#     
+#     # Asset reference
+#     asset_id = Column(Integer, ForeignKey("fixed_assets.id"), nullable=False, index=True)
+#     
+#     # Transfer details
+#     transfer_number = Column(String(50), nullable=False, unique=True)
+#     transfer_date = Column(Date, nullable=False, index=True)
+#     
+#     # From
+#     from_location = Column(String(200), nullable=True)
+#     from_department = Column(String(100), nullable=True)
+#     from_custodian = Column(String(200), nullable=True)
+#     
+#     # To
+#     to_location = Column(String(200), nullable=True)
+#     to_department = Column(String(100), nullable=True)
+#     to_custodian = Column(String(200), nullable=True)
+#     
+#     # Reason
+#     transfer_reason = Column(Text, nullable=True)
+#     
+#     # Approval
+#     approved_by = Column(Integer, nullable=True)
+#     approved_at = Column(DateTime, nullable=True)
+#     
+#     # Audit
+#     created_at = Column(DateTime, default=datetime.utcnow)
+#     created_by = Column(Integer, nullable=False)
+#     
+#     # Relationships
+#     asset = relationship("FixedAsset", back_populates="transfers")
+#     
+#     __table_args__ = (
+#         Index("ix_asset_transfer_asset_date", "asset_id", "transfer_date"),
+#     )
 
 
-class AssetMaintenance(Base):
-    """Asset Maintenance Records"""
-    __tablename__ = "asset_maintenance"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    
-    # Asset reference
-    asset_id = Column(Integer, ForeignKey("fixed_assets.id"), nullable=False, index=True)
-    
-    # Maintenance details
-    maintenance_date = Column(Date, nullable=False, index=True)
-    maintenance_type = Column(String(50), nullable=False)  # routine, breakdown, preventive
-    description = Column(Text, nullable=False)
-    
-    # Service provider
-    vendor_name = Column(String(200), nullable=True)
-    vendor_contact = Column(String(100), nullable=True)
-    
-    # Cost
-    maintenance_cost = Column(Numeric(15, 2), nullable=False)
-    
-    # Status
-    is_completed = Column(Boolean, default=True)
-    completion_date = Column(Date, nullable=True)
-    
-    # Next maintenance
-    next_maintenance_date = Column(Date, nullable=True)
-    
-    # Remarks
-    remarks = Column(Text, nullable=True)
-    
-    # Audit
-    created_at = Column(DateTime, default=datetime.utcnow)
-    created_by = Column(Integer, nullable=False)
-    
-    # Relationships
-    asset = relationship("FixedAsset", back_populates="maintenance_records")
-    
-    __table_args__ = (
-        Index("ix_asset_maint_asset_date", "asset_id", "maintenance_date"),
-    )
+# class AssetMaintenance(Base):
+#     """Asset Maintenance Records"""
+#     __tablename__ = "asset_maintenance"
+#     
+#     id = Column(Integer, primary_key=True, index=True)
+#     tenant_id = Column(Integer, nullable=False, index=True)
+#     
+#     # Asset reference
+#     asset_id = Column(Integer, ForeignKey("fixed_assets.id"), nullable=False, index=True)
+#     
+#     # Maintenance details
+#     maintenance_date = Column(Date, nullable=False, index=True)
+#     maintenance_type = Column(String(50), nullable=False)  # routine, breakdown, preventive
+#     description = Column(Text, nullable=False)
+#     
+#     # Service provider
+#     vendor_name = Column(String(200), nullable=True)
+#     vendor_contact = Column(String(100), nullable=True)
+#     
+#     # Cost
+#     maintenance_cost = Column(Numeric(15, 2), nullable=False)
+#     
+#     # Status
+#     is_completed = Column(Boolean, default=True)
+#     completion_date = Column(Date, nullable=True)
+#     
+#     # Next maintenance
+#     next_maintenance_date = Column(Date, nullable=True)
+#     
+#     # Remarks
+#     remarks = Column(Text, nullable=True)
+#     
+#     # Audit
+#     created_at = Column(DateTime, default=datetime.utcnow)
+#     created_by = Column(Integer, nullable=False)
+#     
+#     # Relationships
+#     asset = relationship("FixedAsset", back_populates="maintenance_records")
+#     
+#     __table_args__ = (
+#         Index("ix_asset_maint_asset_date", "asset_id", "maintenance_date"),
+#     )
 
 
 
