@@ -319,13 +319,13 @@ class SettlementComponentBase(BaseModel):
     component_type: SettlementComponentType = Field(...)
     component_name: str = Field(..., min_length=2, max_length=200)
     description: Optional[str] = Field(None, max_length=2000)
-    amount: Decimal = Field(..., ge=0, decimal_places=2)
+    amount: Decimal = Field(..., ge=0)
     is_deduction: bool = Field(default=False)
     calculation_basis: Optional[str] = Field(None, max_length=2000)
-    quantity: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
-    rate: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    quantity: Optional[Decimal] = Field(None, ge=0)
+    rate: Optional[Decimal] = Field(None, ge=0)
     is_taxable: bool = Field(default=True)
-    tax_amount: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
+    tax_amount: Decimal = Field(default=Decimal('0.00'), ge=0)
     remarks: Optional[str] = Field(None, max_length=2000)
 
 
@@ -338,13 +338,13 @@ class SettlementComponentUpdate(BaseModel):
     """Schema for updating settlement component"""
     component_name: Optional[str] = Field(None, min_length=2, max_length=200)
     description: Optional[str] = Field(None, max_length=2000)
-    amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    amount: Optional[Decimal] = Field(None, ge=0)
     is_deduction: Optional[bool] = None
     calculation_basis: Optional[str] = Field(None, max_length=2000)
-    quantity: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
-    rate: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    quantity: Optional[Decimal] = Field(None, ge=0)
+    rate: Optional[Decimal] = Field(None, ge=0)
     is_taxable: Optional[bool] = None
-    tax_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    tax_amount: Optional[Decimal] = Field(None, ge=0)
     remarks: Optional[str] = Field(None, max_length=2000)
 
 
@@ -383,39 +383,39 @@ class SettlementCalculationSchema(BaseModel):
     """Schema for settlement calculation"""
     # Salary
     basic_salary_days: Optional[int] = Field(None, ge=0, le=31)
-    basic_salary_amount: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
+    basic_salary_amount: Decimal = Field(default=Decimal('0.00'), ge=0)
     
     # Leave
-    total_leave_balance: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
-    encashable_leaves: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
-    leave_encashment_amount: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
+    total_leave_balance: Decimal = Field(default=Decimal('0.00'), ge=0)
+    encashable_leaves: Decimal = Field(default=Decimal('0.00'), ge=0)
+    leave_encashment_amount: Decimal = Field(default=Decimal('0.00'), ge=0)
     
     # Notice period
     notice_period_shortfall_days: int = Field(default=0, ge=0, le=365)
-    notice_pay_recovery: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
+    notice_pay_recovery: Decimal = Field(default=Decimal('0.00'), ge=0)
     
     # Gratuity
-    years_of_service: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    years_of_service: Optional[Decimal] = Field(None, ge=0)
     gratuity_eligible: bool = Field(default=False)
-    gratuity_amount: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
+    gratuity_amount: Decimal = Field(default=Decimal('0.00'), ge=0)
     
     # Bonus
-    bonus_amount: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
-    incentive_amount: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
+    bonus_amount: Decimal = Field(default=Decimal('0.00'), ge=0)
+    incentive_amount: Decimal = Field(default=Decimal('0.00'), ge=0)
     
     # Reimbursements
-    pending_reimbursement_amount: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
+    pending_reimbursement_amount: Decimal = Field(default=Decimal('0.00'), ge=0)
     
     # Recoveries
-    loan_recovery: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
-    advance_recovery: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
-    asset_loss_recovery: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
-    other_recovery: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
+    loan_recovery: Decimal = Field(default=Decimal('0.00'), ge=0)
+    advance_recovery: Decimal = Field(default=Decimal('0.00'), ge=0)
+    asset_loss_recovery: Decimal = Field(default=Decimal('0.00'), ge=0)
+    other_recovery: Decimal = Field(default=Decimal('0.00'), ge=0)
     recovery_remarks: Optional[str] = Field(None, max_length=2000)
     
     # Tax
-    tds_amount: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
-    professional_tax: Decimal = Field(default=Decimal('0.00'), ge=0, decimal_places=2)
+    tds_amount: Decimal = Field(default=Decimal('0.00'), ge=0)
+    professional_tax: Decimal = Field(default=Decimal('0.00'), ge=0)
     
     calculation_remarks: Optional[str] = Field(None, max_length=2000)
 

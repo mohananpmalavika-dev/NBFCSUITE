@@ -83,11 +83,52 @@ from backend.shared.database.asset_models import (
 
 ---
 
+## Issue 4: Incorrect Auth Module Import Path
+**Error:** `ModuleNotFoundError: No module named 'backend.shared.auth'`
+
+**Root Cause:** Multiple files were importing from incorrect path `backend.shared.auth.dependencies` instead of `backend.services.auth.dependencies`
+
+**Files Updated (22 files):**
+- `backend/crm/routes/customer_service_routes.py`
+- `backend/crm/routes/marketing_routes.py`
+- `backend/crm/routes/opportunity_routes.py`
+- `backend/services/aml/router.py`
+- `backend/services/crm/opportunity_router.py`
+- `backend/services/crm/router.py`
+- `backend/services/facility/building_router.py`
+- `backend/services/facility/cafeteria_router.py`
+- `backend/services/facility/housekeeping_router.py`
+- `backend/services/facility/transport_router.py`
+- `backend/services/facility/visitor_router.py`
+- `backend/services/fixed_assets/router.py`
+- `backend/services/hrms/ess_router.py`
+- `backend/services/hrms/loan_router.py`
+- `backend/services/hrms/routes/exit_routes.py`
+- `backend/services/hrms/routes/performance_routes.py`
+- `backend/services/legal/license_router.py`
+- `backend/services/legal/litigation_router.py`
+- `backend/services/legal/router.py`
+- And 3 other schema files
+
+**Solution:**
+```python
+# Before (incorrect)
+from backend.shared.auth.dependencies import get_current_user
+
+# After (correct)
+from backend.services.auth.dependencies import get_current_user
+```
+
+**Commit:** 697f0c3
+
+---
+
 ## Status
 ✅ Fixed and deployed
 - Duplicate table definitions removed
 - All import statements updated
 - Correct class names used throughout
+- Auth module import paths corrected across all modules
 
 ## Next Steps
 Monitor Render deployment logs for any remaining import errors.

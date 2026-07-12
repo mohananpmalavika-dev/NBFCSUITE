@@ -116,18 +116,18 @@ class FixedAssetBase(BaseModel):
     supplier_name: Optional[str] = Field(None, max_length=200)
     
     # Financial
-    purchase_cost: Decimal = Field(..., ge=0, decimal_places=2)
-    installation_cost: Decimal = Field(default=0, ge=0, decimal_places=2)
-    transportation_cost: Decimal = Field(default=0, ge=0, decimal_places=2)
-    other_costs: Decimal = Field(default=0, ge=0, decimal_places=2)
+    purchase_cost: Decimal = Field(..., ge=0)
+    installation_cost: Decimal = Field(default=0, ge=0)
+    transportation_cost: Decimal = Field(default=0, ge=0)
+    other_costs: Decimal = Field(default=0, ge=0)
     
     # Depreciation configuration
     depreciation_method: DepreciationMethodEnum = DepreciationMethodEnum.STRAIGHT_LINE
-    depreciation_rate: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    depreciation_rate: Optional[Decimal] = Field(None, ge=0, le=100)
     useful_life_years: Optional[int] = Field(None, ge=0)
     useful_life_units: Optional[int] = Field(None, ge=0)
-    salvage_value: Decimal = Field(default=0, ge=0, decimal_places=2)
-    residual_value: Decimal = Field(default=0, ge=0, decimal_places=2)
+    salvage_value: Decimal = Field(default=0, ge=0)
+    residual_value: Decimal = Field(default=0, ge=0)
     depreciation_start_date: Optional[date] = None
     
     # Location and custodian
@@ -151,7 +151,7 @@ class FixedAssetBase(BaseModel):
     insurance_policy_number: Optional[str] = Field(None, max_length=100)
     insurance_expiry_date: Optional[date] = None
     insurance_company: Optional[str] = Field(None, max_length=200)
-    insurance_value: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    insurance_value: Optional[Decimal] = Field(None, ge=0)
     
     # Status
     asset_status: AssetStatusEnum = AssetStatusEnum.ACTIVE
@@ -202,7 +202,7 @@ class FixedAssetUpdate(BaseModel):
     insurance_policy_number: Optional[str] = Field(None, max_length=100)
     insurance_expiry_date: Optional[date] = None
     insurance_company: Optional[str] = Field(None, max_length=200)
-    insurance_value: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    insurance_value: Optional[Decimal] = Field(None, ge=0)
     
     image_url: Optional[str] = Field(None, max_length=500)
     document_urls: Optional[List[str]] = None
@@ -268,7 +268,7 @@ class AssetDepreciationBase(BaseModel):
     period_end_date: date
     depreciation_date: date
     depreciation_method: DepreciationMethodEnum
-    depreciation_rate: Optional[Decimal] = Field(None, ge=0, le=100, decimal_places=2)
+    depreciation_rate: Optional[Decimal] = Field(None, ge=0, le=100)
     notes: Optional[str] = None
 
 
@@ -343,18 +343,18 @@ class AssetMaintenanceBase(BaseModel):
     parts_replaced: Optional[str] = None
     recommendations: Optional[str] = None
     
-    labor_cost: Decimal = Field(default=0, ge=0, decimal_places=2)
-    parts_cost: Decimal = Field(default=0, ge=0, decimal_places=2)
-    other_charges: Decimal = Field(default=0, ge=0, decimal_places=2)
+    labor_cost: Decimal = Field(default=0, ge=0)
+    parts_cost: Decimal = Field(default=0, ge=0)
+    other_charges: Decimal = Field(default=0, ge=0)
     
-    downtime_hours: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    downtime_hours: Optional[Decimal] = Field(None, ge=0)
     
     warranty_claim: bool = False
     warranty_claim_number: Optional[str] = Field(None, max_length=100)
     
     invoice_number: Optional[str] = Field(None, max_length=100)
     invoice_date: Optional[date] = None
-    invoice_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    invoice_amount: Optional[Decimal] = Field(None, ge=0)
     
     document_urls: Optional[List[str]] = None
     notes: Optional[str] = None
@@ -376,15 +376,15 @@ class AssetMaintenanceUpdate(BaseModel):
     parts_replaced: Optional[str] = None
     recommendations: Optional[str] = None
     
-    labor_cost: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
-    parts_cost: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
-    other_charges: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    labor_cost: Optional[Decimal] = Field(None, ge=0)
+    parts_cost: Optional[Decimal] = Field(None, ge=0)
+    other_charges: Optional[Decimal] = Field(None, ge=0)
     
-    downtime_hours: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    downtime_hours: Optional[Decimal] = Field(None, ge=0)
     
     invoice_number: Optional[str] = Field(None, max_length=100)
     invoice_date: Optional[date] = None
-    invoice_amount: Optional[Decimal] = Field(None, ge=0, decimal_places=2)
+    invoice_amount: Optional[Decimal] = Field(None, ge=0)
     
     document_urls: Optional[List[str]] = None
     notes: Optional[str] = None
@@ -450,9 +450,9 @@ class AssetTransferBase(BaseModel):
     condition_at_transfer: Optional[str] = Field(None, max_length=50)
     condition_notes: Optional[str] = None
     
-    transfer_cost: Decimal = Field(default=0, ge=0, decimal_places=2)
-    insurance_cost: Decimal = Field(default=0, ge=0, decimal_places=2)
-    other_charges: Decimal = Field(default=0, ge=0, decimal_places=2)
+    transfer_cost: Decimal = Field(default=0, ge=0)
+    insurance_cost: Decimal = Field(default=0, ge=0)
+    other_charges: Decimal = Field(default=0, ge=0)
     
     document_urls: Optional[List[str]] = None
     remarks: Optional[str] = None
@@ -529,8 +529,8 @@ class AssetDisposalRequest(BaseModel):
     asset_id: int
     disposal_date: date
     disposal_method: DisposalMethodEnum
-    disposal_value: Decimal = Field(default=0, ge=0, decimal_places=2)
-    disposal_cost: Decimal = Field(default=0, ge=0, decimal_places=2)
+    disposal_value: Decimal = Field(default=0, ge=0)
+    disposal_cost: Decimal = Field(default=0, ge=0)
     disposal_notes: Optional[str] = None
     reason: Optional[str] = None
 
