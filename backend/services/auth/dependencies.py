@@ -195,3 +195,40 @@ async def get_current_user_id(
     """
     return current_user.id
 
+
+async def get_current_tenant(
+    current_user: UserWithRoles = Depends(get_current_user)
+) -> int:
+    """
+    Get current tenant (returns tenant_id as int)
+    Alias for get_tenant_id but returns int instead of str
+    
+    Usage:
+        @app.get("/protected")
+        async def protected_route(tenant: int = Depends(get_current_tenant)):
+            return {"tenant": tenant}
+    """
+    if not hasattr(current_user, 'tenant_id') or not current_user.tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenant associated with user"
+        )
+    return int(current_user.tenant_id)
+
+
+def check_permission(permission: str):
+    """
+    Check if user has specific permission (alias for require_permission)
+    
+    Args:
+        permission: Permission string (e.g., "users:create")
+        
+    Usage:
+        @app.post("/users")
+        async def create_user(
+            user: UserWithRoles = Depends(check_permission("users:create"))
+        ):
+            ...
+    """
+    return require_permission(permission)
+
