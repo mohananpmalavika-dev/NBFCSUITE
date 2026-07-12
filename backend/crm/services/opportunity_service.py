@@ -19,8 +19,10 @@ from backend.shared.schemas.crm_opportunity_schemas import (
     CRMOpportunityCreate, CRMOpportunityUpdate,
     CRMOpportunityProductCreate, CRMOpportunityActivityCreate
 )
-from backend.shared.utils.response import create_response, error_response
-from backend.shared.utils.logger import logger
+from backend.shared.common.response import create_response, error_response
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CRMOpportunityService:

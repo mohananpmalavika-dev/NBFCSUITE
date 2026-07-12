@@ -244,7 +244,7 @@ def get_marketing_stats(
             MarketingCampaign.is_deleted == False
         ).group_by(MarketingCampaign.status).all()
         
-        from backend.shared.utils.response import create_response
+        from backend.shared.common.response import create_response
         return create_response(
             data={
                 "total_campaigns": total_campaigns,
@@ -256,5 +256,5 @@ def get_marketing_stats(
         )
         
     except Exception as e:
-        from backend.shared.utils.response import error_response
+        from backend.shared.common.response import error_response
         return error_response(message=f"Failed to get statistics: {str(e)}")

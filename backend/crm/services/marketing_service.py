@@ -20,7 +20,7 @@ from backend.shared.schemas.crm_marketing_schemas import (
     LandingPageSubmissionCreate,
     CampaignTemplateCreate, CampaignTemplateUpdate
 )
-from backend.shared.utils.response import create_response, error_response
+from backend.shared.common.response import create_response, error_response
 
 
 class MarketingCampaignService:

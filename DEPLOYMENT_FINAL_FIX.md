@@ -123,12 +123,77 @@ from backend.services.auth.dependencies import get_current_user
 
 ---
 
+## Issue 5: Deprecated Pydantic v2 Constraint
+**Error:** `ValueError: Unknown constraint decimal_places`
+
+**Root Cause:** Pydantic v2 removed the `decimal_places` constraint parameter from `Field()`. This parameter was used to specify decimal precision but is no longer supported.
+
+**Files Updated:**
+- `backend/services/fixed_assets/schemas.py` - Removed `decimal_places` from 8 Decimal field definitions
+- `backend/services/hrms/schemas/exit_schemas.py` - Removed `decimal_places` from 6 Decimal field definitions
+
+**Solution:**
+```python
+# Before (Pydantic v1 style - not supported in v2)
+amount: Decimal = Field(..., ge=0, decimal_places=2)
+
+# After (Pydantic v2 compatible)
+amount: Decimal = Field(..., ge=0)
+```
+
+**Note:** The `decimal_places` field name in `CurrencyBase` schema was preserved as it's a legitimate model field, not a constraint parameter.
+
+**Commit:** a27cb64
+
+---
+
+## Issue 6: Missing Auth Dependency Functions
+**Error:** `ImportError: cannot import name 'require_employee' from 'backend.services.auth.dependencies'`
+
+**Root Cause:** Multiple files were importing auth dependency functions that didn't exist:
+- `require_employee` - imported but never used
+- `check_permission` - used but not defined
+- `get_current_tenant` - used but not defined
+
+**Files Updated:**
+1. `backend/services/auth/dependencies.py` - Added missing functions:
+   - `get_current_tenant()` - Returns tenant_id as int (alias for get_tenant_id)
+   - `check_permission()` - Alias for require_permission for backward compatibility
+
+2. `backend/services/hrms/ess_router.py` - Removed unused `require_employee` import
+
+**Solution:**
+```python
+# Added to dependencies.py
+async def get_current_tenant(current_user: UserWithRoles = Depends(get_current_user)) -> int:
+    """Get current tenant ID as integer"""
+    return int(current_user.tenant_id)
+
+def check_permission(permission: str):
+    """Alias for require_permission"""
+    return require_permission(permission)
+```
+
+**Commit:** f29f4a7
+
+---
+
 ## Status
 ✅ Fixed and deployed
 - Duplicate table definitions removed
 - All import statements updated
 - Correct class names used throughout
 - Auth module import paths corrected across all modules
+- Pydantic v2 incompatible constraints removed
+- Missing auth dependency functions added
+
+## Summary of All Fixes
+1. **Duplicate Asset Models** - Commented out duplicates in accounting_extended_models.py
+2. **Wrong Import Paths** - Updated asset model imports to use asset_models.py
+3. **Wrong Class Names** - Changed AssetDepreciationSchedule to AssetDepreciation
+4. **Auth Module Path** - Fixed backend.shared.auth → backend.services.auth (22 files)
+5. **Pydantic v2 Compatibility** - Removed decimal_places constraints
+6. **Missing Auth Functions** - Added check_permission and get_current_tenant
 
 ## Next Steps
-Monitor Render deployment logs for any remaining import errors.
+Monitor Render deployment logs for successful deployment.
