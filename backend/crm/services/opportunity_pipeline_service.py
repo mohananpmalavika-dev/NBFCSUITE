@@ -12,7 +12,9 @@ from decimal import Decimal
 
 from backend.shared.database.crm_opportunity_models import CRMOpportunity, OpportunityStage
 from backend.shared.common.response import create_response, error_response
-from backend.shared.utils.logger import logger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CRMPipelineService:
