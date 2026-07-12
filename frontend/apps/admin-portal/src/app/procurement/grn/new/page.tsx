@@ -5,12 +5,13 @@
 
 'use client';
 
+import { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import GRNForm from '@/components/procurement/GRNForm';
 
-export default function NewGRNPage() {
+function NewGRNContent() {
   const router = useRouter();
 
   return (
@@ -52,5 +53,13 @@ export default function NewGRNPage() {
         onCancel={() => router.push('/procurement/grn')}
       />
     </div>
+  );
+}
+
+export default function NewGRNPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewGRNContent />
+    </Suspense>
   );
 }

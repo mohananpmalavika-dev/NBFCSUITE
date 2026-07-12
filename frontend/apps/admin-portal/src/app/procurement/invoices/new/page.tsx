@@ -5,12 +5,13 @@
 
 'use client';
 
+import { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import InvoiceForm from '@/components/procurement/InvoiceForm';
 
-export default function NewInvoicePage() {
+function NewInvoiceContent() {
   const router = useRouter();
 
   return (
@@ -52,5 +53,13 @@ export default function NewInvoicePage() {
         onCancel={() => router.push('/procurement/invoices')}
       />
     </div>
+  );
+}
+
+export default function NewInvoicePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewInvoiceContent />
+    </Suspense>
   );
 }

@@ -3,6 +3,16 @@
  * Common helper functions for formatting and data manipulation
  */
 
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+/**
+ * Merge Tailwind CSS classes
+ */
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 /**
  * Format bytes to human-readable file size
  */
@@ -242,4 +252,88 @@ export const buildQueryString = (params: Record<string, any>): string => {
     }
   });
   return searchParams.toString();
+};
+
+/**
+ * Get status color based on status string
+ */
+export const getStatusColor = (status: string): string => {
+  const statusLower = status?.toLowerCase() || '';
+  
+  const colorMap: Record<string, string> = {
+    active: 'bg-green-100 text-green-800',
+    inactive: 'bg-gray-100 text-gray-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    approved: 'bg-green-100 text-green-800',
+    rejected: 'bg-red-100 text-red-800',
+    draft: 'bg-gray-100 text-gray-800',
+    published: 'bg-blue-100 text-blue-800',
+    completed: 'bg-green-100 text-green-800',
+    in_progress: 'bg-blue-100 text-blue-800',
+    cancelled: 'bg-red-100 text-red-800',
+    open: 'bg-yellow-100 text-yellow-800',
+    closed: 'bg-gray-100 text-gray-800',
+    overdue: 'bg-red-100 text-red-800',
+    new: 'bg-blue-100 text-blue-800',
+    processing: 'bg-yellow-100 text-yellow-800',
+    success: 'bg-green-100 text-green-800',
+    failed: 'bg-red-100 text-red-800',
+    warning: 'bg-orange-100 text-orange-800',
+  };
+  
+  return colorMap[statusLower] || 'bg-gray-100 text-gray-800';
+};
+
+/**
+ * Format distance to now (similar to date-fns formatDistanceToNow)
+ */
+export const formatDistanceToNow = (date: string | Date): string => {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+  const diffMonth = Math.floor(diffDay / 30);
+  const diffYear = Math.floor(diffDay / 365);
+  
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
+  if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
+  if (diffDay < 7) return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+  if (diffWeek < 4) return `${diffWeek} week${diffWeek > 1 ? 's' : ''} ago`;
+  if (diffMonth < 12) return `${diffMonth} month${diffMonth > 1 ? 's' : ''} ago`;
+  return `${diffYear} year${diffYear > 1 ? 's' : ''} ago`;
+};
+
+/**
+ * Calculate EMI (Equated Monthly Installment)
+ * @param principal - Loan amount
+ * @param ratePercent - Annual interest rate (percentage)
+ * @param tenureMonths - Loan tenure in months
+ * @returns EMI amount
+ */
+export const calculateEMI = (
+  principal: number,
+  ratePercent: number,
+  tenureMonths: number
+): number => {
+  if (principal <= 0 || ratePercent <= 0 || tenureMonths <= 0) {
+    return 0;
+  }
+  
+  // Convert annual rate to monthly rate and percentage to decimal
+  const monthlyRate = (ratePercent / 12) / 100;
+  
+  // EMI = [P × R × (1+R)^N] / [(1+R)^N-1]
+  const emi = 
+    (principal * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) /
+    (Math.pow(1 + monthlyRate, tenureMonths) - 1);
+  
+  return Math.round(emi * 100) / 100; // Round to 2 decimal places
 };
