@@ -48,8 +48,8 @@ from backend.shared.database.customer_models import (
     CustomerBureauHistory, ActivityType, BureauProvider, BureauPullStatus
 )
 
-# 4. HRMS Loan models (Employee loans)
-from backend.shared.database.loan_models import (
+# 4. HRMS Loan models (Employee loans) - Import from hrms_loan_models
+from backend.shared.database.hrms_loan_models import (
     LoanPolicy, EmployeeLoan, LoanEMISchedule, LoanTransaction,
     LoanType, LoanStatus, RepaymentFrequency, EMIStatus, TransactionType
 )

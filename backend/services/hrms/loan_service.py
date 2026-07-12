@@ -12,7 +12,7 @@ from decimal import Decimal
 import calendar
 from dateutil.relativedelta import relativedelta
 
-from backend.shared.database.loan_models import (
+from backend.shared.database.hrms_loan_models import (
     EmployeeLoan, LoanPolicy, LoanEMISchedule, LoanTransaction,
     LoanType, LoanStatus, RepaymentFrequency, EMIStatus, TransactionType
 )
