@@ -10,7 +10,12 @@ from pydantic import Field, ConfigDict
 class Settings(BaseSettings):
     """Application settings with environment variable support"""
     
-    model_config = ConfigDict(extra='ignore')  # Ignore extra fields from .env file
+    model_config = ConfigDict(
+        extra='ignore',  # Ignore extra fields from .env file
+        env_file='.env',
+        env_file_encoding='utf-8',
+        case_sensitive=True
+    )
     
     # Application
     APP_NAME: str = "NBFC Financial Suite"
@@ -38,7 +43,7 @@ class Settings(BaseSettings):
     
     # CORS
     CORS_ORIGINS: str = Field(default="*", env="CORS_ORIGINS")
-    CORS_ALLOW_CREDENTIALS: bool = Field(default=True, env="CORS_ALLOW_CREDENTIALS")
+    CORS_ALLOW_CREDENTIALS: bool = Field(default=False, env="CORS_ALLOW_CREDENTIALS")
     
     # Multi-tenancy
     TENANT_ISOLATION_ENABLED: bool = Field(default=True, env="TENANT_ISOLATION_ENABLED")

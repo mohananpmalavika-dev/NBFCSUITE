@@ -6,7 +6,7 @@ Pydantic models for request/response validation
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, ConfigDict
 from enum import Enum
 
 
@@ -97,6 +97,8 @@ class VerificationStatusEnum(str, Enum):
 
 class FixedAssetBase(BaseModel):
     """Base schema for Fixed Asset"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     asset_code: str = Field(..., max_length=50, description="Unique asset code")
     asset_name: str = Field(..., max_length=200, description="Asset name")
     asset_description: Optional[str] = Field(None, description="Detailed description")

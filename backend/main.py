@@ -568,10 +568,13 @@ cors_origins = settings.CORS_ORIGINS.split(",")
 if "*" in cors_origins:
     cors_origins = ["*"]
 
+# Safely get CORS_ALLOW_CREDENTIALS with default
+cors_allow_credentials = getattr(settings, 'CORS_ALLOW_CREDENTIALS', True)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_credentials=settings.CORS_ALLOW_CREDENTIALS if "*" not in cors_origins else False,
+    allow_credentials=cors_allow_credentials if "*" not in cors_origins else False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

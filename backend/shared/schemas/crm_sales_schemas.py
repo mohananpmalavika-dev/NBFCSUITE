@@ -3,7 +3,7 @@ CRM Sales Automation Schemas
 Pydantic models for request/response validation
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, ConfigDict
 from typing import Optional, List
 from datetime import date, datetime
 from uuid import UUID
@@ -16,6 +16,8 @@ from decimal import Decimal
 
 class ProductBase(BaseModel):
     """Base Product schema"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     product_code: str = Field(..., min_length=1, max_length=50)
     product_name: str = Field(..., min_length=1, max_length=200)
     product_category: str = Field(default="goods")

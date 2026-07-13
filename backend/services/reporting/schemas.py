@@ -2,7 +2,7 @@
 Reporting & Analytics Pydantic Schemas
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from enum import Enum
@@ -305,6 +305,8 @@ class DashboardWidgetResponse(BaseModel):
 # ============================================
 
 class PredictiveModelCreate(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_name: str
     model_description: Optional[str] = None
     model_type: str  # classification, regression, clustering
@@ -316,6 +318,8 @@ class PredictiveModelCreate(BaseModel):
 
 
 class PredictiveModelResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
+    
     id: int
     tenant_id: str
     model_name: str
@@ -332,11 +336,10 @@ class PredictiveModelResponse(BaseModel):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class PredictionRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_id: int
     entity_type: str  # customer, loan, application
     entity_id: str
@@ -344,6 +347,8 @@ class PredictionRequest(BaseModel):
 
 
 class PredictionResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=(), from_attributes=True)
+    
     id: int
     model_id: int
     entity_type: str
@@ -355,9 +360,6 @@ class PredictionResponse(BaseModel):
     explanation: Optional[str]
     prediction_date: datetime
     prediction_time_ms: Optional[int]
-
-    class Config:
-        from_attributes = True
 
 
 # ============================================
