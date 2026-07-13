@@ -2,10 +2,9 @@
 
 from backend.shared.database.connection import engine, Base, get_db, AsyncSessionLocal
 from backend.shared.database.models import BaseModel, Tenant, TenantMixin, TimestampMixin, SoftDeleteMixin, AuditMixin
-from backend.shared.database.accounting_models import (
-    ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
-    TrialBalance, AccountingPeriod
-)
+
+# NOTE: Model imports are now handled conditionally in conditional_imports.py
+# This prevents unconditional loading of disabled modules
 
 __all__ = [
     "engine",
@@ -17,12 +16,5 @@ __all__ = [
     "TenantMixin",
     "TimestampMixin",
     "SoftDeleteMixin",
-    "AuditMixin",
-    # Accounting models
-    "ChartOfAccounts",
-    "JournalEntry",
-    "JournalEntryLine",
-    "GeneralLedger",
-    "TrialBalance",
-    "AccountingPeriod"
+    "AuditMixin"
 ]
