@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, env="JWT_REFRESH_TOKEN_EXPIRE_DAYS")
     
     # CORS
-    CORS_ORIGINS: List[str] = Field(default=["*"], env="CORS_ORIGINS")
+    CORS_ORIGINS: str = Field(default="*", env="CORS_ORIGINS")
     
     # Multi-tenancy
     TENANT_ISOLATION_ENABLED: bool = Field(default=True, env="TENANT_ISOLATION_ENABLED")
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     
     # File Upload
     MAX_UPLOAD_SIZE: int = Field(default=10485760, env="MAX_UPLOAD_SIZE")  # 10MB
-    ALLOWED_EXTENSIONS: List[str] = Field(default=["pdf", "jpg", "jpeg", "png", "doc", "docx"], env="ALLOWED_EXTENSIONS")
+    ALLOWED_EXTENSIONS: str = Field(default="pdf,jpg,jpeg,png,doc,docx", env="ALLOWED_EXTENSIONS")
     
     # ==================================================================
     # FEATURE FLAGS FOR MEMORY OPTIMIZATION (FREE TIER)
@@ -142,6 +142,22 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+    
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Convert CORS_ORIGINS string to list"""
+        if isinstance(self.CORS_ORIGINS, str):
+            if self.CORS_ORIGINS == "*":
+                return ["*"]
+            return [origin.strip() for origin in self.CORS_ORIGINS.split(",")]
+        return self.CORS_ORIGINS
+    
+    @property
+    def allowed_extensions_list(self) -> List[str]:
+        """Convert ALLOWED_EXTENSIONS string to list"""
+        if isinstance(self.ALLOWED_EXTENSIONS, str):
+            return [ext.strip() for ext in self.ALLOWED_EXTENSIONS.split(",")]
+        return self.ALLOWED_EXTENSIONS
 
 
 # Create settings instance
