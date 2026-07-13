@@ -128,7 +128,7 @@ class CRMOpportunity(Base):
     deleted_by = Column(UUID(as_uuid=True), nullable=True)
     
     # Relationships
-    account = relationship("CRMAccount", back_populates="opportunities", foreign_keys=[account_id])
+    account = relationship("CRMAccount", foreign_keys=[account_id])  # Removed back_populates - CRMAccount may not have opportunities backref
     primary_contact = relationship("CRMContact", foreign_keys=[primary_contact_id])
     products = relationship("CRMOpportunityProduct", back_populates="opportunity", cascade="all, delete-orphan")
     activities = relationship("CRMOpportunityActivity", back_populates="opportunity", cascade="all, delete-orphan")
