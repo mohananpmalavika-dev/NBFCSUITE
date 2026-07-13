@@ -110,40 +110,40 @@ async def lifespan(app: FastAPI):
                 
             logger.info("✅ Table creation transaction completed")
         
-    except Exception as create_error:
-        # Check the type of error
-        error_msg = str(create_error).lower()
-        error_name = type(create_error).__name__
-        
-        # Log the full error for debugging
-        logger.error(f"⚠️ Exception during table creation: {create_error}")
-        logger.error(f"Exception type: {error_name}")
-        
-        # Handle foreign key errors gracefully
-        if 'NoReferencedTableError' in error_name or 'could not find table' in error_msg:
-            logger.warning(f"⚠️ Foreign key error from database schema: {create_error}")
-            logger.warning("⚠️ This is likely from old migrations with disabled modules")
-            logger.warning("💡 Set SKIP_TABLE_CREATION=true to skip table creation entirely")
-            logger.info("✓ Continuing with existing database schema...")
-            # Do NOT raise - continue with existing schema
-        elif 'already exists' in error_msg or 'duplicate' in error_msg:
-            # This shouldn't happen with checkfirst=True, but if it does,
-            # the tables DO exist, so this is OK
-            logger.warning(f"⚠️ Got 'already exists' error - tables may already exist")
-            logger.info("⚠️ Continuing despite 'already exists' message...")
-            # Do NOT raise - continue to verification
-        elif 'cannot be implemented' in error_msg or 'incompatible types' in error_msg:
-            # Schema mismatch - this is a real error
-            logger.error(f"❌ Schema mismatch detected: {create_error}")
-            logger.error("💡 Set environment variable DROP_ALL_TABLES=true to recreate tables")
-            raise
-        else:
-            # Unknown error - check if it's safe to continue
-            logger.error(f"❌ Unexpected error creating tables")
-            import traceback
-            logger.error(traceback.format_exc())
-            logger.warning("⚠️ Attempting to continue with existing database schema...")
-            # Try to continue - worst case, queries will fail later
+        except Exception as create_error:
+            # Check the type of error
+            error_msg = str(create_error).lower()
+            error_name = type(create_error).__name__
+            
+            # Log the full error for debugging
+            logger.error(f"⚠️ Exception during table creation: {create_error}")
+            logger.error(f"Exception type: {error_name}")
+            
+            # Handle foreign key errors gracefully
+            if 'NoReferencedTableError' in error_name or 'could not find table' in error_msg:
+                logger.warning(f"⚠️ Foreign key error from database schema: {create_error}")
+                logger.warning("⚠️ This is likely from old migrations with disabled modules")
+                logger.warning("💡 Set SKIP_TABLE_CREATION=true to skip table creation entirely")
+                logger.info("✓ Continuing with existing database schema...")
+                # Do NOT raise - continue with existing schema
+            elif 'already exists' in error_msg or 'duplicate' in error_msg:
+                # This shouldn't happen with checkfirst=True, but if it does,
+                # the tables DO exist, so this is OK
+                logger.warning(f"⚠️ Got 'already exists' error - tables may already exist")
+                logger.info("⚠️ Continuing despite 'already exists' message...")
+                # Do NOT raise - continue to verification
+            elif 'cannot be implemented' in error_msg or 'incompatible types' in error_msg:
+                # Schema mismatch - this is a real error
+                logger.error(f"❌ Schema mismatch detected: {create_error}")
+                logger.error("💡 Set environment variable DROP_ALL_TABLES=true to recreate tables")
+                raise
+            else:
+                # Unknown error - check if it's safe to continue
+                logger.error(f"❌ Unexpected error creating tables")
+                import traceback
+                logger.error(traceback.format_exc())
+                logger.warning("⚠️ Attempting to continue with existing database schema...")
+                # Try to continue - worst case, queries will fail later
     
     # Verify tables exist - wait a moment for database to sync
     logger.info("🔍 Waiting for database to sync...")
