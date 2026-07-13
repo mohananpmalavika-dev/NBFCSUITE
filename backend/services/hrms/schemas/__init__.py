@@ -40,6 +40,14 @@ from backend.services.hrms.schemas.designation_schemas import (
     PaginatedDesignationResponse,
     DesignationStats,
 )
+from backend.services.hrms.schemas.organization_schemas import (
+    OrganizationBase,
+    OrganizationCreate,
+    OrganizationUpdate,
+    OrganizationResponse,
+    OrganizationListItem,
+    PaginatedOrganizationResponse,
+)
 from backend.services.hrms.schemas.exit_schemas import *
 from backend.services.hrms.schemas.performance_schemas import *
 
@@ -78,6 +86,13 @@ __all__ = [
     "DesignationListItem",
     "PaginatedDesignationResponse",
     "DesignationStats",
+    # Organization schemas
+    "OrganizationBase",
+    "OrganizationCreate",
+    "OrganizationUpdate",
+    "OrganizationResponse",
+    "OrganizationListItem",
+    "PaginatedOrganizationResponse",
     # Exit schemas
     "ExitRequestCreate",
     "ExitRequestUpdate",
