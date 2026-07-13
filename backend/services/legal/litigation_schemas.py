@@ -3,7 +3,7 @@ Legal - Litigation Management Schemas
 Pydantic models for case tracking, hearing management, and legal expense tracking
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, computed_field
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from decimal import Decimal
@@ -377,13 +377,12 @@ class LegalExpenseBase(BaseModel):
     cost_center: Optional[str] = Field(None, max_length=200)
     tags: List[str] = Field(default_factory=list)
     notes: Optional[str] = None
-
-    @validator('total_amount', always=True, pre=False)
-    def calculate_total(cls, v, values):
+    
+    @computed_field
+    @property
+    def total_amount(self) -> Decimal:
         """Calculate total amount"""
-        if 'amount' in values and 'tax_amount' in values:
-            return values['amount'] + (values.get('tax_amount') or Decimal(0))
-        return v
+        return self.amount + (self.tax_amount or Decimal(0))
 
 
 class LegalExpenseCreate(LegalExpenseBase):
