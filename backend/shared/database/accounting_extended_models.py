@@ -909,71 +909,8 @@ class PaymentStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
-class Vendor(Base):
-    """Vendor Master"""
-    __tablename__ = "vendors"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
-    
-    # Vendor identification
-    vendor_code = Column(String(50), nullable=False, unique=True, index=True)
-    vendor_name = Column(String(200), nullable=False)
-    vendor_type = Column(Enum(VendorType), nullable=False)
-    
-    # Contact details
-    contact_person = Column(String(100), nullable=True)
-    email = Column(String(100), nullable=True)
-    phone = Column(String(20), nullable=True)
-    mobile = Column(String(20), nullable=True)
-    
-    # Address
-    address_line1 = Column(String(200), nullable=True)
-    address_line2 = Column(String(200), nullable=True)
-    city = Column(String(100), nullable=True)
-    state = Column(String(100), nullable=True)
-    pincode = Column(String(10), nullable=True)
-    country = Column(String(100), default="India")
-    
-    # Tax details
-    pan = Column(String(10), nullable=True, index=True)
-    gstin = Column(String(15), nullable=True, index=True)
-    tan = Column(String(10), nullable=True)
-    
-    # Bank details
-    bank_name = Column(String(200), nullable=True)
-    bank_account_number = Column(String(50), nullable=True)
-    bank_ifsc = Column(String(11), nullable=True)
-    bank_branch = Column(String(200), nullable=True)
-    
-    # Payment terms
-    payment_terms = Column(Enum(PaymentTerms), default=PaymentTerms.NET_30)
-    credit_days = Column(Integer, default=30)
-    credit_limit = Column(Numeric(15, 2), nullable=True)
-    
-    # Status
-    is_active = Column(Boolean, default=True)
-    is_msme = Column(Boolean, default=False)
-    
-    # Rating
-    vendor_rating = Column(Integer, nullable=True)  # 1-5
-    
-    # Notes
-    notes = Column(Text, nullable=True)
-    
-    # Audit
-    is_deleted = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by = Column(Integer, nullable=False)
-    
-    # Relationships
-    invoices = relationship("PurchaseInvoice", back_populates="vendor")
-    payments = relationship("VendorPayment", back_populates="vendor")
-    
-    __table_args__ = (
-        Index("ix_vendor_tenant_name", "tenant_id", "vendor_name"),
-    )
+# NOTE: Vendor model is defined in procurement_models.py
+# This file only contains vendor-related transaction models that reference the Vendor table
 
 
 class PurchaseInvoice(Base):

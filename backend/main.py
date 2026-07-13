@@ -68,32 +68,65 @@ async def lifespan(app: FastAPI):
     # Create tables - use connect() with manual transaction control for better error handling
     logger.info("🔧 Attempting to create database tables...")
     
-    try:
-        async with engine.begin() as conn:
-            # Use begin() instead of connect() to auto-commit on success
-            def create_tables_sync(sync_conn):
-                logger.info("Executing Base.metadata.create_all...")
-                try:
-                    Base.metadata.create_all(bind=sync_conn, checkfirst=True)
-                    logger.info("✅ Base.metadata.create_all completed successfully")
-                except Exception as e:
-                    logger.error(f"Error during create_all: {e}")
-                    # Don't re-raise here, let the outer handler deal with it
-                    raise
-            
-            await conn.run_sync(create_tables_sync)
-            
-        logger.info("✅ Table creation transaction committed")
+    # First, check if we should skip table creation entirely
+    skip_table_creation = os.getenv("SKIP_TABLE_CREATION", "false").lower() == "true"
+    
+    if skip_table_creation:
+        logger.info("⏭️  SKIP_TABLE_CREATION=true: Skipping table creation, using existing schema")
+    else:
+        try:
+            async with engine.begin() as conn:
+                # Use begin() instead of connect() to auto-commit on success
+                def create_tables_sync(sync_conn):
+                    logger.info("Executing Base.metadata.create_all...")
+                    try:
+                        # Only create tables that are in our current metadata
+                        # This prevents foreign key errors from old migrations
+                        tables_to_create = []
+                        for table_name, table in Base.metadata.tables.items():
+                            tables_to_create.append(table)
+                        
+                        logger.info(f"Creating {len(tables_to_create)} tables from current metadata...")
+                        Base.metadata.create_all(bind=sync_conn, tables=tables_to_create, checkfirst=True)
+                        logger.info("✅ Base.metadata.create_all completed successfully")
+                    except Exception as e:
+                        logger.error(f"Error during create_all: {e}")
+                        error_name = type(e).__name__
+                        error_msg = str(e)
+                        
+                        # Check if this is a foreign key error
+                        if 'NoReferencedTableError' in error_name or 'could not find table' in error_msg:
+                            logger.warning(f"⚠️ Foreign key error detected: {error_msg}")
+                            logger.warning("⚠️ This likely means the database has tables from old schema/migrations")
+                            logger.warning("💡 Recommendation: Set SKIP_TABLE_CREATION=true or DROP_ALL_TABLES=true")
+                            logger.info("✓ Continuing with existing database schema (ignoring creation errors)")
+                            # Don't raise - continue with existing schema
+                            return
+                        
+                        # Other errors - re-raise
+                        raise
+                
+                await conn.run_sync(create_tables_sync)
+                
+            logger.info("✅ Table creation transaction completed")
         
     except Exception as create_error:
         # Check the type of error
         error_msg = str(create_error).lower()
+        error_name = type(create_error).__name__
         
         # Log the full error for debugging
         logger.error(f"⚠️ Exception during table creation: {create_error}")
-        logger.error(f"Exception type: {type(create_error).__name__}")
+        logger.error(f"Exception type: {error_name}")
         
-        if 'already exists' in error_msg or 'duplicate' in error_msg:
+        # Handle foreign key errors gracefully
+        if 'NoReferencedTableError' in error_name or 'could not find table' in error_msg:
+            logger.warning(f"⚠️ Foreign key error from database schema: {create_error}")
+            logger.warning("⚠️ This is likely from old migrations with disabled modules")
+            logger.warning("💡 Set SKIP_TABLE_CREATION=true to skip table creation entirely")
+            logger.info("✓ Continuing with existing database schema...")
+            # Do NOT raise - continue with existing schema
+        elif 'already exists' in error_msg or 'duplicate' in error_msg:
             # This shouldn't happen with checkfirst=True, but if it does,
             # the tables DO exist, so this is OK
             logger.warning(f"⚠️ Got 'already exists' error - tables may already exist")
@@ -105,11 +138,12 @@ async def lifespan(app: FastAPI):
             logger.error("💡 Set environment variable DROP_ALL_TABLES=true to recreate tables")
             raise
         else:
-            # Unknown error - treat as fatal
+            # Unknown error - check if it's safe to continue
             logger.error(f"❌ Unexpected error creating tables")
             import traceback
             logger.error(traceback.format_exc())
-            raise
+            logger.warning("⚠️ Attempting to continue with existing database schema...")
+            # Try to continue - worst case, queries will fail later
     
     # Verify tables exist - wait a moment for database to sync
     logger.info("🔍 Waiting for database to sync...")

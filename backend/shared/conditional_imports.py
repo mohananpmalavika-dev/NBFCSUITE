@@ -56,11 +56,12 @@ def import_models():
             ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
             TrialBalance, AccountingPeriod
         )
-        # Import accounting extended models only if accounting is enabled
+        # Import accounting extended models (note: Vendor is in procurement_models)
         from backend.shared.database.accounting_extended_models import (
-            Vendor as AccountingVendor,  # Renamed to avoid conflict
-            VendorPayment, VendorPaymentAllocation
+            PurchaseInvoice, VendorPayment, VendorPaymentAllocation
         )
+        # Import Vendor model from procurement (needed for vendor payments)
+        from backend.shared.database.procurement_models import Vendor
     
     # 6. Deposit models
     if settings.ENABLE_DEPOSITS:
