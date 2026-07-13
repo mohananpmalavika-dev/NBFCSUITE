@@ -1,7 +1,7 @@
 """
 NBFC Financial Suite - Main Application
 Tier-1 Enterprise Platform - Backend API
-Version: 1.0.1 - Fixed async context issues
+Version: 1.0.2 - Added conditional model imports for memory optimization
 """
 
 from fastapi import FastAPI, Request, status
@@ -25,255 +25,8 @@ from backend.shared.middleware.tenant import TenantMiddleware
 from backend.shared.middleware.logging import LoggingMiddleware
 from backend.shared.middleware.error_handler import ErrorHandlerMiddleware
 
-# Import all models at module level to register them with SQLAlchemy
-# This must happen before any database operations
-# IMPORTANT: Import order matters for foreign key resolution!
-
-# 1. Core models (Tenant, User, etc.)
-from backend.shared.database.models import (
-    Tenant, User, Role, UserRole, Permission, RolePermission, FileUpload
-)
-
-# 2. Master data models (must come before models that reference them)
-from backend.shared.database.master_data_models import (
-    Country, State, City, Pincode, Bank, BankBranch, Currency,
-    InterestRateType, LoanProductType, DocumentType, Occupation,
-    Industry, LoanPurpose, RelationshipType, Holiday, FinancialYear
-)
-
-# 3. Customer models (references master data)
-from backend.shared.database.customer_models import (
-    Customer, CustomerKYC, CustomerDocument, CustomerFamily, 
-    CustomerBankAccount, CustomerReference, CustomerTimeline,
-    CustomerBureauHistory, ActivityType, BureauProvider, BureauPullStatus
-)
-
-# 4. Core loan models (Customer loans - NBFC Operations)
-from backend.shared.database.loan_models import (
-    LoanProduct, LoanApplication, LoanApplicationCoApplicant,
-    LoanApplicationDocument, LoanApprovalWorkflow, LoanAccount,
-    LoanEMISchedule, LoanRepayment, LoanStatus, ApplicationStatus,
-    RepaymentFrequency as LoanRepaymentFrequency, EMIStatus as LoanEMIStatus
-)
-
-# 5. HRMS Loan models (Employee loans) - Import from hrms_loan_models
-from backend.shared.database.hrms_loan_models import (
-    LoanPolicy, EmployeeLoan, LoanEMISchedule as HRMSLoanEMISchedule, 
-    LoanTransaction, LoanType, LoanStatus as HRMSLoanStatus, 
-    RepaymentFrequency as HRMSRepaymentFrequency, EMIStatus as HRMSEMIStatus, 
-    TransactionType
-)
-
-# 7. Other business models
-from backend.shared.database.deposit_models import (
-    DepositProduct, DepositAccount, DepositTransaction,
-    DepositInterestCalculation, DepositMaturityQueue, DepositPassbookEntry
-)
-from backend.shared.database.accounting_models import (
-    ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
-    TrialBalance, AccountingPeriod
-)
-from backend.shared.database.workflow_models import (
-    WorkflowTemplate, WorkflowInstance, WorkflowStep, 
-    WorkflowHistory, WorkflowTask, WorkflowSLATracking
-)
-from backend.shared.database.rules_models import (
-    RuleCategory, BusinessRule, RuleCondition, RuleAction, 
-    RuleEvaluation, RuleDecision, RuleVersion
-)
-from backend.shared.database.decision_models import (
-    InstantDecision, PreApprovedOffer, DecisionStrategy,
-    DecisionCache, DecisionAnalytics, DecisionLimit
-)
-from backend.shared.database.notification_models import (
-    NotificationTemplate, NotificationLog, NotificationQueue,
-    NotificationPreference, NotificationSchedule
-)
-from backend.shared.database.gold_loan_models import (
-    GoldLoanProduct, GoldOrnament, GoldLoanAccount,
-    GoldLoanTransaction, GoldReleaseRequest, GoldAuction
-)
-
-# 8. Integration models (NEW - LOS Enhancement)
-from backend.shared.database.integration_models import (
-    BureauReport, BureauConsent, BankStatementAnalysis,
-    DocumentOCRResult, EKYCRecord, DigiLockerDocument
-)
-
-# 9. Vehicle Loan models (NEW - LOS Vehicle Extension)
-from backend.shared.database.vehicle_loan_models import (
-    VehicleLoanDetails, VehicleDealer, VehicleRTOTracking,
-    VehicleInsurance, VehicleInsuranceClaim, VehicleManufacturerModel
-)
-
-# 10. Property Loan models (NEW - LOS Property Extension)
-from backend.shared.database.property_loan_models import (
-    PropertyLoanDetails, PropertyLegalVerification, PropertyTechnicalVerification,
-    PropertyDocument, PropertyMortgage
-)
-
-# 11. LMS Extended models (NEW - LMS Extensions)
-from backend.shared.database.lms_extended_models import (
-    NACHMandate, NACHDebitTransaction, LoanRestructuring,
-    LoanInsurancePolicy, InsurancePremiumPayment, LoanInsuranceClaim
-)
-
-# 12. Compliance & Regulatory models (NEW - CRILC & SMA Reporting)
-from backend.shared.database.compliance_models import (
-    CRILCBorrower, CRILCFacility, CRILCQuarterlyReturn,
-    SMATracking, SMAStatusHistory, SMAQuarterlyReport, ComplianceAlert
-)
-
-# 13. Treasury & Cash Management models (NEW - Treasury Module)
-from backend.shared.database.treasury_models import (
-    TreasuryBankAccount, TreasuryCashPosition, BankStatement,
-    BankReconciliation, ReconciliationItem, FundTransfer,
-    LiquidityPosition, Investment, InvestmentTransaction, CashFlowForecast
-)
-
-# 14. ALM (Asset Liability Management) models (NEW - ALM Module)
-from backend.shared.database.alm_models import (
-    MaturityLadder, GapAnalysis, LiquidityRatio, InterestRateRisk,
-    QuarterlyReturn, ALMLimits, ALMAlert
-)
-
-# 15. Branch & Operations Management models (NEW - Branch Module)
-from backend.shared.database.branch_models import (
-    Organization, Branch, BranchDayOperation, BranchCounter,
-    CashTransaction, CashDenomination, CashPosition,
-    BranchPerformance, BranchTarget, BranchAuditLog
-)
-
-# 16. HRMS (Human Resource Management System) models (NEW - HRMS Module)
-from backend.shared.database.hrms_models import (
-    HRMSOrganization, Department, Designation, 
-    Employee, ReportingHierarchy
-)
-
-# 17. Recruitment & Onboarding models (NEW - HRMS Recruitment Module)
-from backend.shared.database.recruitment_models import (
-    JobRequisition, JobPosting, JobApplication, Interview,
-    Onboarding, BackgroundVerification
-)
-
-# 18. Inventory & Store Management models (NEW - Inventory Module)
-from backend.shared.database.inventory_models import (
-    ItemMaster, StockTransaction, StockLedger,
-    StockVerification, StockVerificationItem,
-    InventoryValuation, InventoryValuationItem
-)
-
-# 19. Attendance & Leave Management models (NEW - HRMS Attendance Module)
-from backend.shared.database.attendance_models import (
-    Shift, EmployeeShift, Attendance, BiometricLog, AttendanceRegularization,
-    LeavePolicyMaster, EmployeeLeaveBalance, LeaveApplication, LeaveEncashment
-)
-
-# 20. Risk Management models (NEW - Risk Management & Credit Policy Module)
-from backend.shared.database.risk_models import (
-    CreditPolicy, RiskPricingRule, ExposureLimit, ExposureTransaction,
-    RiskRating, EarlyWarningSignal, EarlyWarningAlert
-)
-
-# 21. Payroll Management models (NEW - HRMS Payroll Module)
-from backend.shared.database.payroll_models import (
-    SalaryComponent, SalaryStructure, SalaryStructureComponent, EmployeeSalary,
-    EmployeeSalaryComponent, PayrollRun, Payslip, PayslipComponent,
-    StatutoryCompliance, Form16, PaymentFile
-)
-
-# 22. Insurance & Bancassurance models (NEW - Insurance Module)
-from backend.services.insurance.models import (
-    InsuranceAgent, InsurancePolicy, InsurancePremium,
-    InsuranceClaim, InsuranceCommission
-)
-
-# 23. Reporting & Analytics models (NEW - Reporting Module)
-from backend.shared.database.reporting_models import (
-    ReportTemplate, CustomReportBuilder, GeneratedReport, ScheduledReport,
-    Dashboard, DashboardWidget, PredictiveModel, ModelPrediction,
-    ReportAnalytics, UserReportPreference
-)
-
-# 24. Training & Development models (NEW - HRMS Training Module)
-from backend.shared.database.training_models import (
-    TrainingCourse, TrainingSession, TrainingParticipant,
-    TrainingAssessment, AssessmentResult, TrainingCertification,
-    Skill, EmployeeSkill
-)
-
-# 25. Fixed Asset Management models (NEW - Complete Asset Lifecycle Management)
-from backend.shared.database.asset_models import (
-    FixedAsset, AssetDepreciation, AssetMaintenance, AssetTransfer,
-    AssetVerification, AssetVerificationCycle
-)
-
-# 26. CRM Lead Management models (NEW - Multi-channel Lead Capture & Management)
-from backend.shared.database.crm_lead_models import (
-    Lead, LeadFollowUp, LeadActivity, LeadScoringRule, LeadAssignmentRule
-)
-
-# 27. CRM Opportunity Management models (NEW - Sales Pipeline, Stage Tracking, Win/Loss Analysis)
-from backend.shared.database.crm_opportunity_models import (
-    CRMOpportunity, CRMOpportunityProduct, CRMOpportunityActivity, CRMPipelineStageConfig
-)
-
-# 28. CRM Account Management models (NEW - Account 360, Contact Management, Relationship Tracking)
-from backend.shared.database.crm_account_models import (
-    CRMAccount, CRMContact, CRMAccountRelationship, CRMActivity
-)
-
-# 29. CRM Marketing Automation models (NEW - Campaign Management, Segmentation, Landing Pages)
-from backend.shared.database.crm_marketing_models import (
-    MarketingCampaign, CustomerSegment, SegmentMember, LandingPage,
-    CampaignExecution, LandingPageSubmission, CampaignTemplate
-)
-
-# 30. CRM Sales Automation models (NEW - Product Catalog, Quote Generation, Order Management)
-from backend.shared.database.crm_sales_models import (
-    Product, Quote, QuoteItem, Order, OrderItem
-)
-
-# 31. Property & Rent Management models (NEW - Property Master, Lease, Rent Collection, Utilities, Space Allocation)
-from backend.shared.database.property_rent_models import (
-    Property, PropertySpace, Lease, SpaceAllocation, RentPayment,
-    UtilityBill, PropertyMaintenance
-)
-
-# 32. Legal Contract Management models (NEW - Contract Repository, Lifecycle, Renewal, Version Control)
-from backend.shared.database.legal_models import (
-    Contract, ContractVersion, ContractRenewal, ContractDocument,
-    ContractParty, ContractTemplate,
-    LitigationCase, CaseHearing, LegalExpense, CaseParty, CaseDocument
-)
-
-# 33. Legal License Management models (NEW - License Register, Renewal Reminders, Compliance Tracking)
-from backend.services.legal.license_models import (
-    License, LicenseRenewal, LicenseComplianceCheck, LicenseDocument, LicenseReminder
-)
-
-# 34. CRM Customer Service models (NEW - Ticket Management, Knowledge Base, SLA Tracking)
-from backend.shared.database.crm_service_models import (
-    Ticket, TicketComment, TicketAttachment,
-    KnowledgeArticle, ArticleAttachment,
-    SLA, SLAViolation
-)
-
-# 35. Document Management System (DMS) models (NEW - Complete DMS with Version Control, Workflows, E-Signatures)
-from backend.shared.database.dms_models import (
-    Document, DocumentVersion, DocumentWorkflow, WorkflowTemplate as DMSWorkflowTemplate,
-    DocumentApproval, DocumentPermission, DocumentSignature,
-    DocumentComment, DocumentAuditLog
-)
-
-# 36. Facility & Administration Management models (NEW - Building, Housekeeping, Cafeteria, Transport, Visitor Management)
-from backend.shared.database.facility_models import (
-    Building, Floor, Room,
-    HousekeepingTask, HousekeepingSupply,
-    CafeteriaMenu, CafeteriaOrder, CafeteriaOrderItem, CafeteriaInventory,
-    Vehicle, Trip, VehicleMaintenance,
-    Visitor, VisitorGroup
-)
+# Import conditional loading function
+from backend.shared.conditional_imports import import_models
 
 # Configure logging
 logging.basicConfig(
@@ -290,6 +43,11 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting NBFC Financial Suite API...")
     logger.info(f"Environment: {settings.APP_ENV}")
     logger.info(f"Multi-tenant: {settings.TENANT_ISOLATION_ENABLED}")
+    
+    # Import models conditionally based on feature flags
+    # This MUST happen before any database operations
+    logger.info("📦 Loading database models conditionally...")
+    import_models()
     
     # Force create all tables on startup (simple approach for free hosting)
     logger.info("🔄 Creating database tables...")

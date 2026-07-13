@@ -7,6 +7,352 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def import_models():
+    """
+    Conditionally import database models based on enabled feature flags
+    This prevents SQLAlchemy from trying to create tables for disabled modules
+    """
+    logger.info("Importing database models conditionally...")
+    
+    # 1. Core models (ALWAYS IMPORTED)
+    logger.info("Importing core models...")
+    from backend.shared.database.models import (
+        Tenant, User, Role, UserRole, Permission, RolePermission, FileUpload
+    )
+    
+    # 2. Master data models (ALWAYS IMPORTED if ENABLE_MASTERDATA)
+    if settings.ENABLE_MASTERDATA:
+        logger.info("Importing master data models...")
+        from backend.shared.database.master_data_models import (
+            Country, State, City, Pincode, Bank, BankBranch, Currency,
+            InterestRateType, LoanProductType, DocumentType, Occupation,
+            Industry, LoanPurpose, RelationshipType, Holiday, FinancialYear
+        )
+    
+    # 3. Customer models
+    if settings.ENABLE_CUSTOMERS:
+        logger.info("Importing customer models...")
+        from backend.shared.database.customer_models import (
+            Customer, CustomerKYC, CustomerDocument, CustomerFamily, 
+            CustomerBankAccount, CustomerReference, CustomerTimeline,
+            CustomerBureauHistory, ActivityType, BureauProvider, BureauPullStatus
+        )
+    
+    # 4. Loan models
+    if settings.ENABLE_LOANS:
+        logger.info("Importing loan models...")
+        from backend.shared.database.loan_models import (
+            LoanProduct, LoanApplication, LoanApplicationCoApplicant,
+            LoanApplicationDocument, LoanApprovalWorkflow, LoanAccount,
+            LoanEMISchedule, LoanRepayment, LoanStatus, ApplicationStatus,
+            RepaymentFrequency as LoanRepaymentFrequency, EMIStatus as LoanEMIStatus
+        )
+    
+    # 5. Accounting models
+    if settings.ENABLE_ACCOUNTING:
+        logger.info("Importing accounting models...")
+        from backend.shared.database.accounting_models import (
+            ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
+            TrialBalance, AccountingPeriod
+        )
+        # Import accounting extended models only if accounting is enabled
+        from backend.shared.database.accounting_extended_models import (
+            Vendor as AccountingVendor,  # Renamed to avoid conflict
+            VendorPayment, VendorPaymentAllocation
+        )
+    
+    # 6. Deposit models
+    if settings.ENABLE_DEPOSITS:
+        logger.info("Importing deposit models...")
+        from backend.shared.database.deposit_models import (
+            DepositProduct, DepositAccount, DepositTransaction,
+            DepositInterestCalculation, DepositMaturityQueue, DepositPassbookEntry
+        )
+    
+    # 7. Gold Loan models
+    if settings.ENABLE_GOLD_LOANS:
+        logger.info("Importing gold loan models...")
+        from backend.shared.database.gold_loan_models import (
+            GoldLoanProduct, GoldOrnament, GoldLoanAccount,
+            GoldLoanTransaction, GoldReleaseRequest, GoldAuction
+        )
+    
+    # 8. Vehicle Loan models
+    if settings.ENABLE_VEHICLE_LOANS:
+        logger.info("Importing vehicle loan models...")
+        from backend.shared.database.vehicle_loan_models import (
+            VehicleLoanDetails, VehicleDealer, VehicleRTOTracking,
+            VehicleInsurance, VehicleInsuranceClaim, VehicleManufacturerModel
+        )
+    
+    # 9. Property Loan models
+    if settings.ENABLE_PROPERTY_LOANS:
+        logger.info("Importing property loan models...")
+        from backend.shared.database.property_loan_models import (
+            PropertyLoanDetails, PropertyLegalVerification, PropertyTechnicalVerification,
+            PropertyDocument, PropertyMortgage
+        )
+    
+    # 10. HRMS models
+    if settings.ENABLE_HRMS:
+        logger.info("Importing HRMS models...")
+        from backend.shared.database.hrms_models import (
+            HRMSOrganization, Department, Designation, 
+            Employee, ReportingHierarchy
+        )
+        from backend.shared.database.hrms_loan_models import (
+            LoanPolicy, EmployeeLoan, LoanEMISchedule as HRMSLoanEMISchedule, 
+            LoanTransaction, LoanType, LoanStatus as HRMSLoanStatus, 
+            RepaymentFrequency as HRMSRepaymentFrequency, EMIStatus as HRMSEMIStatus, 
+            TransactionType
+        )
+    
+    # 11. Inventory models (only if enabled, contains vendors reference)
+    if settings.ENABLE_INVENTORY:
+        logger.info("Importing inventory models...")
+        from backend.shared.database.inventory_models import (
+            ItemMaster, StockTransaction, StockLedger,
+            StockVerification, StockVerificationItem,
+            InventoryValuation, InventoryValuationItem
+        )
+        # Also import procurement models if inventory is enabled (for vendors table)
+        from backend.shared.database.procurement_models import (
+            Vendor, PurchaseRequisition, PurchaseRequisitionItem,
+            PurchaseOrder, PurchaseOrderItem,
+            GoodsReceiptNote, GoodsReceiptNoteItem
+        )
+    
+    # 12. Workflow models
+    if settings.ENABLE_WORKFLOW:
+        logger.info("Importing workflow models...")
+        from backend.shared.database.workflow_models import (
+            WorkflowTemplate, WorkflowInstance, WorkflowStep, 
+            WorkflowHistory, WorkflowTask, WorkflowSLATracking
+        )
+    
+    # 13. Rules Engine models
+    if settings.ENABLE_RULES_ENGINE:
+        logger.info("Importing rules engine models...")
+        from backend.shared.database.rules_models import (
+            RuleCategory, BusinessRule, RuleCondition, RuleAction, 
+            RuleEvaluation, RuleDecision, RuleVersion
+        )
+    
+    # 14. Decision Engine models
+    if settings.ENABLE_DECISION_ENGINE:
+        logger.info("Importing decision engine models...")
+        from backend.shared.database.decision_models import (
+            InstantDecision, PreApprovedOffer, DecisionStrategy,
+            DecisionCache, DecisionAnalytics, DecisionLimit
+        )
+    
+    # 15. Notification models
+    if settings.ENABLE_NOTIFICATIONS:
+        logger.info("Importing notification models...")
+        from backend.shared.database.notification_models import (
+            NotificationTemplate, NotificationLog, NotificationQueue,
+            NotificationPreference, NotificationSchedule
+        )
+    
+    # 16. Integration models
+    if settings.ENABLE_BUREAU_INTEGRATION or settings.ENABLE_BANK_STATEMENT or settings.ENABLE_OCR or settings.ENABLE_EKYC or settings.ENABLE_DIGILOCKER:
+        logger.info("Importing integration models...")
+        from backend.shared.database.integration_models import (
+            BureauReport, BureauConsent, BankStatementAnalysis,
+            DocumentOCRResult, EKYCRecord, DigiLockerDocument
+        )
+    
+    # 17. Compliance models
+    if settings.ENABLE_COMPLIANCE:
+        logger.info("Importing compliance models...")
+        from backend.shared.database.compliance_models import (
+            CRILCBorrower, CRILCFacility, CRILCQuarterlyReturn,
+            SMATracking, SMAStatusHistory, SMAQuarterlyReport, ComplianceAlert
+        )
+    
+    # 18. Treasury models
+    if settings.ENABLE_TREASURY:
+        logger.info("Importing treasury models...")
+        from backend.shared.database.treasury_models import (
+            TreasuryBankAccount, TreasuryCashPosition, BankStatement,
+            BankReconciliation, ReconciliationItem, FundTransfer,
+            LiquidityPosition, Investment, InvestmentTransaction, CashFlowForecast
+        )
+    
+    # 19. ALM models
+    if settings.ENABLE_ALM:
+        logger.info("Importing ALM models...")
+        from backend.shared.database.alm_models import (
+            MaturityLadder, GapAnalysis, LiquidityRatio, InterestRateRisk,
+            QuarterlyReturn, ALMLimits, ALMAlert
+        )
+    
+    # 20. Branch models
+    if settings.ENABLE_BRANCH:
+        logger.info("Importing branch models...")
+        from backend.shared.database.branch_models import (
+            Organization, Branch, BranchDayOperation, BranchCounter,
+            CashTransaction, CashDenomination, CashPosition,
+            BranchPerformance, BranchTarget, BranchAuditLog
+        )
+    
+    # 21. Risk Management models
+    if settings.ENABLE_RISK_MANAGEMENT:
+        logger.info("Importing risk management models...")
+        from backend.shared.database.risk_models import (
+            CreditPolicy, RiskPricingRule, ExposureLimit, ExposureTransaction,
+            RiskRating, EarlyWarningSignal, EarlyWarningAlert
+        )
+    
+    # 22. CRM models
+    if settings.ENABLE_CRM:
+        logger.info("Importing CRM models...")
+        from backend.shared.database.crm_lead_models import (
+            Lead, LeadFollowUp, LeadActivity, LeadScoringRule, LeadAssignmentRule
+        )
+        from backend.shared.database.crm_account_models import (
+            CRMAccount, CRMContact, CRMAccountRelationship, CRMActivity
+        )
+        from backend.shared.database.crm_marketing_models import (
+            MarketingCampaign, CustomerSegment, SegmentMember, LandingPage,
+            CampaignExecution, LandingPageSubmission, CampaignTemplate
+        )
+    
+    if settings.ENABLE_CRM_OPPORTUNITIES:
+        logger.info("Importing CRM opportunity models...")
+        from backend.shared.database.crm_opportunity_models import (
+            CRMOpportunity, CRMOpportunityProduct, CRMOpportunityActivity, CRMPipelineStageConfig
+        )
+    
+    if settings.ENABLE_CRM_SALES:
+        logger.info("Importing CRM sales models...")
+        from backend.shared.database.crm_sales_models import (
+            Product, Quote, QuoteItem, Order, OrderItem
+        )
+    
+    if settings.ENABLE_CRM_SERVICE:
+        logger.info("Importing CRM service models...")
+        from backend.shared.database.crm_service_models import (
+            Ticket, TicketComment, TicketAttachment,
+            KnowledgeArticle, ArticleAttachment,
+            SLA, SLAViolation
+        )
+    
+    # 23. Legal models
+    if settings.ENABLE_LEGAL:
+        logger.info("Importing legal models...")
+        from backend.shared.database.legal_models import (
+            Contract, ContractVersion, ContractRenewal, ContractDocument,
+            ContractParty, ContractTemplate
+        )
+    
+    if settings.ENABLE_LITIGATION:
+        logger.info("Importing litigation models...")
+        from backend.shared.database.legal_models import (
+            LitigationCase, CaseHearing, LegalExpense, CaseParty, CaseDocument
+        )
+    
+    if settings.ENABLE_LICENSE:
+        logger.info("Importing license models...")
+        from backend.services.legal.license_models import (
+            License, LicenseRenewal, LicenseComplianceCheck, LicenseDocument, LicenseReminder
+        )
+    
+    # 24. DMS models
+    if settings.ENABLE_DMS:
+        logger.info("Importing DMS models...")
+        from backend.shared.database.dms_models import (
+            Document, DocumentVersion, DocumentWorkflow, WorkflowTemplate as DMSWorkflowTemplate,
+            DocumentApproval, DocumentPermission, DocumentSignature,
+            DocumentComment, DocumentAuditLog
+        )
+    
+    # 25. Facility models
+    if settings.ENABLE_FACILITY:
+        logger.info("Importing facility models...")
+        from backend.shared.database.facility_models import (
+            Building, Floor, Room,
+            HousekeepingTask, HousekeepingSupply,
+            CafeteriaMenu, CafeteriaOrder, CafeteriaOrderItem, CafeteriaInventory,
+            Vehicle, Trip, VehicleMaintenance,
+            Visitor, VisitorGroup
+        )
+    
+    # 26. Reporting models
+    if settings.ENABLE_REPORTING:
+        logger.info("Importing reporting models...")
+        from backend.shared.database.reporting_models import (
+            ReportTemplate, CustomReportBuilder, GeneratedReport, ScheduledReport,
+            Dashboard, DashboardWidget, PredictiveModel, ModelPrediction,
+            ReportAnalytics, UserReportPreference
+        )
+    
+    # 27. Insurance models
+    if settings.ENABLE_INSURANCE:
+        logger.info("Importing insurance models...")
+        from backend.services.insurance.models import (
+            InsuranceAgent, InsurancePolicy, InsurancePremium,
+            InsuranceClaim, InsuranceCommission
+        )
+    
+    # 28. Fixed Assets models
+    if settings.ENABLE_FIXED_ASSETS:
+        logger.info("Importing fixed assets models...")
+        from backend.shared.database.asset_models import (
+            FixedAsset, AssetDepreciation, AssetMaintenance, AssetTransfer,
+            AssetVerification, AssetVerificationCycle
+        )
+    
+    # 29. Additional HRMS modules
+    if settings.ENABLE_RECRUITMENT:
+        logger.info("Importing recruitment models...")
+        from backend.shared.database.recruitment_models import (
+            JobRequisition, JobPosting, JobApplication, Interview,
+            Onboarding, BackgroundVerification
+        )
+    
+    if settings.ENABLE_ATTENDANCE:
+        logger.info("Importing attendance models...")
+        from backend.shared.database.attendance_models import (
+            Shift, EmployeeShift, Attendance, BiometricLog, AttendanceRegularization,
+            LeavePolicyMaster, EmployeeLeaveBalance, LeaveApplication, LeaveEncashment
+        )
+    
+    if settings.ENABLE_PAYROLL:
+        logger.info("Importing payroll models...")
+        from backend.shared.database.payroll_models import (
+            SalaryComponent, SalaryStructure, SalaryStructureComponent, EmployeeSalary,
+            EmployeeSalaryComponent, PayrollRun, Payslip, PayslipComponent,
+            StatutoryCompliance, Form16, PaymentFile
+        )
+    
+    if settings.ENABLE_TRAINING:
+        logger.info("Importing training models...")
+        from backend.shared.database.training_models import (
+            TrainingCourse, TrainingSession, TrainingParticipant,
+            TrainingAssessment, AssessmentResult, TrainingCertification,
+            Skill, EmployeeSkill
+        )
+    
+    # 30. LMS Extended models (NACH, Restructuring, Insurance)
+    if settings.ENABLE_NACH or settings.ENABLE_RESTRUCTURING or settings.ENABLE_LOAN_INSURANCE:
+        logger.info("Importing LMS extended models...")
+        from backend.shared.database.lms_extended_models import (
+            NACHMandate, NACHDebitTransaction, LoanRestructuring,
+            LoanInsurancePolicy, InsurancePremiumPayment, LoanInsuranceClaim
+        )
+    
+    # 31. Property & Rent models
+    if settings.ENABLE_FACILITY:  # Reuse facility flag for property management
+        from backend.shared.database.property_rent_models import (
+            Property, PropertySpace, Lease, SpaceAllocation, RentPayment,
+            UtilityBill, PropertyMaintenance
+        )
+    
+    logger.info("✅ Conditional model imports complete")
+
+
 def get_enabled_routers():
     """
     Dynamically import and return only the routers for enabled modules
