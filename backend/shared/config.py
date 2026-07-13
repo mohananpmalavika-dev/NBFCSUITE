@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = Field(..., env="DATABASE_URL")
+    DB_ECHO: bool = Field(default=False, env="DB_ECHO")  # SQLAlchemy echo queries
     DB_POOL_SIZE: int = Field(default=2, env="DB_POOL_SIZE")  # Reduced from 5 for memory
     DB_MAX_OVERFLOW: int = Field(default=3, env="DB_MAX_OVERFLOW")  # Reduced from 10
     DB_POOL_TIMEOUT: int = Field(default=30, env="DB_POOL_TIMEOUT")
