@@ -10,7 +10,7 @@ from uuid import UUID
 from datetime import date
 
 from backend.shared.database.connection import get_db
-from backend.shared.middleware.auth import get_current_user
+from backend.services.auth.dependencies import get_current_user
 from .task_service import TaskService
 from .schemas import (
     TaskCreate, TaskUpdate, TaskListItem, TaskDetail,

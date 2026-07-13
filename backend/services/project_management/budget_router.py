@@ -9,7 +9,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from backend.shared.database.connection import get_db
-from backend.shared.middleware.auth import get_current_user
+from backend.services.auth.dependencies import get_current_user
 from .budget_service import BudgetService
 from .schemas import (
     ProjectBudgetCreate, ProjectBudgetUpdate, ProjectBudgetDetail,

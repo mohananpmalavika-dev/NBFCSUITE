@@ -10,7 +10,7 @@ from datetime import datetime
 
 from backend.shared.database.connection import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.shared.middleware.auth import get_current_user
+from backend.services.auth.dependencies import get_current_user
 from backend.crm.services.service_service import TicketService, KnowledgeBaseService, SLAService
 from backend.shared.schemas.crm_service_schemas import (
     TicketCreate, TicketUpdate, TicketResponse, TicketListParams, TicketListResponse,

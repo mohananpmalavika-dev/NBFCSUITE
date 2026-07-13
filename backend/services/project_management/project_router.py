@@ -10,7 +10,7 @@ from uuid import UUID
 from datetime import date
 
 from backend.shared.database.connection import get_db
-from backend.shared.middleware.auth import get_current_user
+from backend.services.auth.dependencies import get_current_user
 from .project_service import ProjectService
 from .schemas import (
     ProjectCreate, ProjectUpdate, ProjectListItem, ProjectDetail, ProjectStats,
