@@ -10,12 +10,18 @@ from typing import Optional, List, Tuple
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from io import BytesIO
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+# Optional PDF generation dependencies
+try:
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    HAS_REPORTLAB = True
+except ImportError:
+    HAS_REPORTLAB = False
 
 from backend.shared.database.hrms_models import (
     Employee, LeaveBalance, LeaveApplication, 
@@ -101,6 +107,12 @@ class ESSService:
         payslip_id: str
     ) -> BytesIO:
         """Generate PDF for payslip"""
+        
+        if not HAS_REPORTLAB:
+            raise ValueError(
+                "PDF generation requires reportlab. "
+                "Install it with: pip install reportlab"
+            )
         
         # Get payslip with components and employee details
         query = select(Payslip).where(

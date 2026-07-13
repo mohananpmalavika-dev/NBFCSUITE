@@ -276,7 +276,10 @@ class CRMContactBase(BaseModel):
     linkedin_url: Optional[str] = Field(None, max_length=200)
     twitter_handle: Optional[str] = Field(None, max_length=100)
     
-    @validator('full_name', pre=True, always=True)
+    # Computed field
+    full_name: Optional[str] = None
+    
+    @validator('full_name', pre=True, always=True, check_fields=False)
     def set_full_name(cls, v, values):
         """Auto-generate full name"""
         first = values.get('first_name', '')

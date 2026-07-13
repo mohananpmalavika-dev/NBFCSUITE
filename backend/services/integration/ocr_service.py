@@ -11,15 +11,29 @@ Supports:
 - Cross-verification
 """
 
-import boto3
 import requests
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime, date
-from PIL import Image
 import io
 import re
 import logging
+
+# Optional AWS dependencies
+try:
+    import boto3
+    HAS_BOTO3 = True
+except ImportError:
+    HAS_BOTO3 = False
+    boto3 = None
+
+# Optional PIL dependency
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+    Image = None
 
 from backend.shared.database.integration_models import DocumentOCRResult
 
@@ -54,6 +68,12 @@ class OCRService:
         
         # Initialize AWS Textract client
         if self.provider == 'aws_textract':
+            if not HAS_BOTO3:
+                raise OCRServiceError(
+                    "AWS Textract provider selected but boto3 is not installed. "
+                    "Install it with: pip install boto3"
+                )
+            
             self.textract_client = boto3.client(
                 'textract',
                 aws_access_key_id=config.get('aws_access_key'),

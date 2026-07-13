@@ -6,8 +6,17 @@ Background tasks for automated reminder processing
 import asyncio
 import logging
 from datetime import datetime
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
+
+# Optional scheduler dependency
+try:
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    HAS_APSCHEDULER = True
+except ImportError:
+    HAS_APSCHEDULER = False
+    AsyncIOScheduler = None
+    CronTrigger = None
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.shared.database.connection import AsyncSessionLocal
@@ -20,6 +29,15 @@ class LicenseScheduler:
     """Scheduler for license-related background tasks"""
 
     def __init__(self):
+        if not HAS_APSCHEDULER:
+            logger.warning(
+                "APScheduler not installed. License reminders will not be scheduled. "
+                "Install it with: pip install apscheduler"
+            )
+            self.scheduler = None
+            self.is_running = False
+            return
+        
         self.scheduler = AsyncIOScheduler()
         self.is_running = False
 
@@ -88,6 +106,10 @@ class LicenseScheduler:
 
     def start(self):
         """Start the scheduler"""
+        if not HAS_APSCHEDULER or self.scheduler is None:
+            logger.warning("Scheduler not available - APScheduler not installed")
+            return
+        
         if self.is_running:
             logger.warning("Scheduler is already running")
             return
@@ -125,6 +147,9 @@ class LicenseScheduler:
 
     def stop(self):
         """Stop the scheduler"""
+        if not HAS_APSCHEDULER or self.scheduler is None:
+            return
+        
         if not self.is_running:
             logger.warning("Scheduler is not running")
             return

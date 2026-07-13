@@ -4,11 +4,13 @@ Configuration Settings with Feature Flags for Memory Optimization
 import os
 from typing import Optional, List
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, ConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings with environment variable support"""
+    
+    model_config = ConfigDict(extra='ignore')  # Ignore extra fields from .env file
     
     # Application
     APP_NAME: str = "NBFC Financial Suite"
@@ -143,10 +145,6 @@ class Settings(BaseSettings):
     ENABLE_NACH: bool = Field(default=False, env="ENABLE_NACH")
     ENABLE_RESTRUCTURING: bool = Field(default=False, env="ENABLE_RESTRUCTURING")
     ENABLE_LOAN_INSURANCE: bool = Field(default=False, env="ENABLE_LOAN_INSURANCE")
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
     
     @property
     def cors_origins_list(self) -> List[str]:
