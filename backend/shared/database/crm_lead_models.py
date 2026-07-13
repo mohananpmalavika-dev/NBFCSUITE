@@ -182,7 +182,7 @@ class Lead(Base, TenantMixin, TimestampMixin):
     
     # Relationships
     assigned_to = relationship("User", foreign_keys=[assigned_to_user_id], backref="assigned_leads")
-    branch = relationship("Branch", foreign_keys=[assigned_to_branch_id])
+    branch = relationship("Branch", foreign_keys=[assigned_to_branch_id], lazy="select", viewonly=True)
     customer = relationship("Customer", foreign_keys=[converted_to_customer_id])
     duplicate_of = relationship("Lead", remote_side=[id], backref="duplicates")
     follow_ups = relationship("LeadFollowUp", back_populates="lead", cascade="all, delete-orphan")
@@ -396,7 +396,7 @@ class LeadAssignmentRule(Base, TenantMixin, TimestampMixin):
     
     # Relationships
     assign_to_user = relationship("User", foreign_keys=[assign_to_user_id])
-    assign_to_branch = relationship("Branch", foreign_keys=[assign_to_branch_id])
+    assign_to_branch = relationship("Branch", foreign_keys=[assign_to_branch_id], lazy="select", viewonly=True)
     
     def __repr__(self):
         return f"<LeadAssignmentRule {self.rule_name} - Priority {self.priority}>"
