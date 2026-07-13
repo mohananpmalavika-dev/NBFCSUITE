@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     
     # CORS
     CORS_ORIGINS: str = Field(default="*", env="CORS_ORIGINS")
+    CORS_ALLOW_CREDENTIALS: bool = Field(default=True, env="CORS_ALLOW_CREDENTIALS")
     
     # Multi-tenancy
     TENANT_ISOLATION_ENABLED: bool = Field(default=True, env="TENANT_ISOLATION_ENABLED")
