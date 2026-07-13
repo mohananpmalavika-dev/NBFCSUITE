@@ -1,0 +1,81 @@
+# Render Configuration - Core Service Only
+# For deploying just the Core Service independently
+
+services:
+  - type: web
+    name: nbfc-core-service
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: .
+    buildCommand: |
+      find . -type d -name __pycache__ -exec rm -rf {} + || true
+      pip install --upgrade pip
+      pip install --no-cache-dir -r backend/requirements.render.txt
+    startCommand: uvicorn backend.main_core:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SERVICE_NAME
+        value: core
+      - key: APP_NAME
+        value: NBFC Financial Suite - Core Service
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: WARNING
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nbfc-postgres-shared
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: JWT_REFRESH_TOKEN_EXPIRE_DAYS
+        value: 7
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: CORS_ALLOW_CREDENTIALS
+        value: false
+      - key: SKIP_TABLE_CREATION
+        value: true
+      - key: TENANT_ISOLATION_ENABLED
+        value: true
+      - key: ENABLE_SWAGGER
+        value: true
+      - key: ENABLE_REDOC
+        value: true
+      # Core modules
+      - key: ENABLE_AUTH
+        value: true
+      - key: ENABLE_DASHBOARD
+        value: true
+      - key: ENABLE_MASTERDATA
+        value: true
+      - key: ENABLE_CUSTOMERS
+        value: true
+      - key: ENABLE_LOANS
+        value: true
+      # Disable other services
+      - key: ENABLE_ACCOUNTING
+        value: false
+      - key: ENABLE_HRMS
+        value: false
+      - key: ENABLE_CRM
+        value: false
+      - key: ENABLE_TREASURY
+        value: false
+
+databases:
+  - name: nbfc-postgres-shared
+    region: oregon
+    plan: free
+    databaseName: nbfc_suite
+    user: nbfc_user

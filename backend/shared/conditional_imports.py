@@ -21,6 +21,10 @@ def import_models():
         Tenant, User, Role, UserRole, Permission, RolePermission, FileUpload
     )
     
+    # 1b. Vendor model (ALWAYS IMPORTED - referenced by multiple modules)
+    logger.info("Importing Vendor model (shared across modules)...")
+    from backend.shared.database.procurement_models import Vendor
+    
     # 2. Master data models (ALWAYS IMPORTED if ENABLE_MASTERDATA)
     if settings.ENABLE_MASTERDATA:
         logger.info("Importing master data models...")
@@ -56,12 +60,10 @@ def import_models():
             ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
             TrialBalance, AccountingPeriod
         )
-        # Import accounting extended models (note: Vendor is in procurement_models)
+        # Import accounting extended models (Vendor already imported above)
         from backend.shared.database.accounting_extended_models import (
             PurchaseInvoice, VendorPayment, VendorPaymentAllocation
         )
-        # Import Vendor model from procurement (needed for vendor payments)
-        from backend.shared.database.procurement_models import Vendor
     
     # 6. Deposit models
     if settings.ENABLE_DEPOSITS:
@@ -117,9 +119,9 @@ def import_models():
             StockVerification, StockVerificationItem,
             InventoryValuation, InventoryValuationItem
         )
-        # Also import procurement models if inventory is enabled (for vendors table)
+        # Also import other procurement models if inventory is enabled
         from backend.shared.database.procurement_models import (
-            Vendor, PurchaseRequisition, PurchaseRequisitionItem,
+            PurchaseRequisition, PurchaseRequisitionItem,
             PurchaseOrder, PurchaseOrderItem,
             GoodsReceiptNote, GoodsReceiptNoteItem
         )
@@ -616,3 +618,282 @@ def get_enabled_routers():
     
     logger.info(f"Total routers loaded: {len(routers)}")
     return routers
+
+
+# ============================================================================
+# MICROSERVICES-SPECIFIC MODEL IMPORT FUNCTIONS
+# ============================================================================
+
+def import_core_service_models():
+    """
+    Import models for Core Service
+    Used by: main_core.py
+    Includes: Auth, Customers, Loans, MasterData
+    """
+    logger.info("📦 Loading Core Service models...")
+    
+    # Core models (ESSENTIAL)
+    from backend.shared.database.models import (
+        Tenant, User, Role, UserRole, Permission, RolePermission, FileUpload
+    )
+    
+    # Vendor model (ALWAYS IMPORTED - shared across services)
+    from backend.shared.database.procurement_models import Vendor
+    
+    # Master data models (ESSENTIAL)
+    from backend.shared.database.master_data_models import (
+        Country, State, City, Pincode, Bank, BankBranch, Currency,
+        InterestRateType, LoanProductType, DocumentType, Occupation,
+        Industry, LoanPurpose, RelationshipType, Holiday, FinancialYear
+    )
+    
+    # Customer models (CORE BUSINESS)
+    from backend.shared.database.customer_models import (
+        Customer, CustomerKYC, CustomerDocument, CustomerFamily, 
+        CustomerBankAccount, CustomerReference, CustomerTimeline,
+        CustomerBureauHistory, ActivityType, BureauProvider, BureauPullStatus
+    )
+    
+    # Loan models (CORE BUSINESS)
+    from backend.shared.database.loan_models import (
+        LoanProduct, LoanApplication, LoanApplicationCoApplicant,
+        LoanApplicationDocument, LoanApprovalWorkflow, LoanAccount,
+        LoanEMISchedule, LoanRepayment, LoanStatus, ApplicationStatus,
+        RepaymentFrequency, EMIStatus
+    )
+    
+    # Gold Loans (if enabled)
+    if settings.ENABLE_GOLD_LOANS:
+        from backend.shared.database.gold_loan_models import (
+            GoldLoanProduct, GoldOrnament, GoldLoanAccount,
+            GoldLoanTransaction, GoldReleaseRequest, GoldAuction
+        )
+    
+    # Vehicle Loans (if enabled)
+    if settings.ENABLE_VEHICLE_LOANS:
+        from backend.shared.database.vehicle_loan_models import (
+            VehicleLoanDetails, VehicleDealer, VehicleRTOTracking,
+            VehicleInsurance, VehicleInsuranceClaim, VehicleManufacturerModel
+        )
+    
+    # Property Loans (if enabled)
+    if settings.ENABLE_PROPERTY_LOANS:
+        from backend.shared.database.property_loan_models import (
+            PropertyLoanDetails, PropertyLegalVerification, PropertyTechnicalVerification,
+            PropertyDocument, PropertyMortgage
+        )
+    
+    # Deposits (if enabled)
+    if settings.ENABLE_DEPOSITS:
+        from backend.shared.database.deposit_models import (
+            DepositProduct, DepositAccount, DepositTransaction,
+            DepositInterestCalculation, DepositMaturityQueue, DepositPassbookEntry
+        )
+    
+    # NACH, Restructuring, Insurance (if enabled)
+    if settings.ENABLE_NACH or settings.ENABLE_RESTRUCTURING or settings.ENABLE_LOAN_INSURANCE:
+        from backend.shared.database.lms_extended_models import (
+            NACHMandate, NACHDebitTransaction, LoanRestructuring,
+            LoanInsurancePolicy, InsurancePremiumPayment, LoanInsuranceClaim
+        )
+    
+    logger.info("✅ Core Service models loaded")
+
+
+def import_hrms_service_models():
+    """
+    Import models for HRMS Service
+    Used by: main_hrms.py
+    Includes: Employees, Payroll, Attendance, Recruitment, Training
+    """
+    logger.info("📦 Loading HRMS Service models...")
+    
+    # Core models (REQUIRED for auth)
+    from backend.shared.database.models import (
+        Tenant, User, Role, UserRole, Permission, RolePermission
+    )
+    
+    # Vendor model (ALWAYS IMPORTED - shared across services)
+    from backend.shared.database.procurement_models import Vendor
+    
+    # HRMS Core models
+    from backend.shared.database.hrms_models import (
+        HRMSOrganization, Department, Designation, 
+        Employee, ReportingHierarchy
+    )
+    
+    # HRMS Loan models
+    from backend.shared.database.hrms_loan_models import (
+        LoanPolicy, EmployeeLoan, LoanEMISchedule, 
+        LoanTransaction, LoanType, LoanStatus, 
+        RepaymentFrequency, EMIStatus, TransactionType
+    )
+    
+    # Recruitment models (if enabled)
+    if settings.ENABLE_RECRUITMENT:
+        from backend.shared.database.recruitment_models import (
+            JobRequisition, JobPosting, JobApplication, Interview,
+            Onboarding, BackgroundVerification
+        )
+    
+    # Attendance models (if enabled)
+    if settings.ENABLE_ATTENDANCE:
+        from backend.shared.database.attendance_models import (
+            Shift, EmployeeShift, Attendance, BiometricLog, AttendanceRegularization,
+            LeavePolicyMaster, EmployeeLeaveBalance, LeaveApplication, LeaveEncashment
+        )
+    
+    # Payroll models (if enabled)
+    if settings.ENABLE_PAYROLL:
+        from backend.shared.database.payroll_models import (
+            SalaryComponent, SalaryStructure, SalaryStructureComponent, EmployeeSalary,
+            EmployeeSalaryComponent, PayrollRun, Payslip, PayslipComponent,
+            StatutoryCompliance, Form16, PaymentFile
+        )
+    
+    # Training models (if enabled)
+    if settings.ENABLE_TRAINING:
+        from backend.shared.database.training_models import (
+            TrainingCourse, TrainingSession, TrainingParticipant,
+            TrainingAssessment, AssessmentResult, TrainingCertification,
+            Skill, EmployeeSkill
+        )
+    
+    logger.info("✅ HRMS Service models loaded")
+
+
+def import_accounting_service_models():
+    """
+    Import models for Accounting Service
+    Used by: main_accounting.py
+    Includes: GL, Assets, TDS/GST, Vendor Payments
+    """
+    logger.info("📦 Loading Accounting Service models...")
+    
+    # Core models (REQUIRED for auth)
+    from backend.shared.database.models import (
+        Tenant, User, Role, UserRole, Permission, RolePermission
+    )
+    
+    # Vendor model (ALWAYS IMPORTED - shared across services)
+    from backend.shared.database.procurement_models import Vendor
+    
+    # Accounting Core models
+    from backend.shared.database.accounting_models import (
+        ChartOfAccounts, JournalEntry, JournalEntryLine, GeneralLedger,
+        TrialBalance, AccountingPeriod
+    )
+    
+    # Accounting Extended models (Vendor Payments)
+    from backend.shared.database.accounting_extended_models import (
+        PurchaseInvoice, VendorPayment, VendorPaymentAllocation
+    )
+    
+    # Fixed Assets (if enabled)
+    if settings.ENABLE_FIXED_ASSETS:
+        from backend.shared.database.asset_models import (
+            FixedAsset, AssetDepreciation, AssetMaintenance, AssetTransfer,
+            AssetVerification, AssetVerificationCycle
+        )
+    
+    logger.info("✅ Accounting Service models loaded")
+
+
+def import_operations_service_models():
+    """
+    Import models for Operations Service
+    Used by: main_operations.py
+    Includes: CRM, Treasury, ALM, Compliance, Risk, Branch
+    """
+    logger.info("📦 Loading Operations Service models...")
+    
+    # Core models (REQUIRED for auth)
+    from backend.shared.database.models import (
+        Tenant, User, Role, UserRole, Permission, RolePermission
+    )
+    
+    # Vendor model (ALWAYS IMPORTED - shared across services)
+    from backend.shared.database.procurement_models import Vendor
+    
+    # CRM models (if enabled)
+    if settings.ENABLE_CRM:
+        logger.info("Importing CRM models...")
+        from backend.shared.database.crm_lead_models import (
+            Lead, LeadFollowUp, LeadActivity, LeadScoringRule, LeadAssignmentRule
+        )
+        from backend.shared.database.crm_account_models import (
+            CRMAccount, CRMContact, CRMAccountRelationship, CRMActivity
+        )
+        from backend.shared.database.crm_marketing_models import (
+            MarketingCampaign, CustomerSegment, SegmentMember, LandingPage,
+            CampaignExecution, LandingPageSubmission, CampaignTemplate
+        )
+        
+        if settings.ENABLE_CRM_OPPORTUNITIES:
+            from backend.shared.database.crm_opportunity_models import (
+                CRMOpportunity, CRMOpportunityProduct, CRMOpportunityActivity, CRMPipelineStageConfig
+            )
+        
+        if settings.ENABLE_CRM_SALES:
+            from backend.shared.database.crm_sales_models import (
+                Product, Quote, QuoteItem, Order, OrderItem
+            )
+        
+        if settings.ENABLE_CRM_SERVICE:
+            from backend.shared.database.crm_service_models import (
+                Ticket, TicketComment, TicketAttachment,
+                KnowledgeArticle, ArticleAttachment,
+                SLA, SLAViolation
+            )
+    
+    # Treasury models (if enabled)
+    if settings.ENABLE_TREASURY:
+        logger.info("Importing Treasury models...")
+        from backend.shared.database.treasury_models import (
+            TreasuryBankAccount, TreasuryCashPosition, BankStatement,
+            BankReconciliation, ReconciliationItem, FundTransfer,
+            LiquidityPosition, Investment, InvestmentTransaction, CashFlowForecast
+        )
+    
+    # ALM models (if enabled)
+    if settings.ENABLE_ALM:
+        logger.info("Importing ALM models...")
+        from backend.shared.database.alm_models import (
+            MaturityLadder, GapAnalysis, LiquidityRatio, InterestRateRisk,
+            QuarterlyReturn, ALMLimits, ALMAlert
+        )
+    
+    # Compliance models (if enabled)
+    if settings.ENABLE_COMPLIANCE:
+        logger.info("Importing Compliance models...")
+        from backend.shared.database.compliance_models import (
+            CRILCBorrower, CRILCFacility, CRILCQuarterlyReturn,
+            SMATracking, SMAStatusHistory, SMAQuarterlyReport, ComplianceAlert
+        )
+    
+    # Risk Management models (if enabled)
+    if settings.ENABLE_RISK_MANAGEMENT:
+        logger.info("Importing Risk Management models...")
+        from backend.shared.database.risk_models import (
+            CreditPolicy, RiskPricingRule, ExposureLimit, ExposureTransaction,
+            RiskRating, EarlyWarningSignal, EarlyWarningAlert
+        )
+    
+    # Branch models (if enabled)
+    if settings.ENABLE_BRANCH:
+        logger.info("Importing Branch models...")
+        from backend.shared.database.branch_models import (
+            Organization, Branch, BranchDayOperation, BranchCounter,
+            CashTransaction, CashDenomination, CashPosition,
+            BranchPerformance, BranchTarget, BranchAuditLog
+        )
+    
+    # Integration models (if enabled)
+    if settings.ENABLE_BUREAU_INTEGRATION or settings.ENABLE_BANK_STATEMENT or settings.ENABLE_OCR or settings.ENABLE_EKYC or settings.ENABLE_DIGILOCKER:
+        logger.info("Importing Integration models...")
+        from backend.shared.database.integration_models import (
+            BureauReport, BureauConsent, BankStatementAnalysis,
+            DocumentOCRResult, EKYCRecord, DigiLockerDocument
+        )
+    
+    logger.info("✅ Operations Service models loaded")

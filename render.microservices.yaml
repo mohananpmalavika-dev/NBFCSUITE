@@ -1,0 +1,278 @@
+# ============================================
+# NBFC Suite - Microservices Architecture
+# Render Blueprint Configuration
+# ============================================
+# 
+# Architecture: 4 independent microservices sharing 1 database
+# - Core Service (Auth, Customers, Loans, MasterData) - 512MB
+# - HRMS Service (Employees, Payroll, Attendance) - 512MB
+# - Accounting Service (GL, Assets, Reports) - 512MB
+# - Operations Service (CRM, Treasury, Compliance) - 512MB
+#
+# Shared Database: PostgreSQL (all services connect to same DB)
+#
+# ============================================
+
+services:
+  # ============================================
+  # CORE SERVICE - Authentication & Core Business
+  # ============================================
+  - type: web
+    name: nbfc-core-service
+    env: python
+    region: oregon
+    plan: free  # 512MB RAM
+    branch: main
+    rootDir: .
+    buildCommand: |
+      find . -type d -name __pycache__ -exec rm -rf {} + || true
+      pip install --upgrade pip
+      pip install --no-cache-dir -r backend/requirements.render.txt
+    startCommand: uvicorn backend.main_core:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SERVICE_NAME
+        value: core
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nbfc-postgres-shared
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        sync: false  # Share across all services
+      - fromGroup: nbfc-core-env
+
+  # ============================================
+  # HRMS SERVICE - Human Resource Management
+  # ============================================
+  - type: web
+    name: nbfc-hrms-service
+    env: python
+    region: oregon
+    plan: free  # 512MB RAM
+    branch: main
+    rootDir: .
+    buildCommand: |
+      find . -type d -name __pycache__ -exec rm -rf {} + || true
+      pip install --upgrade pip
+      pip install --no-cache-dir -r backend/requirements.render.txt
+    startCommand: uvicorn backend.main_hrms:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SERVICE_NAME
+        value: hrms
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nbfc-postgres-shared
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        sync: false  # Share across all services
+      - fromGroup: nbfc-hrms-env
+
+  # ============================================
+  # ACCOUNTING SERVICE - Financial Accounting
+  # ============================================
+  - type: web
+    name: nbfc-accounting-service
+    env: python
+    region: oregon
+    plan: free  # 512MB RAM
+    branch: main
+    rootDir: .
+    buildCommand: |
+      find . -type d -name __pycache__ -exec rm -rf {} + || true
+      pip install --upgrade pip
+      pip install --no-cache-dir -r backend/requirements.render.txt
+    startCommand: uvicorn backend.main_accounting:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SERVICE_NAME
+        value: accounting
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nbfc-postgres-shared
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        sync: false  # Share across all services
+      - fromGroup: nbfc-accounting-env
+
+  # ============================================
+  # OPERATIONS SERVICE - CRM, Treasury, Compliance
+  # ============================================
+  - type: web
+    name: nbfc-operations-service
+    env: python
+    region: oregon
+    plan: free  # 512MB RAM
+    branch: main
+    rootDir: .
+    buildCommand: |
+      find . -type d -name __pycache__ -exec rm -rf {} + || true
+      pip install --upgrade pip
+      pip install --no-cache-dir -r backend/requirements.render.txt
+    startCommand: uvicorn backend.main_operations:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SERVICE_NAME
+        value: operations
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nbfc-postgres-shared
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        sync: false  # Share across all services
+      - fromGroup: nbfc-operations-env
+
+  # ============================================
+  # FRONTEND SERVICE - Admin Portal
+  # ============================================
+  - type: web
+    name: nbfc-frontend
+    runtime: node
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: frontend
+    buildCommand: npm install --legacy-peer-deps && npm run build --filter=@nbfc-suite/admin-portal
+    startCommand: cd apps/admin-portal && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL_CORE
+        value: https://nbfc-core-service.onrender.com/api
+      - key: NEXT_PUBLIC_API_URL_HRMS
+        value: https://nbfc-hrms-service.onrender.com/api
+      - key: NEXT_PUBLIC_API_URL_ACCOUNTING
+        value: https://nbfc-accounting-service.onrender.com/api
+      - key: NEXT_PUBLIC_API_URL_OPERATIONS
+        value: https://nbfc-operations-service.onrender.com/api
+
+# ============================================
+# SHARED DATABASE (Single PostgreSQL instance)
+# ============================================
+databases:
+  - name: nbfc-postgres-shared
+    region: oregon
+    plan: free
+    databaseName: nbfc_suite
+    user: nbfc_user
+
+# ============================================
+# ENVIRONMENT VARIABLE GROUPS
+# Configure these in Render Dashboard
+# ============================================
+# 
+# Create 4 environment groups and upload the corresponding .env files:
+# 
+# 1. nbfc-core-env
+#    Upload: .env.core.production
+#    Used by: nbfc-core-service
+# 
+# 2. nbfc-hrms-env
+#    Upload: .env.hrms.production
+#    Used by: nbfc-hrms-service
+# 
+# 3. nbfc-accounting-env
+#    Upload: .env.accounting.production
+#    Used by: nbfc-accounting-service
+# 
+# 4. nbfc-operations-env
+#    Upload: .env.operations.production
+#    Used by: nbfc-operations-service
+# 
+# ============================================
+
+# ============================================
+# DEPLOYMENT INSTRUCTIONS
+# ============================================
+#
+# 1. Create the shared database first:
+#    - Go to Render Dashboard
+#    - Create PostgreSQL database: nbfc-postgres-shared
+#    - Note the connection string
+#
+# 2. Run schema migration (one-time setup):
+#    - Deploy ONE service first (recommend: nbfc-core-service)
+#    - Set SKIP_TABLE_CREATION=false for first deployment only
+#    - After successful deployment, set SKIP_TABLE_CREATION=true
+#    - All tables will be created in shared database
+#
+# 3. Create environment groups:
+#    - Dashboard > Environment Groups
+#    - Create: nbfc-core-env, nbfc-hrms-env, nbfc-accounting-env, nbfc-operations-env
+#    - Upload respective .env files to each group
+#
+# 4. Deploy all services:
+#    - Use this render.microservices.yaml file
+#    - All services will connect to the same database
+#    - Each service runs independently with 512MB RAM
+#
+# 5. Configure frontend:
+#    - Update API endpoints to point to respective services
+#    - Core API: nbfc-core-service.onrender.com
+#    - HRMS API: nbfc-hrms-service.onrender.com
+#    - Accounting API: nbfc-accounting-service.onrender.com
+#    - Operations API: nbfc-operations-service.onrender.com
+#
+# ============================================
+
+# ============================================
+# SERVICE ENDPOINTS
+# ============================================
+#
+# Core Service:
+#   - https://nbfc-core-service.onrender.com
+#   - Health: /health
+#   - Docs: /docs
+#   - APIs: /api/auth, /api/customers, /api/loans, /api/masterdata
+#
+# HRMS Service:
+#   - https://nbfc-hrms-service.onrender.com
+#   - Health: /health
+#   - Docs: /docs
+#   - APIs: /api/hrms
+#
+# Accounting Service:
+#   - https://nbfc-accounting-service.onrender.com
+#   - Health: /health
+#   - Docs: /docs
+#   - APIs: /api/accounting
+#
+# Operations Service:
+#   - https://nbfc-operations-service.onrender.com
+#   - Health: /health
+#   - Docs: /docs
+#   - APIs: /api/crm, /api/treasury, /api/compliance, /api/risk
+#
+# ============================================
+
+# ============================================
+# COST ANALYSIS (Free Tier)
+# ============================================
+#
+# Render Free Tier includes:
+# - 750 hours/month of free services (multiple services share this pool)
+# - Each service gets 512MB RAM
+# - Services sleep after 15 mins of inactivity
+# - 90 second spin-up time (cold start)
+#
+# With 4 services:
+# - Total: 4 × 512MB = 2GB RAM (vs 512MB monolith)
+# - Hours: 750 hours shared across 4 services
+# - Approximately 185 hours per service per month
+# - Or ~6 hours per day per service
+#
+# For production 24/7 uptime:
+# - Upgrade to Starter plan: $7/month per service
+# - Total: 4 × $7 = $28/month
+# - Database: $7/month (shared)
+# - Grand Total: $35/month for complete system
+#
+# ============================================
