@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     
     # Multi-tenancy
     TENANT_ISOLATION_ENABLED: bool = Field(default=True, env="TENANT_ISOLATION_ENABLED")
+    DEFAULT_TENANT_ID: str = Field(default="default", env="DEFAULT_TENANT_ID")
     
     # Redis (optional)
     REDIS_URL: Optional[str] = Field(default=None, env="REDIS_URL")
