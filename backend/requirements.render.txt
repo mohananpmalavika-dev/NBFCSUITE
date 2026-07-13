@@ -41,6 +41,7 @@ jinja2==3.1.2
 python-dotenv==1.0.0
 python-dateutil==2.8.2
 pytz==2023.3
+apscheduler==3.10.4
 
 # File Processing (minimal)
 openpyxl==3.1.2
