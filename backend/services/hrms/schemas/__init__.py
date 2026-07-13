@@ -20,6 +20,17 @@ from backend.services.hrms.schemas.employee_schemas import (
     OrgChartNode,
     EmployeeSearchParams,
 )
+from backend.services.hrms.schemas.department_schemas import (
+    DepartmentTypeEnum,
+    DepartmentBase,
+    DepartmentCreate,
+    DepartmentUpdate,
+    DepartmentResponse,
+    DepartmentListItem,
+    PaginatedDepartmentResponse,
+    DepartmentTreeNode,
+    DepartmentStats,
+)
 from backend.services.hrms.schemas.exit_schemas import *
 from backend.services.hrms.schemas.performance_schemas import *
 
@@ -40,6 +51,16 @@ __all__ = [
     "EmployeeDashboardStats",
     "OrgChartNode",
     "EmployeeSearchParams",
+    # Department schemas
+    "DepartmentTypeEnum",
+    "DepartmentBase",
+    "DepartmentCreate",
+    "DepartmentUpdate",
+    "DepartmentResponse",
+    "DepartmentListItem",
+    "PaginatedDepartmentResponse",
+    "DepartmentTreeNode",
+    "DepartmentStats",
     # Exit schemas
     "ExitRequestCreate",
     "ExitRequestUpdate",
