@@ -161,7 +161,7 @@ class BankStatementAnalysis(Base):
     
     # Relationships
     customer = relationship("Customer", back_populates="bank_analyses")
-    application = relationship("LoanApplication", back_populates="bank_analyses")
+    application = relationship("LoanApplication")  # Removed back_populates - LoanApplication may not have bank_analyses
 
 
 class DocumentOCRResult(Base):
