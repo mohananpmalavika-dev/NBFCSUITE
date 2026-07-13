@@ -8,7 +8,8 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
-from backend.shared.database.connection import get_db, Database
+from backend.shared.database.connection import get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.shared.middleware.auth import get_current_user
 from backend.crm.services.service_service import TicketService, KnowledgeBaseService, SLAService
 from backend.shared.schemas.crm_service_schemas import (
@@ -38,7 +39,7 @@ sla_router = APIRouter()
 @ticket_router.post("/tickets", response_model=TicketAPIResponse, status_code=status.HTTP_201_CREATED)
 async def create_ticket(
     data: TicketCreate,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Create a new ticket"""
@@ -69,7 +70,7 @@ async def list_tickets(
     assigned_to: Optional[UUID] = None,
     account_id: Optional[UUID] = None,
     sla_breached: Optional[bool] = None,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """List tickets with filters"""
@@ -104,7 +105,7 @@ async def list_tickets(
 @ticket_router.get("/tickets/{ticket_id}", response_model=TicketAPIResponse)
 async def get_ticket(
     ticket_id: UUID,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Get ticket by ID"""
@@ -135,7 +136,7 @@ async def get_ticket(
 async def update_ticket(
     ticket_id: UUID,
     data: TicketUpdate,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Update ticket"""
@@ -166,7 +167,7 @@ async def update_ticket(
 @ticket_router.delete("/tickets/{ticket_id}")
 async def delete_ticket(
     ticket_id: UUID,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Delete ticket"""
@@ -194,7 +195,7 @@ async def delete_ticket(
 async def add_ticket_comment(
     ticket_id: UUID,
     data: TicketCommentCreate,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Add comment to ticket"""
@@ -217,7 +218,7 @@ async def add_ticket_comment(
 
 @ticket_router.get("/tickets/stats/overview")
 async def get_ticket_stats(
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Get ticket statistics"""
@@ -244,7 +245,7 @@ async def get_ticket_stats(
 @knowledge_router.post("/knowledge/articles", response_model=KnowledgeArticleAPIResponse, status_code=status.HTTP_201_CREATED)
 async def create_article(
     data: KnowledgeArticleCreate,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Create knowledge base article"""
@@ -272,7 +273,7 @@ async def list_articles(
     category: Optional[str] = None,
     status: Optional[str] = None,
     is_featured: Optional[bool] = None,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """List knowledge base articles"""
@@ -304,7 +305,7 @@ async def list_articles(
 async def get_article(
     article_id: UUID,
     increment_view: bool = Query(False),
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Get article by ID"""
@@ -334,7 +335,7 @@ async def get_article(
 @knowledge_router.get("/knowledge/articles/slug/{slug}", response_model=KnowledgeArticleAPIResponse)
 async def get_article_by_slug(
     slug: str,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Get article by slug"""
@@ -365,7 +366,7 @@ async def get_article_by_slug(
 async def update_article(
     article_id: UUID,
     data: KnowledgeArticleUpdate,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Update article"""
@@ -396,7 +397,7 @@ async def update_article(
 @knowledge_router.delete("/knowledge/articles/{article_id}")
 async def delete_article(
     article_id: UUID,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Delete article"""
@@ -424,7 +425,7 @@ async def delete_article(
 async def record_article_feedback(
     article_id: UUID,
     data: ArticleFeedbackUpdate,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Record article feedback (helpful/not helpful)"""
@@ -456,7 +457,7 @@ async def record_article_feedback(
 @sla_router.post("/slas", response_model=SLAAPIResponse, status_code=status.HTTP_201_CREATED)
 async def create_sla(
     data: SLACreate,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Create SLA"""
@@ -483,7 +484,7 @@ async def list_slas(
     status: Optional[str] = None,
     priority: Optional[str] = None,
     category: Optional[str] = None,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """List SLAs"""
@@ -513,7 +514,7 @@ async def list_slas(
 @sla_router.get("/slas/{sla_id}", response_model=SLAAPIResponse)
 async def get_sla(
     sla_id: UUID,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Get SLA by ID"""
@@ -544,7 +545,7 @@ async def get_sla(
 async def update_sla(
     sla_id: UUID,
     data: SLAUpdate,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Update SLA"""
@@ -575,7 +576,7 @@ async def update_sla(
 @sla_router.delete("/slas/{sla_id}")
 async def delete_sla(
     sla_id: UUID,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Delete SLA"""
@@ -602,7 +603,7 @@ async def delete_sla(
 @sla_router.get("/slas/violations/list")
 async def get_sla_violations(
     ticket_id: Optional[UUID] = None,
-    db: Database = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Get SLA violations"""

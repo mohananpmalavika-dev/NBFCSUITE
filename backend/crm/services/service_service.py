@@ -5,12 +5,12 @@ Ticket Management, Knowledge Base, SLA Tracking
 
 from sqlalchemy import select, func, and_, or_, desc, asc
 from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from uuid import UUID
 import re
 
-from backend.shared.database.connection import Database
 from backend.shared.database.crm_service_models import (
     Ticket, TicketComment, TicketAttachment,
     KnowledgeArticle, ArticleAttachment,
@@ -30,7 +30,7 @@ from backend.shared.schemas.crm_service_schemas import (
 class TicketService:
     """Service for ticket management operations"""
     
-    def __init__(self, db: Database):
+    def __init__(self, db: AsyncSession):
         self.db = db
     
     async def generate_ticket_number(self) -> str:
@@ -521,7 +521,7 @@ class TicketService:
 class KnowledgeBaseService:
     """Service for knowledge base operations"""
     
-    def __init__(self, db: Database):
+    def __init__(self, db: AsyncSession):
         self.db = db
     
     async def generate_article_number(self) -> str:
@@ -739,7 +739,7 @@ class KnowledgeBaseService:
 class SLAService:
     """Service for SLA management operations"""
     
-    def __init__(self, db: Database):
+    def __init__(self, db: AsyncSession):
         self.db = db
     
     async def create_sla(self, data: SLACreate, tenant_id: str, user_id: str) -> SLA:
