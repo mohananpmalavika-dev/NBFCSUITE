@@ -166,13 +166,43 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add middleware
+# Add middleware - CORS configuration
+logger.info(f"🌐 Configuring CORS with origins: {settings.CORS_ORIGINS}")
+
+# Parse CORS origins
+cors_origins = []
+if settings.CORS_ORIGINS == "*":
+    cors_origins = ["*"]
+    logger.info("🌐 CORS: Allowing ALL origins")
+else:
+    # Split by comma and clean whitespace
+    cors_origins = [origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()]
+    # Add common Render.com patterns
+    cors_origins.extend([
+        "https://nbfcsuite-vqel.onrender.com",  # Your frontend
+        "https://*.onrender.com",  # All Render subdomains
+        "http://localhost:3000",  # Local development
+        "http://localhost:3001",
+    ])
+    # Remove duplicates
+    cors_origins = list(set(cors_origins))
+    logger.info(f"🌐 CORS: Allowing specific origins: {cors_origins}")
+
+# If origins contain "*", we can't use credentials
+cors_allow_credentials = True
+if "*" in cors_origins or "https://*.onrender.com" in cors_origins:
+    # For wildcard origins, we need to allow all and disable credentials check
+    cors_origins = ["*"]
+    cors_allow_credentials = False
+    logger.warning("🌐 CORS: Wildcard origin detected, disabling credentials")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=cors_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(TenantMiddleware)

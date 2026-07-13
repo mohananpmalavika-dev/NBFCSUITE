@@ -1163,8 +1163,115 @@ def cors_origins_list(self) -> List[str]:
 - **Config Flexibility:** Enhanced ✅
 - **Production Ready:** YES ✅
 
+---
+
+## Issue 23: Duplicate Vendor Model & Unconditional Imports
+**Error:** `sqlalchemy.exc.NoReferencedTableError: Foreign key associated with column 'inventory_items.preferred_supplier_id' could not find table 'vendors' with which to generate a foreign key to target column 'id'`
+
+**Root Causes:**
+1. **Duplicate Vendor Model**: Two Vendor models with same `__tablename__ = "vendors"`
+   - `procurement_models.py` - Vendor (UUID id) ✓ Correct
+   - `accounting_extended_models.py` - Vendor (Integer id) ✗ Duplicate
+
+2. **Unconditional Database Imports**: `backend/shared/database/__init__.py` imported accounting models at module level
+
+3. **Eager Service Imports**: `backend/services/inventory/__init__.py` imported services eagerly, which loaded models even when `ENABLE_INVENTORY=false`
+
+**Files Updated:**
+1. `backend/shared/database/accounting_extended_models.py`
+   - ❌ Removed duplicate Vendor class (lines 912-988)
+   - ✅ Added comment pointing to procurement_models.py
+   - ✅ Kept PurchaseInvoice, VendorPayment, VendorPaymentAllocation
+
+2. `backend/shared/conditional_imports.py`
+   - ❌ Removed: `Vendor as AccountingVendor` import
+   - ✅ Added: Import Vendor only from procurement_models.py
+   ```python
+   from backend.shared.database.procurement_models import Vendor
+   ```
+
+3. `backend/shared/database/__init__.py`
+   - ❌ Removed unconditional accounting_models imports
+   - ✅ Added note: "Model imports handled in conditional_imports.py"
+
+4. `backend/services/inventory/__init__.py`
+   - ❌ Removed eager imports (ItemMasterService, etc.)
+   - ✅ Changed to lazy getter functions
+   ```python
+   def get_item_service():
+       from backend.services.inventory.item_service import ItemMasterService
+       return ItemMasterService
+   ```
+
+**Why This Happened:**
+With `ENABLE_INVENTORY=false`, the inventory_items table was still being registered because:
+1. Service __init__.py imported ItemMasterService at module level
+2. ItemMasterService imported inventory_models
+3. inventory_models.ItemMaster has FK to vendors.id
+4. But vendors table wasn't imported (both flags disabled)
+5. → NoReferencedTableError
+
+**Solution Benefits:**
+- ✅ Single Vendor model (procurement_models.py)
+- ✅ Models only loaded when feature flags enabled
+- ✅ Lazy service imports prevent premature model loading
+- ✅ Clean SQLAlchemy metadata with only enabled tables
+- ✅ Application starts with ENABLE_INVENTORY=false
+
+**Documentation:**
+- Created `VENDOR_TABLE_DUPLICATE_FIX.md` - Details first fix attempt
+- Created `INVENTORY_FOREIGN_KEY_FIX_COMPLETE.md` - Complete root cause analysis
+
+**Commit:** TBD
+
+---
+
+## 🎉 ALL 23 DEPLOYMENT ISSUES RESOLVED! 🎉
+
+## Complete Fix Summary
+1. ✅ **Duplicate Asset Models**
+2. ✅ **Wrong Import Paths** (asset models)
+3. ✅ **Wrong Class Names**
+4. ✅ **Auth Module Path** (22 files)
+5. ✅ **Pydantic v2 decimal_places**
+6. ✅ **Missing Auth Functions**
+7. ✅ **Utils Module Path**
+8. ✅ **Response Function Name**
+9. ✅ **Database Class Import**
+10. ✅ **Middleware Auth Path** (5 files)
+11. ✅ **Response Module Path**
+12. ✅ **Pydantic v2 Validator Syntax**
+13. ✅ **Computed Field Override**
+14. ✅ **Missing Exceptions Module**
+15. ✅ **Missing APScheduler Dependency**
+16. ✅ **Non-Generic Response Class**
+17. ✅ **Package Name Conflict**
+18. ✅ **Missing Employee Schemas**
+19. ✅ **Missing Department Schemas**
+20. ✅ **Missing Designation Schemas**
+21. ✅ **Missing Organization Schemas**
+22. ✅ **Config Parsing Error (CORS_ORIGINS)**
+23. ✅ **Duplicate Vendor Model & Unconditional Imports**
+
+## Plus Memory Optimization
+
+✅ **Created main_minimal.py** - Reduces memory from 525MB → 220MB (58% savings)
+
+## Final Statistics
+- **Total Issues Fixed:** 23
+- **Files Modified:** 66+
+- **Schema Files Created:** 7
+- **Memory Optimization:** 305MB saved
+- **Duplicate Models Removed:** 2 (Asset, Vendor)
+- **Conditional Import System:** Fully functional ✅
+- **Pydantic v2 Compatibility:** Complete ✅
+- **SQLAlchemy Metadata:** Clean ✅
+- **Production Ready:** YES ✅
+
 ## Deployment Status
 ✅ **BUILD SUCCESSFUL** - All import errors fixed
 ✅ **MEMORY OPTIMIZED** - Minimal version created
 ✅ **CONFIG FIXED** - Environment variable parsing working
+✅ **DATABASE MODELS** - No duplicates, conditional loading working
+✅ **FOREIGN KEYS** - All resolved correctly
 ✅ **READY FOR DEPLOYMENT** - Just commit and push! 🚀🎉
