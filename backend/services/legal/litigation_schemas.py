@@ -424,7 +424,7 @@ class LegalExpenseResponse(LegalExpenseBase):
     tenant_id: str
     case_id: UUID
     expense_number: str
-    total_amount: Decimal
+    # total_amount is computed in base class
     payment_date: Optional[date] = None
     is_approved: bool
     approved_by: Optional[UUID] = None
