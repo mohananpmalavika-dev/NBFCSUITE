@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE: int = Field(default=10485760, env="MAX_UPLOAD_SIZE")  # 10MB
     ALLOWED_EXTENSIONS: str = Field(default="pdf,jpg,jpeg,png,doc,docx", env="ALLOWED_EXTENSIONS")
     
+    # API Documentation
+    ENABLE_SWAGGER: bool = Field(default=True, env="ENABLE_SWAGGER")
+    ENABLE_REDOC: bool = Field(default=True, env="ENABLE_REDOC")
+    
     # ==================================================================
     # FEATURE FLAGS FOR MEMORY OPTIMIZATION (FREE TIER)
     # Enable only the modules you need to reduce memory usage
