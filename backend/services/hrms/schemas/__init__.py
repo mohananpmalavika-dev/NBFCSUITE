@@ -31,6 +31,15 @@ from backend.services.hrms.schemas.department_schemas import (
     DepartmentTreeNode,
     DepartmentStats,
 )
+from backend.services.hrms.schemas.designation_schemas import (
+    DesignationBase,
+    DesignationCreate,
+    DesignationUpdate,
+    DesignationResponse,
+    DesignationListItem,
+    PaginatedDesignationResponse,
+    DesignationStats,
+)
 from backend.services.hrms.schemas.exit_schemas import *
 from backend.services.hrms.schemas.performance_schemas import *
 
@@ -61,6 +70,14 @@ __all__ = [
     "PaginatedDepartmentResponse",
     "DepartmentTreeNode",
     "DepartmentStats",
+    # Designation schemas
+    "DesignationBase",
+    "DesignationCreate",
+    "DesignationUpdate",
+    "DesignationResponse",
+    "DesignationListItem",
+    "PaginatedDesignationResponse",
+    "DesignationStats",
     # Exit schemas
     "ExitRequestCreate",
     "ExitRequestUpdate",
