@@ -500,7 +500,11 @@ class DocumentComment(BaseModel):
     version = relationship("DocumentVersion")
     author = relationship("User", foreign_keys=[author_id])
     resolver = relationship("User", foreign_keys=[resolved_by])
-    replies = relationship("DocumentComment", backref="parent_comment", remote_side=[parent_comment_id])
+    # Self-referential relationship for nested comments
+    replies = relationship("DocumentComment", 
+                          foreign_keys=[parent_comment_id],
+                          remote_side="DocumentComment.id",
+                          backref="parent_comment")
     
     __table_args__ = (
         Index('idx_comment_document_author', 'document_id', 'author_id'),
