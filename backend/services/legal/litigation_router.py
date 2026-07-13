@@ -11,7 +11,7 @@ from datetime import date
 
 from backend.shared.database.connection import get_db
 from backend.services.auth.dependencies import get_current_user, get_tenant_id
-from backend.shared.responses import success_response, error_response
+from backend.shared.common.response import success_response, error_response
 from backend.services.legal.litigation_service import LitigationService
 from backend.services.legal.litigation_schemas import (
     LitigationCaseCreate, LitigationCaseUpdate, LitigationCaseResponse,
