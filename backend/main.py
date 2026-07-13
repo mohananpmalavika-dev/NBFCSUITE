@@ -795,125 +795,22 @@ async def liveness_check() -> Dict[str, Any]:
 # API ROUTERS
 # ============================================
 
-# Import routers
+# MEMORY OPTIMIZATION: Import routers conditionally based on feature flags
+# This reduces memory usage on free tier (512MB RAM limit)
+
+logger.info("Loading API routers based on enabled features...")
+
+# Core routers (always enabled)
 from backend.services.auth.router import router as auth_router
 from backend.services.dashboard.router import router as dashboard_router
-from backend.services.masterdata.router import router as masterdata_router
-from backend.services.customer.router import router as customer_router
-from backend.services.customer.timeline_router import router as customer_timeline_router
-from backend.services.customer.bureau_router import router as customer_bureau_router
-from backend.services.customer.ekyc_router import router as customer_ekyc_router
-from backend.services.customer.digilocker_router import router as customer_digilocker_router
-from backend.services.loan import router as loan_router
-from backend.services.accounting.router import router as accounting_router
-from backend.services.deposit import (
-    product_router, 
-    account_router, 
-    interest_router,
-    passbook_router,
-    statement_router,
-    certificate_router,
-    batch_router,
-    reports_router
-)
-from backend.services.workflow import template_router, instance_router, task_router
-from backend.services.rules import category_router, evaluation_router, decision_router as rules_decision_router
-from backend.services.decision import router as decision_router
-from backend.services.notification import router as notification_router
-from backend.services.file_upload.router import router as file_upload_router
-from backend.services.gold.router import router as gold_loan_router
 
-# NEW: Integration Services Routers (LOS Enhancement - 100% Complete)
-from backend.services.integration.bureau_router import router as bureau_integration_router
-from backend.services.integration.bank_statement_router import router as bank_statement_router
-from backend.services.integration.ocr_router import router as ocr_router
-from backend.services.integration.ekyc_router import router as ekyc_integration_router
-from backend.services.integration.digilocker_router import router as digilocker_integration_router
+# Load only enabled modules using conditional imports
+from backend.shared.conditional_imports import get_enabled_routers
 
-# NEW: LOS Extensions Routers (Vehicle & Property Loans)
-from backend.services.loan.extensions import vehicle_loan_router, property_loan_router
 
-# NEW: LMS Extensions Routers (NACH, Restructuring, Insurance)
-from backend.services.lms.nach_router import router as nach_router
-from backend.services.lms.restructuring_router import router as restructuring_router
-from backend.services.lms.insurance_router import router as insurance_router
-
-# NEW: Insurance & Bancassurance Module (Complete Implementation)
-from backend.services.insurance import (
-    policy_router as insurance_policy_router,
-    premium_router as insurance_premium_router,
-    claim_router as insurance_claim_router,
-    commission_router as insurance_commission_router
-)
-
-# NEW: Compliance & Regulatory Reporting Routers (CRILC & SMA)
-from backend.services.compliance.router import router as compliance_router
-
-# NEW: Treasury & Cash Management Router
-from backend.services.treasury.bank_account_router import router as treasury_bank_account_router
-from backend.services.treasury.cash_position_router import router as treasury_cash_position_router
-from backend.services.treasury.reconciliation_router import router as treasury_reconciliation_router
-from backend.services.treasury.fund_transfer_router import router as treasury_fund_transfer_router
-from backend.services.treasury.alm_router import router as alm_router
-
-# NEW: Branch & Operations Management Routers
-from backend.services.branch import (
-    organization_router as branch_organization_router, 
-    branch_router, 
-    day_operation_router, 
-    cash_router, 
-    performance_router
-)
-
-# NEW: Accounting Extended Routers (TDS & GST & Assets)
-from backend.services.accounting.tds_router import router as tds_router
-from backend.services.accounting.gst_router import router as gst_router
-from backend.services.accounting.asset_router import router as asset_router
-
-# NEW: Fixed Asset Management (Complete Module)
-from backend.services.fixed_assets.router import router as fixed_assets_router
-
-# NEW: Risk Management & Credit Policy Router
-from backend.services.risk.router import router as risk_router
-
-# NEW: HRMS (Human Resource Management System) Routers
-from backend.services.hrms import (
-    employee_router, 
-    department_router, 
-    designation_router, 
-    organization_router as hrms_organization_router
-)
-from backend.services.hrms.training_router import router as training_router
-from backend.services.hrms.ess_router import router as ess_router
-
-# NEW: HRMS Recruitment & Onboarding Routers
-from backend.services.recruitment import (
-    requisition_router,
-    posting_router,
-    application_router,
-    interview_router,
-    onboarding_router
-)
-
-# NEW: HRMS Attendance & Leave Management Routers
-from backend.services.attendance.shift_router import router as shift_router
-from backend.services.attendance.attendance_router import router as attendance_router
-from backend.services.attendance.leave_router import router as leave_router
-
-# NEW: HRMS Payroll Management Router
-from backend.services.payroll.payroll_router import router as payroll_router
-
-# NEW: Inventory & Store Management Router
-from backend.services.inventory.router import router as inventory_router
-
-# NEW: Reporting & Analytics Module (100+ Reports, Dashboards, Predictive Analytics)
-from backend.services.reporting import (
-    template_router as reporting_template_router,
-    generation_router as reporting_generation_router,
-    dashboard_router as reporting_dashboard_router,
-    analytics_router as reporting_analytics_router,
-    builder_router as reporting_builder_router
-)
+# ============================================
+# FASTAPI APPLICATION SETUP
+# ============================================
 
 # NEW: CRM Lead Management Module (Multi-channel Capture, Scoring, Assignment, Follow-up Tracking)
 from backend.services.crm.router import router as crm_router
@@ -948,335 +845,25 @@ from backend.services.facility import (
     visitor_router
 )
 
-# Register routers
+# ============================================
+# REGISTER ROUTERS - MEMORY OPTIMIZED
+# Only loads routers for enabled modules
+# ============================================
+
+# Register core routers (always enabled)
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["Dashboard"])
-app.include_router(masterdata_router, prefix="/api/v1/masterdata", tags=["Master Data"])
-app.include_router(customer_router, prefix="/api/v1/customers", tags=["Customers"])
 
-# Customer 360 / CIF Enhanced Features
-app.include_router(customer_timeline_router, prefix="/api/v1", tags=["Customer Timeline"])
-app.include_router(customer_bureau_router, prefix="/api/v1", tags=["Credit Bureau"])
-app.include_router(customer_ekyc_router, prefix="/api/v1", tags=["eKYC / Aadhaar"])
-app.include_router(customer_digilocker_router, prefix="/api/v1", tags=["DigiLocker"])
+# Dynamically register routers based on feature flags
+enabled_routers = get_enabled_routers()
+for name, router, prefix in enabled_routers:
+    try:
+        app.include_router(router, prefix=prefix)
+        logger.info(f"Registered router: {name}")
+    except Exception as e:
+        logger.error(f"Failed to register router {name}: {e}")
 
-app.include_router(loan_router, prefix="/api/v1", tags=["Loans"])
-app.include_router(accounting_router, prefix="/api/v1", tags=["Accounting"])
-
-# Accounting Extended - TDS, GST & Assets
-app.include_router(tds_router, prefix="/api/v1/accounting/tds", tags=["Accounting - TDS"])
-app.include_router(gst_router, prefix="/api/v1/accounting/gst", tags=["Accounting - GST"])
-app.include_router(asset_router, prefix="/api/v1/accounting/assets", tags=["Accounting - Assets"])
-
-# Fixed Asset Management (Complete Module)
-app.include_router(fixed_assets_router, prefix="/api/v1", tags=["Fixed Assets"])
-
-# Deposit Management Routers
-app.include_router(product_router, prefix="/api/v1", tags=["Deposit Products"])
-app.include_router(account_router, prefix="/api/v1", tags=["Deposit Accounts"])
-app.include_router(interest_router, prefix="/api/v1", tags=["Deposit Interest"])
-
-# NEW Deposit Management Routers (Complete Implementation)
-app.include_router(passbook_router, prefix="/api/v1", tags=["Deposit Passbook"])
-app.include_router(statement_router, prefix="/api/v1", tags=["Deposit Statements"])
-app.include_router(certificate_router, prefix="/api/v1", tags=["Deposit Certificates"])
-app.include_router(batch_router, prefix="/api/v1", tags=["Deposit Batch Operations"])
-app.include_router(reports_router, prefix="/api/v1", tags=["Deposit Reports"])
-
-# Workflow Engine Routers
-app.include_router(template_router, prefix="/api/v1", tags=["Workflow Templates"])
-app.include_router(instance_router, prefix="/api/v1", tags=["Workflow Instances"])
-app.include_router(task_router, prefix="/api/v1", tags=["Workflow Tasks"])
-
-# Business Rules Engine Routers
-app.include_router(category_router, prefix="/api/v1", tags=["Business Rules"])
-app.include_router(evaluation_router, prefix="/api/v1", tags=["Rule Evaluation"])
-app.include_router(rules_decision_router, prefix="/api/v1", tags=["Rule Decisions"])
-
-# Decision Engine Router
-app.include_router(decision_router, prefix="/api/v1", tags=["Decision Engine"])
-
-# Notification Service Router
-app.include_router(notification_router, prefix="/api/v1", tags=["Notifications"])
-
-# File Upload Router
-app.include_router(file_upload_router, prefix="/api/v1", tags=["File Upload"])
-
-# Gold Loan Router
-app.include_router(gold_loan_router, prefix="/api/v1", tags=["Gold Loans"])
-
-# ============================================
-# NEW: INTEGRATION SERVICES ROUTERS
-# LOS Enhancement - Complete Implementation
-# ============================================
-
-# Bureau Integration (CIBIL, Equifax, Experian, CRIF)
-app.include_router(bureau_integration_router, tags=["Bureau Integration"])
-
-# ============================================
-# NEW: LOS EXTENSIONS ROUTERS
-# Vehicle & Property Loan Support
-# ============================================
-
-# Vehicle Loan Extension
-app.include_router(vehicle_loan_router, prefix="/api/v1", tags=["Vehicle Loans"])
-
-# Property Loan Extension (LAP/Home Loan)
-app.include_router(property_loan_router, prefix="/api/v1", tags=["Property Loans"])
-
-# ============================================
-# NEW: LMS EXTENSIONS ROUTERS
-# NACH, Restructuring, and Insurance Tracking
-# ============================================
-
-# NACH/eNACH Mandate Management
-app.include_router(nach_router, prefix="/api/v1", tags=["NACH Management"])
-
-# Loan Restructuring
-app.include_router(restructuring_router, prefix="/api/v1", tags=["Loan Restructuring"])
-
-# Loan Insurance Tracking
-app.include_router(insurance_router, prefix="/api/v1", tags=["Loan Insurance"])
-
-# ============================================================================
-# NEW: INSURANCE & BANCASSURANCE MODULE
-# Policy Management, Premium Collection, Claims Processing, Commission Tracking
-# ============================================================================
-app.include_router(insurance_policy_router, prefix="/api/v1", tags=["Insurance - Policies"])
-app.include_router(insurance_premium_router, prefix="/api/v1", tags=["Insurance - Premiums"])
-app.include_router(insurance_claim_router, prefix="/api/v1", tags=["Insurance - Claims"])
-app.include_router(insurance_commission_router, prefix="/api/v1", tags=["Insurance - Commissions"])
-
-# ============================================================================
-# NEW: COMPLIANCE & REGULATORY REPORTING ROUTERS
-# CRILC (Large Credits) & SMA (Special Mention Accounts) Reporting
-# ============================================================================
-app.include_router(compliance_router, prefix="/api/v1", tags=["Compliance & Regulatory"])
-
-# RBI Returns Automation (NBS-7, Statutory Returns, XBRL, Compliance Calendar)
-from backend.services.compliance.rbi_returns_router import router as rbi_returns_router
-app.include_router(rbi_returns_router, tags=["RBI Returns Automation"])
-
-# ============================================================================
-# NEW: RISK MANAGEMENT & CREDIT POLICY ROUTER
-# Credit Policies, Risk-Based Pricing, Exposure Limits, Risk Ratings, Early Warning Signals
-# ============================================================================
-app.include_router(risk_router, prefix="/api/v1", tags=["Risk Management"])
-
-# ============================================================================
-# NEW: TREASURY & CASH MANAGEMENT ROUTERS
-# Bank Accounts, Cash Position, Reconciliation, Transfers, Liquidity, Investments, ALM
-# ============================================================================
-app.include_router(treasury_bank_account_router, prefix="/api/v1/treasury", tags=["Treasury - Bank Accounts"])
-app.include_router(treasury_cash_position_router, prefix="/api/v1/treasury", tags=["Treasury - Cash Position"])
-app.include_router(treasury_reconciliation_router, prefix="/api/v1/treasury", tags=["Treasury - Reconciliation"])
-app.include_router(treasury_fund_transfer_router, prefix="/api/v1/treasury", tags=["Treasury - Fund Transfers"])
-app.include_router(alm_router, prefix="/api/v1/treasury", tags=["Treasury - ALM"])
-
-# ============================================================================
-# NEW: BRANCH & OPERATIONS MANAGEMENT ROUTERS
-# Organizational Hierarchy, Day Operations, Cash Management, Performance Tracking
-# ============================================================================
-app.include_router(branch_organization_router, prefix="/api/v1", tags=["Branch - Organizations"])
-app.include_router(branch_router, prefix="/api/v1", tags=["Branch - Branches"])
-app.include_router(day_operation_router, prefix="/api/v1", tags=["Branch - Day Operations"])
-app.include_router(cash_router, prefix="/api/v1", tags=["Branch - Cash Management"])
-app.include_router(performance_router, prefix="/api/v1", tags=["Branch - Performance"])
-
-# ============================================================================
-# NEW: HRMS (HUMAN RESOURCE MANAGEMENT SYSTEM) ROUTERS
-# Employee Master, Organization Structure, Department, Designation, Reporting Hierarchy
-# ============================================================================
-app.include_router(employee_router, prefix="/api/v1", tags=["HRMS - Employees"])
-app.include_router(department_router, prefix="/api/v1", tags=["HRMS - Departments"])
-app.include_router(designation_router, prefix="/api/v1", tags=["HRMS - Designations"])
-app.include_router(hrms_organization_router, prefix="/api/v1", tags=["HRMS - Organizations"])
-
-# ============================================================================
-# NEW: HRMS EMPLOYEE SELF-SERVICE ROUTER
-# Payslip Download, Leave Application, Investment Declaration, Reimbursement Claims, Profile Update
-# ============================================================================
-app.include_router(ess_router, tags=["HRMS - Employee Self Service"])
-
-# ============================================================================
-# NEW: HRMS RECRUITMENT & ONBOARDING ROUTERS
-# Job Requisitions, Applicant Tracking, Interview Scheduling, Onboarding Workflow
-# ============================================================================
-app.include_router(requisition_router, prefix="/api/v1/recruitment/requisitions", tags=["HRMS - Recruitment - Requisitions"])
-app.include_router(posting_router, prefix="/api/v1/recruitment/postings", tags=["HRMS - Recruitment - Postings"])
-app.include_router(application_router, prefix="/api/v1/recruitment/applications", tags=["HRMS - Recruitment - Applications"])
-app.include_router(interview_router, prefix="/api/v1/recruitment/interviews", tags=["HRMS - Recruitment - Interviews"])
-app.include_router(onboarding_router, prefix="/api/v1/recruitment/onboarding", tags=["HRMS - Recruitment - Onboarding"])
-
-# ============================================================================
-# NEW: HRMS ATTENDANCE & LEAVE MANAGEMENT ROUTERS
-# Shift Management, Attendance Tracking, Biometric Integration, Leave Management
-# ============================================================================
-app.include_router(shift_router, prefix="/api/v1/attendance/shifts", tags=["HRMS - Attendance - Shifts"])
-app.include_router(attendance_router, prefix="/api/v1/attendance", tags=["HRMS - Attendance - Tracking"])
-app.include_router(leave_router, prefix="/api/v1/leave", tags=["HRMS - Leave Management"])
-
-# ============================================================================
-# NEW: HRMS PAYROLL MANAGEMENT ROUTER
-# Salary Components, Structures, Processing, Statutory Compliance, Form 16, Payment Files
-# ============================================================================
-app.include_router(payroll_router, prefix="/api/v1/payroll", tags=["HRMS - Payroll"])
-
-# ============================================================================
-# NEW: HRMS TRAINING & DEVELOPMENT ROUTER
-# Training Calendar, Courses, Sessions, Assessments, Certifications, LMS Integration, Skill Matrix
-# ============================================================================
-app.include_router(training_router, prefix="/api/v1", tags=["HRMS - Training & Development"])
-
-# ============================================================================
-# NEW: HRMS PERFORMANCE MANAGEMENT ROUTER
-# Goal Setting (KRA/KPI), Appraisal Cycles, 360-Degree Feedback, Ratings, IDP
-# ============================================================================
-from backend.services.hrms.routes.performance_routes import router as performance_router
-app.include_router(performance_router, prefix="/api/v1/hrms/performance", tags=["HRMS - Performance Management"])
-
-# ============================================================================
-# NEW: HRMS EXIT MANAGEMENT ROUTER
-# Resignation Workflow, Clearance Process, Full & Final Settlement, Exit Documents
-# ============================================================================
-from backend.services.hrms.routes.exit_routes import router as exit_router
-app.include_router(exit_router, prefix="/api/v1/hrms/exit", tags=["HRMS - Exit Management"])
-
-# ============================================================================
-# NEW: REPORTING & ANALYTICS MODULE
-# 100+ Pre-built Reports, Custom Report Builder, Executive Dashboards, Predictive Analytics
-# ============================================================================
-app.include_router(reporting_template_router, prefix="/api/v1", tags=["Reporting - Templates"])
-app.include_router(reporting_generation_router, prefix="/api/v1", tags=["Reporting - Generation"])
-app.include_router(reporting_dashboard_router, prefix="/api/v1", tags=["Reporting - Dashboards"])
-app.include_router(reporting_analytics_router, prefix="/api/v1", tags=["Reporting - Analytics"])
-app.include_router(reporting_builder_router, prefix="/api/v1", tags=["Reporting - Custom Builder"])
-
-# ============================================================================
-# NEW: CRM LEAD MANAGEMENT MODULE
-# Multi-Channel Lead Capture, Intelligent Scoring, Assignment & Routing, Follow-up Tracking
-# ============================================================================
-app.include_router(crm_router, tags=["CRM - Lead Management"])
-
-# ============================================================================
-# NEW: CRM OPPORTUNITY MANAGEMENT MODULE
-# Sales Pipeline, Stage-wise Tracking, Win/Loss Analysis, Revenue Forecasting
-# ============================================================================
-app.include_router(crm_opportunity_router, tags=["CRM - Opportunity Management"])
-
-# ============================================================================
-# NEW: CRM ACCOUNT MANAGEMENT MODULE
-# Account 360 View, Contact Management, Relationship Tracking
-# ============================================================================
-from backend.crm.routes.account_routes import router as crm_account_router
-app.include_router(crm_account_router, prefix="/api/v1", tags=["CRM - Account Management"])
-
-# ============================================================================
-# NEW: CRM MARKETING AUTOMATION MODULE
-# Campaign Management, Email/SMS Campaigns, Landing Pages, Segmentation
-# ============================================================================
-from backend.crm.routes.marketing_routes import router as crm_marketing_router
-app.include_router(crm_marketing_router, prefix="/api/v1", tags=["CRM - Marketing Automation"])
-
-# ============================================================================
-# NEW: CRM SALES AUTOMATION MODULE
-# Product Catalog, Quote Generation, Order Management
-# ============================================================================
-app.include_router(product_router, prefix="/api/v1", tags=["CRM - Product Catalog"])
-app.include_router(quote_router, prefix="/api/v1", tags=["CRM - Quote Generation"])
-app.include_router(order_router, prefix="/api/v1", tags=["CRM - Order Management"])
-
-# ============================================================================
-# NEW: CRM CUSTOMER SERVICE MODULE
-# Ticket Management, Knowledge Base, SLA Tracking
-# ============================================================================
-app.include_router(ticket_router, prefix="/api/v1", tags=["CRM - Ticket Management"])
-app.include_router(knowledge_router, prefix="/api/v1", tags=["CRM - Knowledge Base"])
-app.include_router(sla_router, prefix="/api/v1", tags=["CRM - SLA Management"])
-
-# ============================================================================
-# NEW: PROPERTY & RENT MANAGEMENT MODULE
-# Property Master, Lease Tracking, Rent Collection, Utilities, Space Allocation, Maintenance
-# ============================================================================
-from backend.services.property import (
-    property_router,
-    lease_router,
-    rent_router,
-    utility_router,
-    space_router,
-    maintenance_router
-)
-app.include_router(property_router, tags=["Property Management - Properties"])
-app.include_router(lease_router, tags=["Property Management - Leases"])
-app.include_router(rent_router, tags=["Property Management - Rent Collection"])
-app.include_router(utility_router, tags=["Property Management - Utilities"])
-app.include_router(space_router, tags=["Property Management - Spaces"])
-app.include_router(maintenance_router, tags=["Property Management - Maintenance"])
-
-# ============================================================================
-# NEW: NOTIFICATION SYSTEM MODULE
-# Automated Email/SMS Notifications for Rent Due, Lease Expiry, Payment Alerts
-# ============================================================================
-from backend.services.notifications import notification_router
-app.include_router(notification_router, tags=["Notifications - Property Management"])
-
-# ============================================================================
-# NEW: LEGAL CONTRACT MANAGEMENT MODULE
-# Contract Repository, Lifecycle Management, Renewal Tracking, Version Control
-# ============================================================================
-app.include_router(legal_contract_router, tags=["Legal - Contract Management"])
-
-# ============================================================================
-# NEW: LEGAL LITIGATION MANAGEMENT MODULE
-# Case Tracking, Hearing Management, Legal Expense Tracking
-# ============================================================================
-app.include_router(litigation_router, tags=["Legal - Litigation Management"])
-
-# ============================================================================
-# NEW: LEGAL LICENSE MANAGEMENT MODULE
-# License Register, Renewal Reminders, Compliance Tracking
-# ============================================================================
-app.include_router(license_router, tags=["Legal - License Management"])
-
-# ============================================================================
-# NEW: DOCUMENT MANAGEMENT SYSTEM (DMS) MODULE
-# Document Repository, Version Control, Workflow & Approvals, E-Signature, Secure Storage
-# ============================================================================
-app.include_router(dms_router, prefix="/api/v1", tags=["Document Management"])
-
-# ============================================================================
-# NEW: FACILITY & ADMINISTRATION MANAGEMENT MODULE
-# Building Management, Housekeeping, Cafeteria, Transport, Visitor Management
-# ============================================================================
-app.include_router(building_router, prefix="/api/v1", tags=["Facility - Building Management"])
-app.include_router(housekeeping_router, prefix="/api/v1", tags=["Facility - Housekeeping"])
-app.include_router(cafeteria_router, prefix="/api/v1", tags=["Facility - Cafeteria"])
-app.include_router(transport_router, prefix="/api/v1", tags=["Facility - Transport"])
-app.include_router(visitor_router, prefix="/api/v1", tags=["Facility - Visitor Management"])
-
-# ============================================================================
-# NEW: INVENTORY & STORE MANAGEMENT MODULE
-# Item Master, Stock Transactions, Stock Verification, Inventory Valuation
-# ============================================================================
-app.include_router(inventory_router, prefix="/api/v1", tags=["Inventory & Store Management"])
-# ============================================================================
-app.include_router(building_router, prefix="/api/v1", tags=["Facility - Building Management"])
-app.include_router(housekeeping_router, prefix="/api/v1", tags=["Facility - Housekeeping"])
-app.include_router(cafeteria_router, prefix="/api/v1", tags=["Facility - Cafeteria"])
-app.include_router(transport_router, prefix="/api/v1", tags=["Facility - Transport"])
-app.include_router(visitor_router, prefix="/api/v1", tags=["Facility - Visitor Management"])
-
-# Bank Statement Analysis (Perfios/FinBox)
-app.include_router(bank_statement_router, tags=["Bank Statement Analysis"])
-
-# OCR & Document Verification (AWS Textract)
-app.include_router(ocr_router, tags=["OCR & Document Verification"])
-
-# eKYC Integration (Aadhaar OTP)
-app.include_router(ekyc_integration_router, tags=["eKYC Integration"])
-
-# DigiLocker Integration (OAuth)
-app.include_router(digilocker_integration_router, tags=["DigiLocker Integration"])
+logger.info(f"Total routers registered: {len(enabled_routers) + 2}")  # +2 for auth and dashboard
 
 # ============================================
 # STARTUP MESSAGE
@@ -1286,9 +873,8 @@ if __name__ == "__main__":
     import uvicorn
     
     logger.info("=" * 60)
-    logger.info("  NBFC Financial Suite - Tier-1 Enterprise Platform")
-    logger.info("  Version: 2.0.0")
-    logger.info("  Platform Rating: 9.8/10")
+    logger.info("  NBFC Financial Suite - Enterprise Platform")
+    logger.info("  Version: 2.0.0 (Memory Optimized)")
     logger.info("=" * 60)
     
     uvicorn.run(
