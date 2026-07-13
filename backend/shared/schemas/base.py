@@ -4,9 +4,12 @@ Common response and request models
 """
 
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, Generic, TypeVar
 from datetime import datetime
 from uuid import UUID
+
+# Type variable for generic responses
+T = TypeVar('T')
 
 
 class BaseSchema(BaseModel):
@@ -37,11 +40,11 @@ class BaseDBSchema(TimestampSchema, TenantSchema):
     deleted_at: Optional[datetime] = None
 
 
-class SuccessResponse(BaseModel):
+class SuccessResponse(BaseModel, Generic[T]):
     """Standard success response"""
     success: bool = True
     message: str = "Success"
-    data: Any = None
+    data: Optional[T] = None
     meta: Optional[Dict[str, Any]] = None
 
 
@@ -68,11 +71,11 @@ class PaginationMeta(BaseModel):
     has_previous: bool
 
 
-class PaginatedResponse(BaseModel):
+class PaginatedResponse(BaseModel, Generic[T]):
     """Paginated response"""
     success: bool = True
     message: str = "Success"
-    data: List[Any]
+    data: List[T]
     meta: Dict[str, PaginationMeta]
 
 
