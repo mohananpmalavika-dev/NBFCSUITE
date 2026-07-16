@@ -7,8 +7,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from backend.core.database import get_db
-from backend.core.auth import get_current_user, get_current_tenant
+from backend.shared.database.connection import get_db
+from backend.services.auth.dependencies import get_current_user, get_tenant_id as get_current_tenant
 from backend.services.rules.rules_service import RulesService
 from backend.services.rules.rules_models import (
     RuleSet, Rule, DecisionTable, DecisionTableRow, RuleExecution, RuleVersion,

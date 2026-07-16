@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 from pydantic import BaseModel, Field
 
-from backend.core.database import Base
+from backend.shared.database.connection import Base
 
 
 # =====================================================================

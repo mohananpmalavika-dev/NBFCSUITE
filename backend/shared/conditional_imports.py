@@ -226,6 +226,22 @@ def import_models():
             ProductSunset, CustomerMigration
         )
     
+    # 21d. Instant Decision Framework models (NEW - Real-time Decisioning Engine)
+    if settings.ENABLE_INSTANT_DECISION_FRAMEWORK:
+        logger.info("Importing instant decision framework models...")
+        from backend.services.decision_engine.decision_engine_models import (
+            DecisionRequest, BureauCheck, BankStatementAnalysis,
+            KYCVerification, FraudCheck, EligibilityCheck, DecisionAudit
+        )
+    
+    # 21d. Instant Decision Framework models (NEW - Real-time Decisioning Engine)
+    if settings.ENABLE_DECISION_ENGINE:
+        logger.info("Importing instant decision framework models...")
+        from backend.services.decision_engine.decision_engine_models import (
+            DecisionRequest, BureauCheck, BankStatementAnalysis,
+            KYCVerification, FraudCheck, EligibilityCheck, DecisionAudit
+        )
+    
     # 22. CRM models
     if settings.ENABLE_CRM:
         logger.info("Importing CRM models...")
@@ -552,6 +568,12 @@ def get_enabled_routers():
         logger.info("Loading product lifecycle management...")
         from backend.services.product_lifecycle.product_lifecycle_router import router as product_lifecycle_router
         routers.append(("product_lifecycle", product_lifecycle_router, "/api/product-lifecycle"))
+    
+    # Instant Decision Framework (Real-time Decisioning Engine)
+    if settings.ENABLE_INSTANT_DECISION_FRAMEWORK:
+        logger.info("Loading instant decision framework...")
+        from backend.services.decision_engine.decision_engine_router import router as decision_engine_router
+        routers.append(("decision_engine", decision_engine_router, ""))
     
     # Treasury
     if settings.ENABLE_TREASURY:

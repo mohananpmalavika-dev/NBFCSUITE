@@ -144,6 +144,16 @@ const navigationItems = [
     ],
   },
   {
+    title: 'Decision Engine',
+    href: '/decision-engine',
+    icon: Activity,
+    children: [
+      { title: 'Dashboard', href: '/decision-engine/dashboard' },
+      { title: 'All Decisions', href: '/decision-engine' },
+      { title: 'New Decision Request', href: '/decision-engine/new' },
+    ],
+  },
+  {
     title: 'Compliance',
     href: '/compliance',
     icon: Shield,

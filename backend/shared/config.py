@@ -108,6 +108,7 @@ class Settings(BaseSettings):
     ENABLE_RISK_MANAGEMENT: bool = Field(default=False, env="ENABLE_RISK_MANAGEMENT")
     ENABLE_CREDIT_POLICY: bool = Field(default=True, env="ENABLE_CREDIT_POLICY")  # NEW: Risk-based pricing & decisioning
     ENABLE_PRODUCT_LIFECYCLE: bool = Field(default=True, env="ENABLE_PRODUCT_LIFECYCLE")  # NEW: Product variants & sunset management
+    ENABLE_INSTANT_DECISION_FRAMEWORK: bool = Field(default=True, env="ENABLE_INSTANT_DECISION_FRAMEWORK")  # NEW: Real-time decisioning engine
     
     # Treasury & Cash (disable to save memory)
     ENABLE_TREASURY: bool = Field(default=False, env="ENABLE_TREASURY")

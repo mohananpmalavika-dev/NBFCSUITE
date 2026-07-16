@@ -105,6 +105,329 @@ export default function VoluntarySurrenderPage() {
     },
   })
 
+  // Check eligibility mutation
+  const checkEligibilityMutation = useMutation({
+    mutationFn: (allocationId: string) =>
+      surrenderService.checkEligibility(allocationId),
+    onSuccess: () => {
+      toast.success('Eligibility check completed')
+    },
+    onError: () => {
+      toast.error('Failed to check eligibility')
+    },
+  })
+
+  // Submit application mutation
+  const submitApplicationMutation = useMutation({
+    mutationFn: (data: any) => surrenderService.submitApplication(data),
+    onSuccess: () => {
+      toast.success('Surrender application submitted successfully')
+      setSubmitDialogOpen(false)
+      queryClient.invalidateQueries({ queryKey: ['surrender-records'] })
+    },
+    onError: () => {
+      toast.error('Failed to submit surrender application')
+    },
+  })
+
+  // Calculate settlement mutation
+  const calculateSettlementMutation = useMutation({
+    mutationFn: (surrenderId: string) =>
+      surrenderService.calculateFinalSettlement(surrenderId),
+    onSuccess: () => {
+      toast.success('Settlement calculated successfully')
+    },
+    onError: () => {
+      toast.error('Failed to calculate settlement')
+    },
+  })
+
+  // Helper function to get status badge
+  const getStatusBadge = (status: SurrenderStatus) => {
+    const statusConfig: Record<
+      SurrenderStatus,
+      { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+    > = {
+      [SurrenderStatus.APPLICATION_SUBMITTED]: {
+        label: 'Submitted',
+        variant: 'secondary',
+      },
+      [SurrenderStatus.APPROVED]: { label: 'Approved', variant: 'default' },
+      [SurrenderStatus.REJECTED]: { label: 'Rejected', variant: 'destructive' },
+      [SurrenderStatus.DUES_CLEARED]: { label: 'Dues Cleared', variant: 'default' },
+      [SurrenderStatus.KEYS_RETURNED]: { label: 'Keys Returned', variant: 'default' },
+      [SurrenderStatus.INSPECTION_DONE]: {
+        label: 'Inspection Done',
+        variant: 'default',
+      },
+      [SurrenderStatus.REFUND_PROCESSED]: {
+        label: 'Refund Processed',
+        variant: 'default',
+      },
+      [SurrenderStatus.CERTIFICATE_ISSUED]: {
+        label: 'Certificate Issued',
+        variant: 'default',
+      },
+      [SurrenderStatus.IN_PROGRESS]: { label: 'In Progress', variant: 'secondary' },
+      [SurrenderStatus.COMPLETED]: { label: 'Completed', variant: 'default' },
+      [SurrenderStatus.CANCELLED]: { label: 'Cancelled', variant: 'outline' },
+    }
+
+    const config = statusConfig[status] || { label: status, variant: 'outline' }
+    return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  // Helper function to get progress percentage
+  const getProgressPercentage = (status: SurrenderStatus): number => {
+    const progressMap: Record<SurrenderStatus, number> = {
+      [SurrenderStatus.APPLICATION_SUBMITTED]: 10,
+      [SurrenderStatus.APPROVED]: 20,
+      [SurrenderStatus.REJECTED]: 0,
+      [SurrenderStatus.DUES_CLEARED]: 40,
+      [SurrenderStatus.KEYS_RETURNED]: 50,
+      [SurrenderStatus.INSPECTION_DONE]: 70,
+      [SurrenderStatus.REFUND_PROCESSED]: 85,
+      [SurrenderStatus.CERTIFICATE_ISSUED]: 95,
+      [SurrenderStatus.IN_PROGRESS]: 60,
+      [SurrenderStatus.COMPLETED]: 100,
+      [SurrenderStatus.CANCELLED]: 0,
+    }
+    return progressMap[status] || 0
+  }
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Voluntary Locker Surrender</h1>
+          <p className="text-muted-foreground">
+            Manage locker surrender applications and processing
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setEligibilityDialogOpen(true)} variant="outline">
+            <Search className="mr-2 h-4 w-4" />
+            Check Eligibility
+          </Button>
+          <Button onClick={() => setSubmitDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Submit Application
+          </Button>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      {statistics && (
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {statistics.total_applications || 0}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {statistics.pending_approval || 0}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{statistics.in_progress || 0}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Completed</CardTitle>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{statistics.completed || 0}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Main Tabs */}
+      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="pending-approval">
+            Pending Approval
+            {pendingApprovals && pendingApprovals.length > 0 && (
+              <Badge variant="secondary" className="ml-2">
+                {pendingApprovals.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="all-records">All Records</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Surrender Process Overview</CardTitle>
+              <CardDescription>
+                Step-by-step guide for voluntary locker surrender
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    1
+                  </div>
+                  <div>
+                    <p className="font-medium">Submit Application</p>
+                    <p className="text-sm text-muted-foreground">
+                      Customer submits surrender request with reason
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    2
+                  </div>
+                  <div>
+                    <p className="font-medium">Approval Process</p>
+                    <p className="text-sm text-muted-foreground">
+                      Branch manager reviews and approves/rejects
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    3
+                  </div>
+                  <div>
+                    <p className="font-medium">Clear Dues</p>
+                    <p className="text-sm text-muted-foreground">
+                      Outstanding rent and penalties must be paid
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    4
+                  </div>
+                  <div>
+                    <p className="font-medium">Return Keys</p>
+                    <p className="text-sm text-muted-foreground">
+                      Customer returns all keys to branch
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    5
+                  </div>
+                  <div>
+                    <p className="font-medium">Inspection</p>
+                    <p className="text-sm text-muted-foreground">
+                      Branch staff inspects locker for damage
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    6
+                  </div>
+                  <div>
+                    <p className="font-medium">Process Refund</p>
+                    <p className="text-sm text-muted-foreground">
+                      Security deposit refund (minus deductions)
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    7
+                  </div>
+                  <div>
+                    <p className="font-medium">Issue Certificate</p>
+                    <p className="text-sm text-muted-foreground">
+                      Surrender completion certificate issued
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pending-approval" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Applications Pending Approval</CardTitle>
+              <CardDescription>Review and process surrender requests</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {pendingApprovals && pendingApprovals.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Surrender #</TableHead>
+                      <TableHead>Locker</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Application Date</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingApprovals.map((record: SurrenderRecord) => (
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium">
+                          {record.surrender_number}
+                        </TableCell>
+                        <TableCell>{record.locker_id}</TableCell>
+                        <TableCell>{record.customer_id}</TableCell>
+                        <TableCell>
+                          {format(new Date(record.application_date), 'PP')}
+                        </TableCell>
+                        <TableCell>
+                          {record.surrender_reason.replace(/_/g, ' ')}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedSurrender(record)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Review
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No pending approvals
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="all-records" className="space-y-4">
           <Card>
             <CardHeader>

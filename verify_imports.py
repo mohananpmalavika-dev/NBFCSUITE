@@ -1,69 +1,98 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Import Verification Script
-Verifies all imports are correct after the build fixes
+Tests that all fixed imports work correctly
 """
 
 import sys
-import os
 from pathlib import Path
 
 # Add backend to path
 backend_path = Path(__file__).parent / "backend"
-sys.path.insert(0, str(backend_path))
+sys.path.insert(0, str(backend_path.parent))
 
 def test_imports():
-    """Test all critical imports"""
-    print("🔍 Verifying imports...\n")
+    """Test all the fixed imports"""
+    errors = []
     
-    tests = {
-        "Config": "backend.shared.config",
-        "Database Connection": "backend.shared.database.connection",
-        "Database Models": "backend.shared.database.models",
-        "Customer Models": "backend.shared.database.customer_models",
-        "Loan Models": "backend.shared.database.loan_models",
-        "Accounting Models": "backend.shared.database.accounting_models",
-        "Security": "backend.shared.common.security",
-        "Response": "backend.shared.common.response",
-        "Auth Service": "backend.services.auth.service",
-        "Auth Router": "backend.services.auth.router",
-        "Auth Schemas": "backend.services.auth.schemas",
-        "Customer Service": "backend.services.customer.service",
-        "Masterdata Service": "backend.services.masterdata.service",
-        "Main Application": "main",
-    }
+    print("🔍 Testing fixed imports...")
+    print("-" * 60)
     
-    failed = []
-    passed = []
+    # Test 1: Credit Policy Models
+    try:
+        from backend.services.credit_policy import credit_policy_models
+        print("✅ backend.services.credit_policy.credit_policy_models")
+    except ImportError as e:
+        errors.append(f"❌ credit_policy_models: {e}")
+        print(f"❌ backend.services.credit_policy.credit_policy_models: {e}")
     
-    for name, module in tests.items():
-        try:
-            __import__(module)
-            passed.append(name)
-            print(f"✅ {name:25} - OK")
-        except Exception as e:
-            failed.append((name, str(e)))
-            print(f"❌ {name:25} - FAILED: {e}")
+    # Test 2: Credit Policy Router
+    try:
+        from backend.services.credit_policy import credit_policy_router
+        print("✅ backend.services.credit_policy.credit_policy_router")
+    except ImportError as e:
+        errors.append(f"❌ credit_policy_router: {e}")
+        print(f"❌ backend.services.credit_policy.credit_policy_router: {e}")
     
-    print(f"\n{'='*60}")
-    print(f"Results: {len(passed)} passed, {len(failed)} failed")
-    print(f"{'='*60}\n")
+    # Test 3: Product Lifecycle Models
+    try:
+        from backend.services.product_lifecycle import product_lifecycle_models
+        print("✅ backend.services.product_lifecycle.product_lifecycle_models")
+    except ImportError as e:
+        errors.append(f"❌ product_lifecycle_models: {e}")
+        print(f"❌ backend.services.product_lifecycle.product_lifecycle_models: {e}")
     
-    if failed:
-        print("Failed imports:")
-        for name, error in failed:
-            print(f"  • {name}: {error}")
+    # Test 4: Product Lifecycle Router
+    try:
+        from backend.services.product_lifecycle import product_lifecycle_router
+        print("✅ backend.services.product_lifecycle.product_lifecycle_router")
+    except ImportError as e:
+        errors.append(f"❌ product_lifecycle_router: {e}")
+        print(f"❌ backend.services.product_lifecycle.product_lifecycle_router: {e}")
+    
+    # Test 5: Rules Models
+    try:
+        from backend.services.rules import rules_models
+        print("✅ backend.services.rules.rules_models")
+    except ImportError as e:
+        errors.append(f"❌ rules_models: {e}")
+        print(f"❌ backend.services.rules.rules_models: {e}")
+    
+    # Test 6: Rules Router
+    try:
+        from backend.services.rules import rules_router
+        print("✅ backend.services.rules.rules_router")
+    except ImportError as e:
+        errors.append(f"❌ rules_router: {e}")
+        print(f"❌ backend.services.rules.rules_router: {e}")
+    
+    # Test 7: Workflow Models
+    try:
+        from backend.services.workflow import workflow_models
+        print("✅ backend.services.workflow.workflow_models")
+    except ImportError as e:
+        errors.append(f"❌ workflow_models: {e}")
+        print(f"❌ backend.services.workflow.workflow_models: {e}")
+    
+    # Test 8: Workflow Router
+    try:
+        from backend.services.workflow import workflow_router
+        print("✅ backend.services.workflow.workflow_router")
+    except ImportError as e:
+        errors.append(f"❌ workflow_router: {e}")
+        print(f"❌ backend.services.workflow.workflow_router: {e}")
+    
+    print("-" * 60)
+    
+    if errors:
+        print(f"\n❌ {len(errors)} import(s) failed:")
+        for error in errors:
+            print(f"   {error}")
         return False
     else:
-        print("🎉 All imports verified successfully!")
+        print(f"\n✅ All {8} imports successful!")
         return True
 
 if __name__ == "__main__":
-    try:
-        success = test_imports()
-        sys.exit(0 if success else 1)
-    except Exception as e:
-        print(f"\n❌ Verification failed: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    success = test_imports()
+    sys.exit(0 if success else 1)

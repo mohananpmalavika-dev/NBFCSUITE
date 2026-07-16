@@ -114,6 +114,161 @@ async def list_cameras(
     )
 
 
+@router.get("/cameras/{camera_id}", response_model=dict)
+async def get_camera(
+    camera_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Get camera by ID"""
+    service = CameraService(db, tenant_id, current_user["id"])
+    camera = await service.get_camera(camera_id)
+    
+    return success_response(
+        message="Camera retrieved successfully",
+        data=CCTVCameraResponse.from_orm(camera).dict()
+    )
+
+
+@router.put("/cameras/{camera_id}", response_model=dict)
+async def update_camera(
+    camera_id: uuid.UUID,
+    update_data: CCTVCameraUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Update camera details"""
+    service = CameraService(db, tenant_id, current_user["id"])
+    camera = await service.update_camera(camera_id, update_data)
+    
+    return success_response(
+        message="Camera updated successfully",
+        data=CCTVCameraResponse.from_orm(camera).dict()
+    )
+
+
+@router.delete("/cameras/{camera_id}", response_model=dict)
+async def delete_camera(
+    camera_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Delete camera (soft delete)"""
+    service = CameraService(db, tenant_id, current_user["id"])
+    result = await service.delete_camera(camera_id)
+    
+    return success_response(
+        message="Camera deleted successfully",
+        data=result
+    )
+
+
+@router.patch("/cameras/{camera_id}/status", response_model=dict)
+async def update_camera_status(
+    camera_id: uuid.UUID,
+    status: CameraStatus = Query(...),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Update camera status"""
+    service = CameraService(db, tenant_id, current_user["id"])
+    result = await service.update_camera_status(camera_id, status)
+    
+    return success_response(
+        message="Camera status updated successfully",
+        data=result
+    )
+
+
+@router.get("/cameras/{camera_id}/health", response_model=dict)
+async def get_camera_health(
+    camera_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Get camera health status"""
+    service = CameraService(db, tenant_id, current_user["id"])
+    health = await service.get_camera_health(camera_id)
+    
+    return success_response(
+        message="Camera health retrieved successfully",
+        data=health
+    )
+
+
+@router.get("/cameras/{camera_id}/uptime", response_model=dict)
+async def calculate_camera_uptime(
+    camera_id: uuid.UUID,
+    days: int = Query(30, ge=1, le=365),
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Calculate camera uptime percentage"""
+    service = CameraService(db, tenant_id, current_user["id"])
+    uptime = await service.calculate_uptime(camera_id, days=days)
+    
+    return success_response(
+        message="Camera uptime calculated successfully",
+        data=uptime
+    )
+
+
+@router.post("/cameras/{camera_id}/test", response_model=dict)
+async def test_camera_connectivity(
+    camera_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Test camera connectivity"""
+    service = CameraService(db, tenant_id, current_user["id"])
+    test_result = await service.test_connectivity(camera_id)
+    
+    return success_response(
+        message="Camera connectivity test completed",
+        data=test_result
+    )
+
+
+@router.get("/cameras/branch/{branch_id}/summary", response_model=dict)
+async def get_branch_cameras_summary(
+    branch_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Get camera summary for a branch"""
+    service = CameraService(db, tenant_id, current_user["id"])
+    summary = await service.get_branch_cameras_summary(branch_id)
+    
+    return success_response(
+        message="Branch camera summary retrieved successfully",
+        data=summary
+    )
+
+
+@router.get("/cameras/health/report", response_model=dict)
+async def get_system_health_report(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+    tenant_id: str = Depends(get_tenant_id)
+):
+    """Get system-wide camera health report"""
+    service = CameraService(db, tenant_id, current_user["id"])
+    report = await service.get_system_health_report()
+    
+    return success_response(
+        message="System health report generated successfully",
+        data=report
+    )
+
+
 # ==================== RECORDING & STORAGE ENDPOINTS ====================
 
 @router.post("/dvr-nvr", response_model=dict, status_code=status.HTTP_201_CREATED)
