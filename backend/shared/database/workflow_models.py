@@ -357,3 +357,67 @@ class WorkflowSLATracking(Base):
     
     def __repr__(self):
         return f"<WorkflowSLATracking {self.sla_type} - {self.status}>"
+
+
+class WorkflowSLA(Base):
+    """
+    Enhanced Workflow SLA with Business Hours and Escalation Management
+    
+    Advanced SLA tracking with:
+    - Business hours calculation
+    - Holiday calendar support
+    - Pause/resume functionality
+    - Multi-level escalation
+    - Detailed metrics
+    """
+    __tablename__ = "workflow_sla"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(50), ForeignKey("tenants.id"), nullable=False, index=True)
+    
+    # SLA Configuration Reference
+    sla_config_id = Column(String(100), nullable=False, index=True)
+    
+    # Associated Entity
+    entity_type = Column(String(50), nullable=False, index=True)
+    entity_id = Column(Integer, nullable=False, index=True)
+    workflow_instance_id = Column(Integer, ForeignKey("workflow_instances.id"), nullable=False, index=True)
+    workflow_step_id = Column(Integer, ForeignKey("workflow_steps.id"), index=True)
+    
+    # Status
+    status = Column(String(50), default='active', nullable=False, index=True)
+    # Status: active, met, breached, paused, cancelled
+    
+    # Time Tracking
+    start_time = Column(DateTime, nullable=False, index=True)
+    deadline = Column(DateTime, nullable=False, index=True)
+    completion_time = Column(DateTime, index=True)
+    
+    # Pause Tracking
+    total_paused_duration = Column(Integer, default=0)  # Total paused time in minutes
+    pause_start = Column(DateTime)  # Current pause start time (if paused)
+    pause_reason = Column(Text)
+    
+    # Escalation Tracking
+    escalation_count = Column(Integer, default=0)
+    last_escalation_time = Column(DateTime)
+    escalated_to_users = Column(JSON, default=list)  # List of user IDs escalated to
+    
+    # Metrics (calculated periodically)
+    time_elapsed_minutes = Column(Integer, default=0)  # Elapsed time excluding pauses
+    time_remaining_minutes = Column(Integer, default=0)  # Time remaining
+    sla_percentage = Column(Integer, default=0)  # 0-100, percentage of SLA consumed
+    
+    # Breach Information
+    breach_time = Column(DateTime)  # When SLA was breached
+    breach_duration_minutes = Column(Integer)  # How long breached
+    
+    # Metadata
+    sla_metadata = Column(JSON)  # Additional SLA configuration and tracking data
+    
+    # Audit Fields
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f"<WorkflowSLA {self.entity_type}#{self.entity_id} - {self.status}>"

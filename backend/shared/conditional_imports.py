@@ -208,6 +208,24 @@ def import_models():
             RiskRating, EarlyWarningSignal, EarlyWarningAlert
         )
     
+    # 21b. Credit Policy Integration models (NEW - Advanced Risk-Based Pricing & Decisioning)
+    if settings.ENABLE_CREDIT_POLICY or settings.ENABLE_RISK_MANAGEMENT:
+        logger.info("Importing credit policy integration models...")
+        from backend.services.credit_policy.credit_policy_models import (
+            CreditPolicy as CreditPolicyNew, RiskBasedPricing, ScoreBasedRate, LTVRatio,
+            ExposureLimit as ExposureLimitNew, ConcentrationLimit, SectoralCap,
+            AutoApprovalCriteria, ManualReviewTrigger, DecisionMatrix, CounterOfferRule
+        )
+    
+    # 21c. Product Lifecycle Management models (NEW - Product Variants & Sunset Management)
+    if settings.ENABLE_PRODUCT_LIFECYCLE:
+        logger.info("Importing product lifecycle management models...")
+        from backend.services.product_lifecycle.product_lifecycle_models import (
+            ProductVariant, PromotionalProduct, SeasonalProduct,
+            GeographySpecificProduct, SegmentSpecificProduct,
+            ProductSunset, CustomerMigration
+        )
+    
     # 22. CRM models
     if settings.ENABLE_CRM:
         logger.info("Importing CRM models...")
@@ -297,6 +315,14 @@ def import_models():
         from backend.services.insurance.models import (
             InsuranceAgent, InsurancePolicy, InsurancePremium,
             InsuranceClaim, InsuranceCommission
+        )
+    
+    # 28. Locker Management models
+    if settings.ENABLE_LOCKER_MANAGEMENT:
+        logger.info("Importing locker management models...")
+        from backend.shared.database.locker_models import (
+            LockerMaster, LockerAllocation, LockerRentPayment,
+            LockerMaintenance, LockerAccessLog
         )
     
     # 28. Fixed Assets models
@@ -515,6 +541,18 @@ def get_enabled_routers():
         from backend.services.risk.router import router as risk_router
         routers.append(("risk", risk_router, "/api/risk"))
     
+    # Credit Policy Integration (Advanced Risk-Based Pricing & Decisioning)
+    if settings.ENABLE_CREDIT_POLICY or settings.ENABLE_RISK_MANAGEMENT:
+        logger.info("Loading credit policy integration...")
+        from backend.services.credit_policy.credit_policy_router import router as credit_policy_router
+        routers.append(("credit_policy", credit_policy_router, "/api/credit-policy"))
+    
+    # Product Lifecycle Management (Product Variants & Sunset Management)
+    if settings.ENABLE_PRODUCT_LIFECYCLE:
+        logger.info("Loading product lifecycle management...")
+        from backend.services.product_lifecycle.product_lifecycle_router import router as product_lifecycle_router
+        routers.append(("product_lifecycle", product_lifecycle_router, "/api/product-lifecycle"))
+    
     # Treasury
     if settings.ENABLE_TREASURY:
         logger.info("Loading treasury module...")
@@ -610,6 +648,12 @@ def get_enabled_routers():
         routers.append(("insurance_premiums", insurance_premium_router, "/api/insurance"))
         routers.append(("insurance_claims", insurance_claim_router, "/api/insurance"))
         routers.append(("insurance_commissions", insurance_commission_router, "/api/insurance"))
+    
+    # Locker Management
+    if settings.ENABLE_LOCKER_MANAGEMENT:
+        logger.info("Loading locker management module...")
+        from backend.services.locker.router import router as locker_router
+        routers.append(("locker_management", locker_router, "/api"))
     
     # File Upload (utility - always enable if customers or loans enabled)
     if settings.ENABLE_CUSTOMERS or settings.ENABLE_LOANS:

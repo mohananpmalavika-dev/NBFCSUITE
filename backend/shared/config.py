@@ -106,6 +106,8 @@ class Settings(BaseSettings):
     # Compliance & Regulatory (disable to save memory)
     ENABLE_COMPLIANCE: bool = Field(default=False, env="ENABLE_COMPLIANCE")
     ENABLE_RISK_MANAGEMENT: bool = Field(default=False, env="ENABLE_RISK_MANAGEMENT")
+    ENABLE_CREDIT_POLICY: bool = Field(default=True, env="ENABLE_CREDIT_POLICY")  # NEW: Risk-based pricing & decisioning
+    ENABLE_PRODUCT_LIFECYCLE: bool = Field(default=True, env="ENABLE_PRODUCT_LIFECYCLE")  # NEW: Product variants & sunset management
     
     # Treasury & Cash (disable to save memory)
     ENABLE_TREASURY: bool = Field(default=False, env="ENABLE_TREASURY")
@@ -147,6 +149,9 @@ class Settings(BaseSettings):
     
     # Insurance (disable to save memory)
     ENABLE_INSURANCE: bool = Field(default=False, env="ENABLE_INSURANCE")
+    
+    # Locker Management (disable to save memory)
+    ENABLE_LOCKER_MANAGEMENT: bool = Field(default=False, env="ENABLE_LOCKER_MANAGEMENT")
     
     # LMS Extensions (disable to save memory)
     ENABLE_NACH: bool = Field(default=False, env="ENABLE_NACH")

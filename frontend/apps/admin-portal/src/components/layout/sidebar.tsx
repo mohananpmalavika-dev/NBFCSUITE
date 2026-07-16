@@ -134,6 +134,8 @@ const navigationItems = [
     icon: AlertTriangle,
     children: [
       { title: 'Dashboard', href: '/risk' },
+      { title: 'Credit Policy (New)', href: '/credit-policy' },
+      { title: 'Product Lifecycle', href: '/product-lifecycle' },
       { title: 'Credit Policies', href: '/risk/policies' },
       { title: 'Risk Pricing', href: '/risk/pricing' },
       { title: 'Exposure Limits', href: '/risk/exposure' },

@@ -638,6 +638,9 @@ from backend.services.facility import (
     visitor_router
 )
 
+# NEW: Credit Policy Integration Module (Risk-Based Pricing, Credit Decisioning, Exposure Management)
+from backend.services.credit_policy.credit_policy_router import router as credit_policy_router
+
 # ============================================
 # REGISTER ROUTERS - MEMORY OPTIMIZED
 # Only loads routers for enabled modules

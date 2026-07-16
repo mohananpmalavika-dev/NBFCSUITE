@@ -370,6 +370,30 @@ def load_operations_routers():
         from backend.services.integration.ocr_router import router as ocr_router
         app.include_router(ocr_router, prefix="/api/integration", tags=["Integration - OCR"])
     
+    # Workflow Engine (BPMN)
+    logger.info("Loading Workflow Engine routers...")
+    from backend.services.workflow.template_router import router as workflow_template_router
+    from backend.services.workflow.instance_router import router as workflow_instance_router
+    from backend.services.workflow.task_router import router as workflow_task_router
+    from backend.services.workflow.bpmn_router import router as workflow_bpmn_router
+    from backend.services.workflow.integration_router import router as workflow_integration_router
+    from backend.services.workflow.approval_router import router as workflow_approval_router
+    from backend.services.workflow.sla_router import router as workflow_sla_router
+    from backend.services.workflow.analytics_router import router as workflow_analytics_router
+    app.include_router(workflow_template_router, prefix="/api/workflow", tags=["Workflow - Templates"])
+    app.include_router(workflow_instance_router, prefix="/api/workflow", tags=["Workflow - Instances"])
+    app.include_router(workflow_task_router, prefix="/api/workflow", tags=["Workflow - Tasks"])
+    app.include_router(workflow_bpmn_router, tags=["Workflow - BPMN Designer"])
+    app.include_router(workflow_integration_router, tags=["Workflow - Integrations"])
+    app.include_router(workflow_approval_router, tags=["Workflow - Advanced Approvals"])
+    app.include_router(workflow_sla_router, tags=["Workflow - SLA & Escalation"])
+    app.include_router(workflow_analytics_router, tags=["Workflow - Analytics & Monitoring"])
+    
+    # Business Rules Engine
+    logger.info("Loading Business Rules Engine router...")
+    from backend.services.rules.rule_router import router as rules_router
+    app.include_router(rules_router, tags=["Business Rules Engine"])
+    
     logger.info("✅ Operations service routers loaded")
 
 
